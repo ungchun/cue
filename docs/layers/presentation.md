@@ -1,6 +1,10 @@
+---
+참조: [ARCHITECTURE.md, docs/coding/swiftui.md]
+---
+
 # Presentation 계층
 
-SwiftUI UI. `Domain`에만 의존한다 (`Data`를 직접 알지 못한다).
+위치: `cue/Presentation/`. SwiftUI UI. `Domain`에만 의존한다 (`Data`를 직접 알지 못한다).
 
 ## 폴더
 | 폴더 | 담는 것 |
@@ -14,6 +18,4 @@ SwiftUI UI. `Domain`에만 의존한다 (`Data`를 직접 알지 못한다).
 - `...View`: 상태는 ViewModel에 위임. ViewModel은 `init(dependencies:)`로 생성.
 - ViewModel은 UseCase를 통해서만 데이터에 접근한다.
 
-## 규칙
-- 새 화면 → `Features/`에 폴더 추가 + 필요 시 `AppRoute`에 case 추가.
-- ViewModel은 `Dependencies`를 받아 필요한 UseCase만 보관한다.
+상세 패턴은 [docs/coding/swiftui.md](../coding/swiftui.md) 참고.

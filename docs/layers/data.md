@@ -1,6 +1,10 @@
+---
+참조: [ARCHITECTURE.md, docs/coding/persistence.md]
+---
+
 # Data 계층
 
-`Domain`이 정의한 Repository 프로토콜을 **구현**한다. `Domain`에만 의존한다.
+위치: `cue/Data/`. `Domain`이 정의한 Repository 프로토콜을 **구현**한다. `Domain`에만 의존한다.
 
 ## 폴더
 | 폴더 | 담는 것 |
@@ -15,10 +19,4 @@
 - SwiftData/CloudKit 오류는 `DomainError`로 변환해 던진다.
 - 새 `@Model`을 추가하면 `ModelContainerFactory.schema`에 등록한다.
 
-## iCloud(CloudKit) 동기화 켜기
-1. Xcode → 타깃 → **Signing & Capabilities**
-2. **+ Capability → iCloud** 추가, **CloudKit** 체크
-3. 끝. `cloudKitDatabase`가 `.automatic`이라 코드 변경 불필요.
-
-### CloudKit 스키마 제약 (`ItemModel` 주석 참고)
-유니크 제약 금지 · 모든 속성 옵셔널/기본값 · 모든 관계 옵셔널+역관계 · 출시 후 추가만 가능.
+CloudKit 동기화·스키마 제약은 [docs/coding/persistence.md](../coding/persistence.md) 참고.

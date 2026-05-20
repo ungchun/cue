@@ -1,6 +1,10 @@
+---
+참조: [ARCHITECTURE.md]
+---
+
 # Domain 계층
 
-앱의 **핵심 규칙**. 아무것도 의존하지 않는다 (`Foundation`만 허용).
+위치: `cue/Domain/`. 앱의 **핵심 규칙**. 아무것도 의존하지 않는다 (`Foundation`만 허용).
 
 ## 금지 사항
 - `import SwiftUI` ❌

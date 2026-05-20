@@ -32,7 +32,7 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외
    | SwiftUI·MVVM·동시성 | [docs/coding/swiftui.md](docs/coding/swiftui.md) |
    | SwiftData·iCloud 저장 | [docs/coding/persistence.md](docs/coding/persistence.md) |
    | 테스트 작성 | [docs/testing.md](docs/testing.md) |
-   | 계층별 세부 | `cue/{Domain,Data,Presentation}/README.md` |
+   | 계층별 세부 | [domain](docs/layers/domain.md) · [data](docs/layers/data.md) · [presentation](docs/layers/presentation.md) |
 
 ## 핵심 규칙 (요약 — 상세는 위 문서)
 
