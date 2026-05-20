@@ -7,7 +7,7 @@ import SwiftUI
 
 /// 앱 전역 의존성 묶음. `CompositionRoot`에서 조립되어 `@Environment`로 주입된다.
 /// View / ViewModel은 이 묶음을 통해 UseCase에만 접근한다.
-struct Dependencies {
+struct Dependencies: Sendable {
     var fetchItems: FetchItemsUseCase
     var addItem: AddItemUseCase
     var deleteItem: DeleteItemUseCase

@@ -50,7 +50,7 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외
 
 ## 환경
 
-Xcode 26.5 / Swift 5 모드 / iOS 26.5 / Bundle ID `azhy.cue`.
+Xcode 26.5 / Swift 6.0 / iOS 26.0 / Bundle ID `azhy.cue`.
 
 > 앱 컨셉 확정 후 도메인 문서(`docs/domain/`)가 추가된다.
 > 현재 `Item`/`ItemList`는 구조 예시(placeholder)다.

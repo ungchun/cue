@@ -4,7 +4,7 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장 (외
 
 ## 환경
 
-- Xcode 26.5 / Swift 5 모드 / iOS 26.5
+- Xcode 26.5 / Swift 6.0 / iOS 26.0
 - Bundle ID: `azhy.cue`
 
 ## 구조
