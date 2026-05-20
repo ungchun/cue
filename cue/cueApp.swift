@@ -9,9 +9,14 @@ import SwiftUI
 
 @main
 struct cueApp: App {
+    /// 앱 의존성을 조립하는 단 하나의 진입점.
+    private let composition = CompositionRoot()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(\.dependencies, composition.dependencies)
         }
+        .modelContainer(composition.modelContainer)
     }
 }
