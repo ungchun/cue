@@ -11,6 +11,12 @@ struct Dependencies: Sendable {
     var fetchItems: FetchItemsUseCase
     var addItem: AddItemUseCase
     var deleteItem: DeleteItemUseCase
+
+    var requestRemindersAccess: RequestRemindersAccessUseCase
+    var fetchReminderLists: FetchReminderListsUseCase
+    var fetchReminders: FetchRemindersUseCase
+    var toggleReminderCompletion: ToggleReminderCompletionUseCase
+    var addReminder: AddReminderUseCase
 }
 
 extension EnvironmentValues {
@@ -21,13 +27,37 @@ extension EnvironmentValues {
 extension Dependencies {
     /// 프리뷰·테스트용 인메모리 의존성.
     static var preview: Dependencies {
-        let repository = InMemoryItemRepository(seed: [
+        let itemRepository = InMemoryItemRepository(seed: [
             Item(title: "예시 항목", note: "InMemoryItemRepository 제공"),
         ])
+
+        let workListID = "preview-work"
+        let personalListID = "preview-personal"
+        let remindersRepository = InMemoryRemindersRepository(
+            access: .granted,
+            lists: [
+                ReminderList(id: workListID, title: "회사", colorHex: nil),
+                ReminderList(id: personalListID, title: "개인", colorHex: nil),
+            ],
+            reminders: [
+                Reminder(id: "p1", title: "주간 보고서 작성", isCompleted: false,
+                         notes: nil, dueDate: nil, listID: workListID),
+                Reminder(id: "p2", title: "회의실 예약", isCompleted: true,
+                         notes: nil, dueDate: nil, listID: workListID),
+                Reminder(id: "p3", title: "장보기", isCompleted: false,
+                         notes: nil, dueDate: nil, listID: personalListID),
+            ]
+        )
+
         return Dependencies(
-            fetchItems: FetchItemsUseCase(repository: repository),
-            addItem: AddItemUseCase(repository: repository),
-            deleteItem: DeleteItemUseCase(repository: repository)
+            fetchItems: FetchItemsUseCase(repository: itemRepository),
+            addItem: AddItemUseCase(repository: itemRepository),
+            deleteItem: DeleteItemUseCase(repository: itemRepository),
+            requestRemindersAccess: RequestRemindersAccessUseCase(repository: remindersRepository),
+            fetchReminderLists: FetchReminderListsUseCase(repository: remindersRepository),
+            fetchReminders: FetchRemindersUseCase(repository: remindersRepository),
+            toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
+            addReminder: AddReminderUseCase(repository: remindersRepository)
         )
     }
 }

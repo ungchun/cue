@@ -14,13 +14,19 @@ struct CompositionRoot {
 
     init() {
         let container = ModelContainerFactory.make()
-        let repository = SwiftDataItemRepository(context: container.mainContext)
+        let itemRepository = SwiftDataItemRepository(context: container.mainContext)
+        let remindersRepository = EventKitRemindersRepository()
 
         self.modelContainer = container
         self.dependencies = Dependencies(
-            fetchItems: FetchItemsUseCase(repository: repository),
-            addItem: AddItemUseCase(repository: repository),
-            deleteItem: DeleteItemUseCase(repository: repository)
+            fetchItems: FetchItemsUseCase(repository: itemRepository),
+            addItem: AddItemUseCase(repository: itemRepository),
+            deleteItem: DeleteItemUseCase(repository: itemRepository),
+            requestRemindersAccess: RequestRemindersAccessUseCase(repository: remindersRepository),
+            fetchReminderLists: FetchReminderListsUseCase(repository: remindersRepository),
+            fetchReminders: FetchRemindersUseCase(repository: remindersRepository),
+            toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
+            addReminder: AddReminderUseCase(repository: remindersRepository)
         )
     }
 }

@@ -15,7 +15,7 @@ struct cueApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(dependencies: composition.dependencies)
                 .environment(\.dependencies, composition.dependencies)
         }
         .modelContainer(composition.modelContainer)
