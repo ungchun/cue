@@ -5,12 +5,15 @@
 
 import CoreGraphics
 
-/// 디자인 토큰 — 화면 전반의 간격 값을 한 곳에서 관리한다.
-/// 색상·타이포그래피 등 다른 토큰도 이 폴더(`DesignSystem/`)에 추가한다.
+/// 간격 토큰 — 4/8pt 그리드. 패딩·요소 간 간격은 이 값만 사용한다.
+///
+/// 사용: `.padding(Spacing.md)`.
 enum Spacing {
+    static let xxs: CGFloat = 2
     static let xs: CGFloat = 4
     static let sm: CGFloat = 8
     static let md: CGFloat = 16
     static let lg: CGFloat = 24
     static let xl: CGFloat = 32
+    static let xxl: CGFloat = 48
 }

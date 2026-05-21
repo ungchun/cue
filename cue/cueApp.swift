@@ -5,6 +5,7 @@
 //  Created by Kim SungHun on 5/20/26.
 //
 
+import SwiftData
 import SwiftUI
 
 @main

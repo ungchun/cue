@@ -20,7 +20,7 @@
 |---|---|---|
 | `Domain/` | `Foundation` | `SwiftUI`, `SwiftData` |
 | `Data/` | `Foundation`, `SwiftData` | `SwiftUI` |
-| `Presentation/` | `SwiftUI` | `SwiftData`, `Data`의 구체 타입 |
+| `Presentation/` | `SwiftUI`, `UIKit` | `SwiftData`, `Data`의 구체 타입 |
 | `App/` | 전부 (조립 담당) | — |
 
 ## 네이밍
