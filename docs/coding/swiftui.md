@@ -22,6 +22,10 @@
 
 ## Swift 동시성
 
+- **프로젝트 기본 액터 격리는 `nonisolated`** (`SWIFT_DEFAULT_ACTOR_ISOLATION`).
+  순수 타입(Domain 엔티티·enum 등)은 격리 없음이 기본 — UI(`View`·`ViewModel`·
+  `CompositionRoot`)는 `@MainActor`를 **명시**한다. `MainActor` 기본값은 순수
+  Domain 계층·`actor`·테스트와 충돌하므로 쓰지 않는다 (SE-0466).
 - Repository **프로토콜**은 `Sendable`, 메서드는 `async throws`.
 - SwiftData를 쓰는 구현은 `@MainActor` (메인 `ModelContext` 사용).
 - 인메모리·순수 구현은 `actor`로 격리한다.
