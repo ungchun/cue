@@ -5,19 +5,29 @@
 
 import SwiftUI
 
-/// 앱의 첫 화면. 네비게이션 컨테이너를 소유하고 첫 Feature를 띄운다.
+/// 앱의 첫 화면. 하단 탭바를 소유하고 각 탭의 화면을 띄운다.
 struct RootView: View {
-    @Environment(\.dependencies) private var dependencies
-    @State private var router = AppRouter()
+    @State private var selectedTab: AppTab = .reminder
 
     var body: some View {
-        NavigationStack(path: $router.path) {
-            ItemListView(dependencies: dependencies)
-                .navigationDestination(for: AppRoute.self) { route in
-                    route.destination(dependencies: dependencies)
+        TabView(selection: $selectedTab) {
+            ForEach(AppTab.allCases) { tab in
+                Tab(tab.title, systemImage: tab.systemImage, value: tab) {
+                    NavigationStack {
+                        screen(for: tab)
+                    }
                 }
+            }
         }
-        .environment(router)
+    }
+
+    /// 탭에 대응하는 화면을 만든다.
+    @ViewBuilder
+    private func screen(for tab: AppTab) -> some View {
+        switch tab {
+        case .reminder: ReminderView()
+        case .settings: SettingsView()
+        }
     }
 }
 
