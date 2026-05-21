@@ -1,6 +1,9 @@
 # AGENTS.md — cue
 
-SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외부 서버 없음.
+**cue** — "지금 잊으면 안 되는 하나"를 잠금화면·Dynamic Island·Live Activity에
+띄워두는 신호 앱. 전체 컨셉 → [docs/concept.md](docs/concept.md)
+
+SwiftUI 기반, 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외부 서버 없음.
 
 이 파일은 **얇은 인덱스**다 — 상세 규칙은 링크된 문서로 위임한다. 내용을 여기 쌓지 않는다.
 
@@ -28,6 +31,7 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외
 
    | 영역 | 문서 |
    |---|---|
+   | 앱 컨셉·제품 | [docs/concept.md](docs/concept.md) |
    | 계층 구조·의존성 규칙 | [ARCHITECTURE.md](ARCHITECTURE.md) |
    | Swift 스타일·네이밍·에러 | [docs/coding/conventions.md](docs/coding/conventions.md) |
    | SwiftUI·MVVM·동시성 | [docs/coding/swiftui.md](docs/coding/swiftui.md) |
@@ -55,5 +59,5 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외
 
 Xcode 26.5 / Swift 6.0 / iOS 26.0 / Bundle ID `azhy.cue`.
 
-> 앱 컨셉 확정 후 도메인 문서(`docs/domain/`)가 추가된다.
-> 현재 `Item`/`ItemList`는 구조 예시(placeholder)다.
+> 앱 컨셉은 [docs/concept.md](docs/concept.md). 도메인 코드는 추후 `docs/domain/`.
+> 현재 `Item`/`ItemList`는 placeholder다 — 실제 도메인(`Cue` 등)으로 교체 예정.
