@@ -1,8 +1,8 @@
 ---
-참조: [docs/tdd.md, docs/testing.md, ARCHITECTURE.md]
+참조: [docs/tdd.md, docs/testing.md, docs/design-system.md, ARCHITECTURE.md]
 ---
 
-# 워크플로우 — 리팩토링
+# 워크플로우 — refactor (리팩토링)
 
 기능을 바꾸지 않고 구조·품질만 개선한다. `커버리지 확보 → refactor → green`.
 
@@ -22,6 +22,7 @@
 - [ ] 이름이 역할을 정확히 드러내나 (모호한 `data`, `info`, `manager` 제거)
 - [ ] 함수가 한 가지 일만 하나 (너무 길면 분리)
 - [ ] 매직 넘버·문자열을 상수로 뺐나
+- [ ] 뷰에 raw 값이 직접 들어가 있지 않나 → [design-system.md](../design-system.md)
 - [ ] 계층 경계를 넘는 의존성이 없나 → [ARCHITECTURE.md](../../ARCHITECTURE.md)
 - [ ] 죽은 코드(안 쓰는 함수·타입)를 제거했나
 

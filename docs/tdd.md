@@ -1,5 +1,5 @@
 ---
-참조: [docs/testing.md, docs/workflow/feature.md, docs/workflow/bugfix.md, docs/workflow/refactor.md]
+참조: [docs/testing.md, docs/workflow/feat.md, docs/workflow/fix.md, docs/workflow/refactor.md, docs/workflow/debug.md]
 ---
 
 # TDD 사이클

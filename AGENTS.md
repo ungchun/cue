@@ -15,13 +15,14 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외
 ## 작업 시작 전
 
 1. **항상 읽기**: 이 파일 + [docs/tdd.md](docs/tdd.md)
-2. **작업 유형별 진입점** — 하나를 골라 따른다:
+2. **작업 유형별 진입점** — `/cue` 스킬이 분류·라우팅을 자동화한다. 직접 할 땐 하나 골라 따른다:
 
-   | 유형 | 문서 |
+   | 모드 | 문서 |
    |---|---|
-   | 새 기능 | [docs/workflow/feature.md](docs/workflow/feature.md) |
-   | 버그 수정 | [docs/workflow/bugfix.md](docs/workflow/bugfix.md) |
-   | 리팩토링 | [docs/workflow/refactor.md](docs/workflow/refactor.md) |
+   | feat (새 기능) | [docs/workflow/feat.md](docs/workflow/feat.md) |
+   | fix (버그 수정) | [docs/workflow/fix.md](docs/workflow/fix.md) |
+   | refactor (리팩토링) | [docs/workflow/refactor.md](docs/workflow/refactor.md) |
+   | debug (원인 진단) | [docs/workflow/debug.md](docs/workflow/debug.md) |
 
 3. **작업 영역 문서** — 건드리는 영역만 골라 읽는다:
 
@@ -30,6 +31,7 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외
    | 계층 구조·의존성 규칙 | [ARCHITECTURE.md](ARCHITECTURE.md) |
    | Swift 스타일·네이밍·에러 | [docs/coding/conventions.md](docs/coding/conventions.md) |
    | SwiftUI·MVVM·동시성 | [docs/coding/swiftui.md](docs/coding/swiftui.md) |
+   | 디자인 시스템 (색·타이포·간격) | [docs/design-system.md](docs/design-system.md) |
    | SwiftData·iCloud 저장 | [docs/coding/persistence.md](docs/coding/persistence.md) |
    | 테스트 작성 | [docs/testing.md](docs/testing.md) |
    | 계층별 세부 | [domain](docs/layers/domain.md) · [data](docs/layers/data.md) · [presentation](docs/layers/presentation.md) |
@@ -39,6 +41,7 @@ SwiftUI 기반 iOS 앱. 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외
 - 의존성은 항상 `Domain`을 향한다. `Domain`은 `SwiftUI`·`SwiftData`를 import하지 않는다.
 - 구체 구현 생성은 `App/CompositionRoot.swift`에서만.
 - 1 파일 = 1 타입. 역할 접미사(`...UseCase`, `...ViewModel` 등).
+- 뷰는 디자인 시스템 토큰(`AppColor`/`AppFont`/`Spacing`)만 — raw 값 직접 입력 금지, 퍼스트파티 컴포넌트 우선.
 - 빌드는 사용자가 직접 수행한다. 에이전트는 코드 변경 후 빌드를 사용자에게 넘긴다.
 
 ## 문서 규약
