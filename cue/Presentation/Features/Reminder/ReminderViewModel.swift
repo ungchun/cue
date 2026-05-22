@@ -42,11 +42,6 @@ final class ReminderViewModel {
         return allReminders.filter { $0.listID == selectedListID }
     }
 
-    /// 리스트의 미완료 항목 개수 — 리스트 메뉴의 (n) 표시용.
-    func incompleteCount(in list: ReminderList) -> Int {
-        allReminders.filter { $0.listID == list.id && !$0.isCompleted }.count
-    }
-
     /// 화면 진입 시 — 권한을 확보하고 데이터를 적재한다.
     func onAppear() async {
         access = await requestAccessUseCase()

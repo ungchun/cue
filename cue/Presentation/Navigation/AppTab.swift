@@ -13,7 +13,7 @@ enum AppTab: CaseIterable, Identifiable {
     /// 탭 레이블에 표시할 이름.
     var title: String {
         switch self {
-        case .reminder: "미리알림"
+        case .reminder: "할일"
         case .settings: "설정"
         }
     }

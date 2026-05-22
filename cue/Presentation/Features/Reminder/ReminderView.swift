@@ -15,7 +15,22 @@ struct ReminderView: View {
 
     var body: some View {
         content
-            .navigationTitle(viewModel.selectedList?.title ?? "미리알림")
+            .navigationTitle("할일")
+            .toolbar {
+                // 뷰만 — 액션은 아직 없음.
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                    } label: {
+                        Image(systemName: "list.bullet")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                }
+            }
             .task { await viewModel.onAppear() }
             .alert("오류", isPresented: errorBinding) {
                 Button("확인", role: .cancel) {}

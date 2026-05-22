@@ -5,8 +5,7 @@
 
 import SwiftUI
 
-/// 앱의 첫 화면. 하단 탭바를 소유하고, 미리알림 탭에서는 탭바 위에
-/// 리스트 칩 액세서리(`ReminderListBar`)를 띄운다.
+/// 앱의 첫 화면. 하단 탭바를 소유하고 탭에 맞는 화면을 보여준다.
 struct RootView: View {
     @State private var selectedTab: AppTab = .reminder
     @State private var reminderViewModel: ReminderViewModel
@@ -23,11 +22,6 @@ struct RootView: View {
                         screen(for: tab)
                     }
                 }
-            }
-        }
-        .tabViewBottomAccessory {
-            if selectedTab == .reminder {
-                ReminderListBar(viewModel: reminderViewModel)
             }
         }
     }

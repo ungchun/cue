@@ -92,19 +92,6 @@ struct ReminderViewModelTests {
         #expect(viewModel.visibleReminders.map(\.id) == ["2"])
     }
 
-    @Test func incompleteCountCountsOnlyIncomplete() async {
-        let viewModel = ReminderViewModel(dependencies: makeDependencies(
-            lists: [listA],
-            reminders: [
-                reminder(id: "1", isCompleted: false, listID: "A"),
-                reminder(id: "2", isCompleted: true, listID: "A"),
-            ]
-        ))
-        await viewModel.onAppear()
-
-        #expect(viewModel.incompleteCount(in: listA) == 1)
-    }
-
     @Test func toggleFlipsCompletion() async {
         let target = reminder(id: "1", isCompleted: false, listID: "A")
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
