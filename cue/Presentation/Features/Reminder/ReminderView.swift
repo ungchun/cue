@@ -6,12 +6,9 @@
 import SwiftUI
 import UIKit
 
-/// 미리알림 탭 화면 — 선택된 리스트의 항목을 보여주고 추가·완료 토글을 제공한다.
-///
-/// 리스트 선택 칩은 탭바 위 `ReminderListBar` 액세서리가 담당한다.
+/// 할일 탭 화면 — 선택된 리스트의 미완료 항목을 보여주고 완료 토글을 제공한다.
 struct ReminderView: View {
     let viewModel: ReminderViewModel
-    @State private var newReminderTitle = ""
 
     var body: some View {
         content
@@ -67,24 +64,13 @@ struct ReminderView: View {
 
     private var reminderList: some View {
         List {
-            Section {
-                HStack(spacing: Spacing.sm) {
-                    TextField("새 미리알림", text: $newReminderTitle)
-                        .onSubmit(addReminder)
-                    Button("추가", action: addReminder)
-                        .disabled(isTitleEmpty)
-                }
-            }
-
-            Section {
-                if viewModel.visibleReminders.isEmpty {
-                    Text("이 리스트에 미리알림이 없습니다.")
-                        .font(AppFont.bodyLarge)
-                        .foregroundStyle(AppColor.textSecondary)
-                } else {
-                    ForEach(viewModel.visibleReminders) { reminder in
-                        reminderRow(reminder)
-                    }
+            if viewModel.visibleReminders.isEmpty {
+                Text("할 일이 없습니다.")
+                    .font(AppFont.bodyLarge)
+                    .foregroundStyle(AppColor.textSecondary)
+            } else {
+                ForEach(viewModel.visibleReminders) { reminder in
+                    reminderRow(reminder)
                 }
             }
         }
@@ -95,29 +81,47 @@ struct ReminderView: View {
         }
     }
 
+    /// 미리알림 한 줄 — 동그란 체크 버튼 + 제목, 마감일이 있으면 그 아래 표시.
     private func reminderRow(_ reminder: Reminder) -> some View {
-        HStack(spacing: Spacing.sm) {
+        HStack(alignment: .top, spacing: Spacing.sm) {
             Button {
                 Task { await viewModel.toggle(reminder) }
             } label: {
-                Image(systemName: reminder.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(
-                        reminder.isCompleted ? AppColor.accent : AppColor.textSecondary
-                    )
+                Image(systemName: "circle")
+                    .foregroundStyle(AppColor.textSecondary)
             }
             .buttonStyle(.plain)
 
-            Text(reminder.title)
-                .font(AppFont.bodyLarge)
-                .foregroundStyle(
-                    reminder.isCompleted ? AppColor.textSecondary : AppColor.textPrimary
-                )
-                .strikethrough(reminder.isCompleted)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(reminder.title)
+                    .font(AppFont.bodyLarge)
+                    .foregroundStyle(AppColor.textPrimary)
+
+                if let dueDate = reminder.dueDate {
+                    Text(dueDateText(dueDate))
+                        .font(AppFont.bodySmall)
+                        .foregroundStyle(isOverdue(dueDate) ? AppColor.danger : AppColor.textSecondary)
+                }
+            }
         }
     }
 
-    private var isTitleEmpty: Bool {
-        newReminderTitle.trimmingCharacters(in: .whitespaces).isEmpty
+    /// 마감일 표시 문자열 — 오늘·내일은 단어로, 그 외엔 날짜로.
+    private func dueDateText(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let time = date.formatted(date: .omitted, time: .shortened)
+        if calendar.isDateInToday(date) {
+            return "오늘 \(time)"
+        } else if calendar.isDateInTomorrow(date) {
+            return "내일 \(time)"
+        } else {
+            return date.formatted(date: .numeric, time: .shortened)
+        }
+    }
+
+    /// 마감일이 현재 시각보다 지났으면 true — 지난 항목은 빨갛게 표시한다.
+    private func isOverdue(_ date: Date) -> Bool {
+        date < .now
     }
 
     private var errorBinding: Binding<Bool> {
@@ -125,13 +129,6 @@ struct ReminderView: View {
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil } }
         )
-    }
-
-    private func addReminder() {
-        guard !isTitleEmpty else { return }
-        let title = newReminderTitle
-        newReminderTitle = ""
-        Task { await viewModel.add(title: title) }
     }
 }
 

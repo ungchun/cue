@@ -36,10 +36,10 @@ final class ReminderViewModel {
         lists.first { $0.id == selectedListID }
     }
 
-    /// 선택된 리스트에 속한 항목만.
+    /// 선택된 리스트의 **미완료** 항목만. 완료된 항목은 숨긴다.
     var visibleReminders: [Reminder] {
         guard let selectedListID else { return [] }
-        return allReminders.filter { $0.listID == selectedListID }
+        return allReminders.filter { $0.listID == selectedListID && !$0.isCompleted }
     }
 
     /// 화면 진입 시 — 권한을 확보하고 데이터를 적재한다.
