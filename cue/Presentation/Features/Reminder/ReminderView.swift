@@ -10,6 +10,14 @@ import UIKit
 struct ReminderView: View {
     let viewModel: ReminderViewModel
 
+    @State private var newTitle = ""
+    @State private var newMemo = ""
+    @State private var showingDetail = false
+    @FocusState private var focusedField: NewRowField?
+
+    /// 리스트 맨 아래 새 할일 입력 행의 포커스 대상.
+    private enum NewRowField { case title, memo }
+
     var body: some View {
         content
             .navigationTitle("할일")
@@ -33,6 +41,11 @@ struct ReminderView: View {
                 Button("확인", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .sheet(isPresented: $showingDetail) {
+                ReminderDetailSheet(title: $newTitle, memo: $newMemo) { dueDate, includesTime in
+                    saveNewReminder(dueDate: dueDate, includesTime: includesTime)
+                }
             }
     }
 
@@ -64,16 +77,21 @@ struct ReminderView: View {
 
     private var reminderList: some View {
         List {
-            if viewModel.visibleReminders.isEmpty {
-                Text("할 일이 없습니다.")
-                    .font(AppFont.bodyLarge)
-                    .foregroundStyle(AppColor.textSecondary)
-            } else {
-                ForEach(viewModel.visibleReminders) { reminder in
-                    reminderRow(reminder)
-                }
+            ForEach(viewModel.visibleReminders) { reminder in
+                reminderRow(reminder)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task { await viewModel.delete(reminder) }
+                        } label: {
+                            Label("삭제", systemImage: "trash")
+                        }
+                    }
             }
+            newReminderRow
+                .listRowSeparator(.hidden)
         }
+        .listStyle(.plain)
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
@@ -88,22 +106,89 @@ struct ReminderView: View {
                 Task { await viewModel.toggle(reminder) }
             } label: {
                 Image(systemName: "circle")
-                    .foregroundStyle(AppColor.textSecondary)
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(reminder.title)
                     .font(AppFont.bodyLarge)
-                    .foregroundStyle(AppColor.textPrimary)
+                    .foregroundStyle(.primary)
 
                 if let dueDate = reminder.dueDate {
                     Text(dueDateText(dueDate))
                         .font(AppFont.bodySmall)
-                        .foregroundStyle(isOverdue(dueDate) ? AppColor.danger : AppColor.textSecondary)
+                        .foregroundStyle(isOverdue(dueDate) ? Color.red : Color.secondary)
                 }
             }
         }
+    }
+
+    /// 리스트 맨 아래 새 할일 입력 행 — 제목·메모를 직접 입력한다.
+    /// 포커스 시 메모 칸과 ⓘ 버튼이 나타난다. 엔터로 바로 저장하거나, ⓘ로 세부사항 시트를 연다.
+    private var newReminderRow: some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Image(systemName: "circle.dotted")
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                TextField("", text: $newTitle)
+                    .font(AppFont.bodyLarge)
+                    .foregroundStyle(.primary)
+                    .focused($focusedField, equals: .title)
+                    .onSubmit { submitNewReminder() }
+
+                if focusedField != nil {
+                    TextField("메모 추가", text: $newMemo)
+                        .font(AppFont.bodySmall)
+                        .foregroundStyle(.secondary)
+                        .focused($focusedField, equals: .memo)
+                        .onSubmit { submitNewReminder() }
+                }
+            }
+
+            if focusedField != nil {
+                Spacer()
+                Button {
+                    showingDetail = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// 입력 행에서 키보드 엔터로 저장 — 제목·메모만 담아 추가한다.
+    /// 저장 뒤 입력 행을 비우고 제목 칸 포커스를 유지해 연속 입력을 돕는다.
+    private func submitNewReminder() {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let memo = newMemo
+        clearNewRow()
+        focusedField = .title
+        Task { await viewModel.add(title: trimmed, notes: memo) }
+    }
+
+    /// 세부사항 시트 완료 — 제목·메모·마감일을 담아 추가한다.
+    private func saveNewReminder(dueDate: Date?, includesTime: Bool) {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let memo = newMemo
+        clearNewRow()
+        Task {
+            await viewModel.add(
+                title: trimmed, notes: memo,
+                dueDate: dueDate, includesTime: includesTime
+            )
+        }
+    }
+
+    /// 입력 행을 비운다.
+    private func clearNewRow() {
+        newTitle = ""
+        newMemo = ""
     }
 
     /// 마감일 표시 문자열 — 오늘·내일은 단어로, 그 외엔 날짜로.
