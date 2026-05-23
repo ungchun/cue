@@ -8,7 +8,7 @@
 
 ```
 DesignSystem/
-├── Foundation/   색·타이포그래피·간격 토큰
+├── Foundation/   타이포그래피·간격 토큰 (색은 Apple 시스템 컬러 사용)
 └── Components/   커스텀 컴포넌트 (필요할 때만 생성)
 ```
 
@@ -16,8 +16,8 @@ DesignSystem/
 
 뷰를 그릴 때 모든 모드(feat / fix / refactor)가 반드시 지킨다:
 
-1. **Foundation 토큰만 사용.** 색·글꼴·간격은 `AppColor` · `AppFont` · `Spacing`만
-   쓴다. raw 숫자·색 리터럴을 뷰에 직접 입력하는 것은 **절대 금지**.
+1. **색은 Apple 시스템 컬러만.** 폰트는 `AppFont`, 간격은 `Spacing` 토큰만 쓴다.
+   raw 숫자·hex·OKLCH·이름 지은 커스텀 색 리터럴을 뷰에 입력하는 것은 **금지**.
 2. **iOS 퍼스트파티 컴포넌트 우선.** 뷰는 웬만하면 Apple 기본 컴포넌트
    (`List`, `Button`, `NavigationStack`, `Form`, `Label`…)로 그린다.
 3. **커스텀 뷰는 컴포넌트화.** 퍼스트파티로 안 되는 게 진짜 있을 때만 커스텀을 만들되,
@@ -25,22 +25,33 @@ DesignSystem/
    - 그 컴포넌트 단위로 재사용한다 (Feature 안에 일회용 커스텀 뷰를 두지 않는다).
    - ⚠️ **커스텀 컴포넌트를 만들기 전에 반드시 사용자에게 먼저 알리고 합의한다.**
 
-## Foundation — 색 (Color)
+## Foundation — 색 (Apple 시스템 컬러)
 
-색은 **OKLCH로 작성**한다. iOS는 OKLCH 네이티브 미지원이라 `Color.oklch(l, c, h)`가
-sRGB로 변환한다 (`Foundation/Color+OKLCH.swift`).
+자체 색 토큰을 두지 않는다. **SwiftUI가 제공하는 semantic 컬러만** 쓴다.
+이유: iOS 디자인 언어와 자동으로 일치하고, 라이트/다크·Dynamic Type·접근성
+대비 모드를 시스템이 알아서 처리한다.
 
-**2-tier 토큰:**
-
-| Tier | 파일 | 뷰에서 |
+| 용도 | 쓰는 값 | 비고 |
 |---|---|---|
-| Primitive 팔레트 | `ColorPalette` (`neutral50`…, `accent500`…) | ❌ 직접 사용 금지 |
-| Semantic 토큰 | `AppColor` (`background`, `textPrimary`, `accent`…) | ✅ 이것만 사용 |
+| 본문 텍스트 | `.primary` / `Color.primary` | 라이트=검정·다크=흰색 자동 |
+| 보조 텍스트·아이콘 | `.secondary` / `Color.secondary` | 흐린 회색 |
+| 더 흐린 보조 | `.tertiary` | 거의 안 쓰지만 필요할 때 |
+| 강조 (링크·active 상태·체크) | `.tint` / `Color.accentColor` | Assets `AccentColor`가 결정, 미지정 시 시스템 블루 |
+| 오류·경고·파괴 액션 | `Color.red` | 시스템 레드 (다크 자동 대응) |
+| 그 외 의미 색 | `Color.green`, `Color.orange`, `Color.yellow`, … | 모두 시스템 시맨틱 |
 
-- 뷰: `.foregroundStyle(AppColor.textPrimary)`, `.background(AppColor.background)`.
-- 라이트/다크 모드는 `AppColor` 토큰이 `Color.dynamic`으로 자동 해석한다.
-- 팔레트 변경 → `ColorPalette`의 OKLCH 값만 수정하면 앱 전체가 따라온다.
-- ⚠️ 현재 팔레트는 브랜드 색 미정 상태의 placeholder다.
+**원칙:**
+- `.foregroundStyle(.primary)` / `.foregroundStyle(.secondary)` / `.foregroundStyle(.tint)` 형태가 1순위.
+- 삼항 같은 곳에서 ShapeStyle 타입이 안 맞아 컴파일 안 되면 `Color.primary` / `Color.secondary` / `Color.accentColor` / `Color.red`로 통일.
+- 배경·구분선은 가능한 한 시스템이 그리는 그대로 둔다 (`Form`/`List`/`Section`의 기본 그룹 배경, `Divider` 등). 명시적 배경이 필요하면 `Color(.systemBackground)` / `Color(.secondarySystemBackground)` 같은 `UIColor` 시맨틱 래퍼를 쓴다.
+- 투명도 변형(`Color.primary.opacity(0.08)` 같은 미세 하이라이트)은 OK — 다른 raw 색을 새로 만들지 않는 한 시스템 컬러의 파생으로 본다.
+
+**금지:**
+- 자체 색 토큰 enum/struct 정의 (`AppColor`·`ColorPalette` 같은 것 다시 만들지 않는다).
+- hex·OKLCH·RGB 리터럴 (`Color(red: ..., green: ..., blue: ...)`, `Color("#FF00AA")`).
+- Assets에 색 등록 → `Color("MyBlue")` (예외: 앱 전체 accent는 Assets의 `AccentColor` 하나만).
+
+브랜드 색이 정해지면 Assets의 `AccentColor` 하나만 갱신 → `.tint`로 쓰는 모든 곳이 따라온다.
 
 ## Foundation — 타이포그래피 (AppFont)
 
@@ -59,10 +70,11 @@ Apple 시스템 텍스트 스타일 위에 의미 이름을 매핑 → Dynamic T
 
 - 위치: `DesignSystem/Components/`. 파일 1개 = 컴포넌트 1개.
 - 생성 조건: 퍼스트파티로 불가능 + 재사용 가치 있음 + **사용자 합의 완료**.
-- 컴포넌트도 내부에서 Foundation 토큰만 쓴다.
+- 컴포넌트도 내부에서 시스템 컬러 + `AppFont`/`Spacing`만 쓴다.
 
 ## 토큰·컴포넌트 추가하기
 
-- 새 색 → `ColorPalette` primitive 추가 → `AppColor` semantic 추가.
 - 새 글꼴 → `AppFont`에 추가 (반드시 시스템 텍스트 스타일 기반).
+- 새 간격 → `Spacing`에 추가 (4/8pt 그리드 유지).
+- 새 색은 **추가하지 않는다** — 시스템 시맨틱 컬러로 표현 못 하는 의미가 생기면 먼저 사용자와 합의.
 - 새 컴포넌트 → **사용자 합의 후** `Components/`에 추가.

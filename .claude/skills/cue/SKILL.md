@@ -21,7 +21,8 @@ cue의 모든 코드 변경을 TDD 사이클로 조율한다. 진입점은 `/cue
    로직엔 테스트를 작성하되, 빌드·테스트 통과 여부를 작업 중 사용자에게 되묻지
    않는다. 작성까지가 하네스의 몫. 검증은 push 직전에 모아서 한다 (→ Step 5).
 4. **디자인 시스템 규칙** → `docs/design-system.md`
-   - 뷰는 Foundation 토큰(`AppColor`/`AppFont`/`Spacing`)만. raw 값 직접 입력 금지.
+   - 색은 Apple 시스템 컬러(`.primary`/`.secondary`/`.tint`/`Color.red` 등)만 — 자체 색 토큰·hex·OKLCH·RGB 리터럴 금지.
+   - 폰트는 `AppFont`, 간격은 `Spacing` 토큰만 — 고정 숫자 직접 입력 금지.
    - iOS 퍼스트파티 컴포넌트 우선.
    - 커스텀 컴포넌트는 **만들기 전 반드시 사용자에게 알리고 합의**한다.
 5. **의존성 규칙** — `Domain`은 `SwiftUI`·`SwiftData`를 모른다. → `ARCHITECTURE.md`
