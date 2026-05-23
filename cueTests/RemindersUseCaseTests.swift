@@ -3,6 +3,7 @@
 //  cueTests
 //
 
+import Foundation
 import Testing
 @testable import cue
 
@@ -100,5 +101,99 @@ struct RemindersUseCaseTests {
         await #expect(throws: DomainError.self) {
             try await AddReminderUseCase(repository: repository)(title: "   ", listID: "L1")
         }
+    }
+
+    @Test func addReminderStoresNotes() async throws {
+        let repository = makeRepository()
+
+        try await AddReminderUseCase(repository: repository)(
+            title: "장보기", notes: "우유 사기", listID: "L1"
+        )
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.first?.notes == "우유 사기")
+    }
+
+    @Test func addReminderWithBlankNotesStoresNil() async throws {
+        let repository = makeRepository()
+
+        try await AddReminderUseCase(repository: repository)(
+            title: "장보기", notes: "   ", listID: "L1"
+        )
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.first?.notes == nil)
+    }
+
+    @Test func updateReminderChangesTitleAndNotes() async throws {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1", title: "옛 제목")])
+
+        try await UpdateReminderUseCase(repository: repository)(
+            reminderID: "R1", title: "새 제목", notes: "새 메모"
+        )
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.first?.title == "새 제목")
+        #expect(reminders.first?.notes == "새 메모")
+    }
+
+    @Test func updateReminderTrimsTitle() async throws {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1")])
+
+        try await UpdateReminderUseCase(repository: repository)(
+            reminderID: "R1", title: "  공백  ", notes: nil
+        )
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.first?.title == "공백")
+    }
+
+    @Test func updateReminderWithBlankTitleThrows() async {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1")])
+
+        await #expect(throws: DomainError.self) {
+            try await UpdateReminderUseCase(repository: repository)(
+                reminderID: "R1", title: " ", notes: nil
+            )
+        }
+    }
+
+    @Test func updateReminderWithMissingIDThrows() async {
+        let repository = makeRepository()
+
+        await #expect(throws: DomainError.self) {
+            try await UpdateReminderUseCase(repository: repository)(
+                reminderID: "없는ID", title: "제목", notes: nil
+            )
+        }
+    }
+
+    @Test func deleteReminderRemovesItem() async throws {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1")])
+
+        try await DeleteReminderUseCase(repository: repository)(reminderID: "R1")
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.isEmpty)
+    }
+
+    @Test func deleteReminderWithMissingIDThrows() async {
+        let repository = makeRepository()
+
+        await #expect(throws: DomainError.self) {
+            try await DeleteReminderUseCase(repository: repository)(reminderID: "없는ID")
+        }
+    }
+
+    @Test func addReminderStoresDueDate() async throws {
+        let repository = makeRepository()
+        let due = Date(timeIntervalSince1970: 1_700_000_000)
+
+        try await AddReminderUseCase(repository: repository)(
+            title: "마감 있는 일", dueDate: due, includesTime: true, listID: "L1"
+        )
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.first?.dueDate == due)
     }
 }

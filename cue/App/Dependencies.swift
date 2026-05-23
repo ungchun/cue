@@ -17,6 +17,8 @@ struct Dependencies: Sendable {
     var fetchReminders: FetchRemindersUseCase
     var toggleReminderCompletion: ToggleReminderCompletionUseCase
     var addReminder: AddReminderUseCase
+    var updateReminder: UpdateReminderUseCase
+    var deleteReminder: DeleteReminderUseCase
 }
 
 extension EnvironmentValues {
@@ -57,7 +59,9 @@ extension Dependencies {
             fetchReminderLists: FetchReminderListsUseCase(repository: remindersRepository),
             fetchReminders: FetchRemindersUseCase(repository: remindersRepository),
             toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
-            addReminder: AddReminderUseCase(repository: remindersRepository)
+            addReminder: AddReminderUseCase(repository: remindersRepository),
+            updateReminder: UpdateReminderUseCase(repository: remindersRepository),
+            deleteReminder: DeleteReminderUseCase(repository: remindersRepository)
         )
     }
 }

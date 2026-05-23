@@ -13,11 +13,23 @@ struct AddReminderUseCase: Sendable {
         self.repository = repository
     }
 
-    func callAsFunction(title: String, listID: String) async throws {
+    func callAsFunction(
+        title: String,
+        notes: String? = nil,
+        dueDate: Date? = nil,
+        includesTime: Bool = false,
+        listID: String
+    ) async throws {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw DomainError.validation("제목을 입력해 주세요.")
         }
-        try await repository.addReminder(title: trimmed, toListID: listID)
+        try await repository.addReminder(
+            title: trimmed,
+            notes: ReminderNotes.normalized(notes),
+            dueDate: dueDate,
+            includesTime: includesTime,
+            toListID: listID
+        )
     }
 }

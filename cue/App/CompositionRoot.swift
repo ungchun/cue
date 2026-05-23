@@ -26,7 +26,9 @@ struct CompositionRoot {
             fetchReminderLists: FetchReminderListsUseCase(repository: remindersRepository),
             fetchReminders: FetchRemindersUseCase(repository: remindersRepository),
             toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
-            addReminder: AddReminderUseCase(repository: remindersRepository)
+            addReminder: AddReminderUseCase(repository: remindersRepository),
+            updateReminder: UpdateReminderUseCase(repository: remindersRepository),
+            deleteReminder: DeleteReminderUseCase(repository: remindersRepository)
         )
     }
 }

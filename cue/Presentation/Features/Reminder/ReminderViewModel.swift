@@ -15,6 +15,8 @@ final class ReminderViewModel {
     private let fetchRemindersUseCase: FetchRemindersUseCase
     private let toggleCompletionUseCase: ToggleReminderCompletionUseCase
     private let addReminderUseCase: AddReminderUseCase
+    private let updateReminderUseCase: UpdateReminderUseCase
+    private let deleteReminderUseCase: DeleteReminderUseCase
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
@@ -29,6 +31,8 @@ final class ReminderViewModel {
         self.fetchRemindersUseCase = dependencies.fetchReminders
         self.toggleCompletionUseCase = dependencies.toggleReminderCompletion
         self.addReminderUseCase = dependencies.addReminder
+        self.updateReminderUseCase = dependencies.updateReminder
+        self.deleteReminderUseCase = dependencies.deleteReminder
     }
 
     /// 현재 선택된 리스트.
@@ -77,13 +81,44 @@ final class ReminderViewModel {
         }
     }
 
-    func add(title: String) async {
+    func add(
+        title: String,
+        notes: String? = nil,
+        dueDate: Date? = nil,
+        includesTime: Bool = false
+    ) async {
         guard let selectedListID else {
             errorMessage = "먼저 리스트를 선택해 주세요."
             return
         }
         do {
-            try await addReminderUseCase(title: title, listID: selectedListID)
+            try await addReminderUseCase(
+                title: title,
+                notes: notes,
+                dueDate: dueDate,
+                includesTime: includesTime,
+                listID: selectedListID
+            )
+            allReminders = try await fetchRemindersUseCase()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 기존 항목의 제목·메모를 수정한다.
+    func update(reminderID: String, title: String, notes: String?) async {
+        do {
+            try await updateReminderUseCase(reminderID: reminderID, title: title, notes: notes)
+            allReminders = try await fetchRemindersUseCase()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 항목을 삭제한다.
+    func delete(_ reminder: Reminder) async {
+        do {
+            try await deleteReminderUseCase(reminderID: reminder.id)
             allReminders = try await fetchRemindersUseCase()
         } catch {
             errorMessage = error.localizedDescription

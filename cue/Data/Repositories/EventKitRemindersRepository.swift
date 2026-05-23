@@ -53,14 +53,48 @@ actor EventKitRemindersRepository: RemindersRepository {
         try store.save(reminder, commit: true)
     }
 
-    func addReminder(title: String, toListID listID: String) async throws {
+    func addReminder(
+        title: String,
+        notes: String?,
+        dueDate: Date?,
+        includesTime: Bool,
+        toListID listID: String
+    ) async throws {
         guard let calendar = store.calendars(for: .reminder)
             .first(where: { $0.calendarIdentifier == listID }) else {
             throw DomainError.notFound
         }
         let reminder = EKReminder(eventStore: store)
         reminder.title = title
+        reminder.notes = notes
         reminder.calendar = calendar
+        if let dueDate {
+            // 시간이 없으면 [년·월·일]만 — EventKit은 이를 "종일" 마감으로 본다.
+            let fields: Set<Calendar.Component> = includesTime
+                ? [.year, .month, .day, .hour, .minute]
+                : [.year, .month, .day]
+            reminder.dueDateComponents = Calendar.current.dateComponents(fields, from: dueDate)
+            // 마감일만으로는 알림이 울리지 않는다 — 시간이 있으면 알람을 함께 단다.
+            if includesTime {
+                reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
+            }
+        }
         try store.save(reminder, commit: true)
+    }
+
+    func updateReminder(reminderID: String, title: String, notes: String?) async throws {
+        guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
+            throw DomainError.notFound
+        }
+        reminder.title = title
+        reminder.notes = notes
+        try store.save(reminder, commit: true)
+    }
+
+    func deleteReminder(reminderID: String) async throws {
+        guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
+            throw DomainError.notFound
+        }
+        try store.remove(reminder, commit: true)
     }
 }

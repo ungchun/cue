@@ -3,6 +3,7 @@
 //  cueTests
 //
 
+import Foundation
 import Testing
 @testable import cue
 
@@ -30,7 +31,9 @@ struct ReminderViewModelTests {
             fetchReminderLists: FetchReminderListsUseCase(repository: remindersRepository),
             fetchReminders: FetchRemindersUseCase(repository: remindersRepository),
             toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
-            addReminder: AddReminderUseCase(repository: remindersRepository)
+            addReminder: AddReminderUseCase(repository: remindersRepository),
+            updateReminder: UpdateReminderUseCase(repository: remindersRepository),
+            deleteReminder: DeleteReminderUseCase(repository: remindersRepository)
         )
     }
 
@@ -133,5 +136,49 @@ struct ReminderViewModelTests {
         await viewModel.add(title: "   ")
 
         #expect(viewModel.errorMessage != nil)
+    }
+
+    @Test func addStoresNotes() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
+        await viewModel.onAppear()
+
+        await viewModel.add(title: "장보기", notes: "우유 사기")
+
+        #expect(viewModel.visibleReminders.first { $0.title == "장보기" }?.notes == "우유 사기")
+    }
+
+    @Test func updateChangesTitleAndNotes() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [reminder(id: "1", title: "옛 제목", listID: "A")]
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.update(reminderID: "1", title: "새 제목", notes: "새 메모")
+
+        #expect(viewModel.visibleReminders.first?.title == "새 제목")
+        #expect(viewModel.visibleReminders.first?.notes == "새 메모")
+    }
+
+    @Test func addStoresDueDate() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
+        await viewModel.onAppear()
+        let due = Date(timeIntervalSince1970: 1_700_000_000)
+
+        await viewModel.add(title: "마감", dueDate: due, includesTime: true)
+
+        #expect(viewModel.visibleReminders.first { $0.title == "마감" }?.dueDate == due)
+    }
+
+    @Test func deleteRemovesReminder() async {
+        let target = reminder(id: "1", listID: "A")
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA], reminders: [target]
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.delete(target)
+
+        #expect(viewModel.visibleReminders.isEmpty)
     }
 }
