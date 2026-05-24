@@ -7,22 +7,38 @@ import SwiftUI
 
 /// 미리 알림 세부사항 입력 시트 — iOS "미리 알림" 세부사항 화면을 따른다.
 ///
-/// 제목·메모는 상위 입력 행과 바인딩을 공유하고, 마감일(날짜·시간)은 시트 안에서
-/// 고른다. 완료를 누르면 `onComplete(마감일, 시간포함여부)`로 값을 넘기고 닫힌다.
+/// 생성·수정 양쪽에서 재사용한다. 초기값은 `init` 파라미터로 받고, 시트 내부에서
+/// `@State`로 편집한다. 완료 시 `Draft`로 값을 넘겨주고 닫힌다 — 호출자가 add/update
+/// 중 어느 쪽을 부를지 결정한다. X(취소)는 변경을 전부 버린다.
 ///
 /// 날짜·시간 인라인 피커는 **한 번에 하나만** 펼친다 (iOS 미리 알림과 동일).
 /// 토글이 켜진 행을 다시 탭하면 펼침/접힘이 바뀐다.
 struct ReminderDetailSheet: View {
-    @Binding var title: String
-    @Binding var memo: String
-    let onComplete: (_ dueDate: Date?, _ includesTime: Bool) -> Void
+    /// 완료 시 호출자에게 전달되는 편집 결과.
+    struct Draft {
+        var title: String
+        var memo: String
+        var dueDate: Date?
+        var includesTime: Bool
+    }
 
-    @State private var hasDate = false
-    @State private var hasTime = false
-    @State private var dueDate = Date()
+    @State private var title: String
+    @State private var memo: String
+    @State private var hasDate: Bool
+    @State private var hasTime: Bool
+    @State private var dueDate: Date
     @State private var expanded: PickerKind?
     @State private var pressedKind: PickerKind?
+    @State private var showingDiscardConfirmation = false
     @Environment(\.dismiss) private var dismiss
+
+    private let onComplete: (Draft) -> Void
+
+    // 변경사항 감지용 초기값 스냅샷 — X 누를 때 hasChanges 비교.
+    private let initialTitle: String
+    private let initialMemo: String
+    private let initialDueDate: Date?
+    private let initialIncludesTime: Bool
 
     /// 어떤 인라인 피커가 펼쳐졌는지 — 둘 다 켜져도 동시에 펼치진 않는다.
     private enum PickerKind { case date, time }
@@ -44,14 +60,48 @@ struct ReminderDetailSheet: View {
     /// DatePicker·서브타이틀의 오전/오후·요일을 일관되게 한국어로 표시하기 위해 고정한다.
     private let koLocale = Locale(identifier: "ko_KR")
 
+    /// 생성·수정 양쪽을 한 init으로 다룬다 — 수정은 기존 값을 넣고, 생성은 기본값을 쓴다.
+    init(
+        title: String = "",
+        memo: String = "",
+        dueDate: Date? = nil,
+        includesTime: Bool = false,
+        onComplete: @escaping (Draft) -> Void
+    ) {
+        _title = State(initialValue: title)
+        _memo = State(initialValue: memo)
+        _hasDate = State(initialValue: dueDate != nil)
+        _hasTime = State(initialValue: dueDate != nil && includesTime)
+        _dueDate = State(initialValue: dueDate ?? Date())
+        // 처음 들어왔을 때 펼침은 닫아둔다 — iOS 미리알림과 동일하게 사용자가 탭해서 펼친다.
+        _expanded = State(initialValue: nil)
+        self.initialTitle = title
+        self.initialMemo = memo
+        self.initialDueDate = dueDate
+        self.initialIncludesTime = includesTime
+        self.onComplete = onComplete
+    }
+
+    /// 사용자가 시트에 들어와서 한 글자라도 바꿨는지 — X 누를 때 확인 다이얼로그 띄울지 판단.
+    private var hasChanges: Bool {
+        if title != initialTitle { return true }
+        if memo != initialMemo { return true }
+        let currentDate: Date? = hasDate ? dueDate : nil
+        if currentDate != initialDueDate { return true }
+        if hasTime != initialIncludesTime { return true }
+        return false
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("제목", text: $title)
+                    // 시트 안엔 leading 아이콘이 없어 axis: .vertical TextField 정렬 이슈가 없음.
+                    // Enter는 줄바꿈으로 두고, commit은 툴바 ✓ 버튼으로 명시.
+                    TextField("제목", text: $title, axis: .vertical)
                         .font(AppFont.titleLarge)
                         .foregroundStyle(.primary)
-                    TextField("메모", text: $memo)
+                    TextField("메모", text: $memo, axis: .vertical)
                         .font(AppFont.bodyLarge)
                         .foregroundStyle(.primary)
                 }
@@ -98,18 +148,37 @@ struct ReminderDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    // 회색 Liquid Glass capsule + X 심볼 — iOS 26 toolbar 기본 chrome.
+                    // `Label` + `.labelStyle(.iconOnly)`로 VoiceOver title("닫기")까지 보장.
                     Button {
-                        dismiss()
+                        if hasChanges {
+                            showingDiscardConfirmation = true
+                        } else {
+                            dismiss()
+                        }
                     } label: {
-                        Image(systemName: "xmark")
+                        Label("닫기", systemImage: "xmark")
+                            .labelStyle(.iconOnly)
+                    }
+                    // X 버튼을 anchor 삼는 popover. iPhone(compact width)에선 기본이 sheet라
+                    // presentationCompactAdaptation(.popover)로 popover 강제.
+                    .popover(isPresented: $showingDiscardConfirmation) {
+                        discardPopover
+                            .presentationCompactAdaptation(.popover)
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
+                    // 파란 Liquid Glass capsule + 흰 체크 — `.glassProminent` 스타일로 prominent.
+                    // capsule은 .tint(AccentColor) 따라간다. dark mode에서 label color가 자동으로
+                    // 검은색이 되는 이슈 우회를 위해 `Label` + `.foregroundStyle(.white)` 명시.
                     Button {
                         complete()
                     } label: {
-                        Image(systemName: "checkmark")
+                        Label("저장", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
+                            .foregroundStyle(.white)
                     }
+                    .buttonStyle(.glassProminent)
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
@@ -117,9 +186,38 @@ struct ReminderDetailSheet: View {
         }
     }
 
+    /// X 버튼 popover 컨텐츠 — 제목(leading, 명시적 줄바꿈) + destructive 버튼. 외부 탭으로 dismiss(=취소).
+    /// iOS 시스템 알림 크기 — 제목 `.headline`, 버튼 iOS 26 `.glass` capsule + 빨간 텍스트 명시.
+    private var discardPopover: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("이 변경 사항을 폐기\n하겠습니까?")
+                .font(AppFont.headline)
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(role: .destructive) {
+                showingDiscardConfirmation = false
+                dismiss()
+            } label: {
+                // 회색 system fill capsule + 빨간 destructive 텍스트 — iOS native alert와 동일.
+                // `.glass` style은 fill이 너무 투명해 직접 background로 명시.
+                Text("변경 사항 폐기")
+                    .font(AppFont.bodyLarge.weight(.medium))
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.md)
+                    .background(Color(.tertiarySystemFill), in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(Spacing.lg)
+        // iPhone popover는 content ideal size를 작게 잡아 minWidth로 명시적 강제 — 화면 ~60% 정도.
+        .frame(minWidth: 240)
+    }
+
     /// 날짜·시간 공통 토글 행 — 아이콘 + 라벨(+서브타이틀) + 트레일링 토글.
     /// 토글이 켜진 상태에서 라벨 영역을 탭하면 해당 피커의 펼침이 토글된다.
-    /// (Form 행 안에서 `Button`은 제스처가 Toggle과 충돌하므로 `.onTapGesture`를 쓴다.)
     private func toggleRow(
         kind: PickerKind,
         label: String,
@@ -141,8 +239,9 @@ struct ReminderDetailSheet: View {
                         Text(label)
                             .foregroundStyle(.primary)
                         if let subtitle {
+                            // 서브타이틀은 iOS 미리알림과 동일하게 캡션 크기 — 라벨보다 확연히 작게.
                             Text(subtitle)
-                                .font(AppFont.bodySmall)
+                                .font(AppFont.caption)
                                 .foregroundStyle(.tint)
                         }
                     }
@@ -157,7 +256,7 @@ struct ReminderDetailSheet: View {
                 .labelsHidden()
         }
         // 셀 전체에 호버 느낌 — `listRowBackground`는 행 바닥 전체(좌우 끝까지) 채운다.
-        // 단, 안 눌렸을 때는 `nil`을 넘겨야 시스템 그룹 박스 배경이 유지된다 (Color.clear는 박스를 덮어버림).
+        // 단, 안 눌렸을 때는 `nil`을 넘겨야 시스템 그룹 박스 배경이 유지된다.
         .listRowBackground(pressHighlight(for: kind))
     }
 
@@ -224,11 +323,16 @@ struct ReminderDetailSheet: View {
     }
 
     private func complete() {
-        onComplete(hasDate ? dueDate : nil, hasTime)
+        onComplete(Draft(
+            title: title,
+            memo: memo,
+            dueDate: hasDate ? dueDate : nil,
+            includesTime: hasTime
+        ))
         dismiss()
     }
 }
 
 #Preview {
-    ReminderDetailSheet(title: .constant("장보기"), memo: .constant("")) { _, _ in }
+    ReminderDetailSheet(title: "장보기", memo: "") { _ in }
 }
