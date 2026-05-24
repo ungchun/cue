@@ -19,6 +19,9 @@ struct Dependencies: Sendable {
     var addReminder: AddReminderUseCase
     var updateReminder: UpdateReminderUseCase
     var deleteReminder: DeleteReminderUseCase
+    var addReminderList: AddReminderListUseCase
+    var updateReminderList: UpdateReminderListUseCase
+    var deleteReminderList: DeleteReminderListUseCase
 }
 
 extension EnvironmentValues {
@@ -38,8 +41,9 @@ extension Dependencies {
         let remindersRepository = InMemoryRemindersRepository(
             access: .granted,
             lists: [
-                ReminderList(id: workListID, title: "회사", colorHex: nil),
-                ReminderList(id: personalListID, title: "개인", colorHex: nil),
+                // 프리뷰용 색 — 실 EventKit 색 대신 iOS 미리알림 기본 팔레트와 비슷한 값.
+                ReminderList(id: workListID, title: "회사", colorHex: "#FF9500"),
+                ReminderList(id: personalListID, title: "개인", colorHex: "#34C759"),
             ],
             reminders: [
                 Reminder(id: "p1", title: "주간 보고서 작성", isCompleted: false,
@@ -61,7 +65,10 @@ extension Dependencies {
             toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
             addReminder: AddReminderUseCase(repository: remindersRepository),
             updateReminder: UpdateReminderUseCase(repository: remindersRepository),
-            deleteReminder: DeleteReminderUseCase(repository: remindersRepository)
+            deleteReminder: DeleteReminderUseCase(repository: remindersRepository),
+            addReminderList: AddReminderListUseCase(repository: remindersRepository),
+            updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
+            deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository)
         )
     }
 }

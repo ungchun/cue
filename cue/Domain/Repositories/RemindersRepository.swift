@@ -39,4 +39,12 @@ protocol RemindersRepository: Sendable {
     ) async throws
     /// 항목을 삭제한다.
     func deleteReminder(reminderID: String) async throws
+
+    /// 새 리스트(섹션)를 만든다. 만들어진 리스트의 ID를 돌려준다 — 호출자가 곧장 선택하도록.
+    /// `colorHex`가 nil이면 시스템 기본 색.
+    func addList(title: String, colorHex: String?) async throws -> String
+    /// 기존 리스트의 이름·색을 갱신한다.
+    func updateList(listID: String, title: String, colorHex: String?) async throws
+    /// 리스트를 삭제한다 — 안에 있는 모든 항목도 함께 제거된다 (EventKit 동작).
+    func deleteList(listID: String) async throws
 }

@@ -88,4 +88,30 @@ actor InMemoryRemindersRepository: RemindersRepository {
         }
         reminders.remove(at: index)
     }
+
+    func addList(title: String, colorHex: String?) async throws -> String {
+        let id = UUID().uuidString
+        lists.append(ReminderList(id: id, title: title, colorHex: colorHex))
+        return id
+    }
+
+    func updateList(listID: String, title: String, colorHex: String?) async throws {
+        guard let index = lists.firstIndex(where: { $0.id == listID }) else {
+            throw DomainError.notFound
+        }
+        lists[index].title = title
+        // EventKit 구현과 같은 의미론: nil이면 색을 건드리지 않음.
+        if let colorHex {
+            lists[index].colorHex = colorHex
+        }
+    }
+
+    func deleteList(listID: String) async throws {
+        guard let index = lists.firstIndex(where: { $0.id == listID }) else {
+            throw DomainError.notFound
+        }
+        lists.remove(at: index)
+        // EventKit 동작과 동일하게 리스트 안의 항목도 함께 제거.
+        reminders.removeAll { $0.listID == listID }
+    }
 }

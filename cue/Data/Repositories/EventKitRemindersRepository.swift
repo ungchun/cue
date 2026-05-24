@@ -118,4 +118,70 @@ actor EventKitRemindersRepository: RemindersRepository {
         }
         try store.remove(reminder, commit: true)
     }
+
+    // MARK: - Lists (calendars)
+
+    func addList(title: String, colorHex: String?) async throws -> String {
+        let calendar = EKCalendar(for: .reminder, eventStore: store)
+        calendar.title = title
+        if let cgColor = Self.cgColor(fromHex: colorHex) {
+            calendar.cgColor = cgColor
+        }
+        // 합의된 정책: iCloud 우선, 없으면 사용자의 기본 미리알림 리스트 source로 fallback,
+        // 그것도 없으면 reminders를 지원하는 첫 source.
+        guard let source = pickListSource() else {
+            throw DomainError.validation("리스트를 만들 수 있는 저장소가 없습니다.")
+        }
+        calendar.source = source
+        try store.saveCalendar(calendar, commit: true)
+        return calendar.calendarIdentifier
+    }
+
+    func updateList(listID: String, title: String, colorHex: String?) async throws {
+        guard let calendar = store.calendar(withIdentifier: listID) else {
+            throw DomainError.notFound
+        }
+        calendar.title = title
+        // colorHex가 nil이면 색을 건드리지 않는다 — "비우기"가 아니라 "변경 없음".
+        if let cgColor = Self.cgColor(fromHex: colorHex) {
+            calendar.cgColor = cgColor
+        }
+        try store.saveCalendar(calendar, commit: true)
+    }
+
+    func deleteList(listID: String) async throws {
+        guard let calendar = store.calendar(withIdentifier: listID) else {
+            throw DomainError.notFound
+        }
+        try store.removeCalendar(calendar, commit: true)
+    }
+
+    /// 새 리스트가 들어갈 EKSource — iCloud(CalDAV with "icloud" in title) → 사용자 기본
+    /// 미리알림 리스트의 source → reminders 지원 첫 source 순으로 고른다.
+    private func pickListSource() -> EKSource? {
+        let sources = store.sources
+        if let iCloud = sources.first(where: {
+            $0.sourceType == .calDAV && $0.title.lowercased().contains("icloud")
+        }) {
+            return iCloud
+        }
+        if let defaultSource = store.defaultCalendarForNewReminders()?.source {
+            return defaultSource
+        }
+        return sources.first { source in
+            !source.calendars(for: .reminder).isEmpty
+        } ?? sources.first
+    }
+
+    /// "#RRGGBB" → sRGB `CGColor`. 잘못된 포맷이면 nil.
+    /// Mapper의 hex 추출과 역방향 대칭 — sRGB 가정.
+    private static func cgColor(fromHex hex: String?) -> CGColor? {
+        guard var s = hex else { return nil }
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6, let v = UInt32(s, radix: 16) else { return nil }
+        let r = CGFloat((v >> 16) & 0xff) / 255
+        let g = CGFloat((v >> 8) & 0xff) / 255
+        let b = CGFloat(v & 0xff) / 255
+        return CGColor(srgbRed: r, green: g, blue: b, alpha: 1)
+    }
 }

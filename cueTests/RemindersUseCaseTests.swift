@@ -210,4 +210,98 @@ struct RemindersUseCaseTests {
         let reminders = try await FetchRemindersUseCase(repository: repository)()
         #expect(reminders.first?.dueDate == due)
     }
+
+    // MARK: - List CRUD
+
+    @Test func addReminderListReturnsNewID() async throws {
+        let repository = makeRepository()
+
+        let newID = try await AddReminderListUseCase(repository: repository)(
+            title: "사이드 프로젝트", colorHex: "#FF9500"
+        )
+
+        let lists = try await FetchReminderListsUseCase(repository: repository)()
+        #expect(lists.contains { $0.id == newID && $0.title == "사이드 프로젝트" })
+    }
+
+    @Test func addReminderListTrimsTitle() async throws {
+        let repository = makeRepository()
+
+        let newID = try await AddReminderListUseCase(repository: repository)(
+            title: "  여백  ", colorHex: nil
+        )
+
+        let lists = try await FetchReminderListsUseCase(repository: repository)()
+        #expect(lists.first { $0.id == newID }?.title == "여백")
+    }
+
+    @Test func addReminderListThrowsForBlankTitle() async {
+        let repository = makeRepository()
+
+        await #expect(throws: (any Error).self) {
+            _ = try await AddReminderListUseCase(repository: repository)(
+                title: "   ", colorHex: nil
+            )
+        }
+    }
+
+    @Test func updateReminderListChangesTitleAndColor() async throws {
+        let repository = makeRepository()
+
+        try await UpdateReminderListUseCase(repository: repository)(
+            listID: "L1", title: "새 이름", colorHex: "#34C759"
+        )
+
+        let lists = try await FetchReminderListsUseCase(repository: repository)()
+        let updated = lists.first { $0.id == "L1" }
+        #expect(updated?.title == "새 이름")
+        #expect(updated?.colorHex == "#34C759")
+    }
+
+    @Test func updateReminderListKeepsColorWhenHexIsNil() async throws {
+        let repository = InMemoryRemindersRepository(
+            access: .granted,
+            lists: [ReminderList(id: "L1", title: "원본", colorHex: "#FF9500")]
+        )
+
+        try await UpdateReminderListUseCase(repository: repository)(
+            listID: "L1", title: "이름만 변경", colorHex: nil
+        )
+
+        let lists = try await FetchReminderListsUseCase(repository: repository)()
+        #expect(lists.first?.colorHex == "#FF9500")
+    }
+
+    @Test func updateReminderListThrowsForMissingID() async {
+        let repository = makeRepository()
+
+        await #expect(throws: (any Error).self) {
+            try await UpdateReminderListUseCase(repository: repository)(
+                listID: "없는ID", title: "x", colorHex: nil
+            )
+        }
+    }
+
+    @Test func deleteReminderListRemovesListAndItsReminders() async throws {
+        let repository = makeRepository(reminders: [
+            makeReminder(id: "R1"),
+            makeReminder(id: "R2", title: "다른 리스트"),
+        ])
+
+        try await DeleteReminderListUseCase(repository: repository)(listID: "L1")
+
+        let lists = try await FetchReminderListsUseCase(repository: repository)()
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(lists.isEmpty)
+        // L1에 속한 항목들도 함께 사라짐 — EventKit 동작과 동일.
+        #expect(reminders.isEmpty)
+    }
+
+    @Test func deleteReminderListThrowsForMissingID() async {
+        let repository = makeRepository()
+
+        await #expect(throws: (any Error).self) {
+            try await DeleteReminderListUseCase(repository: repository)(listID: "없는ID")
+        }
+    }
 }

@@ -28,7 +28,10 @@ struct CompositionRoot {
             toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
             addReminder: AddReminderUseCase(repository: remindersRepository),
             updateReminder: UpdateReminderUseCase(repository: remindersRepository),
-            deleteReminder: DeleteReminderUseCase(repository: remindersRepository)
+            deleteReminder: DeleteReminderUseCase(repository: remindersRepository),
+            addReminderList: AddReminderListUseCase(repository: remindersRepository),
+            updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
+            deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository)
         )
     }
 }

@@ -17,6 +17,9 @@ final class ReminderViewModel {
     private let addReminderUseCase: AddReminderUseCase
     private let updateReminderUseCase: UpdateReminderUseCase
     private let deleteReminderUseCase: DeleteReminderUseCase
+    private let addReminderListUseCase: AddReminderListUseCase
+    private let updateReminderListUseCase: UpdateReminderListUseCase
+    private let deleteReminderListUseCase: DeleteReminderListUseCase
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
@@ -35,6 +38,9 @@ final class ReminderViewModel {
         self.addReminderUseCase = dependencies.addReminder
         self.updateReminderUseCase = dependencies.updateReminder
         self.deleteReminderUseCase = dependencies.deleteReminder
+        self.addReminderListUseCase = dependencies.addReminderList
+        self.updateReminderListUseCase = dependencies.updateReminderList
+        self.deleteReminderListUseCase = dependencies.deleteReminderList
     }
 
     /// 현재 선택된 리스트.
@@ -147,6 +153,42 @@ final class ReminderViewModel {
         do {
             try await deleteReminderUseCase(reminderID: reminder.id)
             allReminders = try await fetchRemindersUseCase()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 새 리스트 생성 — 만들고 나서 그 리스트로 자동 전환한다.
+    func addList(title: String, colorHex: String?) async {
+        do {
+            let newID = try await addReminderListUseCase(title: title, colorHex: colorHex)
+            lists = try await fetchListsUseCase()
+            selectedListID = newID
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 기존 리스트의 이름·색을 수정.
+    func updateList(listID: String, title: String, colorHex: String?) async {
+        do {
+            try await updateReminderListUseCase(listID: listID, title: title, colorHex: colorHex)
+            lists = try await fetchListsUseCase()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 리스트 삭제 — 안에 있는 모든 항목도 함께 사라진다.
+    /// 삭제 후 selectedListID는 남은 첫 리스트로(없으면 nil) 옮긴다.
+    func deleteList(listID: String) async {
+        do {
+            try await deleteReminderListUseCase(listID: listID)
+            lists = try await fetchListsUseCase()
+            allReminders = try await fetchRemindersUseCase()
+            if selectedListID == listID {
+                selectedListID = lists.first?.id
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

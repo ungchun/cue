@@ -33,7 +33,10 @@ struct ReminderViewModelTests {
             toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: remindersRepository),
             addReminder: AddReminderUseCase(repository: remindersRepository),
             updateReminder: UpdateReminderUseCase(repository: remindersRepository),
-            deleteReminder: DeleteReminderUseCase(repository: remindersRepository)
+            deleteReminder: DeleteReminderUseCase(repository: remindersRepository),
+            addReminderList: AddReminderListUseCase(repository: remindersRepository),
+            updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
+            deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository)
         )
     }
 
@@ -198,5 +201,70 @@ struct ReminderViewModelTests {
         await viewModel.delete(target)
 
         #expect(viewModel.visibleReminders.isEmpty)
+    }
+
+    // MARK: - List CRUD
+
+    @Test func addListCreatesAndSelectsNewList() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
+        await viewModel.onAppear()
+
+        await viewModel.addList(title: "사이드 프로젝트", colorHex: "#FF9500")
+
+        #expect(viewModel.lists.contains { $0.title == "사이드 프로젝트" })
+        // 새로 만든 리스트로 자동 전환.
+        #expect(viewModel.selectedList?.title == "사이드 프로젝트")
+    }
+
+    @Test func addListWithBlankTitleSurfacesError() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
+        await viewModel.onAppear()
+
+        await viewModel.addList(title: "   ", colorHex: nil)
+
+        #expect(viewModel.errorMessage != nil)
+        // selected는 그대로.
+        #expect(viewModel.selectedListID == "A")
+    }
+
+    @Test func updateListChangesTitleAndColor() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
+        await viewModel.onAppear()
+
+        await viewModel.updateList(listID: "A", title: "새 이름", colorHex: "#34C759")
+
+        let updated = viewModel.lists.first { $0.id == "A" }
+        #expect(updated?.title == "새 이름")
+        #expect(updated?.colorHex == "#34C759")
+    }
+
+    @Test func deleteListRemovesItAndMovesSelection() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [reminder(id: "1", listID: "A")]
+        ))
+        await viewModel.onAppear()
+        // 첫 진입은 A 선택.
+
+        await viewModel.deleteList(listID: "A")
+
+        #expect(viewModel.lists.map(\.id) == ["B"])
+        // 안 있던 항목도 함께 사라짐.
+        #expect(viewModel.allReminders.isEmpty)
+        // selected는 남은 첫 리스트로 옮겨감.
+        #expect(viewModel.selectedListID == "B")
+    }
+
+    @Test func deleteListKeepsSelectionWhenOtherListDeleted() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB]
+        ))
+        await viewModel.onAppear()
+        viewModel.select(listB)  // 현재 B 선택 중.
+
+        await viewModel.deleteList(listID: "A")
+
+        // 다른 리스트 삭제는 selection에 영향 없음.
+        #expect(viewModel.selectedListID == "B")
     }
 }
