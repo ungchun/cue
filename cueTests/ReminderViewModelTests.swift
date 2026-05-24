@@ -147,6 +147,24 @@ struct ReminderViewModelTests {
         #expect(viewModel.visibleReminders.first { $0.title == "장보기" }?.notes == "우유 사기")
     }
 
+    @Test func updateStoresDueDate() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [reminder(id: "1", listID: "A")]
+        ))
+        await viewModel.onAppear()
+        let due = Date(timeIntervalSince1970: 1_700_000_000)
+
+        await viewModel.update(
+            reminderID: "1", title: "마감 있는 일", notes: nil,
+            dueDate: due, includesTime: true
+        )
+
+        let updated = viewModel.visibleReminders.first
+        #expect(updated?.dueDate == due)
+        #expect(updated?.includesTime == true)
+    }
+
     @Test func updateChangesTitleAndNotes() async {
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA],

@@ -24,6 +24,8 @@ final class ReminderViewModel {
     private(set) var isLoading = false
     var selectedListID: String?
     var errorMessage: String?
+    /// 옵션 메뉴 — 완료된 항목 섹션을 함께 보여줄지. 기본 OFF.
+    var showsCompleted = false
 
     init(dependencies: Dependencies) {
         self.requestAccessUseCase = dependencies.requestRemindersAccess
@@ -44,6 +46,19 @@ final class ReminderViewModel {
     var visibleReminders: [Reminder] {
         guard let selectedListID else { return [] }
         return allReminders.filter { $0.listID == selectedListID && !$0.isCompleted }
+    }
+
+    /// 리스트별 미완료 항목 수 — 리스트 선택 메뉴 옆 카운트 표기용.
+    func incompleteCount(for list: ReminderList) -> Int {
+        allReminders.reduce(into: 0) { count, reminder in
+            if reminder.listID == list.id && !reminder.isCompleted { count += 1 }
+        }
+    }
+
+    /// 선택된 리스트의 **완료** 항목 — "완료된 항목 보기" 토글이 켜졌을 때만 화면에 추가된다.
+    var completedReminders: [Reminder] {
+        guard let selectedListID else { return [] }
+        return allReminders.filter { $0.listID == selectedListID && $0.isCompleted }
     }
 
     /// 화면 진입 시 — 권한을 확보하고 데이터를 적재한다.
@@ -105,10 +120,22 @@ final class ReminderViewModel {
         }
     }
 
-    /// 기존 항목의 제목·메모를 수정한다.
-    func update(reminderID: String, title: String, notes: String?) async {
+    /// 기존 항목의 제목·메모·마감일을 수정한다.
+    func update(
+        reminderID: String,
+        title: String,
+        notes: String?,
+        dueDate: Date? = nil,
+        includesTime: Bool = false
+    ) async {
         do {
-            try await updateReminderUseCase(reminderID: reminderID, title: title, notes: notes)
+            try await updateReminderUseCase(
+                reminderID: reminderID,
+                title: title,
+                notes: notes,
+                dueDate: dueDate,
+                includesTime: includesTime
+            )
             allReminders = try await fetchRemindersUseCase()
         } catch {
             errorMessage = error.localizedDescription

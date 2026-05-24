@@ -13,10 +13,25 @@ struct ReminderView: View {
     @State private var newTitle = ""
     @State private var newMemo = ""
     @State private var showingDetail = false
-    @FocusState private var focusedField: NewRowField?
+    @State private var editingReminder: Reminder?
 
-    /// 리스트 맨 아래 새 할일 입력 행의 포커스 대상.
-    private enum NewRowField { case title, memo }
+    // 새 입력 행 — title/memo 각자 focus 추적. 둘 다 풀리면 add 시도.
+    @State private var newTitleFocused = false
+    @State private var newMemoFocused = false
+
+    // 기존 항목 인라인 편집 — 한 번에 하나만 편집한다.
+    @State private var editingReminderID: String?
+    @State private var editingTitle = ""
+    @State private var editingMemo = ""
+    @State private var editTitleFocused = false
+    @State private var editMemoFocused = false
+
+    // 새 입력 행에서 ⓘ를 눌렀을 때, 이어지는 포커스 해제로 자동 add가 일어나지 않도록 한 번 억제한다.
+    @State private var suppressNewRowAutoSubmit = false
+
+    // 체크 → 0.5초 정지 → 토글 적용. 그 사이 동그라미는 채워진 체크마크로 보인다.
+    // 대기 중 다시 탭하면 취소(iOS 미리알림과 동일).
+    @State private var pendingCompletionIDs: Set<String> = []
 
     var body: some View {
         content
@@ -24,16 +39,10 @@ struct ReminderView: View {
             .toolbar {
                 // 뷰만 — 액션은 아직 없음.
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                    } label: {
-                        Image(systemName: "list.bullet")
-                    }
+                    listSelectionMenu
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
+                    optionsMenu
                 }
             }
             .task { await viewModel.onAppear() }
@@ -43,10 +52,70 @@ struct ReminderView: View {
                 Text(viewModel.errorMessage ?? "")
             }
             .sheet(isPresented: $showingDetail) {
-                ReminderDetailSheet(title: $newTitle, memo: $newMemo) { dueDate, includesTime in
-                    saveNewReminder(dueDate: dueDate, includesTime: includesTime)
+                // 생성 — 입력 행에 적힌 제목·메모를 초기값으로 시트에 흘려준다.
+                ReminderDetailSheet(title: newTitle, memo: newMemo) { draft in
+                    saveNewReminder(draft: draft)
                 }
             }
+            .sheet(item: $editingReminder) { reminder in
+                // 수정 — 인라인 편집 값(이미 reminder에 스냅샷됨)을 초기값으로 넘기고, 완료 시 update 호출.
+                ReminderDetailSheet(
+                    title: reminder.title,
+                    memo: reminder.notes ?? "",
+                    dueDate: reminder.dueDate,
+                    includesTime: reminder.includesTime
+                ) { draft in
+                    saveEdit(reminderID: reminder.id, draft: draft)
+                }
+            }
+            // 인라인 편집의 두 필드 사이 이동은 잠깐 둘 다 false가 될 수 있어 80ms 지연 후 재확인.
+            .onChange(of: editTitleFocused) { _, _ in scheduleEditCommit() }
+            .onChange(of: editMemoFocused) { _, _ in scheduleEditCommit() }
+            .onChange(of: newTitleFocused) { _, _ in scheduleNewCommit() }
+            .onChange(of: newMemoFocused) { _, _ in scheduleNewCommit() }
+    }
+
+    /// 좌측 상단 — 사용자가 가진 미리알림 리스트(섹션)를 펼치는 메뉴.
+    /// 각 항목 옆 `(n)`은 그 리스트의 **미완료** 개수. 현재 선택된 리스트는 leading 체크마크.
+    ///
+    /// SwiftUI Menu가 Button label 안 `Image`를 자동으로 menu item icon으로 띄워 opacity가
+    /// 무시되므로 (모든 항목에 체크 보임), 선택 항목만 `Label(systemImage:)`로 두고 나머진
+    /// 그냥 `Text`. iOS native Menu가 같은 그룹에 systemImage가 한 개라도 있으면 모든 항목에
+    /// leading 자리를 예약해 들여쓰기 자동 정렬 + 선택 표시가 동시에 처리된다.
+    private var listSelectionMenu: some View {
+        Menu {
+            ForEach(viewModel.lists) { list in
+                Button {
+                    viewModel.select(list)
+                } label: {
+                    let title = "\(list.title) (\(viewModel.incompleteCount(for: list)))"
+                    if list.id == viewModel.selectedListID {
+                        Label(title, systemImage: "checkmark")
+                    } else {
+                        Text(title)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "list.bullet")
+        }
+    }
+
+    /// 우측 상단 옵션 메뉴 — 현재는 "완료된 항목 보기" 토글 하나. 추가 옵션은 여기 쌓는다.
+    /// 토글 ON이면 텍스트가 "숨기기"로 바뀌고 아이콘도 `eye.slash`로 — iOS native 미리알림 메뉴와 동일.
+    private var optionsMenu: some View {
+        Menu {
+            Button {
+                viewModel.showsCompleted.toggle()
+            } label: {
+                Label(
+                    viewModel.showsCompleted ? "완료된 항목 숨기기" : "완료된 항목 보기",
+                    systemImage: viewModel.showsCompleted ? "eye.slash" : "eye"
+                )
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+        }
     }
 
     @ViewBuilder
@@ -90,8 +159,15 @@ struct ReminderView: View {
             }
             newReminderRow
                 .listRowSeparator(.hidden)
+
+            if viewModel.showsCompleted {
+                completedSection
+            }
         }
         .listStyle(.plain)
+        // 완료 토글로 항목이 빠져나갈 때 자연스러운 페이드. visibleReminders의 ID 시퀀스가
+        // 바뀔 때만 트리거되므로 입력·편집 중 무관한 리렌더에는 애니메이션이 끼지 않는다.
+        .animation(.easeInOut(duration: 0.25), value: viewModel.visibleReminders.map(\.id))
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
@@ -99,14 +175,84 @@ struct ReminderView: View {
         }
     }
 
-    /// 미리알림 한 줄 — 동그란 체크 버튼 + 제목, 마감일이 있으면 그 아래 표시.
-    private func reminderRow(_ reminder: Reminder) -> some View {
+    /// 완료된 항목 섹션 — 입력 행 밑에 디바이더 + "완료됨" 헤더 + 완료된 항목들.
+    /// 미완료 섹션과 같은 List 안에 그려야 스크롤·스와이프가 자연스럽게 이어진다.
+    /// `.listStyle(.plain)`에선 Section header가 sticky가 되므로 일반 row로 헤더 그린다.
+    @ViewBuilder
+    private var completedSection: some View {
+        // `Divider()`는 List row 안에서 세로 라인으로 잡힐 때가 있어 직접 1pt 가로 라인.
+        // `Color(.separator)`는 iOS system 라인 색이라 light/dark 자동 대응.
+        Color(.separator)
+            .frame(height: 1)
+            .listRowSeparator(.hidden)
+        HStack(alignment: .lastTextBaseline) {
+            Text("완료됨")
+                .font(AppFont.titleLarge)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text("\(viewModel.completedReminders.count)")
+                .font(AppFont.bodySmall)
+                .foregroundStyle(.secondary)
+        }
+        .listRowSeparator(.hidden)
+
+        ForEach(viewModel.completedReminders) { reminder in
+            completedReminderRow(reminder)
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        Task { await viewModel.delete(reminder) }
+                    } label: {
+                        Label("삭제", systemImage: "trash")
+                    }
+                }
+        }
+    }
+
+    /// 완료된 항목 행 — 채워진 동그라미 + secondary 색 텍스트.
+    /// 동그라미 탭 → 미완료로 토글(0.5초 지연 동작은 미완료 행과 동일).
+    private func completedReminderRow(_ reminder: Reminder) -> some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
             Button {
-                Task { await viewModel.toggle(reminder) }
+                tapCompletionToggle(reminder)
             } label: {
-                Image(systemName: "circle")
+                completionIcon(for: reminder)
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(reminder.title)
+                    .font(AppFont.bodyLarge)
                     .foregroundStyle(.secondary)
+
+                if let dueDate = reminder.dueDate {
+                    Text(dueDateText(dueDate))
+                        .font(AppFont.bodySmall)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// 미리알림 한 줄 — 편집 모드 여부에 따라 정적 표시 또는 인라인 편집 행을 보여준다.
+    @ViewBuilder
+    private func reminderRow(_ reminder: Reminder) -> some View {
+        if editingReminderID == reminder.id {
+            editingReminderRow(reminder)
+        } else {
+            readOnlyReminderRow(reminder)
+        }
+    }
+
+    /// 정적 표시 행 — 텍스트 영역 탭 → 인라인 편집으로 전환.
+    /// 동그라미 Button은 별도 영역이라 자기 탭(완료 토글)만 처리하고 행 탭과 충돌 안 함.
+    private func readOnlyReminderRow(_ reminder: Reminder) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Button {
+                tapCompletionToggle(reminder)
+            } label: {
+                completionIcon(for: reminder)
             }
             .buttonStyle(.plain)
 
@@ -121,38 +267,95 @@ struct ReminderView: View {
                         .foregroundStyle(isOverdue(dueDate) ? Color.red : Color.secondary)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                startInlineEdit(reminder)
+            }
+        }
+    }
+
+    /// 인라인 편집 행 — newReminderRow와 같은 모양. 제목·메모는 멀티라인 GrowingTextView.
+    /// GrowingTextView는 UITextView 기반(textContainerInset=0)이라 leading SF Symbol과 정렬이 정확.
+    /// HStack `.firstTextBaseline` + Image `.font(.body)`로 글자 baseline에 자연스럽게 매핑된다.
+    private func editingReminderRow(_ reminder: Reminder) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+            Button {
+                tapCompletionToggle(reminder)
+            } label: {
+                completionIcon(for: reminder)
+                    .font(.body)
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                GrowingTextView(
+                    text: $editingTitle,
+                    isFocused: $editTitleFocused,
+                    font: .preferredFont(forTextStyle: .body),
+                    textColor: .label,
+                    submitOnReturn: true
+                )
+                GrowingTextView(
+                    text: $editingMemo,
+                    isFocused: $editMemoFocused,
+                    placeholder: "메모 추가",
+                    font: .preferredFont(forTextStyle: .callout),
+                    textColor: .secondaryLabel,
+                    submitOnReturn: true
+                )
+            }
+
+            Spacer()
+            Button {
+                openDetailSheet(for: reminder)
+            } label: {
+                Image(systemName: "info.circle")
+                    .font(.body)
+                    .foregroundStyle(.tint)
+            }
+            .buttonStyle(.plain)
         }
     }
 
     /// 리스트 맨 아래 새 할일 입력 행 — 제목·메모를 직접 입력한다.
-    /// 포커스 시 메모 칸과 ⓘ 버튼이 나타난다. 엔터로 바로 저장하거나, ⓘ로 세부사항 시트를 연다.
+    /// 포커스 시 메모 칸과 ⓘ 버튼이 나타난다. 두 입력은 멀티라인 GrowingTextView.
+    /// 두 focus 모두 풀리면 자동 add(80ms 지연 후 재확인). ⓘ로는 세부사항 시트.
     private var newReminderRow: some View {
-        HStack(alignment: .top, spacing: Spacing.sm) {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
             Image(systemName: "circle.dotted")
+                .font(.body)
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                TextField("", text: $newTitle)
-                    .font(AppFont.bodyLarge)
-                    .foregroundStyle(.primary)
-                    .focused($focusedField, equals: .title)
-                    .onSubmit { submitNewReminder() }
+                GrowingTextView(
+                    text: $newTitle,
+                    isFocused: $newTitleFocused,
+                    font: .preferredFont(forTextStyle: .body),
+                    textColor: .label,
+                    submitOnReturn: true
+                )
 
-                if focusedField != nil {
-                    TextField("메모 추가", text: $newMemo)
-                        .font(AppFont.bodySmall)
-                        .foregroundStyle(.secondary)
-                        .focused($focusedField, equals: .memo)
-                        .onSubmit { submitNewReminder() }
+                if newTitleFocused || newMemoFocused {
+                    GrowingTextView(
+                        text: $newMemo,
+                        isFocused: $newMemoFocused,
+                        placeholder: "메모 추가",
+                        font: .preferredFont(forTextStyle: .callout),
+                        textColor: .secondaryLabel,
+                        submitOnReturn: true
+                    )
                 }
             }
 
-            if focusedField != nil {
+            if newTitleFocused || newMemoFocused {
                 Spacer()
                 Button {
+                    suppressNewRowAutoSubmit = true
                     showingDetail = true
                 } label: {
                     Image(systemName: "info.circle")
+                        .font(.body)
                         .foregroundStyle(.tint)
                 }
                 .buttonStyle(.plain)
@@ -160,27 +363,145 @@ struct ReminderView: View {
         }
     }
 
-    /// 입력 행에서 키보드 엔터로 저장 — 제목·메모만 담아 추가한다.
-    /// 저장 뒤 입력 행을 비우고 제목 칸 포커스를 유지해 연속 입력을 돕는다.
+    /// 완료 동그라미 — 양방향 토글 대응. pending이면 토글 후 상태를, 아니면 현재 상태를 표시한다.
+    /// (미완료 → 완료: 빈 원 → 채워진 체크. 완료 → 미완료: 채워진 체크 → 빈 원.)
+    private func completionIcon(for reminder: Reminder) -> some View {
+        let pending = pendingCompletionIDs.contains(reminder.id)
+        let showCompleted = pending ? !reminder.isCompleted : reminder.isCompleted
+        return Image(systemName: showCompleted ? "checkmark.circle.fill" : "circle")
+            .foregroundStyle(showCompleted ? Color.accentColor : Color.secondary)
+    }
+
+    /// 완료 토글을 0.5초 지연 후 적용한다 — 즉시 사라지지 않게 잠깐 멈춰서
+    /// 사용자가 자신의 탭을 시각적으로 확인할 시간을 준다(iOS 미리알림과 동일).
+    /// 대기 중 다시 탭하면 취소되어 토글되지 않는다.
+    private func tapCompletionToggle(_ reminder: Reminder) {
+        if pendingCompletionIDs.contains(reminder.id) {
+            pendingCompletionIDs.remove(reminder.id)
+            return
+        }
+        pendingCompletionIDs.insert(reminder.id)
+        Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            // 사용자가 대기 중 다시 탭해 취소했으면 적용 안 함.
+            guard pendingCompletionIDs.contains(reminder.id) else { return }
+            // 토글이 visibleReminders에서 항목을 빼는 동안 채워진 체크마크가 그대로 보이도록
+            // pending 해제는 toggle 이후에 한다 — 사이에 "체크 해제 → 사라짐" 깜빡임을 막는다.
+            // toggle 완료 시점에 행은 이미 List에서 빠져나가 .animation 모디파이어가 페이드를 입힌다.
+            await viewModel.toggle(reminder)
+            pendingCompletionIDs.remove(reminder.id)
+        }
+    }
+
+    /// 인라인 편집을 시작한다 — 기존 값으로 버퍼를 채우고 제목에 포커스.
+    /// 다른 행을 편집 중이었다면 먼저 그쪽을 커밋한다.
+    private func startInlineEdit(_ reminder: Reminder) {
+        if let currentID = editingReminderID, currentID != reminder.id,
+           let current = viewModel.allReminders.first(where: { $0.id == currentID }) {
+            commitInlineEdit(current)
+        }
+        editingReminderID = reminder.id
+        editingTitle = reminder.title
+        editingMemo = reminder.notes ?? ""
+        editTitleFocused = true
+    }
+
+    /// 인라인 편집을 마감한다 — 변경 사항이 있을 때만 update를 호출한다.
+    /// 빈 제목은 무효 처리(원래 값 유지).
+    private func commitInlineEdit(_ reminder: Reminder) {
+        let trimmed = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalMemo = reminder.notes ?? ""
+        let memo = editingMemo
+
+        editingReminderID = nil
+        editTitleFocused = false
+        editMemoFocused = false
+
+        guard !trimmed.isEmpty else { return }
+        guard trimmed != reminder.title || memo != originalMemo else { return }
+
+        Task {
+            await viewModel.update(
+                reminderID: reminder.id,
+                title: trimmed,
+                notes: memo,
+                dueDate: reminder.dueDate,
+                includesTime: reminder.includesTime
+            )
+        }
+    }
+
+    /// 인라인 편집 중 ⓘ를 누르면 — 친 값을 시트 초기값으로 넘기고 시트를 연다.
+    /// (시트 완료 시 update가 한 번에 일어나므로 인라인 update는 하지 않는다.)
+    private func openDetailSheet(for reminder: Reminder) {
+        var snapshot = reminder
+        snapshot.title = editingTitle
+        snapshot.notes = editingMemo
+        editingReminderID = nil
+        editTitleFocused = false
+        editMemoFocused = false
+        editingReminder = snapshot
+    }
+
+    /// 인라인 편집의 두 GrowingTextView 사이 focus 이동은 잠깐 둘 다 false가 될 수 있다.
+    /// 80ms 지연 후 둘 다 여전히 false면 진짜 commit.
+    private func scheduleEditCommit() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            guard !editTitleFocused, !editMemoFocused,
+                  let id = editingReminderID,
+                  let reminder = viewModel.allReminders.first(where: { $0.id == id })
+            else { return }
+            commitInlineEdit(reminder)
+        }
+    }
+
+    /// 새 입력 행의 두 GrowingTextView 사이 focus 이동도 동일 패턴.
+    /// 80ms 지연 후 둘 다 풀려 있으면 add 시도. ⓘ 경로는 가드로 한 번 건너뜀.
+    private func scheduleNewCommit() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            guard !newTitleFocused, !newMemoFocused else { return }
+            if suppressNewRowAutoSubmit {
+                suppressNewRowAutoSubmit = false
+                return
+            }
+            submitNewReminder()
+        }
+    }
+
+    /// 새 입력 행을 마감한다 — 포커스가 빠질 때 자동 호출. 제목이 비어 있으면 무시한다.
     private func submitNewReminder() {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let memo = newMemo
         clearNewRow()
-        focusedField = .title
         Task { await viewModel.add(title: trimmed, notes: memo) }
     }
 
-    /// 세부사항 시트 완료 — 제목·메모·마감일을 담아 추가한다.
-    private func saveNewReminder(dueDate: Date?, includesTime: Bool) {
-        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// 세부사항 시트(생성) 완료 — Draft를 풀어 add 호출하고 입력 행을 비운다.
+    private func saveNewReminder(draft: ReminderDetailSheet.Draft) {
+        let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let memo = newMemo
+        let memo = draft.memo
         clearNewRow()
         Task {
             await viewModel.add(
                 title: trimmed, notes: memo,
-                dueDate: dueDate, includesTime: includesTime
+                dueDate: draft.dueDate, includesTime: draft.includesTime
+            )
+        }
+    }
+
+    /// 세부사항 시트(수정) 완료 — Draft를 풀어 update 호출.
+    private func saveEdit(reminderID: String, draft: ReminderDetailSheet.Draft) {
+        let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        Task {
+            await viewModel.update(
+                reminderID: reminderID,
+                title: trimmed,
+                notes: draft.memo,
+                dueDate: draft.dueDate,
+                includesTime: draft.includesTime
             )
         }
     }
@@ -191,16 +512,22 @@ struct ReminderView: View {
         newMemo = ""
     }
 
-    /// 마감일 표시 문자열 — 오늘·내일은 단어로, 그 외엔 날짜로.
+    /// 마감일 표시 문자열 — 오늘·내일은 단어로, 그 외엔 "2026. 5. 29. 오후 6:00" 형태로.
+    /// 기기 로케일과 무관하게 한국어로 보이도록 ko_KR을 명시한다.
     private func dueDateText(_ date: Date) -> String {
         let calendar = Calendar.current
-        let time = date.formatted(date: .omitted, time: .shortened)
+        let koLocale = Locale(identifier: "ko_KR")
+        let time = date.formatted(
+            Date.FormatStyle(date: .omitted, time: .shortened, locale: koLocale)
+        )
         if calendar.isDateInToday(date) {
             return "오늘 \(time)"
         } else if calendar.isDateInTomorrow(date) {
             return "내일 \(time)"
         } else {
-            return date.formatted(date: .numeric, time: .shortened)
+            return date.formatted(
+                Date.FormatStyle(date: .numeric, time: .shortened, locale: koLocale)
+            )
         }
     }
 
