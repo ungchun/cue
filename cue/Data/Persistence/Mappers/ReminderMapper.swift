@@ -12,8 +12,18 @@ enum ReminderMapper {
         ReminderList(
             id: calendar.calendarIdentifier,
             title: calendar.title,
-            colorHex: nil
+            colorHex: hex(from: calendar.cgColor)
         )
+    }
+
+    /// `CGColor` → "#RRGGBB" 6자리 hex. RGBA 컴포넌트가 없으면 nil.
+    /// EventKit 캘린더 색은 sRGB 가정 — 별도 컬러 스페이스 변환은 하지 않는다.
+    private static func hex(from cgColor: CGColor?) -> String? {
+        guard let components = cgColor?.components, components.count >= 3 else { return nil }
+        let r = Int(round(max(0, min(1, components[0])) * 255))
+        let g = Int(round(max(0, min(1, components[1])) * 255))
+        let b = Int(round(max(0, min(1, components[2])) * 255))
+        return String(format: "#%02X%02X%02X", r, g, b)
     }
 
     /// `EKReminder` → 도메인 `Reminder`
