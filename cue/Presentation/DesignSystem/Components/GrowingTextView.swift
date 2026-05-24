@@ -64,7 +64,7 @@ private struct Representable: UIViewRepresentable {
     var submitOnReturn: Bool
 
     func makeUIView(context: Context) -> UITextView {
-        let view = UITextView()
+        let view = AutoFocusTextView()
         view.backgroundColor = .clear
         view.textContainerInset = .zero
         view.textContainer.lineFragmentPadding = 0
@@ -74,13 +74,16 @@ private struct Representable: UIViewRepresentable {
         view.adjustsFontForContentSizeCategory = true
         view.delegate = context.coordinator
         view.text = text
-        // 세로는 컨텐츠만큼 강하게 잡고(자동 확장), 가로는 .defaultLow로 풀어 SwiftUI 부모가
-        // 제안한 너비에 wrap되도록 한다 — 기본 `.defaultHigh`면 한 줄로 width를 계속 늘려서
-        // 줄바꿈이 안 일어난다.
         view.setContentCompressionResistancePriority(.required, for: .vertical)
         view.setContentHuggingPriority(.required, for: .vertical)
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        // window 부착 즉시(같은 RunLoop tick) becomeFirstResponder하도록 flag set.
+        // DispatchQueue.main.async는 다음 tick으로 미뤄져 이전 view dispose와 새 view become
+        // 사이가 1 frame 이상 비어 UIKit이 키보드 dismiss animation을 시작한다.
+        // `didMoveToWindow`는 UIKit lifecycle hook — view가 window에 추가되는 그 순간에 호출돼
+        // 첫 responder transfer가 같은 tick에 일어나 키보드가 안 내려간다.
+        view.becomeFirstResponderOnMount = isFocused
         return view
     }
 
@@ -97,18 +100,26 @@ private struct Representable: UIViewRepresentable {
         if uiView.font != font { uiView.font = font }
         if uiView.textColor != textColor { uiView.textColor = textColor }
 
-        // 외부에서 isFocused가 바뀌면 firstResponder 상태를 동기화 — 이미 일치하면 noop.
-        let shouldFocus = isFocused
+        // become만 처리(resign은 UIKit transfer에 위임 — 명시 resign이 race 일으킴).
+        // closure 안에서 binding 최신 값을 re-read한다 — capture된 stale 값으로 호출하면
+        // 외부에서 binding이 false로 바뀐 뒤에도 first responder를 끌어와 버린다.
+        let binding = $isFocused
         DispatchQueue.main.async {
-            if shouldFocus && !uiView.isFirstResponder {
+            if binding.wrappedValue && !uiView.isFirstResponder {
                 uiView.becomeFirstResponder()
-            } else if !shouldFocus && uiView.isFirstResponder {
-                uiView.resignFirstResponder()
             }
         }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    /// SwiftUI가 view를 dispose하기 직전 — delegate를 떼어 dispose 과정에서 발생할
+    /// `textViewDidEndEditing` callback이 binding(`isFocused`)을 false로 만들지 않게 한다.
+    /// 같은 binding을 공유한 새 mount된 GrowingTextView가 이미 first responder를 잡아도
+    /// 이전 view의 dispose-시 didEnd가 binding을 false로 set하면 새 view도 같이 resign된다.
+    static func dismantleUIView(_ uiView: UITextView, coordinator: Coordinator) {
+        uiView.delegate = nil
+    }
 
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: Representable
@@ -119,14 +130,17 @@ private struct Representable: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
-            // SwiftUI 업데이트 중에 binding을 바꾸면 경고가 나므로 다음 runloop tick으로 미룬다.
             DispatchQueue.main.async {
                 self.parent.isFocused = true
             }
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
-            DispatchQueue.main.async {
+            // 150ms 지연 — 이 사이 view가 dispose되면 `dismantleUIView`가 `delegate = nil`
+            // 처리. async 시점 delegate가 self가 아니면 dispose된 것 → binding 건드리지 않음.
+            // 사용자가 키보드를 직접 dismiss한 경우엔 view 살아있어 delegate 그대로 → 정상 false.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self, weak textView] in
+                guard let self, let textView, textView.delegate === self else { return }
                 self.parent.isFocused = false
             }
         }
@@ -143,6 +157,22 @@ private struct Representable: UIViewRepresentable {
                 return false
             }
             return true
+        }
+    }
+}
+
+/// UITextView subclass — `didMoveToWindow` UIKit lifecycle hook을 통해 window 부착 즉시
+/// (`DispatchQueue.main.async`를 거치지 않고 같은 RunLoop tick에) `becomeFirstResponder`를
+/// 호출한다. SwiftUI의 view dispose와 새 view mount가 한 turn 안에 일어날 때 이전 view의
+/// resign과 새 view의 become을 같은 tick에 묶어 UIKit이 첫 responder transfer로 인식하게 만든다
+/// → 키보드가 dismiss/show되지 않고 그대로 유지.
+private final class AutoFocusTextView: UITextView {
+    var becomeFirstResponderOnMount: Bool = false
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil, becomeFirstResponderOnMount, !isFirstResponder {
+            becomeFirstResponder()
         }
     }
 }
