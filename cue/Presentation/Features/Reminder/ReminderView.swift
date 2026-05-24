@@ -33,9 +33,22 @@ struct ReminderView: View {
     // 대기 중 다시 탭하면 취소(iOS 미리알림과 동일).
     @State private var pendingCompletionIDs: Set<String> = []
 
+    // 스크롤로 본문 large title이 가려졌는지 — 가려지면 navigation bar에 inline title 표시.
+    @State private var showsInlineTitle = false
+
+    // 옵션 메뉴에서 트리거되는 모달들 — 시트 내용은 다음 사이클에서.
+    @State private var showingNewListSheet = false
+    @State private var showingListInfoSheet = false
+    @State private var showingDeleteListConfirmation = false
+
     var body: some View {
         content
-            .navigationTitle("할일")
+            // 시스템 large title은 색을 항목별로 바꿀 수 없어 inline mode로 숨기고
+            // List 안 첫 row에 직접 그린다(`listTitleRow`). 미리알림 앱과 동일 동작 —
+            // 스크롤하면 title이 컨텐츠와 함께 위로 사라지고, 가려지는 시점에
+            // navigation bar 중앙의 inline title이 채워진다(`showsInlineTitle`).
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(showsInlineTitle ? (viewModel.selectedList?.title ?? "") : "")
             .toolbar {
                 // 뷰만 — 액션은 아직 없음.
                 ToolbarItem(placement: .topBarLeading) {
@@ -73,6 +86,34 @@ struct ReminderView: View {
             .onChange(of: editMemoFocused) { _, _ in scheduleEditCommit() }
             .onChange(of: newTitleFocused) { _, _ in scheduleNewCommit() }
             .onChange(of: newMemoFocused) { _, _ in scheduleNewCommit() }
+            // 새로운 목록 — 빈 폼 + 기본 색.
+            .sheet(isPresented: $showingNewListSheet) {
+                ListEditorSheet(mode: .new) { title, colorHex in
+                    Task { await viewModel.addList(title: title, colorHex: colorHex) }
+                }
+            }
+            // 목록 정보 보기 — 현재 선택된 리스트의 값을 초기값으로.
+            // selectedList가 nil이면 메뉴 항목이 의미 없으므로 sheet도 의미 없다 — guard.
+            .sheet(isPresented: $showingListInfoSheet) {
+                if let list = viewModel.selectedList {
+                    ListEditorSheet(mode: .edit(list)) { title, colorHex in
+                        Task { await viewModel.updateList(listID: list.id, title: title, colorHex: colorHex) }
+                    }
+                }
+            }
+            // 목록 삭제 확인 — 안에 있는 모든 미리알림도 EventKit이 함께 제거한다.
+            .alert(
+                "'\(viewModel.selectedList?.title ?? "")' 삭제",
+                isPresented: $showingDeleteListConfirmation
+            ) {
+                Button("취소", role: .cancel) {}
+                Button("삭제", role: .destructive) {
+                    guard let listID = viewModel.selectedListID else { return }
+                    Task { await viewModel.deleteList(listID: listID) }
+                }
+            } message: {
+                Text("이 목록과 안에 있는 모든 미리알림이 삭제됩니다.")
+            }
     }
 
     /// 좌측 상단 — 사용자가 가진 미리알림 리스트(섹션)를 펼치는 메뉴.
@@ -101,8 +142,9 @@ struct ReminderView: View {
         }
     }
 
-    /// 우측 상단 옵션 메뉴 — 현재는 "완료된 항목 보기" 토글 하나. 추가 옵션은 여기 쌓는다.
-    /// 토글 ON이면 텍스트가 "숨기기"로 바뀌고 아이콘도 `eye.slash`로 — iOS native 미리알림 메뉴와 동일.
+    /// 우측 상단 옵션 메뉴 — 완료된 항목 토글, 목록 CRUD 진입.
+    /// `Section` 사이에 SwiftUI Menu가 자동으로 구분선을 그려준다(iOS native 패턴).
+    /// 시트·삭제 액션의 실제 백엔드는 다음 사이클에서 — 지금은 UI 진입까지만.
     private var optionsMenu: some View {
         Menu {
             Button {
@@ -112,6 +154,29 @@ struct ReminderView: View {
                     viewModel.showsCompleted ? "완료된 항목 숨기기" : "완료된 항목 보기",
                     systemImage: viewModel.showsCompleted ? "eye.slash" : "eye"
                 )
+            }
+
+            Section {
+                Button {
+                    showingNewListSheet = true
+                } label: {
+                    Label("새로운 목록", systemImage: "plus")
+                }
+                Button {
+                    showingListInfoSheet = true
+                } label: {
+                    Label("목록 정보 보기", systemImage: "info.circle")
+                }
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    showingDeleteListConfirmation = true
+                } label: {
+                    Label("목록 삭제", systemImage: "trash")
+                }
+                // 선택된 리스트가 없으면 삭제할 게 없음.
+                .disabled(viewModel.selectedList == nil)
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -146,12 +211,17 @@ struct ReminderView: View {
 
     private var reminderList: some View {
         List {
+            listTitleRow
             ForEach(viewModel.visibleReminders) { reminder in
                 reminderRow(reminder)
                     .listRowSeparator(.hidden)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
-                            Task { await viewModel.delete(reminder) }
+                            Task {
+                                await flushInlineEditAwaiting()
+                                try? await Task.sleep(for: .milliseconds(120))
+                                await viewModel.delete(reminder)
+                            }
                         } label: {
                             Label("삭제", systemImage: "trash")
                         }
@@ -165,14 +235,36 @@ struct ReminderView: View {
             }
         }
         .listStyle(.plain)
-        // 완료 토글로 항목이 빠져나갈 때 자연스러운 페이드. visibleReminders의 ID 시퀀스가
-        // 바뀔 때만 트리거되므로 입력·편집 중 무관한 리렌더에는 애니메이션이 끼지 않는다.
         .animation(.easeInOut(duration: 0.25), value: viewModel.visibleReminders.map(\.id))
+        // 스크롤 시 키보드 즉시 닫음 → UITextView가 resign → isFocused 동기화로 새 입력/편집 포커스 해제.
+        .scrollDismissesKeyboard(.immediately)
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.contentOffset.y > 40
+        } action: { _, newValue in
+            showsInlineTitle = newValue
+        }
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
             }
         }
+    }
+
+    /// List 안 inline large title — 선택된 리스트 title을 그 리스트의 색으로 표시.
+    /// 시스템 navigation large title은 색을 항목별로 변경할 수 없어 직접 그린다.
+    /// 스크롤 시 컨텐츠와 함께 위로 사라진다(미리알림 앱과 동일).
+    private var listTitleRow: some View {
+        Text(viewModel.selectedList?.title ?? "")
+            .font(AppFont.displayLarge)
+            .foregroundStyle(listColor ?? .primary)
+            .listRowSeparator(.hidden)
+    }
+
+    /// 현재 선택된 리스트의 색 — EventKit calendar color에서 매핑된 hex 문자열을 Color로.
+    /// 색이 없거나 잘못된 hex면 `nil` → 호출자가 fallback 색(.primary/.secondary 등)을 정함.
+    private var listColor: Color? {
+        guard let hex = viewModel.selectedList?.colorHex else { return nil }
+        return Color(hex: hex)
     }
 
     /// 완료된 항목 섹션 — 입력 행 밑에 디바이더 + "완료됨" 헤더 + 완료된 항목들.
@@ -224,11 +316,13 @@ struct ReminderView: View {
                 Text(reminder.title)
                     .font(AppFont.bodyLarge)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if let dueDate = reminder.dueDate {
                     Text(dueDateText(dueDate))
                         .font(AppFont.bodySmall)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -260,11 +354,14 @@ struct ReminderView: View {
                 Text(reminder.title)
                     .font(AppFont.bodyLarge)
                     .foregroundStyle(.primary)
+                    // List row에서 Text가 한 줄로 잘리는 SwiftUI 동작을 막고 멀티라인 wrap 보장.
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if let dueDate = reminder.dueDate {
                     Text(dueDateText(dueDate))
                         .font(AppFont.bodySmall)
                         .foregroundStyle(isOverdue(dueDate) ? Color.red : Color.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -311,8 +408,8 @@ struct ReminderView: View {
                 openDetailSheet(for: reminder)
             } label: {
                 Image(systemName: "info.circle")
-                    .font(.body)
-                    .foregroundStyle(.tint)
+                    .font(.title3)
+                    .foregroundStyle(listColor ?? Color.accentColor)
             }
             .buttonStyle(.plain)
         }
@@ -355,8 +452,8 @@ struct ReminderView: View {
                     showingDetail = true
                 } label: {
                     Image(systemName: "info.circle")
-                        .font(.body)
-                        .foregroundStyle(.tint)
+                        .font(.title3)
+                        .foregroundStyle(listColor ?? Color.accentColor)
                 }
                 .buttonStyle(.plain)
             }
@@ -364,12 +461,14 @@ struct ReminderView: View {
     }
 
     /// 완료 동그라미 — 양방향 토글 대응. pending이면 토글 후 상태를, 아니면 현재 상태를 표시한다.
-    /// (미완료 → 완료: 빈 원 → 채워진 체크. 완료 → 미완료: 채워진 체크 → 빈 원.)
+    /// 완료 상태는 `largecircle.fill.circle`(외곽 원 + 안 작은 점) + 리스트 색,
+    /// 미완료는 빈 `circle` + secondary 회색 — 미리알림 앱과 동일.
     private func completionIcon(for reminder: Reminder) -> some View {
         let pending = pendingCompletionIDs.contains(reminder.id)
         let showCompleted = pending ? !reminder.isCompleted : reminder.isCompleted
-        return Image(systemName: showCompleted ? "checkmark.circle.fill" : "circle")
-            .foregroundStyle(showCompleted ? Color.accentColor : Color.secondary)
+        let tint: Color = showCompleted ? (listColor ?? .accentColor) : .secondary
+        return Image(systemName: showCompleted ? "largecircle.fill.circle" : "circle")
+            .foregroundStyle(tint)
     }
 
     /// 완료 토글을 0.5초 지연 후 적용한다 — 즉시 사라지지 않게 잠깐 멈춰서
@@ -385,25 +484,86 @@ struct ReminderView: View {
             try? await Task.sleep(for: .milliseconds(500))
             // 사용자가 대기 중 다시 탭해 취소했으면 적용 안 함.
             guard pendingCompletionIDs.contains(reminder.id) else { return }
-            // 토글이 visibleReminders에서 항목을 빼는 동안 채워진 체크마크가 그대로 보이도록
-            // pending 해제는 toggle 이후에 한다 — 사이에 "체크 해제 → 사라짐" 깜빡임을 막는다.
-            // toggle 완료 시점에 행은 이미 List에서 빠져나가 .animation 모디파이어가 페이드를 입힌다.
+            // 인라인 편집 commit(=update fetch)을 await으로 완전히 끝내고, dispose 한 turn 양보 후
+            // toggle. 두 mutation이 거의 동시에 ForEach diff를 일으켜 first responder race로 죽던
+            // 문제를 strict sequential로 차단한다.
+            await flushInlineEditAwaiting()
+            try? await Task.sleep(for: .milliseconds(120))
+            // pending 해제는 toggle 이후 — "체크 해제 → 사라짐" 깜빡임 방지.
             await viewModel.toggle(reminder)
             pendingCompletionIDs.remove(reminder.id)
         }
     }
 
+    /// 인라인 편집 commit + update fetch까지 await으로 끝내고 돌아온다.
+    /// caller가 또 다른 mutation(toggle/delete/start new edit 등)을 일으키기 직전에 부르면,
+    /// 두 fetch가 거의 동시에 ForEach diff를 일으켜 first responder가 deleted cell에 갇히는
+    /// UICollectionView assertion으로 죽는 race를 strict-sequential로 차단한다.
+    @MainActor
+    private func flushInlineEditAwaiting() async {
+        guard let id = editingReminderID,
+              let reminder = viewModel.allReminders.first(where: { $0.id == id }) else {
+            // 편집 대상이 사라졌으면 inline editing state만 정리.
+            editingReminderID = nil
+            editTitleFocused = false
+            editMemoFocused = false
+            return
+        }
+        let trimmed = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalMemo = reminder.notes ?? ""
+        let memo = editingMemo
+
+        editingReminderID = nil
+        editTitleFocused = false
+        editMemoFocused = false
+
+        guard !trimmed.isEmpty,
+              trimmed != reminder.title || memo != originalMemo else { return }
+
+        await viewModel.update(
+            reminderID: reminder.id,
+            title: trimmed,
+            notes: memo,
+            dueDate: reminder.dueDate,
+            includesTime: reminder.includesTime
+        )
+    }
+
     /// 인라인 편집을 시작한다 — 기존 값으로 버퍼를 채우고 제목에 포커스.
     /// 다른 행을 편집 중이었다면 먼저 그쪽을 커밋한다.
+    ///
+    /// **race 차단 시퀀스** (사용자: 편집 중 다른 row 탭):
+    /// 1) focus만 먼저 내려 UITextView가 first responder를 양보 → 한 turn 양보
+    /// 2) 기존 편집의 update fetch까지 await으로 완전히 마치고 → ForEach diff 정리 대기
+    /// 3) 새 editingReminderID 설정 — 그 다음 render에서 새 row가 editing UI로 전환
+    /// 단계 사이를 분리하지 않으면 SwiftUI render 한 번 안에서 두 row의 view tree가 동시
+    /// swap되어 first responder가 deleted cell에 갇히는 UICollectionView assertion으로 죽는다.
+    ///
+    /// **알려진 trade-off** — focus를 한 번 떨궜다 다시 잡기 때문에 키보드가 잠깐 내려갔다
+    /// 올라온다. 같은 binding을 공유한 채 view swap만 하면 SwiftUI가 binding 변화를 못 알아
+    /// 채 새 UITextView가 `becomeFirstResponder`를 받지 못 한다(시도해봤음 — focus 안 들어감).
+    /// 키보드 유지를 진짜로 보장하려면 row별 별도 focus binding으로 큰 refactor 필요.
     private func startInlineEdit(_ reminder: Reminder) {
-        if let currentID = editingReminderID, currentID != reminder.id,
-           let current = viewModel.allReminders.first(where: { $0.id == currentID }) {
-            commitInlineEdit(current)
+        if editingReminderID == reminder.id { return }
+
+        Task { @MainActor in
+            // (1) focus 해제 — view swap 없이 UITextView만 양보.
+            if editTitleFocused || editMemoFocused {
+                editTitleFocused = false
+                editMemoFocused = false
+                try? await Task.sleep(for: .milliseconds(80))
+            }
+            // (2) 기존 편집 commit(=update fetch까지 await) + dispose 완료 대기.
+            if editingReminderID != nil {
+                await flushInlineEditAwaiting()
+                try? await Task.sleep(for: .milliseconds(120))
+            }
+            // (3) 새 edit 시작.
+            editingReminderID = reminder.id
+            editingTitle = reminder.title
+            editingMemo = reminder.notes ?? ""
+            editTitleFocused = true
         }
-        editingReminderID = reminder.id
-        editingTitle = reminder.title
-        editingMemo = reminder.notes ?? ""
-        editTitleFocused = true
     }
 
     /// 인라인 편집을 마감한다 — 변경 사항이 있을 때만 update를 호출한다.
@@ -433,14 +593,23 @@ struct ReminderView: View {
 
     /// 인라인 편집 중 ⓘ를 누르면 — 친 값을 시트 초기값으로 넘기고 시트를 연다.
     /// (시트 완료 시 update가 한 번에 일어나므로 인라인 update는 하지 않는다.)
+    /// `startInlineEdit`과 같은 race 차단 시퀀스 — focus 양보 → view swap → sheet open.
     private func openDetailSheet(for reminder: Reminder) {
         var snapshot = reminder
         snapshot.title = editingTitle
         snapshot.notes = editingMemo
-        editingReminderID = nil
-        editTitleFocused = false
-        editMemoFocused = false
-        editingReminder = snapshot
+
+        Task { @MainActor in
+            if editTitleFocused || editMemoFocused {
+                editTitleFocused = false
+                editMemoFocused = false
+                try? await Task.sleep(for: .milliseconds(80))
+            }
+            editingReminderID = nil
+            // editing→readOnly view swap이 UITextView를 dispose할 시간을 준 뒤 시트 열기.
+            try? await Task.sleep(for: .milliseconds(120))
+            editingReminder = snapshot
+        }
     }
 
     /// 인라인 편집의 두 GrowingTextView 사이 focus 이동은 잠깐 둘 다 false가 될 수 있다.
@@ -549,3 +718,4 @@ struct ReminderView: View {
         ReminderView(viewModel: ReminderViewModel(dependencies: .preview))
     }
 }
+
