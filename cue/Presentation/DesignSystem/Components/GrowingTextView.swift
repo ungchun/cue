@@ -74,10 +74,22 @@ private struct Representable: UIViewRepresentable {
         view.adjustsFontForContentSizeCategory = true
         view.delegate = context.coordinator
         view.text = text
-        // 컨텐츠 크기만큼만 차지 — SwiftUI가 자동 확장을 따라가게 한다.
+        // 세로는 컨텐츠만큼 강하게 잡고(자동 확장), 가로는 .defaultLow로 풀어 SwiftUI 부모가
+        // 제안한 너비에 wrap되도록 한다 — 기본 `.defaultHigh`면 한 줄로 width를 계속 늘려서
+        // 줄바꿈이 안 일어난다.
         view.setContentCompressionResistancePriority(.required, for: .vertical)
         view.setContentHuggingPriority(.required, for: .vertical)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         return view
+    }
+
+    /// SwiftUI가 제안한 너비에 맞춰 wrap된 높이를 정확히 돌려준다.
+    /// 없으면 UITextView가 자기 intrinsicContentSize로 한 줄 너비를 계속 요구해 wrap이 안 된다.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
+        let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: fitting.height)
     }
 
     func updateUIView(_ uiView: UITextView, context: Context) {
