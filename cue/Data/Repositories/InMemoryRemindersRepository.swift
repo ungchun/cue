@@ -53,7 +53,6 @@ actor InMemoryRemindersRepository: RemindersRepository {
         guard lists.contains(where: { $0.id == listID }) else {
             throw DomainError.notFound
         }
-        // `includesTime`은 EventKit의 종일/시각 구분용 — 인메모리 모델은 마감일만 보관한다.
         reminders.append(
             Reminder(
                 id: UUID().uuidString,
@@ -61,17 +60,26 @@ actor InMemoryRemindersRepository: RemindersRepository {
                 isCompleted: false,
                 notes: notes,
                 dueDate: dueDate,
+                includesTime: includesTime,
                 listID: listID
             )
         )
     }
 
-    func updateReminder(reminderID: String, title: String, notes: String?) async throws {
+    func updateReminder(
+        reminderID: String,
+        title: String,
+        notes: String?,
+        dueDate: Date?,
+        includesTime: Bool
+    ) async throws {
         guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
             throw DomainError.notFound
         }
         reminders[index].title = title
         reminders[index].notes = notes
+        reminders[index].dueDate = dueDate
+        reminders[index].includesTime = includesTime
     }
 
     func deleteReminder(reminderID: String) async throws {

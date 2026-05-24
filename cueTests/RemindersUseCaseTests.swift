@@ -185,6 +185,20 @@ struct RemindersUseCaseTests {
         }
     }
 
+    @Test func updateReminderChangesDueDate() async throws {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1")])
+        let due = Date(timeIntervalSince1970: 1_700_000_000)
+
+        try await UpdateReminderUseCase(repository: repository)(
+            reminderID: "R1", title: "할 일", notes: nil,
+            dueDate: due, includesTime: true
+        )
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.first?.dueDate == due)
+        #expect(reminders.first?.includesTime == true)
+    }
+
     @Test func addReminderStoresDueDate() async throws {
         let repository = makeRepository()
         let due = Date(timeIntervalSince1970: 1_700_000_000)

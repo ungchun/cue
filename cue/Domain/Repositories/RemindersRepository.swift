@@ -27,8 +27,16 @@ protocol RemindersRepository: Sendable {
         includesTime: Bool,
         toListID listID: String
     ) async throws
-    /// 기존 항목의 제목·메모를 갱신한다. `notes`가 nil이면 메모를 비운다.
-    func updateReminder(reminderID: String, title: String, notes: String?) async throws
+    /// 기존 항목의 제목·메모·마감일을 갱신한다.
+    /// `notes`가 nil이면 메모를 비우고, `dueDate`가 nil이면 마감일을 지운다.
+    /// `includesTime`은 종일/시각 구분을 결정한다 (시각이면 EventKit 알람도 함께 갱신).
+    func updateReminder(
+        reminderID: String,
+        title: String,
+        notes: String?,
+        dueDate: Date?,
+        includesTime: Bool
+    ) async throws
     /// 항목을 삭제한다.
     func deleteReminder(reminderID: String) async throws
 }

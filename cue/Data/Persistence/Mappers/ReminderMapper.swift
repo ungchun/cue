@@ -17,6 +17,8 @@ enum ReminderMapper {
     }
 
     /// `EKReminder` → 도메인 `Reminder`
+    /// `includesTime`은 `dueDateComponents`에 시·분이 들어 있는지로 판단한다 —
+    /// 시·분이 비어 있으면 EventKit이 종일 마감으로 취급한다.
     static func toReminder(_ reminder: EKReminder) -> Reminder {
         Reminder(
             id: reminder.calendarItemIdentifier,
@@ -24,6 +26,7 @@ enum ReminderMapper {
             isCompleted: reminder.isCompleted,
             notes: reminder.notes,
             dueDate: reminder.dueDateComponents?.date,
+            includesTime: reminder.dueDateComponents?.hour != nil,
             listID: reminder.calendar.calendarIdentifier
         )
     }

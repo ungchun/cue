@@ -82,12 +82,33 @@ actor EventKitRemindersRepository: RemindersRepository {
         try store.save(reminder, commit: true)
     }
 
-    func updateReminder(reminderID: String, title: String, notes: String?) async throws {
+    func updateReminder(
+        reminderID: String,
+        title: String,
+        notes: String?,
+        dueDate: Date?,
+        includesTime: Bool
+    ) async throws {
         guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
             throw DomainError.notFound
         }
         reminder.title = title
         reminder.notes = notes
+        // 기존 알람을 모두 떼고, 시간 포함이면 새로 단다 — 마감일 변경 시 알람 시각도 같이 바뀌어야 함.
+        if let alarms = reminder.alarms {
+            for alarm in alarms { reminder.removeAlarm(alarm) }
+        }
+        if let dueDate {
+            let fields: Set<Calendar.Component> = includesTime
+                ? [.year, .month, .day, .hour, .minute]
+                : [.year, .month, .day]
+            reminder.dueDateComponents = Calendar.current.dateComponents(fields, from: dueDate)
+            if includesTime {
+                reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
+            }
+        } else {
+            reminder.dueDateComponents = nil
+        }
         try store.save(reminder, commit: true)
     }
 
