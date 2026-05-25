@@ -94,7 +94,7 @@ struct ListEditorSheet: View {
             .frame(maxWidth: .infinity)
 
             TextField("목록 이름", text: $title)
-                .font(AppFont.titleMedium)
+                .font(.title3.weight(.semibold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(selectedPalette.displayColor)
                 .focused($nameFocused)
@@ -173,7 +173,7 @@ struct ListEditorSheet: View {
     private var discardPopover: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Text("이 변경 사항을 폐기\n하겠습니까?")
-                .font(AppFont.headline)
+                .font(.headline)
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -182,7 +182,7 @@ struct ListEditorSheet: View {
                 dismiss()
             } label: {
                 Text("변경 사항 폐기")
-                    .font(AppFont.bodyLarge.weight(.medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.md)

@@ -33,8 +33,6 @@ struct ReminderView: View {
     // 대기 중 다시 탭하면 취소(iOS 미리알림과 동일).
     @State private var pendingCompletionIDs: Set<String> = []
 
-    // 스크롤로 본문 large title이 가려졌는지 — 가려지면 navigation bar에 inline title 표시.
-    @State private var showsInlineTitle = false
 
     // 인라인 편집 row swap 진행 중인지 — 이전 view의 textViewDidEndEditing이 binding을
     // false로 떨어뜨리는 부작용을 차단하기 위한 가드. swap 중엔 editTitleFocused = false가
@@ -46,17 +44,19 @@ struct ReminderView: View {
     @State private var showingListInfoSheet = false
     @State private var showingDeleteListConfirmation = false
 
+    // 스크롤로 본문 large title이 가려졌는지 — 가려지면 navigation bar에 inline title 표시.
+    @State private var showsInlineTitle = false
+
     // 좌상단 "미리 알림" 버튼 — Apple Reminders 앱 호출용 SwiftUI 환경 핸들.
     @Environment(\.openURL) private var openURL
 
     var body: some View {
         content
-            // 시스템 large title은 색을 항목별로 바꿀 수 없어 inline mode로 숨기고
-            // List 안 첫 row에 직접 그린다(`listTitleRow`). 미리알림 앱과 동일 동작 —
-            // 스크롤하면 title이 컨텐츠와 함께 위로 사라지고, 가려지는 시점에
-            // navigation bar 중앙의 inline title이 채워진다(`showsInlineTitle`).
+            // 시스템 large title은 색을 selection별로 동적 변경할 수 없어 inline 모드로
+            // 숨기고 List 안 첫 row(`listTitleRow`)에 직접 그린다. 스크롤하면 컨텐츠와
+            // 함께 위로 사라지고, 가려진 시점에 navigation bar 중앙 inline title이 채워진다.
             .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle(showsInlineTitle ? (viewModel.selectedList?.title ?? "") : "")
+            .navigationTitle(showsInlineTitle ? currentTitle : "")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     openRemindersAppButton
@@ -206,23 +206,11 @@ struct ReminderView: View {
     private var reminderList: some View {
         List {
             listTitleRow
-            ForEach(viewModel.visibleReminders) { reminder in
-                reminderRow(reminder)
-                    .listRowSeparator(.hidden)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            Task {
-                                await flushInlineEditAwaiting()
-                                try? await Task.sleep(for: .milliseconds(120))
-                                await viewModel.delete(reminder)
-                            }
-                        } label: {
-                            Label("삭제", systemImage: "trash")
-                        }
-                    }
+            if case .systemFilter(.all) = viewModel.selection {
+                allModeContent
+            } else {
+                singleModeContent
             }
-            newReminderRow
-                .listRowSeparator(.hidden)
 
             if viewModel.showsCompleted {
                 completedSection
@@ -250,20 +238,95 @@ struct ReminderView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             ListSelectorChipBar(
                 lists: viewModel.lists,
-                selectedListID: viewModel.selectedListID,
-                onSelect: { viewModel.select($0) }
+                selection: viewModel.selection,
+                onSelectList: { viewModel.select($0) },
+                onSelectFilter: { viewModel.selectFilter($0) }
             )
         }
     }
 
-    /// List 안 inline large title — 선택된 리스트 title을 그 리스트의 색으로 표시.
-    /// 시스템 navigation large title은 색을 항목별로 변경할 수 없어 직접 그린다.
-    /// 스크롤 시 컨텐츠와 함께 위로 사라진다(미리알림 앱과 동일).
-    private var listTitleRow: some View {
-        Text(viewModel.selectedList?.title ?? "")
-            .font(AppFont.displayLarge)
-            .foregroundStyle(listColor ?? .primary)
+    /// 리스트/오늘/예정 selection 본문 — 단일 ForEach + 입력 행.
+    @ViewBuilder
+    private var singleModeContent: some View {
+        remindersForEach(viewModel.visibleReminders)
+        newReminderRow
             .listRowSeparator(.hidden)
+    }
+
+    /// `.all` selection 본문 — 리스트별 섹션 그루핑. SwiftUI `Section` + `.listStyle(.plain)`
+    /// 조합으로 섹션 헤더가 자동 sticky(공중에 떠 있는 형태)로 동작한다.
+    /// 입력 행은 마지막에 1개 — default 리스트("미리 알림" 매칭 → lists.first fallback)로 저장.
+    /// 다중 섹션별 입력 row는 newReminderRow의 단일 state 기반이라 다음 사이클에서 분리.
+    @ViewBuilder
+    private var allModeContent: some View {
+        ForEach(viewModel.allModeSections, id: \.list.id) { section in
+            Section {
+                remindersForEach(section.reminders)
+            } header: {
+                sectionHeader(for: section.list)
+            }
+        }
+        newReminderRow
+            .listRowSeparator(.hidden)
+    }
+
+    /// reminder row + swipe(삭제) — single/all 모드 공통.
+    @ViewBuilder
+    private func remindersForEach(_ reminders: [Reminder]) -> some View {
+        ForEach(reminders) { reminder in
+            reminderRow(reminder)
+                .listRowSeparator(.hidden)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        Task {
+                            await flushInlineEditAwaiting()
+                            try? await Task.sleep(for: .milliseconds(120))
+                            await viewModel.delete(reminder)
+                        }
+                    } label: {
+                        Label("삭제", systemImage: "trash")
+                    }
+                }
+        }
+    }
+
+    /// `.all` 모드 섹션 헤더 — 리스트 이름을 그 리스트 색으로, 폰트는 large title보다 한 단계 작게.
+    private func sectionHeader(for list: ReminderList) -> some View {
+        Text(list.title)
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(metaColor(forListColorHex: list.colorHex))
+            .padding(.top, Spacing.sm)
+    }
+
+    /// List 안에 직접 그리는 large title — selection별 라벨·색을 적용. 스크롤되면
+    /// 컨텐츠와 함께 위로 사라지고 navigation bar inline title이 채워진다.
+    private var listTitleRow: some View {
+        Text(currentTitle)
+            .font(.largeTitle.bold())
+            .foregroundStyle(currentTitleColor)
+            .listRowSeparator(.hidden)
+    }
+
+    /// 현재 selection의 large title 라벨 — 사용자 리스트면 그 이름, 시스템 필터면 필터 라벨.
+    private var currentTitle: String {
+        switch viewModel.selection {
+        case .list: return viewModel.selectedList?.title ?? ""
+        case .systemFilter(let filter): return filter.title
+        case .none: return ""
+        }
+    }
+
+    /// 현재 selection의 large title 색 — 시스템 필터는 Apple Reminders 패턴을 따른
+    /// 의미별 시스템 컬러(오늘=accent / 예정=red / 전체=gray), 사용자 리스트는 그 리스트
+    /// EventKit 캘린더 색, 없으면 `.primary`. 시스템 필터 색은 EventKit에 없어 자체 매핑.
+    private var currentTitleColor: Color {
+        switch viewModel.selection {
+        case .list: return listColor ?? .primary
+        case .systemFilter(.today): return Color.accentColor
+        case .systemFilter(.scheduled): return Color.red
+        case .systemFilter(.all): return Color.gray
+        case .none: return .primary
+        }
     }
 
     /// 현재 선택된 리스트의 색 — EventKit calendar color에서 매핑된 hex 문자열을 Color로.
@@ -285,11 +348,11 @@ struct ReminderView: View {
             .listRowSeparator(.hidden)
         HStack(alignment: .lastTextBaseline) {
             Text("완료됨")
-                .font(AppFont.titleLarge)
+                .font(.title2.weight(.semibold))
                 .foregroundStyle(.secondary)
             Spacer()
             Text("\(viewModel.completedReminders.count)")
-                .font(AppFont.bodySmall)
+                .font(.callout)
                 .foregroundStyle(.secondary)
         }
         .listRowSeparator(.hidden)
@@ -320,13 +383,13 @@ struct ReminderView: View {
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(reminder.title)
-                    .font(AppFont.bodyLarge)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let dueDate = reminder.dueDate {
                     Text(dueDateText(dueDate))
-                        .font(AppFont.bodySmall)
+                        .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -376,11 +439,8 @@ struct ReminderView: View {
                         textColor: .secondaryLabel,
                         submitOnReturn: true
                     )
-                } else if let dueDate = reminder.dueDate {
-                    Text(dueDateText(dueDate))
-                        .font(AppFont.bodySmall)
-                        .foregroundStyle(isOverdue(dueDate) ? Color.red : Color.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    metaRow(for: reminder)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -401,6 +461,73 @@ struct ReminderView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    /// 항목 둘째 줄 메타. 표시할 라벨이 하나라도 있을 때만 그린다.
+    /// - **리스트이름** (그 리스트 색): 시스템 필터 모드(오늘/예정/전체)에서만
+    /// - **마감일/시간**: 마감일이 있으면 항상 (지났으면 빨강)
+    /// - **↻ 반복**: 반복 규칙이 있으면 selection 모드 무관 항상
+    @ViewBuilder
+    private func metaRow(for reminder: Reminder) -> some View {
+        if reminder.dueDate != nil || reminder.recurrence != nil || isSystemFilterMode {
+            HStack(spacing: Spacing.sm) {
+                if isSystemFilterMode, let list = list(for: reminder) {
+                    Text(list.title)
+                        .foregroundStyle(metaColor(forListColorHex: list.colorHex))
+                }
+                if let dueDate = reminder.dueDate {
+                    Text(dueDateText(dueDate))
+                        .foregroundStyle(isOverdue(dueDate) ? Color.red : Color.secondary)
+                }
+                if let recurrence = reminder.recurrence {
+                    HStack(spacing: Spacing.xxs) {
+                        Image(systemName: "repeat")
+                        Text(recurrenceLabel(recurrence))
+                    }
+                    .foregroundStyle(Color.secondary)
+                }
+            }
+            .font(.subheadline)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// 현재 selection이 시스템 필터(오늘/예정/전체)면 true. 메타 row의 풍부도 분기에 쓰인다.
+    private var isSystemFilterMode: Bool {
+        if case .systemFilter = viewModel.selection { return true }
+        return false
+    }
+
+    /// `reminder`가 속한 리스트(있다면) — 메타 라벨용.
+    private func list(for reminder: Reminder) -> ReminderList? {
+        viewModel.lists.first { $0.id == reminder.listID }
+    }
+
+    /// 리스트 colorHex → Color. 없거나 hex 파싱 실패면 `.secondary` fallback.
+    private func metaColor(forListColorHex hex: String?) -> Color {
+        guard let hex, let color = Color(hex: hex) else { return Color.secondary }
+        return color
+    }
+
+    /// 반복 규칙 한국어 라벨. interval=1이면 매일/매주/매월/매년,
+    /// 아니면 "N일/주/개월/년 마다".
+    private func recurrenceLabel(_ rule: RecurrenceRule) -> String {
+        if rule.interval == 1 {
+            switch rule.frequency {
+            case .daily: return "매일"
+            case .weekly: return "매주"
+            case .monthly: return "매월"
+            case .yearly: return "매년"
+            }
+        }
+        let unit: String
+        switch rule.frequency {
+        case .daily: unit = "일"
+        case .weekly: unit = "주"
+        case .monthly: unit = "개월"
+        case .yearly: unit = "년"
+        }
+        return "\(rule.interval)\(unit)마다"
     }
 
     /// 인라인 편집 row 식별용 field.

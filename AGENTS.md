@@ -46,7 +46,7 @@ SwiftUI 기반, 클린 아키텍처 3계층, 로컬 + iCloud 저장, 외부 서�
 - 의존성은 항상 `Domain`을 향한다. `Domain`은 `SwiftUI`·`SwiftData`를 import하지 않는다.
 - 구체 구현 생성은 `App/CompositionRoot.swift`에서만.
 - 1 파일 = 1 타입. 역할 접미사(`...UseCase`, `...ViewModel` 등).
-- 뷰의 색은 Apple 시스템 컬러(`.primary`/`.secondary`/`.tint`/`Color.red` 등)만, 폰트는 `AppFont`, 간격은 `Spacing`만 — raw 색·hex·OKLCH·고정 숫자 입력 금지, 퍼스트파티 컴포넌트 우선.
+- 뷰의 색은 Apple 시스템 컬러(`.primary`/`.secondary`/`.tint`/`Color.red` 등)만, 폰트는 SwiftUI 텍스트 스타일(`.body`/`.callout`/`.headline`/`.title2.weight(.semibold)` 등) 직접 사용, 간격은 `Spacing` 토큰만 — raw 색·hex·OKLCH·`.system(size:)` 고정 크기 금지, 퍼스트파티 컴포넌트 우선.
 - 빌드·테스트 실행은 사용자가 한다. 에이전트는 코드(테스트 포함)까지만 쓰고,
   빌드·테스트 통과 여부를 작업 중 묻지 않는다. push 전 전체 테스트 로직을 점검한다.
 

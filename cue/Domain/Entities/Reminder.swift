@@ -17,5 +17,7 @@ struct Reminder: Identifiable, Equatable, Sendable {
     var notes: String?
     var dueDate: Date?
     var includesTime: Bool = false
+    /// 반복 주기. nil이면 일회성 항목. EventKit `recurrenceRules`의 첫 규칙만 매핑한다.
+    var recurrence: RecurrenceRule? = nil
     let listID: String
 }

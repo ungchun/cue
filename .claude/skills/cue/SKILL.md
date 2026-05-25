@@ -22,7 +22,7 @@ cue의 모든 코드 변경을 TDD 사이클로 조율한다. 진입점은 `/cue
    않는다. 작성까지가 하네스의 몫. 검증은 push 직전에 모아서 한다 (→ Step 5).
 4. **디자인 시스템 규칙** → `docs/design-system.md`
    - 색은 Apple 시스템 컬러(`.primary`/`.secondary`/`.tint`/`Color.red` 등)만 — 자체 색 토큰·hex·OKLCH·RGB 리터럴 금지.
-   - 폰트는 `AppFont`, 간격은 `Spacing` 토큰만 — 고정 숫자 직접 입력 금지.
+   - 폰트는 SwiftUI 텍스트 스타일(`.body`/`.callout`/`.headline`/`.title2.weight(.semibold)` 등) 직접 사용, 간격은 `Spacing` 토큰만 — `.system(size:)` 고정 크기·`Spacing` 외 숫자 직접 입력 금지. 자체 폰트 토큰 enum(`AppFont` 등) 다시 만들지 않는다.
    - iOS 퍼스트파티 컴포넌트 우선.
    - 커스텀 컴포넌트는 **만들기 전 반드시 사용자에게 알리고 합의**한다.
 5. **의존성 규칙** — `Domain`은 `SwiftUI`·`SwiftData`를 모른다. → `ARCHITECTURE.md`

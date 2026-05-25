@@ -99,10 +99,10 @@ struct ReminderDetailSheet: View {
                     // 시트 안엔 leading 아이콘이 없어 axis: .vertical TextField 정렬 이슈가 없음.
                     // Enter는 줄바꿈으로 두고, commit은 툴바 ✓ 버튼으로 명시.
                     TextField("제목", text: $title, axis: .vertical)
-                        .font(AppFont.titleLarge)
+                        .font(.title2.weight(.semibold))
                         .foregroundStyle(.primary)
                     TextField("메모", text: $memo, axis: .vertical)
-                        .font(AppFont.bodyLarge)
+                        .font(.body)
                         .foregroundStyle(.primary)
                 }
 
@@ -191,7 +191,7 @@ struct ReminderDetailSheet: View {
     private var discardPopover: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Text("이 변경 사항을 폐기\n하겠습니까?")
-                .font(AppFont.headline)
+                .font(.headline)
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -203,7 +203,7 @@ struct ReminderDetailSheet: View {
                 // 회색 system fill capsule + 빨간 destructive 텍스트 — iOS native alert와 동일.
                 // `.glass` style은 fill이 너무 투명해 직접 background로 명시.
                 Text("변경 사항 폐기")
-                    .font(AppFont.bodyLarge.weight(.medium))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.md)
@@ -241,7 +241,7 @@ struct ReminderDetailSheet: View {
                         if let subtitle {
                             // 서브타이틀은 iOS 미리알림과 동일하게 캡션 크기 — 라벨보다 확연히 작게.
                             Text(subtitle)
-                                .font(AppFont.caption)
+                                .font(.caption)
                                 .foregroundStyle(.tint)
                         }
                     }

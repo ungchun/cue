@@ -42,11 +42,13 @@ struct ReminderViewModelTests {
 
     private func reminder(
         id: String, title: String = "할 일",
-        isCompleted: Bool = false, listID: String
+        isCompleted: Bool = false, dueDate: Date? = nil,
+        includesTime: Bool = false, listID: String
     ) -> Reminder {
         Reminder(
             id: id, title: title, isCompleted: isCompleted,
-            notes: nil, dueDate: nil, listID: listID
+            notes: nil, dueDate: dueDate, includesTime: includesTime,
+            listID: listID
         )
     }
 
@@ -109,6 +111,174 @@ struct ReminderViewModelTests {
         await viewModel.onAppear()
 
         #expect(viewModel.visibleReminders.map(\.id) == ["1"])
+    }
+
+    // MARK: - System filter (오늘/예정/전체)
+
+    /// 오늘 필터 — 오늘 자정 이전 마감(overdue 포함) 미완료만. 완료된 항목·마감 없음·미래는 제외.
+    @Test func todayFilterIncludesOverdueAndTodayDue() async {
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let yesterdayNoon = startOfToday.addingTimeInterval(-12 * 60 * 60)
+        let todayNoon = startOfToday.addingTimeInterval(12 * 60 * 60)
+        let tomorrowNoon = startOfToday.addingTimeInterval(36 * 60 * 60)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "overdue", dueDate: yesterdayNoon, listID: "A"),
+                reminder(id: "today", dueDate: todayNoon, listID: "A"),
+                reminder(id: "future", dueDate: tomorrowNoon, listID: "A"),
+                reminder(id: "nodue", listID: "A"),
+                reminder(id: "completed", isCompleted: true, dueDate: todayNoon, listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.today)
+
+        #expect(viewModel.visibleReminders.map(\.id).sorted() == ["overdue", "today"])
+    }
+
+    /// 예정 필터 — 마감일이 있는 모든 미완료. 마감 없음·완료는 제외.
+    @Test func scheduledFilterIncludesAllDueIncomplete() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "due-past", dueDate: now.addingTimeInterval(-86400), listID: "A"),
+                reminder(id: "due-future", dueDate: now.addingTimeInterval(86400), listID: "A"),
+                reminder(id: "nodue", listID: "A"),
+                reminder(id: "completed", isCompleted: true, dueDate: now, listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.scheduled)
+
+        #expect(viewModel.visibleReminders.map(\.id).sorted() == ["due-future", "due-past"])
+    }
+
+    /// 전체 필터 — 모든 미완료(마감 없어도). 완료는 제외.
+    @Test func allFilterIncludesAllIncomplete() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "1", listID: "A"),
+                reminder(id: "2", listID: "B"),
+                reminder(id: "completed", isCompleted: true, listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.all)
+
+        #expect(viewModel.visibleReminders.map(\.id).sorted() == ["1", "2"])
+    }
+
+    /// 시스템 필터에서 add() — 이름이 "미리 알림"인 리스트가 있으면 거기로 저장.
+    @Test func addInSystemFilterUsesNamedDefaultList() async {
+        let defaultList = ReminderList(id: "DEF", title: "미리 알림", colorHex: nil)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, defaultList]
+        ))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.today)
+        await viewModel.add(title: "오늘 새 일")
+
+        let added = viewModel.allReminders.first { $0.title == "오늘 새 일" }
+        #expect(added?.listID == "DEF")
+    }
+
+    /// 시스템 필터에서 add() — "미리 알림" 이름 매칭이 없으면 `lists.first`로 fallback.
+    @Test func addInSystemFilterFallsBackToFirstList() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB]
+        ))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.scheduled)
+        await viewModel.add(title: "마감 있는 새 일")
+
+        let added = viewModel.allReminders.first { $0.title == "마감 있는 새 일" }
+        #expect(added?.listID == "A")
+    }
+
+    /// 시스템 필터 visibleReminders는 마감일 오름차순 — 빠른 마감 먼저, 마감 없음 뒤.
+    @Test func visibleRemindersSortedByDueDateAscending() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "late", dueDate: now.addingTimeInterval(7200), listID: "A"),
+                reminder(id: "early", dueDate: now.addingTimeInterval(3600), listID: "A"),
+                reminder(id: "nodue", listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.all)
+
+        #expect(viewModel.visibleReminders.map(\.id) == ["early", "late", "nodue"])
+    }
+
+    /// `.all` 모드 섹션 그루핑 — lists 순서 보존, 각 섹션은 그 리스트의 미완료만.
+    @Test func allModeSectionsGroupsByListPreservingOrder() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "a1", listID: "A"),
+                reminder(id: "b1", listID: "B"),
+                reminder(id: "a-done", isCompleted: true, listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        let sections = viewModel.allModeSections
+
+        #expect(sections.map(\.list.id) == ["A", "B"])
+        #expect(sections[0].reminders.map(\.id) == ["a1"])
+        #expect(sections[1].reminders.map(\.id) == ["b1"])
+    }
+
+    /// `.all` 모드 섹션 — 빈 리스트도 포함(섹션 헤더는 그려야 함).
+    @Test func allModeSectionsIncludesEmptyLists() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [reminder(id: "a1", listID: "A")]
+        ))
+        await viewModel.onAppear()
+
+        let sections = viewModel.allModeSections
+
+        #expect(sections.count == 2)
+        #expect(sections[1].reminders.isEmpty)
+    }
+
+    /// 일반 리스트 selection은 **시간 지정 없는 항목**(`includesTime=false`나 마감 없음)이 위,
+    /// 그 아래는 시간 지정 항목들이 마감일 오름차순.
+    @Test func listSelectionPutsUntimedFirstThenTimedAscending() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                // 시간 지정 항목 (includesTime=true)
+                reminder(id: "late", dueDate: now.addingTimeInterval(7200), includesTime: true, listID: "A"),
+                reminder(id: "early", dueDate: now.addingTimeInterval(3600), includesTime: true, listID: "A"),
+                // 시간 지정 없는 항목들 (종일, 또는 마감 없음)
+                reminder(id: "allday", dueDate: now, includesTime: false, listID: "A"),
+                reminder(id: "nodue", listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+        // .list("A")가 자동 selection.
+
+        let ids = viewModel.visibleReminders.map(\.id)
+        let head = Set(ids.prefix(2))
+        let tail = Array(ids.suffix(2))
+        // 시간 지정 없는 두 항목이 앞에 (순서는 보존된 EventKit 입력 순서라 검사 X).
+        #expect(head == ["allday", "nodue"])
+        // 시간 지정 항목들은 시간순.
+        #expect(tail == ["early", "late"])
     }
 
     @Test func toggleFlipsCompletion() async {
