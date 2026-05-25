@@ -132,7 +132,7 @@ struct ReminderView: View {
         Menu {
             ForEach(viewModel.lists) { list in
                 Button {
-                    viewModel.select(list)
+                    // 리스트 전환은 하단 칩 바로 이동. 메뉴는 UI 유지를 위한 자리만.
                 } label: {
                     let title = "\(list.title) (\(viewModel.incompleteCount(for: list)))"
                     if list.id == viewModel.selectedListID {
@@ -254,6 +254,16 @@ struct ReminderView: View {
             if viewModel.isLoading {
                 ProgressView()
             }
+        }
+        // 하단 칩 바를 List의 safe area에 부착 — 탭바 바로 위에 고정되고
+        // List 컨텐츠는 자동으로 inset만큼 위로 올라간다. iOS 26 Liquid Glass
+        // 머티리얼이 자체적으로 분리감을 주므로 별도 separator는 두지 않는다.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            ListSelectorChipBar(
+                lists: viewModel.lists,
+                selectedListID: viewModel.selectedListID,
+                onSelect: { viewModel.select($0) }
+            )
         }
     }
 
