@@ -46,6 +46,9 @@ struct ReminderView: View {
     @State private var showingListInfoSheet = false
     @State private var showingDeleteListConfirmation = false
 
+    // 좌상단 "미리 알림" 버튼 — Apple Reminders 앱 호출용 SwiftUI 환경 핸들.
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
         content
             // 시스템 large title은 색을 항목별로 바꿀 수 없어 inline mode로 숨기고
@@ -55,9 +58,8 @@ struct ReminderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle(showsInlineTitle ? (viewModel.selectedList?.title ?? "") : "")
             .toolbar {
-                // 뷰만 — 액션은 아직 없음.
                 ToolbarItem(placement: .topBarLeading) {
-                    listSelectionMenu
+                    openRemindersAppButton
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     optionsMenu
@@ -121,29 +123,16 @@ struct ReminderView: View {
             }
     }
 
-    /// 좌측 상단 — 사용자가 가진 미리알림 리스트(섹션)를 펼치는 메뉴.
-    /// 각 항목 옆 `(n)`은 그 리스트의 **미완료** 개수. 현재 선택된 리스트는 leading 체크마크.
-    ///
-    /// SwiftUI Menu가 Button label 안 `Image`를 자동으로 menu item icon으로 띄워 opacity가
-    /// 무시되므로 (모든 항목에 체크 보임), 선택 항목만 `Label(systemImage:)`로 두고 나머진
-    /// 그냥 `Text`. iOS native Menu가 같은 그룹에 systemImage가 한 개라도 있으면 모든 항목에
-    /// leading 자리를 예약해 들여쓰기 자동 정렬 + 선택 표시가 동시에 처리된다.
-    private var listSelectionMenu: some View {
-        Menu {
-            ForEach(viewModel.lists) { list in
-                Button {
-                    // 리스트 전환은 하단 칩 바로 이동. 메뉴는 UI 유지를 위한 자리만.
-                } label: {
-                    let title = "\(list.title) (\(viewModel.incompleteCount(for: list)))"
-                    if list.id == viewModel.selectedListID {
-                        Label(title, systemImage: "checkmark")
-                    } else {
-                        Text(title)
-                    }
-                }
+    /// 좌측 상단 — Apple Reminders 앱으로 점프하는 텍스트 버튼.
+    /// `x-apple-reminderkit://` 스킴으로 시스템 미리 알림 앱을 연다. 시스템이 처리할 수
+    /// 없으면 SwiftUI `openURL`이 조용히 무시한다(별도 fallback 없음).
+    private var openRemindersAppButton: some View {
+        Button {
+            if let url = URL(string: "x-apple-reminderkit://") {
+                openURL(url)
             }
         } label: {
-            Image(systemName: "list.bullet")
+            Text("미리 알림")
         }
     }
 
