@@ -184,9 +184,10 @@ final class ReminderViewModel {
         title: String,
         notes: String? = nil,
         dueDate: Date? = nil,
-        includesTime: Bool = false
+        includesTime: Bool = false,
+        toListID: String? = nil
     ) async {
-        guard let listID = resolveTargetListID() else {
+        guard let listID = toListID ?? resolveTargetListID() else {
             errorMessage = "먼저 리스트를 선택해 주세요."
             return
         }

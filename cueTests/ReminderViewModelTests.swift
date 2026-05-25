@@ -189,6 +189,21 @@ struct ReminderViewModelTests {
         #expect(added?.listID == "DEF")
     }
 
+    /// add()에 `toListID`를 명시하면 selection 모드 무관 그 리스트로 저장 —
+    /// `.all` 모드 섹션별 입력 row가 자기 섹션의 listID를 명시할 때 쓰는 경로.
+    @Test func addWithExplicitTargetListIDIgnoresSelection() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB]
+        ))
+        await viewModel.onAppear()
+        // 자동 selection은 .list("A"). 그래도 toListID="B"가 우선.
+
+        await viewModel.add(title: "B 섹션 입력", toListID: "B")
+
+        let added = viewModel.allReminders.first { $0.title == "B 섹션 입력" }
+        #expect(added?.listID == "B")
+    }
+
     /// 시스템 필터에서 add() — "미리 알림" 이름 매칭이 없으면 `lists.first`로 fallback.
     @Test func addInSystemFilterFallsBackToFirstList() async {
         let viewModel = ReminderViewModel(dependencies: makeDependencies(

@@ -47,6 +47,11 @@ struct ReminderView: View {
     // 스크롤로 본문 large title이 가려졌는지 — 가려지면 navigation bar에 inline title 표시.
     @State private var showsInlineTitle = false
 
+    // `.all` 모드에서 어느 섹션의 입력 row가 활성인지. nil이면 모두 placeholder.
+    // 한 번에 하나만 active — newReminderRow가 단일 state 기반이라 다중 활성 불가하므로
+    // active한 섹션에만 진짜 입력 row를 mount하고 나머진 placeholder로 표시.
+    @State private var activeNewRowListID: String?
+
     // 좌상단 "미리 알림" 버튼 — Apple Reminders 앱 호출용 SwiftUI 환경 핸들.
     @Environment(\.openURL) private var openURL
 
@@ -218,6 +223,7 @@ struct ReminderView: View {
         }
         .listStyle(.plain)
         .listRowSpacing(Spacing.zero)
+        .listSectionSpacing(Spacing.zero)
         // 시스템 기본 row 최소 높이(44pt)를 0으로 깎아 row가 컨텐츠 자체 높이로 줄어든다.
         // horizontal inset은 시스템 기본 유지 — `.listRowInsets`처럼 좌우까지 강제하지 않는다.
         .environment(\.defaultMinListRowHeight, Spacing.zero)
@@ -255,19 +261,54 @@ struct ReminderView: View {
 
     /// `.all` selection 본문 — 리스트별 섹션 그루핑. SwiftUI `Section` + `.listStyle(.plain)`
     /// 조합으로 섹션 헤더가 자동 sticky(공중에 떠 있는 형태)로 동작한다.
-    /// 입력 행은 마지막에 1개 — default 리스트("미리 알림" 매칭 → lists.first fallback)로 저장.
-    /// 다중 섹션별 입력 row는 newReminderRow의 단일 state 기반이라 다음 사이클에서 분리.
+    /// 각 섹션 끝에 입력 row가 있고 — `activeNewRowListID == section.list.id`인 섹션만
+    /// 진짜 `newReminderRow`(GrowingTextView mount)를 그리고, 나머진 placeholder.
+    /// 입력 row 다음에 섹션 끝 디바이더 1pt.
     @ViewBuilder
     private var allModeContent: some View {
         ForEach(viewModel.allModeSections, id: \.list.id) { section in
             Section {
                 remindersForEach(section.reminders)
+                if activeNewRowListID == section.list.id {
+                    newReminderRow
+                        .listRowSeparator(.hidden)
+                } else {
+                    newRowPlaceholder(forListID: section.list.id)
+                        .listRowSeparator(.hidden)
+                }
+                Color(.separator)
+                    .frame(height: 1)
+                    .listRowSeparator(.hidden)
+                    .padding(.vertical, Spacing.zero)
             } header: {
                 sectionHeader(for: section.list)
             }
         }
-        newReminderRow
-            .listRowSeparator(.hidden)
+    }
+
+    /// 비활성 섹션의 입력 row placeholder — `circle.dotted` 아이콘만. 텍스트는 두지 않는다.
+    /// 탭하면 `activeNewRowListID`가 그 listID로 바뀌어 진짜 입력 row가 mount되고
+    /// 다음 runloop에 포커스가 이동한다. 행 전체가 hit area.
+    private func newRowPlaceholder(forListID listID: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+            Image(systemName: "circle.dotted")
+                .font(.body)
+                .foregroundStyle(.tertiary)
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            activateNewRow(forListID: listID)
+        }
+    }
+
+    /// placeholder 탭 처리 — active를 그 섹션으로 옮기고 다음 runloop에서 포커스 set.
+    /// mount 직전에 focus를 true로 두면 새로 그려질 GrowingTextView가 이를 받아 keyboard 띄움.
+    private func activateNewRow(forListID listID: String) {
+        activeNewRowListID = listID
+        DispatchQueue.main.async {
+            newTitleFocused = true
+        }
     }
 
     /// reminder row + swipe(삭제) — single/all 모드 공통.
@@ -295,7 +336,6 @@ struct ReminderView: View {
         Text(list.title)
             .font(.title3.weight(.semibold))
             .foregroundStyle(metaColor(forListColorHex: list.colorHex))
-            .padding(.top, Spacing.sm)
     }
 
     /// List 안에 직접 그리는 large title — selection별 라벨·색을 적용. 스크롤되면
@@ -464,14 +504,15 @@ struct ReminderView: View {
     }
 
     /// 항목 둘째 줄 메타. 표시할 라벨이 하나라도 있을 때만 그린다.
-    /// - **리스트이름** (그 리스트 색): 시스템 필터 모드(오늘/예정/전체)에서만
+    /// - **리스트이름** (그 리스트 색): 오늘/예정에서만 표시. 전체는 섹션 헤더가
+    ///   리스트이름을 큰 글씨로 보여주므로 row 메타에서는 중복 제거.
     /// - **마감일/시간**: 마감일이 있으면 항상 (지났으면 빨강)
     /// - **↻ 반복**: 반복 규칙이 있으면 selection 모드 무관 항상
     @ViewBuilder
     private func metaRow(for reminder: Reminder) -> some View {
-        if reminder.dueDate != nil || reminder.recurrence != nil || isSystemFilterMode {
+        if reminder.dueDate != nil || reminder.recurrence != nil || showsListNameInMeta {
             HStack(spacing: Spacing.sm) {
-                if isSystemFilterMode, let list = list(for: reminder) {
+                if showsListNameInMeta, let list = list(for: reminder) {
                     Text(list.title)
                         .foregroundStyle(metaColor(forListColorHex: list.colorHex))
                 }
@@ -489,6 +530,15 @@ struct ReminderView: View {
             }
             .font(.subheadline)
             .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// 메타 row에 리스트 이름을 표시할지 — 오늘/예정에서만 true. 전체는 섹션 헤더에
+    /// 이미 리스트이름이 있어 row 메타 표시는 중복.
+    private var showsListNameInMeta: Bool {
+        switch viewModel.selection {
+        case .systemFilter(.today), .systemFilter(.scheduled): return true
+        default: return false
         }
     }
 
@@ -818,12 +868,18 @@ struct ReminderView: View {
     }
 
     /// 새 입력 행을 마감한다 — 포커스가 빠질 때 자동 호출. 제목이 비어 있으면 무시한다.
+    /// `.all` 모드에서 active 섹션이 있으면 그 listID로, 아니면 ViewModel의 default 매칭.
     private func submitNewReminder() {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        let targetID = activeNewRowListID
+        guard !trimmed.isEmpty else {
+            activeNewRowListID = nil
+            return
+        }
         let memo = newMemo
         clearNewRow()
-        Task { await viewModel.add(title: trimmed, notes: memo) }
+        activeNewRowListID = nil
+        Task { await viewModel.add(title: trimmed, notes: memo, toListID: targetID) }
     }
 
     /// 세부사항 시트(생성) 완료 — Draft를 풀어 add 호출하고 입력 행을 비운다.
@@ -831,11 +887,14 @@ struct ReminderView: View {
         let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let memo = draft.memo
+        let targetID = activeNewRowListID
         clearNewRow()
+        activeNewRowListID = nil
         Task {
             await viewModel.add(
                 title: trimmed, notes: memo,
-                dueDate: draft.dueDate, includesTime: draft.includesTime
+                dueDate: draft.dueDate, includesTime: draft.includesTime,
+                toListID: targetID
             )
         }
     }
