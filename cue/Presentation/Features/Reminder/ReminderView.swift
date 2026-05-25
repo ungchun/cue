@@ -240,10 +240,11 @@ struct ReminderView: View {
             }
         }
         .listStyle(.plain)
+        .listRowSpacing(Spacing.zero)
+        // 시스템 기본 row 최소 높이(44pt)를 0으로 깎아 row가 컨텐츠 자체 높이로 줄어든다.
+        // horizontal inset은 시스템 기본 유지 — `.listRowInsets`처럼 좌우까지 강제하지 않는다.
+        .environment(\.defaultMinListRowHeight, Spacing.zero)
         .animation(.easeInOut(duration: 0.25), value: viewModel.visibleReminders.map(\.id))
-        // 스크롤 시 키보드 즉시 닫음. tap 영향이 있어도 통합 view + swap flag로
-        // startInlineEdit이 같은 RunLoop tick에 새 row become으로 transfer 처리.
-        .scrollDismissesKeyboard(.immediately)
         .onScrollGeometryChange(for: Bool.self) { geometry in
             geometry.contentOffset.y > 40
         } action: { _, newValue in
