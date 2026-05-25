@@ -47,14 +47,14 @@ struct ListSelectorChipBar: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, Spacing.xs)
-            .padding(.vertical, Spacing.xs)
+            .padding(Spacing.xs)
         }
         // 단일 외곽 Liquid Glass 캡슐 — ScrollView 자체에 적용해
         // 안쪽 칩 묶음이 한 컨테이너 안에서 함께 스크롤된다.
         .glassEffect(.regular, in: .capsule)
         .padding(.horizontal, Spacing.md)
         .padding(.bottom, Spacing.sm)
+        .padding(.bottom, Spacing.xs)
     }
 
     /// 칩 본체 — 선택은 안쪽 캡슐 fill + primary 텍스트, 미선택은 텍스트만(secondary).
@@ -65,7 +65,8 @@ struct ListSelectorChipBar: View {
             .font(.callout)
             .foregroundStyle(isSelected ? .primary : .secondary)
             .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.md)
+            .padding(.vertical, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
             .background {
                 if isSelected {
                     Capsule().fill(.regularMaterial)
