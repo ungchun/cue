@@ -290,10 +290,14 @@ struct ReminderView: View {
     /// 탭하면 `activeNewRowListID`가 그 listID로 바뀌어 진짜 입력 row가 mount되고
     /// 다음 runloop에 포커스가 이동한다. 행 전체가 hit area.
     private func newRowPlaceholder(forListID listID: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+        HStack(alignment: .firstTextBaseline, spacing: circleTextSpacing) {
             Image(systemName: "circle.dotted")
-                .font(.body)
+                .font(.title2.weight(.thin))
                 .foregroundStyle(.tertiary)
+                .frame(
+                    width: UIFont.preferredFont(forTextStyle: .body).lineHeight,
+                    height: UIFont.preferredFont(forTextStyle: .body).lineHeight
+                )
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
@@ -414,28 +418,29 @@ struct ReminderView: View {
     /// 완료된 항목 행 — 채워진 동그라미 + secondary 색 텍스트.
     /// 동그라미 탭 → 미완료로 토글(0.5초 지연 동작은 미완료 행과 동일).
     private func completedReminderRow(_ reminder: Reminder) -> some View {
-        HStack(alignment: .top, spacing: Spacing.sm) {
-            Button {
-                tapCompletionToggle(reminder)
-            } label: {
-                completionIcon(for: reminder)
-            }
-            .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+            HStack(alignment: .top, spacing: circleTextSpacing) {
+                Button {
+                    tapCompletionToggle(reminder)
+                } label: {
+                    completionIcon(for: reminder)
+                }
+                .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(reminder.title)
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-
-                if let dueDate = reminder.dueDate {
-                    Text(dueDateText(dueDate))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let dueDate = reminder.dueDate {
+                Text(dueDateText(dueDate))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, titleIndent)
+            }
         }
     }
 
@@ -445,16 +450,17 @@ struct ReminderView: View {
     /// GrowingTextView는 reminder.title을 constant binding으로 받아 disabled.
     private func reminderRow(_ reminder: Reminder) -> some View {
         let isEditing = editingReminderID == reminder.id
-        return HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-            Button {
-                tapCompletionToggle(reminder)
-            } label: {
-                completionIcon(for: reminder)
-                    .font(.body)
-            }
-            .buttonStyle(.plain)
+        return VStack(alignment: .leading, spacing: Spacing.xxs) {
+            // 첫 줄 — 동그라미 + 제목(+ 편집 중일 때 ⓘ). `.top` 정렬 + image가 body lineHeight
+            // 정사각형 frame이라 image center가 첫 줄 line box center에 자동 정렬된다.
+            HStack(alignment: .top, spacing: circleTextSpacing) {
+                Button {
+                    tapCompletionToggle(reminder)
+                } label: {
+                    completionIcon(for: reminder)
+                }
+                .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 // title GrowingTextView — 모든 row에 항상 mount. dispose 없음 → 키보드 transfer 가능.
                 GrowingTextView(
                     text: titleBinding(for: reminder),
@@ -469,9 +475,24 @@ struct ReminderView: View {
                 // 입력 차단. binding setter가 editingReminderID 체크라 어차피 noop이지만
                 // UX 일관성 위해.
                 .disabled(swappingInlineEdit ? false : !isEditing)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
+                if isEditing {
+                    Button {
+                        openDetailSheet(for: reminder)
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.title3)
+                            .foregroundStyle(listColor ?? Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // 둘째 줄 — 메모(편집 + focus 중일 때) 또는 메타. titleIndent로 동그라미 영역만큼
+            // 들여쓰기 → 제목 leading edge에 정렬.
+            Group {
                 if isEditing && (editTitleFocused || editMemoFocused) {
-                    // 메모 칸 — editing + focus 중일 때만 mount. dispose 일어나지만 title 영향 없음.
                     GrowingTextView(
                         text: $editingMemo,
                         isFocused: $editMemoFocused,
@@ -484,23 +505,11 @@ struct ReminderView: View {
                     metaRow(for: reminder)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if !isEditing { startInlineEdit(reminder) }
-            }
-
-            if isEditing {
-                Spacer()
-                Button {
-                    openDetailSheet(for: reminder)
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(.title3)
-                        .foregroundStyle(listColor ?? Color.accentColor)
-                }
-                .buttonStyle(.plain)
-            }
+            .padding(.leading, titleIndent)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isEditing { startInlineEdit(reminder) }
         }
     }
 
@@ -633,12 +642,16 @@ struct ReminderView: View {
     /// 포커스 시 메모 칸과 ⓘ 버튼이 나타난다. 두 입력은 멀티라인 GrowingTextView.
     /// 두 focus 모두 풀리면 자동 add(80ms 지연 후 재확인). ⓘ로는 세부사항 시트.
     private var newReminderRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-            Image(systemName: "circle.dotted")
-                .font(.body)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+            HStack(alignment: .top, spacing: circleTextSpacing) {
+                Image(systemName: "circle.dotted")
+                    .font(.title2.weight(.thin))
+                    .foregroundStyle(.secondary)
+                    .frame(
+                        width: UIFont.preferredFont(forTextStyle: .body).lineHeight,
+                        height: UIFont.preferredFont(forTextStyle: .body).lineHeight
+                    )
 
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 GrowingTextView(
                     text: $newTitle,
                     // setter에서 inline 편집 정리를 sync로 처리 — onChange로 미루면 inline row의
@@ -648,32 +661,45 @@ struct ReminderView: View {
                     textColor: .label,
                     submitOnReturn: true
                 )
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if newTitleFocused || newMemoFocused {
-                    GrowingTextView(
-                        text: $newMemo,
-                        isFocused: $newMemoFocused,
-                        placeholder: "메모 추가",
-                        font: .preferredFont(forTextStyle: .callout),
-                        textColor: .secondaryLabel,
-                        submitOnReturn: true
-                    )
+                    Button {
+                        suppressNewRowAutoSubmit = true
+                        showingDetail = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.title3)
+                            .foregroundStyle(listColor ?? Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
             if newTitleFocused || newMemoFocused {
-                Spacer()
-                Button {
-                    suppressNewRowAutoSubmit = true
-                    showingDetail = true
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(.title3)
-                        .foregroundStyle(listColor ?? Color.accentColor)
-                }
-                .buttonStyle(.plain)
+                GrowingTextView(
+                    text: $newMemo,
+                    isFocused: $newMemoFocused,
+                    placeholder: "메모 추가",
+                    font: .preferredFont(forTextStyle: .callout),
+                    textColor: .secondaryLabel,
+                    submitOnReturn: true
+                )
+                .padding(.leading, titleIndent)
             }
         }
+    }
+
+    /// 동그라미와 텍스트 사이 spacing — 모든 row에서 일관되게 사용. 토큰 합성으로 표현.
+    private var circleTextSpacing: CGFloat {
+        Spacing.sm + Spacing.xs + Spacing.xxs
+    }
+
+    /// 메타·메모를 제목 leading edge에 정렬하기 위한 들여쓰기 폭.
+    /// 동그라미 frame(body lineHeight × lineHeight) + circleTextSpacing.
+    /// UIFont 메트릭 + 토큰 합성이라 Dynamic Type / spacing 변경 시 자동 추종 — 매직값 없음.
+    private var titleIndent: CGFloat {
+        UIFont.preferredFont(forTextStyle: .body).lineHeight + circleTextSpacing
     }
 
     /// 완료 동그라미 — 양방향 토글 대응. pending이면 토글 후 상태를, 아니면 현재 상태를 표시한다.
@@ -684,7 +710,16 @@ struct ReminderView: View {
         let showCompleted = pending ? !reminder.isCompleted : reminder.isCompleted
         let tint: Color = showCompleted ? (listColor ?? .accentColor) : .secondary
         return Image(systemName: showCompleted ? "largecircle.fill.circle" : "circle")
+            .font(.title2.weight(.thin))
             .foregroundStyle(tint)
+            // body 한 줄 line height × line height 정사각형으로 image 영역을 강제.
+            // → image center가 body 첫 줄 line box center에 자동 정렬되고(HStack `.top` 조합),
+            //   동시에 메타/메모의 `.padding(.leading, titleIndent)`가 정확히 이 영역 옆에서 시작한다.
+            //   title2 image가 frame보다 살짝 크지만 layout 기준은 frame.
+            .frame(
+                width: UIFont.preferredFont(forTextStyle: .body).lineHeight,
+                height: UIFont.preferredFont(forTextStyle: .body).lineHeight
+            )
     }
 
     /// 완료 토글을 0.5초 지연 후 적용한다 — 즉시 사라지지 않게 잠깐 멈춰서
@@ -958,4 +993,5 @@ struct ReminderView: View {
         ReminderView(viewModel: ReminderViewModel(dependencies: .preview))
     }
 }
+
 
