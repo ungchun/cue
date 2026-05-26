@@ -317,6 +317,7 @@ struct ReminderView: View {
         ForEach(reminders) { reminder in
             reminderRow(reminder)
                 .listRowSeparator(.hidden)
+                .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.md, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         Task {
