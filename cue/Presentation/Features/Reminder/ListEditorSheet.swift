@@ -24,32 +24,49 @@ struct ListEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var title: String
-    @State private var selectedPaletteID: String
+    /// 팔레트에서 사용자가 선택한 옵션 id — nil이면 어떤 팔레트도 선택되지 않은 상태.
+    /// 편집 모드에서 EventKit hex가 팔레트와 정확히 매칭되지 않으면 nil로 시작해 그리드에 ring 없음.
+    @State private var selectedPaletteID: String?
+    /// 팔레트 매칭 실패 시 EventKit이 준 원본 hex — identity card 표시·저장에 사용.
+    /// 사용자가 팔레트를 새로 고르면 nil이 되고 그때부턴 selectedPaletteID가 source of truth.
+    @State private var customHex: String?
     @State private var showingDiscardConfirmation = false
     /// 새 목록 시트가 열리면 곧장 입력할 수 있도록 자동 포커스. 편집 모드엔 자동 포커스 안 함.
     @FocusState private var nameFocused: Bool
 
     private let initialTitle: String
-    private let initialPaletteID: String
+    private let initialPaletteID: String?
+    private let initialCustomHex: String?
 
     init(mode: Mode, onSave: @escaping (String, String?) -> Void) {
         self.mode = mode
         self.onSave = onSave
 
         let title: String
-        let paletteID: String
+        let paletteID: String?
+        let customHex: String?
         switch mode {
         case .new:
             title = ""
             paletteID = ListPalette.defaultID
+            customHex = nil
         case .edit(let list):
             title = list.title
-            paletteID = ListPalette.option(forHex: list.colorHex)?.id ?? ListPalette.defaultID
+            if let option = ListPalette.option(forHex: list.colorHex) {
+                paletteID = option.id
+                customHex = nil
+            } else {
+                // 팔레트에 정확 일치 없음 — 그리드 ring은 표시 안 하고 원본 hex만 보유.
+                paletteID = nil
+                customHex = list.colorHex
+            }
         }
         self._title = State(initialValue: title)
         self._selectedPaletteID = State(initialValue: paletteID)
+        self._customHex = State(initialValue: customHex)
         self.initialTitle = title
         self.initialPaletteID = paletteID
+        self.initialCustomHex = customHex
     }
 
     var body: some View {
@@ -85,7 +102,7 @@ struct ListEditorSheet: View {
         VStack(spacing: Spacing.md) {
             ZStack {
                 Circle()
-                    .fill(selectedPalette.displayColor)
+                    .fill(displayColor)
                     .frame(width: 80, height: 80)
                 Image(systemName: "list.bullet")
                     .font(.system(size: 44, weight: .semibold))
@@ -96,7 +113,7 @@ struct ListEditorSheet: View {
             TextField("목록 이름", text: $title)
                 .font(.title3.weight(.semibold))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(selectedPalette.displayColor)
+                .foregroundStyle(displayColor)
                 .focused($nameFocused)
                 .submitLabel(.done)
                 .padding(.horizontal, Spacing.md)
@@ -115,6 +132,8 @@ struct ListEditorSheet: View {
             ForEach(ListPalette.palette) { option in
                 Button {
                     selectedPaletteID = option.id
+                    // 팔레트를 새로 골랐으니 원본 custom hex는 더 이상 source of truth가 아님.
+                    customHex = nil
                 } label: {
                     Circle()
                         .fill(option.displayColor)
@@ -158,7 +177,8 @@ struct ListEditorSheet: View {
             Button {
                 let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { return }
-                onSave(trimmed, selectedPalette.hex)
+                // 팔레트 선택이 있으면 그 hex, 아니면 EventKit 원본 hex 그대로 유지.
+                onSave(trimmed, selectedPalette?.hex ?? customHex)
                 dismiss()
             } label: {
                 Label("저장", systemImage: "checkmark")
@@ -195,11 +215,23 @@ struct ListEditorSheet: View {
     }
 
     private var hasChanges: Bool {
-        title != initialTitle || selectedPaletteID != initialPaletteID
+        title != initialTitle
+            || selectedPaletteID != initialPaletteID
+            || customHex != initialCustomHex
     }
 
-    private var selectedPalette: ListPalette {
-        ListPalette.palette.first { $0.id == selectedPaletteID } ?? ListPalette.default
+    /// 현재 선택된 팔레트(있으면). 없으면 nil — 그리드 ring 표시 분기와 저장 hex fallback에 쓰인다.
+    private var selectedPalette: ListPalette? {
+        guard let selectedPaletteID else { return nil }
+        return ListPalette.palette.first { $0.id == selectedPaletteID }
+    }
+
+    /// identity card(큰 동그라미·이름)의 표시 색. 팔레트 선택이 있으면 그 색,
+    /// 없으면 customHex로 만든 Color, 둘 다 없으면 secondary로 fallback.
+    private var displayColor: Color {
+        if let palette = selectedPalette { return palette.displayColor }
+        if let hex = customHex, let color = Color(hex: hex) { return color }
+        return .secondary
     }
 }
 
