@@ -21,7 +21,7 @@ enum AppTab: CaseIterable, Identifiable {
     /// 탭 아이콘으로 쓸 SF Symbol 이름.
     var systemImage: String {
         switch self {
-        case .reminder: "bell"
+        case .reminder: "list.bullet"
         case .settings: "gearshape"
         }
     }
