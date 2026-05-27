@@ -27,10 +27,24 @@ struct RootView: View {
     }
 
     /// 탭에 대응하는 화면을 만든다.
+    /// `focus`/`schedule`은 탭만 먼저 들이고 화면은 다음 사이클에서 — 시스템 표준
+    /// `ContentUnavailableView`로 placeholder를 둬 빈 화면이 어색하지 않게 한다.
     @ViewBuilder
     private func screen(for tab: AppTab) -> some View {
         switch tab {
+        case .focus:
+            ContentUnavailableView(
+                "집중",
+                systemImage: "timer",
+                description: Text("뽀모도로·앱 차단은 다음 사이클에서.")
+            )
         case .reminder: ReminderView(viewModel: reminderViewModel)
+        case .schedule:
+            ContentUnavailableView(
+                "일정",
+                systemImage: "calendar",
+                description: Text("시간순 일정 뷰는 다음 사이클에서.")
+            )
         case .settings: SettingsView()
         }
     }
