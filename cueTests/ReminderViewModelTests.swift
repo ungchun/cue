@@ -251,8 +251,48 @@ struct ReminderViewModelTests {
         let sections = viewModel.allModeSections
 
         #expect(sections.map(\.list.id) == ["A", "B"])
-        #expect(sections[0].reminders.map(\.id) == ["a1"])
-        #expect(sections[1].reminders.map(\.id) == ["b1"])
+        #expect(sections[0].active.map(\.id) == ["a1"])
+        #expect(sections[1].active.map(\.id) == ["b1"])
+    }
+
+    /// `.all` 모드 섹션 — `showsCompleted=true`면 각 섹션의 completed에 그 리스트의 완료 항목 포함.
+    @Test func allModeSectionsIncludesCompletedWhenToggled() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "a1", listID: "A"),
+                reminder(id: "a-done1", isCompleted: true, listID: "A"),
+                reminder(id: "a-done2", isCompleted: true, listID: "A"),
+                reminder(id: "b-done", isCompleted: true, listID: "B"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.showsCompleted = true
+
+        let sections = viewModel.allModeSections
+
+        #expect(sections[0].active.map(\.id) == ["a1"])
+        #expect(Set(sections[0].completed.map(\.id)) == Set(["a-done1", "a-done2"]))
+        #expect(sections[1].active.isEmpty)
+        #expect(sections[1].completed.map(\.id) == ["b-done"])
+    }
+
+    /// `.all` 모드 섹션 — `showsCompleted=false`면 completed가 비어 있어야 한다(토글 OFF 동안 숨김).
+    @Test func allModeSectionsHidesCompletedWhenToggleOff() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "a1", listID: "A"),
+                reminder(id: "a-done", isCompleted: true, listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.showsCompleted = false
+
+        let sections = viewModel.allModeSections
+
+        #expect(sections[0].active.map(\.id) == ["a1"])
+        #expect(sections[0].completed.isEmpty)
     }
 
     /// `.all` 모드 섹션 — 빈 리스트도 포함(섹션 헤더는 그려야 함).
@@ -266,7 +306,7 @@ struct ReminderViewModelTests {
         let sections = viewModel.allModeSections
 
         #expect(sections.count == 2)
-        #expect(sections[1].reminders.isEmpty)
+        #expect(sections[1].active.isEmpty)
     }
 
     /// 일반 리스트 selection은 **시간 지정 없는 항목**(`includesTime=false`나 마감 없음)이 위,

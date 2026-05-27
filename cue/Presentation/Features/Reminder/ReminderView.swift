@@ -211,13 +211,18 @@ struct ReminderView: View {
     private var reminderList: some View {
         List {
             listTitleRow
-            if case .systemFilter(.all) = viewModel.selection {
+            let isAllMode: Bool = {
+                if case .systemFilter(.all) = viewModel.selection { return true }
+                return false
+            }()
+            if isAllMode {
                 allModeContent
             } else {
                 singleModeContent
             }
 
-            if viewModel.showsCompleted {
+            // `.all` 모드는 완료 항목을 각 섹션 내부에 그리므로 외곽 completedSection은 생략.
+            if viewModel.showsCompleted, !isAllMode {
                 completedSection
             }
         }
@@ -268,7 +273,20 @@ struct ReminderView: View {
     private var allModeContent: some View {
         ForEach(viewModel.allModeSections, id: \.list.id) { section in
             Section {
-                remindersForEach(section.reminders)
+                remindersForEach(section.active)
+                // 그 리스트의 완료 항목들 — showsCompleted OFF면 ViewModel이 빈 배열로 줘서 자동 생략.
+                ForEach(section.completed) { reminder in
+                    completedReminderRow(reminder)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.md, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                Task { await viewModel.delete(reminder) }
+                            } label: {
+                                Label("삭제", systemImage: "trash")
+                            }
+                        }
+                }
                 if activeNewRowListID == section.list.id {
                     newReminderRow
                         .listRowSeparator(.hidden)

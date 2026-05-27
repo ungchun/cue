@@ -104,15 +104,20 @@ final class ReminderViewModel {
         (lhs.dueDate ?? .distantFuture) < (rhs.dueDate ?? .distantFuture)
     }
 
-    /// `.all` 모드에서 본문에 그릴 (리스트, 그 리스트의 미완료 항목) 묶음.
-    /// 리스트 표시 순서는 `lists`와 동일하고, 각 묶음 내부는 시간 지정 없는 항목이
-    /// 위, 그 아래 dueDate 오름차순. 빈 리스트도 포함한다(섹션 헤더는 보여야 하므로).
-    var allModeSections: [(list: ReminderList, reminders: [Reminder])] {
+    /// `.all` 모드에서 본문에 그릴 (리스트, 미완료, 완료) 묶음.
+    /// 리스트 표시 순서는 `lists`와 동일하고, 미완료는 시간 지정 없는 항목이 위
+    /// 그 아래 dueDate 오름차순. 완료 항목은 EventKit 원본 순서(다른 모드의
+    /// `completedReminders`와 동일 처리) — `showsCompleted` OFF면 빈 배열.
+    /// 빈 리스트도 포함한다(섹션 헤더는 보여야 하므로).
+    var allModeSections: [(list: ReminderList, active: [Reminder], completed: [Reminder])] {
         lists.map { list in
-            let reminders = allReminders
+            let active = allReminders
                 .filter { $0.listID == list.id && !$0.isCompleted }
                 .sorted(by: untimedFirstThenAscending)
-            return (list, reminders)
+            let completed = showsCompleted
+                ? allReminders.filter { $0.listID == list.id && $0.isCompleted }
+                : []
+            return (list, active, completed)
         }
     }
 
