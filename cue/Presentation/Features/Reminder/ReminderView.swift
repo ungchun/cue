@@ -146,13 +146,16 @@ struct ReminderView: View {
     /// 시트·삭제 액션의 실제 백엔드는 다음 사이클에서 — 지금은 UI 진입까지만.
     private var optionsMenu: some View {
         Menu {
-            Button {
-                viewModel.showsCompleted.toggle()
-            } label: {
-                Label(
-                    viewModel.showsCompleted ? "완료된 항목 숨기기" : "완료된 항목 보기",
-                    systemImage: viewModel.showsCompleted ? "eye.slash" : "eye"
-                )
+            // 오늘/예정은 마감일 필터라 완료 항목 매핑이 모호 — 토글 자체를 숨겨 혼동을 줄인다.
+            if canToggleCompleted {
+                Button {
+                    viewModel.showsCompleted.toggle()
+                } label: {
+                    Label(
+                        viewModel.showsCompleted ? "완료된 항목 숨기기" : "완료된 항목 보기",
+                        systemImage: viewModel.showsCompleted ? "eye.slash" : "eye"
+                    )
+                }
             }
 
             Section {
@@ -389,6 +392,17 @@ struct ReminderView: View {
         case .systemFilter(.scheduled): return Color.red
         case .systemFilter(.all): return Color.gray
         case .none: return .primary
+        }
+    }
+
+    /// 옵션 메뉴의 "완료된 항목 보기" 토글 노출 여부.
+    /// 오늘/예정은 dueDate 기반 필터라 "완료된 항목"의 의미가 모호하고 ViewModel도 그 두 모드에선
+    /// 완료 항목을 비워 둔다 — 토글이 작동해도 시각 효과가 없으므로 메뉴에서 자체를 숨긴다.
+    /// `.all`과 단일 리스트(`.list(id)`)에서만 노출.
+    private var canToggleCompleted: Bool {
+        switch viewModel.selection {
+        case .systemFilter(.today), .systemFilter(.scheduled): return false
+        default: return true
         }
     }
 
@@ -722,12 +736,14 @@ struct ReminderView: View {
     }
 
     /// 완료 동그라미 — 양방향 토글 대응. pending이면 토글 후 상태를, 아니면 현재 상태를 표시한다.
-    /// 완료 상태는 `largecircle.fill.circle`(외곽 원 + 안 작은 점) + 리스트 색,
+    /// 완료 상태는 `largecircle.fill.circle`(외곽 원 + 안 작은 점) + **reminder가 속한 리스트 색**,
     /// 미완료는 빈 `circle` + secondary 회색 — 미리알림 앱과 동일.
+    /// `.all` 모드처럼 selection이 특정 리스트가 아닐 때도 각 row의 리스트 색이 그대로 따라온다.
     private func completionIcon(for reminder: Reminder) -> some View {
         let pending = pendingCompletionIDs.contains(reminder.id)
         let showCompleted = pending ? !reminder.isCompleted : reminder.isCompleted
-        let tint: Color = showCompleted ? (listColor ?? .accentColor) : .secondary
+        let reminderListColor: Color? = list(for: reminder)?.colorHex.flatMap(Color.init(hex:))
+        let tint: Color = showCompleted ? (reminderListColor ?? .accentColor) : .secondary
         return Image(systemName: showCompleted ? "largecircle.fill.circle" : "circle")
             .font(.title2.weight(.thin))
             .foregroundStyle(tint)
