@@ -52,7 +52,7 @@ struct ListSelectorChipBar: View {
         // 단일 외곽 Liquid Glass 캡슐 — ScrollView 자체에 적용해
         // 안쪽 칩 묶음이 한 컨테이너 안에서 함께 스크롤된다.
         .glassEffect(.regular, in: .capsule)
-        .padding(.horizontal, Spacing.md)
+        .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.sm)
         .padding(.bottom, Spacing.xs)
     }
