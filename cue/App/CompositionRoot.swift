@@ -16,6 +16,7 @@ struct CompositionRoot {
         let container = ModelContainerFactory.make()
         let itemRepository = SwiftDataItemRepository(context: container.mainContext)
         let remindersRepository = EventKitRemindersRepository()
+        let eventsRepository = EventKitEventsRepository()
 
         self.modelContainer = container
         self.dependencies = Dependencies(
@@ -31,7 +32,8 @@ struct CompositionRoot {
             deleteReminder: DeleteReminderUseCase(repository: remindersRepository),
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
-            deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository)
+            deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
+            requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository)
         )
     }
 }

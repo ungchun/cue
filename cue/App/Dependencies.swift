@@ -22,6 +22,8 @@ struct Dependencies: Sendable {
     var addReminderList: AddReminderListUseCase
     var updateReminderList: UpdateReminderListUseCase
     var deleteReminderList: DeleteReminderListUseCase
+
+    var requestEventsAccess: RequestEventsAccessUseCase
 }
 
 extension EnvironmentValues {
@@ -68,7 +70,10 @@ extension Dependencies {
             deleteReminder: DeleteReminderUseCase(repository: remindersRepository),
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
-            deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository)
+            deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
+            requestEventsAccess: RequestEventsAccessUseCase(
+                repository: InMemoryEventsRepository(access: .granted)
+            )
         )
     }
 }
