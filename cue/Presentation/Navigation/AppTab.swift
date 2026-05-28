@@ -8,7 +8,7 @@
 enum AppTab: CaseIterable, Identifiable {
     case focus     // 뽀모도로 + 앱 차단 — 화면은 다음 사이클에서.
     case reminder
-    case schedule  // 시간순 일정 — 화면은 다음 사이클에서.
+    case schedule  // 타임라인 + 신규 이벤트 시트(EKEventEditViewController). 시간순 리스트는 다음 사이클에서.
     case settings
 
     var id: Self { self }
