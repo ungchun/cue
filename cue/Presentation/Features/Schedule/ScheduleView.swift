@@ -38,7 +38,8 @@ struct ScheduleView: View {
         }
         .listStyle(.plain)
         .listRowSpacing(Spacing.zero)
-        .listSectionSpacing(Spacing.sm)
+        // 섹션 간 gap이 있으면 rail이 그 영역에서 끊기므로 0. 헤더 자체 padding으로 호흡 확보.
+        .listSectionSpacing(Spacing.zero)
         .environment(\.defaultMinListRowHeight, Spacing.zero)
         .overlay { emptyOverlay }
         .navigationBarTitleDisplayMode(.inline)
@@ -112,8 +113,8 @@ struct ScheduleView: View {
     }
 
     /// 하루 섹션 — 헤더(날짜+요일, 토/일 색 분기) + 그날의 이벤트 row들.
-    /// ForEach 안에 인라인으로 두면 type-checker가 표현 무게에 막혀 timeout 진단을 띄울 수
-    /// 있어 함수로 분리한다.
+    /// 헤더에도 rail 세로선이 통과하도록 같은 좌측 column을 두고, row의 inset과 헤더의
+    /// inset을 일치시켜 rail이 한 줄로 이어진다.
     @ViewBuilder
     private func daySection(_ group: DayGroup) -> some View {
         Section {
@@ -126,11 +127,41 @@ struct ScheduleView: View {
                     ))
             }
         } header: {
+            dayHeader(group)
+                .listRowSeparator(.hidden)
+                .listRowInsets(.init(
+                    top: Spacing.zero, leading: Spacing.zero,
+                    bottom: Spacing.zero, trailing: Spacing.md
+                ))
+        }
+    }
+
+    /// 날짜+요일 헤더 — 좌측에 rail 통과용 세로선 column(점 없음) + 텍스트.
+    /// `.background(Color(.systemBackground))`로 sticky 헤더가 row 위에 떠 있을 때
+    /// 아래 rail이 비치지 않게 가린다.
+    private func dayHeader(_ group: DayGroup) -> some View {
+        HStack(alignment: .center, spacing: Spacing.sm) {
+            railSpine
             Text(Self.dayHeaderFormatter.string(from: group.date))
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(Self.headerColor(for: group.date))
                 .textCase(nil)
+            Spacer(minLength: Spacing.zero)
         }
+        .padding(.vertical, Spacing.sm)
+        .background(Color(.systemBackground))
+    }
+
+    /// 헤더용 rail 세로선 — `EventRow.railColumn`과 같은 폭·동일한 가운데 정렬로
+    /// 두어 row와 헤더의 rail이 정확히 한 줄로 보이게 한다(점 없음).
+    private var railSpine: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color(.separator))
+                .frame(width: 1)
+        }
+        .frame(width: Spacing.lg)
+        .frame(maxHeight: .infinity)
     }
 
     /// 섹션 헤더 — "5월 31일 토요일" 형식. ko_KR 고정.
@@ -183,6 +214,7 @@ private struct EventRow: View {
     }
 
     /// row 우측 본문 — 캡슐 제목 + 우측 시간.
+    /// `.padding(.vertical)`을 키우면 row 자체가 길어져 rail 점 사이 간격도 함께 늘어난다.
     private var content: some View {
         HStack(spacing: Spacing.sm) {
             titleCapsule
@@ -192,7 +224,7 @@ private struct EventRow: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(.vertical, Spacing.sm)
     }
 
     /// 캡슐 = 캘린더 색의 옅은 배경 + 캘린더 색 글씨. EventKit이 주는 raw hex 그대로
