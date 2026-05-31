@@ -33,6 +33,9 @@ struct FocusSessionEditorSheet: View {
         case title, focus, rest
     }
 
+    /// 커스텀 색 시트 표시 — 마지막 무지개 슬롯이 true로 올린다.
+    @State private var showingCustomColorPicker = false
+
     var body: some View {
         NavigationStack {
             Form {
@@ -96,6 +99,9 @@ struct FocusSessionEditorSheet: View {
                 colorHex = Self.defaultColorHex
             }
         }
+        .sheet(isPresented: $showingCustomColorPicker) {
+            CustomColorPickerSheet(colorHex: $colorHex)
+        }
     }
 
     // MARK: - 색상 섹션
@@ -137,41 +143,33 @@ struct FocusSessionEditorSheet: View {
             .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
-    /// 커스텀 색 진입 슬롯 — 무지개 그라디언트 원. 위에 거의 투명한 `ColorPicker`가
-    /// 덮여 있어 탭 시 시스템 컬러 피커가 열린다. 사용자가 고른 색은 hex로 환원되어
-    /// `colorHex`에 저장.
+    /// 커스텀 색 진입 슬롯 — 무지개 그라디언트 원을 Button으로 감싼다. 탭 시
+    /// `UIColorPickerViewController`를 시트로 띄워(`CustomColorPickerSheet`) 임의 색 선택.
+    ///
+    /// SwiftUI `ColorPicker`를 투명 overlay로 깔던 이전 방식은 iOS 17/18에서 hit-test가
+    /// 안 잡혀 탭 무반응. UIKit picker를 직접 띄우는 게 가장 확실하다.
     ///
     /// 현재 `colorHex`가 프리셋 어디에도 없으면 "커스텀 활성" — 흰색 체크마크로 표시.
     private var customSwatch: some View {
         let isCustomActive = !Self.palette.contains { $0.hex.lowercased() == colorHex.lowercased() }
-        return Circle()
-            .fill(Self.rainbowGradient)
-            .frame(width: Spacing.xl, height: Spacing.xl)
-            .overlay {
-                if isCustomActive {
-                    Image(systemName: "checkmark")
-                        .font(.body.weight(.bold))
-                        .foregroundStyle(.white)
+        return Button {
+            showingCustomColorPicker = true
+        } label: {
+            Circle()
+                .fill(Self.rainbowGradient)
+                .frame(width: Spacing.xl, height: Spacing.xl)
+                .overlay {
+                    if isCustomActive {
+                        Image(systemName: "checkmark")
+                            .font(.body.weight(.bold))
+                            .foregroundStyle(.white)
+                    }
                 }
-            }
-            .overlay {
-                // 시스템 ColorPicker를 거의 투명(opacity 0.015)으로 같은 자리에 깔아
-                // 탭만 받게 한다. opacity 0이면 hit-test에서 제외될 수 있어 아주 작은 값.
-                ColorPicker("", selection: customColorBinding, supportsOpacity: false)
-                    .labelsHidden()
-                    .opacity(0.015)
-            }
-            .frame(maxWidth: .infinity)
-            .accessibilityLabel("커스텀 색상")
-            .accessibilityAddTraits(isCustomActive ? [.isSelected] : [])
-    }
-
-    /// ColorPicker가 요구하는 Binding<Color> ↔ 내부 `colorHex: String` 어댑터.
-    private var customColorBinding: Binding<Color> {
-        Binding(
-            get: { Color(hex: colorHex) ?? .gray },
-            set: { colorHex = $0.hexString }
-        )
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel("커스텀 색상")
+        .accessibilityAddTraits(isCustomActive ? [.isSelected] : [])
     }
 
     /// 무지개 그라디언트 — 커스텀 슬롯의 시각 신호. AngularGradient는 conic 효과.
