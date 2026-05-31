@@ -18,6 +18,9 @@ struct ScheduleView: View {
     @Bindable var viewModel: ScheduleViewModel
     /// 신규 이벤트 시트와 공유하는 EKEventStore. `@State`로 view 생애 동안 유지한다.
     @State private var eventStore = EKEventStore()
+    /// 스크롤로 본문 "타임라인" large title이 가려졌는지 — 가려지면 navigation bar
+    /// 중앙에 inline title("타임라인")이 채워진다. ReminderView와 동일 패턴.
+    @State private var showsInlineTitle = false
 
     // 좌상단 "캘린더" 버튼 — Apple Calendar 앱 호출용 SwiftUI 환경 핸들.
     // ReminderView의 "미리 알림" 버튼과 동일 패턴.
@@ -50,8 +53,15 @@ struct ScheduleView: View {
         .listSectionSpacing(Spacing.zero)
         .environment(\.defaultMinListRowHeight, Spacing.zero)
         .overlay { emptyOverlay }
+        // 본문 large title이 위로 스크롤돼 가려진 시점부터 navigation bar에 inline title.
+        // 40pt는 ReminderView와 같은 임계값 — 두 탭이 같은 시점에 전환되도록.
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.contentOffset.y > 40
+        } action: { _, newValue in
+            showsInlineTitle = newValue
+        }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("")
+        .navigationTitle(showsInlineTitle ? "타임라인" : "")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 openCalendarAppButton
