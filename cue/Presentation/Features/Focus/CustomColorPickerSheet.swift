@@ -80,9 +80,14 @@ private struct ColorPickerRepresentable: UIViewControllerRepresentable {
 
 /// `UIColorPickerViewController` 서브클래스 — 좌상단 스포이드 버튼을 숨긴다.
 ///
-/// 시스템이 제공하는 공개 API로는 스포이드를 끌 수 없어 view tree를 훑어 accessibility
-/// label이 "스포이드"·"eyedropper"인 UIButton을 찾아 `isHidden = true`로 설정한다.
-/// 비공개 UI 구조에 의존하는 hack이라 iOS 업데이트 시 깨질 수 있음.
+/// 공개 API로 끌 방법이 없어 view tree를 훑어 다음 세 가지 단서 중 하나라도 잡히면
+/// 그 view를 `isHidden = true` 처리한다:
+///  1. 클래스명에 `Eyedropper` / `ColorSample` 포함 (시스템 비공개 클래스)
+///  2. UIButton의 accessibility label이 "스포이드" / "eyedrop" 포함
+///  3. UIButton의 image description이 "eyedropper" 심볼을 포함
+///
+/// 비공개 UI 구조 의존이라 iOS 업데이트 시 깨질 수 있다. viewDidLayoutSubviews는
+/// 레이아웃마다 호출돼 동적으로 추가되는 버튼도 잡는다.
 private final class EyedropperHidingColorPickerViewController: UIColorPickerViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
@@ -91,7 +96,15 @@ private final class EyedropperHidingColorPickerViewController: UIColorPickerView
 
     private func hideEyedropperIfPresent(in view: UIView) {
         for subview in view.subviews {
+            // (1) 클래스명 — UIColorPickerEyedropperButton 같은 비공개 클래스를 잡는다.
+            let className = String(describing: type(of: subview)).lowercased()
+            if className.contains("eyedrop") || className.contains("colorsample") {
+                subview.isHidden = true
+                continue
+            }
+
             if let button = subview as? UIButton {
+                // (2) accessibility label — 로케일에 따라 "스포이드" / "Eye Dropper".
                 let label = button.accessibilityLabel?.lowercased() ?? ""
                 if label.contains("스포이드")
                     || label.contains("eyedrop")
@@ -99,7 +112,17 @@ private final class EyedropperHidingColorPickerViewController: UIColorPickerView
                     button.isHidden = true
                     continue
                 }
+
+                // (3) 이미지 description — SF Symbol이면 description에 심볼명이 들어간다.
+                if let image = button.image(for: .normal) ?? button.currentImage {
+                    let desc = "\(image)".lowercased()
+                    if desc.contains("eyedropper") {
+                        button.isHidden = true
+                        continue
+                    }
+                }
             }
+
             hideEyedropperIfPresent(in: subview)
         }
     }
