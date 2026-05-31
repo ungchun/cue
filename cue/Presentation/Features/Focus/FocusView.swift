@@ -7,26 +7,28 @@ import Combine
 import SwiftUI
 import UIKit
 
-/// 집중 탭의 메인 화면 — 원형 ring + 시간이 **항상** 떠 있고, 진행 중이면 ring이 차오르고
-/// 컨트롤(일시정지/스킵/종료)이 노출된다. 설정은 우상단 ⚙ 버튼이 띄우는 시트에서 잡는다.
+/// 집중 탭의 메인 화면 — 원형 ring + 시간이 **항상** 떠 있고, 상단엔 선택된 세션의
+/// 타이틀(있을 때만), idle 상태엔 시작 버튼·running 상태엔 일시정지/스킵/종료 컨트롤.
 ///
-/// 시작은 시트 안의 "시작" 버튼이 담당 — 시트를 닫으면서 부모(이 뷰)가 들고 있는
-/// `viewModel.start()`를 호출해 같은 메인 뷰 안에서 세션이 시작된다(별도 풀스크린 뷰 없음).
+/// 우상단 버튼이 세션 목록 시트(`FocusSessionsListSheet`)를 띄우고, 그 시트 위에 다시
+/// 중간 detent 시트(`FocusSessionEditorSheet`)가 추가/수정 진입점이 된다. 행 탭으로 세션을
+/// 고르면 시트가 닫히고 메인 화면이 그 세션의 타이틀·설정을 즉시 반영한다.
 struct FocusView: View {
     @Bindable var viewModel: FocusViewModel
-    /// 시트 표시 — ⚙ 버튼이 true로 올린다.
-    @State private var showingSettings = false
+    /// 세션 목록 시트 표시 — 우상단 버튼이 true로 올린다.
+    @State private var showingSessions = false
 
     /// 1초마다 publish — `tick`은 일시정지·완료·세션 없음 상태에 자체 가드.
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     /// 백그라운드 진입 시각 — 복귀 시 흘러간 만큼 한 번에 tick해 단계 종료 시점을 추격.
-    /// 세션 없는 idle 상태에선 캡처하지 않는다(추격할 게 없음).
+    /// 세션 없는 idle 상태에선 캡처하지 않는다.
     @Environment(\.scenePhase) private var scenePhase
     @State private var backgroundedAt: Date?
 
     var body: some View {
         VStack(spacing: Spacing.xl) {
+            titleHeader
             cycleIndicator
             Spacer()
             ringWithTime
@@ -37,39 +39,36 @@ struct FocusView: View {
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .navigationTitle("집중")
-        .navigationBarTitleDisplayMode(.inline)
+        // 빨강 톤을 탭 전체에 적용 — .tint가 ring 진행, 컨트롤 등에 자연스레 전파된다.
+        .tint(.red)
+        // 상단 "집중" nav 타이틀은 제거 — 본문 상단에 세션 타이틀이 자리잡는다.
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showingSettings = true
+                    showingSessions = true
                 } label: {
-                    Image(systemName: "slider.horizontal.3")
+                    Image(systemName: "list.bullet")
                 }
-                .accessibilityLabel("설정")
-                // 세션 진행 중엔 설정 변경 비활성 — 현재 세션의 길이·반복은 잠금.
+                .tint(.red)
+                .accessibilityLabel("세션")
+                // 세션 진행 중엔 목록을 잠근다 — 다른 세션으로 갈아타려면 먼저 종료해야 한다.
                 .disabled(viewModel.session != nil)
             }
         }
         .task { await viewModel.onAppear() }
-        .sheet(isPresented: $showingSettings) {
-            FocusSettingsSheet(settings: $viewModel.settings) {
-                // 시트 닫고 메인에서 세션 시작.
-                showingSettings = false
-                viewModel.start()
-            }
+        .sheet(isPresented: $showingSessions) {
+            FocusSessionsListSheet(viewModel: viewModel)
         }
         .onReceive(ticker) { _ in
             viewModel.session?.tick(seconds: 1)
         }
         .onChange(of: viewModel.session?.phase) { _, newPhase in
-            // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. nil → non-nil(세션 시작) 변화도
-            // 트리거되지만 시작 자체는 success를 알리는 신호로 자연스럽다.
+            // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. nil → non-nil 변화(세션 시작)에도
+            // 트리거되지만 시작 자체를 알리는 신호로 자연스럽다.
             guard newPhase != nil else { return }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
         .onChange(of: viewModel.session?.isComplete) { _, completed in
-            // 마지막 집중 종료 또는 abort()로 완료되면 자동으로 세션을 정리해 idle로 복귀.
             if completed == true {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 viewModel.stopSession()
@@ -93,10 +92,22 @@ struct FocusView: View {
         }
     }
 
-    // MARK: - 상단 사이클 진행
+    // MARK: - 상단 타이틀
 
-    /// "1 / 4" — idle이거나 1 사이클짜리 세션엔 의미가 없어 빈 자리(`Color.clear`)로 둔다.
-    /// 자리를 유지해야 idle ↔ running 전환에서 ring 위치가 흔들리지 않는다.
+    /// 선택된 세션의 이름. 선택 없으면 빈 자리로 둬 ring 위치를 일정하게 유지한다.
+    @ViewBuilder
+    private var titleHeader: some View {
+        if let session = viewModel.selectedSession {
+            Text(session.title)
+                .font(.largeTitle.bold())
+                .foregroundStyle(.red)
+                .lineLimit(1)
+        } else {
+            Color.clear.frame(height: Spacing.xl)
+        }
+    }
+
+    /// "1 / 4" — running이고 totalCycles > 1일 때만. 자리는 항상 유지.
     @ViewBuilder
     private var cycleIndicator: some View {
         if let session = viewModel.session, session.totalCycles > 1 {
@@ -109,10 +120,10 @@ struct FocusView: View {
         }
     }
 
-    // MARK: - 가운데 ring + 시간
+    // MARK: - ring + 시간
 
-    /// 원형 ring + 한가운데 mm:ss. idle엔 외곽 회색 ring만, running엔 그 위에 tint progress
-    /// 트림이 덧그려져 시계 방향으로 차오른다.
+    /// 원형 ring + 한가운데 mm:ss. idle엔 외곽 회색 ring만, running엔 그 위에 tint
+    /// progress 트림이 시계 방향으로 차오른다.
     private var ringWithTime: some View {
         ZStack {
             Circle()
@@ -121,7 +132,6 @@ struct FocusView: View {
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(.tint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                    // 12시 방향 시작 → 시계 방향으로 채워지도록 회전.
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 0.2), value: progress)
             }
@@ -142,14 +152,13 @@ struct FocusView: View {
                 .font(.headline)
                 .foregroundStyle(.secondary)
         } else {
-            // idle 시 자리만 유지 — ring 위치가 흔들리지 않게.
             Color.clear.frame(height: Spacing.lg)
         }
     }
 
     // MARK: - 하단 컨트롤
 
-    /// 일시정지/재개 · 스킵 · 종료 — running에만 노출. idle엔 자리만 유지.
+    /// running이면 일시정지/스킵/종료, idle이면 ▶ 시작 버튼.
     @ViewBuilder
     private var controlRow: some View {
         if let session = viewModel.session {
@@ -174,9 +183,28 @@ struct FocusView: View {
                 }
             }
         } else {
-            // idle — 자리만 유지해 ring이 같은 위치에 머문다.
-            Color.clear.frame(height: Spacing.xxl + Spacing.md)
+            startButton
         }
+    }
+
+    /// idle 시 메인 화면의 시작 진입점.
+    private var startButton: some View {
+        Button {
+            viewModel.start()
+        } label: {
+            VStack(spacing: Spacing.xs) {
+                Image(systemName: "play.fill")
+                    .font(.title)
+                    .frame(width: Spacing.xxl, height: Spacing.xxl)
+                    .background(Circle().fill(Color.red.opacity(0.15)))
+                    .foregroundStyle(.red)
+                Text("시작")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("시작")
     }
 
     /// 컨트롤 단일 버튼 — 원형 배경 + 아이콘 + 라벨.
@@ -184,7 +212,7 @@ struct FocusView: View {
     private func controlButton(
         systemImage: String,
         label: String,
-        tint: Color = .accentColor,
+        tint: Color = .red,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -205,7 +233,7 @@ struct FocusView: View {
 
     // MARK: - 계산값
 
-    /// running 시 0(시작) → 1(단계 종료)로 차오르는 비율. idle이면 0(트림이 안 그려짐).
+    /// running 시 0(시작) → 1(단계 종료)으로 차오르는 비율. idle이면 0(트림 안 그려짐).
     private var progress: Double {
         guard let session = viewModel.session else { return 0 }
         let total = session.phaseDuration
@@ -213,9 +241,9 @@ struct FocusView: View {
         return max(0, min(1, 1 - session.remaining / total))
     }
 
-    /// "mm:ss". running이면 남은 시간, idle이면 설정된 집중 시간을 보여준다.
+    /// "mm:ss". running이면 남은 시간, idle이면 선택 세션(또는 기본) 집중 시간을 보여준다.
     private var timeText: String {
-        let seconds = viewModel.session?.remaining ?? viewModel.settings.focusDuration
+        let seconds = viewModel.session?.remaining ?? viewModel.displayedSettings.focusDuration
         return Duration.seconds(max(0, seconds))
             .formatted(.time(pattern: .minuteSecond))
     }

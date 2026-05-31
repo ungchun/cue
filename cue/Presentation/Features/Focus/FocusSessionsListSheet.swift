@@ -1,0 +1,133 @@
+//
+//  FocusSessionsListSheet.swift
+//  cue / Presentation
+//
+
+import SwiftUI
+
+/// 저장된 세션 프리셋 목록 — 메인 화면 우상단 버튼이 띄우는 시트.
+///
+/// 좌상단 "세션" 타이틀(빨강 large) · 우상단 X 닫기 · 우하단 떠 있는 + 버튼.
+/// 행을 탭하면 그 세션을 선택하고 시트가 닫히며, 우측 "수정"을 누르면 그 세션을 prefill한
+/// `FocusSessionEditorSheet`(중간 detent)이 이 시트 *위에* 스택으로 올라온다.
+struct FocusSessionsListSheet: View {
+    @Bindable var viewModel: FocusViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    /// 신규 추가 시트 표시 — + 버튼이 true로 올린다.
+    @State private var showingCreate = false
+    /// 수정 시트 표시 — 특정 세션을 prefill해 띄운다. nil이면 닫힘.
+    @State private var editingSession: FocusSession?
+
+    var body: some View {
+        NavigationStack {
+            // 목록 + 우하단 FAB를 겹치기 위해 ZStack — FAB는 List 스크롤과 무관하게 떠 있다.
+            ZStack(alignment: .bottomTrailing) {
+                List {
+                    Text("세션")
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(.red)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(.init(
+                            top: Spacing.md, leading: Spacing.md,
+                            bottom: Spacing.sm, trailing: Spacing.md
+                        ))
+
+                    ForEach(viewModel.sessions) { session in
+                        sessionRow(session)
+                    }
+                }
+                .listStyle(.plain)
+
+                addButton
+                    .padding(Spacing.lg)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .tint(.red)
+                    .accessibilityLabel("닫기")
+                }
+            }
+            .overlay { emptyOverlay }
+            // 중간 detent로 새 세션 시트가 이 위에 스택으로 — 부모 시트는 닫히지 않는다.
+            .sheet(isPresented: $showingCreate) {
+                FocusSessionEditorSheet(mode: .create, viewModel: viewModel)
+                    .presentationDetents([.medium, .large])
+            }
+            .sheet(item: $editingSession) { session in
+                FocusSessionEditorSheet(mode: .edit(session), viewModel: viewModel)
+                    .presentationDetents([.medium, .large])
+            }
+        }
+    }
+
+    // MARK: - 행
+
+    /// 세션 한 줄. 좌측(점 + 제목)은 탭 시 선택, 우측 "수정"은 탭 시 편집 시트.
+    /// 두 영역을 분리해 둬야 한쪽이 다른 쪽의 탭을 가로채지 않는다.
+    private func sessionRow(_ session: FocusSession) -> some View {
+        HStack(spacing: Spacing.zero) {
+            HStack(spacing: Spacing.md) {
+                Circle()
+                    .fill(.red)
+                    .frame(width: Spacing.md, height: Spacing.md)
+                Text(session.title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.red)
+                    .lineLimit(1)
+                Spacer(minLength: Spacing.zero)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                viewModel.selectSession(id: session.id)
+                dismiss()
+            }
+
+            Button("수정") {
+                editingSession = session
+            }
+            .font(.callout)
+            .foregroundStyle(.red.opacity(0.5))
+            .buttonStyle(.borderless)
+        }
+        .padding(.vertical, Spacing.xs)
+    }
+
+    /// 우하단 떠 있는 + — 새 세션 만들기 진입점.
+    private var addButton: some View {
+        Button {
+            showingCreate = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.title)
+                .foregroundStyle(.white)
+                .frame(width: Spacing.xxl, height: Spacing.xxl)
+                .background(Circle().fill(.red))
+        }
+        .accessibilityLabel("세션 추가")
+    }
+
+    /// 세션이 한 건도 없을 때 List 위에 띄우는 안내.
+    @ViewBuilder
+    private var emptyOverlay: some View {
+        if viewModel.sessions.isEmpty {
+            ContentUnavailableView(
+                "저장된 세션이 없어요",
+                systemImage: "timer",
+                description: Text("우하단 +로 새 세션을 만드세요.")
+            )
+        }
+    }
+}
+
+#Preview {
+    Color.clear.sheet(isPresented: .constant(true)) {
+        FocusSessionsListSheet(viewModel: FocusViewModel(dependencies: .preview))
+    }
+}
