@@ -24,18 +24,19 @@ struct ScheduleView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        // 시스템 large title은 toolbar와 표준 간격을 띄우기 때문에 ReminderView와 위치가
-        // 어긋난다. 같은 룩(toolbar 바로 아래에 large title)을 만들기 위해 inline 모드로
-        // 시스템 large title을 끄고 본문 컨테이너 안에 자체 텍스트를 직접 그린다.
-        VStack(alignment: .leading, spacing: Spacing.zero) {
+        // ReminderView와 동일한 패턴: navigation bar는 inline 모드로 두고 large title은
+        // List 첫 row에 직접 박는다. List가 가진 자체 top inset 덕에 toolbar↔title 간격이
+        // 자연스럽게 맞고, 두 탭의 헤더 라인이 일치한다.
+        List {
             Text("타임라인")
                 .font(.largeTitle.bold())
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.xs)
-
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .listRowSeparator(.hidden)
         }
+        .listStyle(.plain)
+        .listRowSpacing(Spacing.zero)
+        .listSectionSpacing(Spacing.zero)
+        .environment(\.defaultMinListRowHeight, Spacing.zero)
+        .overlay { contentOverlay }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .toolbar {
@@ -84,10 +85,10 @@ struct ScheduleView: View {
         _ = eventStore.defaultCalendarForNewEvents
     }
 
-    /// 본문 — 권한 상태에 따라 안내, 권한이 있으면 빈 타임라인 placeholder.
-    /// 이벤트 리스트는 다음 사이클에서.
+    /// List 위 overlay로 그려지는 본문 — 권한 상태별 안내·빈 타임라인 placeholder.
+    /// 이벤트 리스트는 다음 사이클에서 List 자체에 row로 들어갈 예정.
     @ViewBuilder
-    private var content: some View {
+    private var contentOverlay: some View {
         switch viewModel.access {
         case .notDetermined, .denied:
             ContentUnavailableView(
