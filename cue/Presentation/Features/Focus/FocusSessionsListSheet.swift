@@ -7,7 +7,7 @@ import SwiftUI
 
 /// 저장된 세션 프리셋 목록 — 메인 화면 우상단 버튼이 띄우는 시트.
 ///
-/// 좌상단 "세션" 타이틀(빨강 large) · 우상단 X 닫기 · 우하단 떠 있는 + 버튼.
+/// nav 바 가운데 "세션" inline 타이틀 · 좌상단 X 닫기 · 우상단 + 추가 (모두 시스템 기본 색).
 /// 행을 탭하면 그 세션을 선택하고 시트가 닫히며, 우측 "수정"을 누르면 그 세션을 prefill한
 /// `FocusSessionEditorSheet`(중간 detent)이 이 시트 *위에* 스택으로 올라온다.
 struct FocusSessionsListSheet: View {
@@ -21,37 +21,30 @@ struct FocusSessionsListSheet: View {
 
     var body: some View {
         NavigationStack {
-            // 목록 + 우하단 FAB를 겹치기 위해 ZStack — FAB는 List 스크롤과 무관하게 떠 있다.
-            ZStack(alignment: .bottomTrailing) {
-                List {
-                    Text("세션")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(.red)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(.init(
-                            top: Spacing.md, leading: Spacing.md,
-                            bottom: Spacing.sm, trailing: Spacing.md
-                        ))
-
-                    ForEach(viewModel.sessions) { session in
-                        sessionRow(session)
-                    }
+            List {
+                ForEach(viewModel.sessions) { session in
+                    sessionRow(session)
                 }
-                .listStyle(.plain)
-
-                addButton
-                    .padding(Spacing.lg)
             }
+            .listStyle(.plain)
+            .navigationTitle("세션")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
                     }
-                    .tint(.red)
                     .accessibilityLabel("닫기")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingCreate = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("세션 추가")
                 }
             }
             .overlay { emptyOverlay }
@@ -97,20 +90,6 @@ struct FocusSessionsListSheet: View {
             .buttonStyle(.borderless)
         }
         .padding(.vertical, Spacing.xs)
-    }
-
-    /// 우하단 떠 있는 + — 새 세션 만들기 진입점.
-    private var addButton: some View {
-        Button {
-            showingCreate = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.title)
-                .foregroundStyle(.white)
-                .frame(width: Spacing.xxl, height: Spacing.xxl)
-                .background(Circle().fill(.red))
-        }
-        .accessibilityLabel("세션 추가")
     }
 
     /// 세션이 한 건도 없을 때 List 위에 띄우는 안내.

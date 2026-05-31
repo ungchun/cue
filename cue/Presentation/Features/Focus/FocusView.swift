@@ -39,9 +39,9 @@ struct FocusView: View {
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // 빨강 톤을 탭 전체에 적용 — .tint가 ring 진행, 컨트롤 등에 자연스레 전파된다.
-        .tint(.red)
-        // 상단 "집중" nav 타이틀은 제거 — 본문 상단에 세션 타이틀이 자리잡는다.
+        // 빨강 톤은 ring·컨트롤 등 메인 요소에만 명시적으로 박는다 — 탭 루트에 .tint(.red)를
+        // 걸면 자식 시트(세션 목록)의 X/+ 버튼까지 빨강이 전파돼 디자인 분리를 못 한다.
+        // 상단 "집중" nav 타이틀도 제거 — 본문 상단에 세션 타이틀이 자리잡는다.
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -131,7 +131,8 @@ struct FocusView: View {
             if viewModel.session != nil {
                 Circle()
                     .trim(from: 0, to: progress)
-                    .stroke(.tint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    // 환경 .tint가 더 이상 빨강이 아니라 stroke 색을 명시적으로 박는다.
+                    .stroke(Color.red, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 0.2), value: progress)
             }
