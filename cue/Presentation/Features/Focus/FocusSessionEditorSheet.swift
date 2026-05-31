@@ -23,32 +23,26 @@ struct FocusSessionEditorSheet: View {
     /// 폼 입력값 — 시트가 떠 있는 동안 임시로 들고 있다가 저장 시 ViewModel에 반영.
     @State private var title: String = ""
     @State private var settings: FocusSettings = .default
-    /// 새 세션 모드일 때 TextField에 자동 포커스를 잡는다.
-    @FocusState private var titleFocused: Bool
+
+    /// 어느 입력 필드가 포커스인지 추적. numberPad엔 Return이 없어 keyboard toolbar의
+    /// "완료" 버튼이 `nil`로 떨어뜨려 키보드를 닫는다.
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case title, focus, rest
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("이름") {
                     TextField("세션 이름", text: $title)
-                        .focused($titleFocused)
+                        .focused($focusedField, equals: .title)
                 }
                 Section("시간") {
-                    Stepper(
-                        value: $settings.focusDuration,
-                        in: 60...(180 * 60),
-                        step: 60
-                    ) {
-                        LabeledContent("집중 시간", value: minuteLabel(settings.focusDuration))
-                    }
+                    minuteRow(label: "집중 시간", minutes: focusMinutesBinding, field: .focus)
                     if settings.isRepeating {
-                        Stepper(
-                            value: $settings.restDuration,
-                            in: 60...(60 * 60),
-                            step: 60
-                        ) {
-                            LabeledContent("휴식 시간", value: minuteLabel(settings.restDuration))
-                        }
+                        minuteRow(label: "휴식 시간", minutes: restMinutesBinding, field: .rest)
                     }
                 }
                 Section("반복") {
@@ -73,6 +67,12 @@ struct FocusSessionEditorSheet: View {
                     }
                     .disabled(trimmedTitle.isEmpty)
                 }
+                // numberPad는 Return이 없어 키보드 위 toolbar의 "완료"로 닫는다.
+                // 한글 키보드에도 떠 있지만 무해.
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("완료") { focusedField = nil }
+                }
             }
         }
         .onAppear {
@@ -84,7 +84,7 @@ struct FocusSessionEditorSheet: View {
             } else {
                 title = ""
                 settings = .default
-                titleFocused = true
+                focusedField = .title
             }
         }
     }
@@ -102,9 +102,44 @@ struct FocusSessionEditorSheet: View {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// 초 → "N분" 라벨.
-    private func minuteLabel(_ seconds: TimeInterval) -> String {
-        "\(Int(seconds / 60))분"
+    /// 도메인의 초 단위 `focusDuration`을 분 단위 `Int`로 노출하는 binding.
+    /// setter는 1~59분으로 클램프 — 60 이상을 막아 사용자 요청 범위를 보장한다.
+    private var focusMinutesBinding: Binding<Int> {
+        Binding(
+            get: { Int(settings.focusDuration / 60) },
+            set: { settings.focusDuration = TimeInterval(Self.clampMinutes($0) * 60) }
+        )
+    }
+
+    /// 휴식도 같은 1~59분 범위.
+    private var restMinutesBinding: Binding<Int> {
+        Binding(
+            get: { Int(settings.restDuration / 60) },
+            set: { settings.restDuration = TimeInterval(Self.clampMinutes($0) * 60) }
+        )
+    }
+
+    /// 입력값을 허용 범위로 클램프. 빈 입력(0)이나 음수는 1로, 60 이상은 59로.
+    private static func clampMinutes(_ value: Int) -> Int {
+        max(1, min(59, value))
+    }
+
+    // MARK: - 행 builder
+
+    /// "집중 시간 [____] 분" 한 줄. TextField는 numberPad 키보드 + 우측 정렬.
+    private func minuteRow(label: String, minutes: Binding<Int>, field: Field) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            TextField("", value: minutes, format: .number)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .focused($focusedField, equals: field)
+                // "59"(2자리)가 넉넉히 들어가는 폭. xl(32)로는 좁고 xxl(48)이 자연스러움.
+                .frame(width: Spacing.xxl)
+            Text("분")
+                .foregroundStyle(.secondary)
+        }
     }
 
     // MARK: - 저장
