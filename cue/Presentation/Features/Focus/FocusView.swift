@@ -49,7 +49,6 @@ struct FocusView: View {
                 } label: {
                     Image(systemName: "list.bullet")
                 }
-                .tint(.red)
                 .accessibilityLabel("세션")
                 // 세션 진행 중엔 목록을 잠근다 — 다른 세션으로 갈아타려면 먼저 종료해야 한다.
                 .disabled(viewModel.session != nil)
