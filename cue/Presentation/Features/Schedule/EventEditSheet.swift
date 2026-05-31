@@ -19,10 +19,16 @@ import SwiftUI
 /// is not supported"). 모달 시트 환경에서 `EKEventEditViewController`는 자체 toolbar를
 /// 그린다.
 ///
+/// `eventStore`는 호출자가 미리 만들어 주입한다 — 컨트롤러 안에서 새 store를 만들면
+/// 캘린더 목록·기본 캘린더·권한 캐시를 시트 표시 시점에 처음 조회하게 되어 데이터가
+/// 한 박자 늦게 채워지고 LaunchServices/persona 시스템 로그가 무더기로 찍힌다.
+/// `ScheduleView`가 화면 진입 시 warm-up한 store를 공유하면 그 비용이 사전 분산된다.
+///
 /// dismiss는 `controller.dismiss(...)`를 직접 호출하지 않고 `onCompletion`이
 /// `showingNewEvent`를 false로 떨어뜨려 SwiftUI가 닫게 한다 — 그래야 시트 상태와
 /// SwiftUI binding이 일관된다.
 struct EventEditSheet: UIViewControllerRepresentable {
+    let eventStore: EKEventStore
     let onCompletion: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -31,7 +37,7 @@ struct EventEditSheet: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> EKEventEditViewController {
         let editor = EKEventEditViewController()
-        editor.eventStore = context.coordinator.store
+        editor.eventStore = eventStore
         editor.editViewDelegate = context.coordinator
         // event를 명시 지정하지 않으면 빈 이벤트로 시작 — iOS 캘린더 "신규"와 동일.
         return editor
@@ -43,8 +49,6 @@ struct EventEditSheet: UIViewControllerRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, EKEventEditViewDelegate {
-        /// 컨트롤러 생애 동안 유지해야 하는 EKEventStore — 권한·이벤트 객체 그래프를 공유.
-        let store = EKEventStore()
         let onCompletion: () -> Void
 
         init(onCompletion: @escaping () -> Void) {
@@ -52,7 +56,7 @@ struct EventEditSheet: UIViewControllerRepresentable {
         }
 
         /// 저장·취소·삭제 어떤 액션이든 SwiftUI 시트 상태를 false로 떨어뜨려 닫는다.
-        /// 저장 액션이면 컨트롤러가 내부적으로 `store`에 save까지 마친 상태로 들어온다.
+        /// 저장 액션이면 컨트롤러가 내부적으로 `eventStore`에 save까지 마친 상태.
         func eventEditViewController(
             _ controller: EKEventEditViewController,
             didCompleteWith action: EKEventEditViewAction
