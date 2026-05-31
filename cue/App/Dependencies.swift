@@ -25,6 +25,9 @@ struct Dependencies: Sendable {
 
     var requestEventsAccess: RequestEventsAccessUseCase
     var fetchEvents: FetchEventsUseCase
+
+    /// 집중 세션의 단계 종료 알림 스케줄러. ViewModel이 schedule/cancel을 직접 호출한다.
+    var focusNotifications: any FocusNotificationScheduling
 }
 
 extension EnvironmentValues {
@@ -102,7 +105,8 @@ extension Dependencies {
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
-            fetchEvents: FetchEventsUseCase(repository: eventsRepository)
+            fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            focusNotifications: NoopFocusNotificationScheduler()
         )
     }
 }

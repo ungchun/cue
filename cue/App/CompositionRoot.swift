@@ -34,7 +34,8 @@ struct CompositionRoot {
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
-            fetchEvents: FetchEventsUseCase(repository: eventsRepository)
+            fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            focusNotifications: UserNotificationFocusScheduler()
         )
     }
 }
