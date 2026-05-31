@@ -170,20 +170,19 @@ struct ScheduleView: View {
     }
 
     /// List 바닥의 페이지네이션 trigger — viewport에 들어오면 ViewModel에 다음 2주를
-    /// 요청한다. 자체 시각 컨텐츠 없이 가벼운 placeholder + ProgressView(로딩 시).
-    /// row 자체엔 separator도 inset도 두지 않아 사용자에겐 보이지 않는다.
-    @ViewBuilder
+    /// 요청한다. spinner + "더 불러오는 중" 라벨을 항상 표시해 사용자에게 추가 로드가
+    /// 일어남을 명확히 알린다(fetch가 너무 빠르면 isLoadingMore가 깜빡여 인식이
+    /// 어렵기 때문에 조건 분기 없이 항상 노출).
     private var loadMoreTrigger: some View {
-        HStack {
-            Spacer()
-            if viewModel.isLoadingMore {
-                ProgressView()
-                    .padding(.vertical, Spacing.md)
-            } else {
-                Color.clear.frame(height: 1)
-            }
-            Spacer()
+        HStack(spacing: Spacing.sm) {
+            ProgressView()
+                .controlSize(.small)
+            Text("더 불러오는 중")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.lg)
         .listRowSeparator(.hidden)
         .listRowInsets(.init(
             top: Spacing.zero, leading: Spacing.zero,
