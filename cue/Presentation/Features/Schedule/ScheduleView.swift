@@ -6,10 +6,10 @@
 import EventKit
 import SwiftUI
 
-/// 일정 탭 화면 — "타임라인" 헤더 + 우상단 신규 이벤트 + 버튼.
+/// 일정 탭 화면 — "타임라인" 헤더 + 우상단 신규 이벤트 + 버튼 + 향후 30일치 이벤트 리스트.
 ///
-/// 시간순 이벤트 리스트는 후속 사이클에서. 현재는 권한·신규 입력만 다룬다.
-/// 신규 입력은 `EKEventEditViewController`(iOS 캘린더 네이티브 시트)가 처리한다.
+/// 이벤트는 일정 있는 날만 섹션으로 묶여 표시된다(`DayGroup` 단위). 신규 입력은
+/// `EKEventEditViewController`(iOS 캘린더 네이티브 시트)가 처리한다.
 ///
 /// `eventStore`는 화면 진입 시 한 번 만들어 warm-up하고 `EventEditSheet`에 그대로
 /// 주입한다 — 시트 안에서 새 store를 만들면 캘린더 목록·기본 캘린더 조회가 시트 표시
@@ -31,12 +31,25 @@ struct ScheduleView: View {
             Text("타임라인")
                 .font(.largeTitle.bold())
                 .listRowSeparator(.hidden)
+
+            ForEach(viewModel.eventsByDay) { group in
+                Section {
+                    ForEach(group.events) { event in
+                        EventRow(event: event)
+                    }
+                } header: {
+                    Text(Self.dayHeaderFormatter.string(from: group.date))
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(nil)
+                }
+            }
         }
         .listStyle(.plain)
         .listRowSpacing(Spacing.zero)
-        .listSectionSpacing(Spacing.zero)
+        .listSectionSpacing(Spacing.md)
         .environment(\.defaultMinListRowHeight, Spacing.zero)
-        .overlay { contentOverlay }
+        .overlay { emptyOverlay }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .toolbar {
@@ -85,10 +98,10 @@ struct ScheduleView: View {
         _ = eventStore.defaultCalendarForNewEvents
     }
 
-    /// List 위 overlay로 그려지는 본문 — 권한 상태별 안내·빈 타임라인 placeholder.
-    /// 이벤트 리스트는 다음 사이클에서 List 자체에 row로 들어갈 예정.
+    /// 권한 없음 / 빈 타임라인일 때 List 위에 띄우는 안내. 이벤트가 한 건이라도 있으면
+    /// 안내는 가려지고 List 본 row만 보인다.
     @ViewBuilder
-    private var contentOverlay: some View {
+    private var emptyOverlay: some View {
         switch viewModel.access {
         case .notDetermined, .denied:
             ContentUnavailableView(
@@ -97,14 +110,69 @@ struct ScheduleView: View {
                 description: Text("설정 → cue 에서 캘린더 권한을 켜 주세요.")
             )
         case .granted:
-            ContentUnavailableView(
-                "일정이 비어있어요",
-                systemImage: "calendar",
-                description: Text("우측 상단 +로 새 일정을 추가하세요.")
-            )
+            if viewModel.eventsByDay.isEmpty {
+                ContentUnavailableView(
+                    "일정이 비어있어요",
+                    systemImage: "calendar",
+                    description: Text("우측 상단 +로 새 일정을 추가하세요.")
+                )
+            }
         }
     }
+
+    /// 섹션 헤더 — "5월 31일 토요일" 형식. ko_KR 고정.
+    private static let dayHeaderFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일 EEEE"
+        return formatter
+    }()
 }
+
+/// 한 이벤트 row — 캘린더 색 점 + 제목 + 시작-종료 시간(또는 "종일").
+private struct EventRow: View {
+    let event: CalendarEvent
+
+    var body: some View {
+        HStack(spacing: Spacing.md) {
+            Circle()
+                .fill(dotColor)
+                .frame(width: Spacing.sm, height: Spacing.sm)
+            Text(event.title)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            Spacer(minLength: Spacing.md)
+            Text(timeText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .padding(.vertical, Spacing.xs)
+    }
+
+    /// "#RRGGBB"를 SwiftUI Color로. 없으면 시스템 tint.
+    private var dotColor: Color {
+        guard let hex = event.calendarColorHex,
+              let parsed = Color(hex: hex) else { return .accentColor }
+        return parsed
+    }
+
+    /// 종일은 "종일", 아니면 "오전 9:00 - 오전 10:00" 형식 (ko_KR).
+    private var timeText: String {
+        if event.isAllDay { return "종일" }
+        let formatter = Self.timeFormatter
+        return "\(formatter.string(from: event.startDate)) - \(formatter.string(from: event.endDate))"
+    }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "a h:mm"
+        return formatter
+    }()
+}
+
 
 #Preview {
     NavigationStack {
