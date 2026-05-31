@@ -30,8 +30,6 @@ struct ScheduleView: View {
                 EventEditSheet(onCompletion: {
                     viewModel.dismissNewEvent()
                 })
-                // 캘린더 네이티브 시트는 자체 크기 관리 — full-screen에 가깝다.
-                .ignoresSafeArea()
             }
     }
 
