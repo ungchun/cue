@@ -138,6 +138,9 @@ struct ScheduleView: View {
     /// 날짜+요일 헤더 — 좌측에 rail 통과용 세로선 column(점 없음) + 텍스트.
     /// padding을 Text에만 주고 HStack 자체엔 두지 않는다 — HStack에 padding을 걸면
     /// padding 영역엔 rail이 안 그려져 row와 row 사이 헤더 영역에서 세로선이 끊긴다.
+    ///
+    /// padding은 비대칭(위 md, 아래 xs) — 헤더는 자기 그룹의 첫 row와 가깝게 묶여 보이고
+    /// 이전 그룹과는 여유 있게 떨어지는 게 정보 계층 측면에서 자연스럽다.
     private func dayHeader(_ group: DayGroup) -> some View {
         HStack(alignment: .center, spacing: Spacing.sm) {
             railSpine
@@ -145,7 +148,8 @@ struct ScheduleView: View {
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(Self.headerColor(for: group.date))
                 .textCase(nil)
-                .padding(.vertical, Spacing.md)
+                .padding(.top, Spacing.md)
+                .padding(.bottom, Spacing.xs)
             Spacer(minLength: Spacing.zero)
         }
         .background(Color(.systemBackground))
