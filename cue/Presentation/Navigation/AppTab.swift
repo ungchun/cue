@@ -6,7 +6,7 @@
 /// 앱의 하단 탭. 탭을 추가하면 case와 메타데이터(`title`·`systemImage`)를 함께 늘린다.
 /// 탭 선언 순서가 그대로 탭바 좌→우 순서. `allCases`가 그 순서를 보장한다.
 enum AppTab: CaseIterable, Identifiable {
-    case focus     // 뽀모도로 + 앱 차단 — 화면은 다음 사이클에서.
+    case focus     // 뽀모도로 — 단계 종료 알림까지. Live Activity·앱 차단은 다음 사이클.
     case reminder
     case schedule  // 타임라인 + 신규 이벤트 시트(EKEventEditViewController). 시간순 리스트는 다음 사이클에서.
     case settings

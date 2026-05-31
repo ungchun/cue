@@ -10,10 +10,12 @@ struct RootView: View {
     @State private var selectedTab: AppTab = .reminder
     @State private var reminderViewModel: ReminderViewModel
     @State private var scheduleViewModel: ScheduleViewModel
+    @State private var focusViewModel: FocusViewModel
 
     init(dependencies: Dependencies) {
         _reminderViewModel = State(initialValue: ReminderViewModel(dependencies: dependencies))
         _scheduleViewModel = State(initialValue: ScheduleViewModel(dependencies: dependencies))
+        _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies))
     }
 
     var body: some View {
@@ -34,12 +36,7 @@ struct RootView: View {
     @ViewBuilder
     private func screen(for tab: AppTab) -> some View {
         switch tab {
-        case .focus:
-            ContentUnavailableView(
-                "집중",
-                systemImage: "timer",
-                description: Text("뽀모도로·앱 차단은 다음 사이클에서.")
-            )
+        case .focus: FocusView(viewModel: focusViewModel)
         case .reminder: ReminderView(viewModel: reminderViewModel)
         case .schedule: ScheduleView(viewModel: scheduleViewModel)
         case .settings: SettingsView()
