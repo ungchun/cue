@@ -19,6 +19,10 @@ struct ScheduleView: View {
     /// 신규 이벤트 시트와 공유하는 EKEventStore. `@State`로 view 생애 동안 유지한다.
     @State private var eventStore = EKEventStore()
 
+    // 좌상단 "캘린더" 버튼 — Apple Calendar 앱 호출용 SwiftUI 환경 핸들.
+    // ReminderView의 "미리 알림" 버튼과 동일 패턴.
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
         // 시스템 large title은 toolbar와 표준 간격을 띄우기 때문에 ReminderView와 위치가
         // 어긋난다. 같은 룩(toolbar 바로 아래에 large title)을 만들기 위해 inline 모드로
@@ -35,6 +39,9 @@ struct ScheduleView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                openCalendarAppButton
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     viewModel.presentNewEvent()
@@ -52,6 +59,18 @@ struct ScheduleView: View {
             EventEditSheet(eventStore: eventStore, onCompletion: {
                 viewModel.dismissNewEvent()
             })
+        }
+    }
+
+    /// 좌상단 "캘린더" 버튼 — Apple 캘린더 앱을 연다. `calshow://`는 캘린더 앱의 표준
+    /// URL scheme. ReminderView의 `openRemindersAppButton`과 동일 패턴.
+    private var openCalendarAppButton: some View {
+        Button {
+            if let url = URL(string: "calshow://") {
+                openURL(url)
+            }
+        } label: {
+            Text("캘린더")
         }
     }
 
