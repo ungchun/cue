@@ -172,6 +172,53 @@ struct ScheduleViewModelTests {
         #expect(viewModel.editingEvent == nil)
     }
 
+    @Test func loadMoreFetchesEventsInExtendedRange() async {
+        // initial 30일 이후 35일 후 시점의 이벤트 — initial fetch엔 안 들어오고
+        // loadMore(+14일 추가)에서 들어와야 한다.
+        let today = Calendar.current.startOfDay(for: Date())
+        let dayInInitial = today.addingTimeInterval(5 * 24 * 60 * 60)
+        let dayInExtended = today.addingTimeInterval(35 * 24 * 60 * 60)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [
+            event(id: "in-initial",
+                  start: dayInInitial.addingTimeInterval(60 * 60),
+                  end: dayInInitial.addingTimeInterval(2 * 60 * 60)),
+            event(id: "in-extended",
+                  start: dayInExtended.addingTimeInterval(60 * 60),
+                  end: dayInExtended.addingTimeInterval(2 * 60 * 60)),
+        ]))
+        await viewModel.onAppear()
+        let initialIDs = Set(viewModel.eventsByDay.flatMap(\.events).map(\.id))
+        #expect(initialIDs == ["in-initial"])
+
+        await viewModel.loadMore()
+
+        let afterIDs = Set(viewModel.eventsByDay.flatMap(\.events).map(\.id))
+        #expect(afterIDs == ["in-initial", "in-extended"])
+    }
+
+    @Test func loadMoreDoesNothingWhenAccessDenied() async {
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(access: .denied))
+        await viewModel.onAppear()
+
+        await viewModel.loadMore()
+
+        #expect(viewModel.eventsByDay.isEmpty)
+    }
+
+    @Test func loadMorePreservesExistingEventsWithoutDuplicates() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let existing = event(id: "existing",
+                              start: today.addingTimeInterval(10 * 60 * 60),
+                              end: today.addingTimeInterval(11 * 60 * 60))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [existing]))
+        await viewModel.onAppear()
+
+        await viewModel.loadMore()
+
+        // existing은 initial 범위에만 있고 extended 범위엔 없음 → 그대로 1건 유지.
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["existing"])
+    }
+
     @Test func presentEditIgnoresReadOnlyEvent() {
         // 구독 캘린더의 공휴일 같은 read-only 이벤트는 탭해도 시트가 안 떠야 한다.
         let today = Calendar.current.startOfDay(for: Date())

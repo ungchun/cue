@@ -35,6 +35,9 @@ struct ScheduleView: View {
             ForEach(viewModel.eventsByDay) { group in
                 daySection(group)
             }
+            if viewModel.access == .granted {
+                loadMoreTrigger
+            }
         }
         .listStyle(.plain)
         .listRowSpacing(Spacing.zero)
@@ -164,6 +167,31 @@ struct ScheduleView: View {
             Spacer(minLength: Spacing.zero)
         }
         .background(Color(.systemBackground))
+    }
+
+    /// List 바닥의 페이지네이션 trigger — viewport에 들어오면 ViewModel에 다음 2주를
+    /// 요청한다. 자체 시각 컨텐츠 없이 가벼운 placeholder + ProgressView(로딩 시).
+    /// row 자체엔 separator도 inset도 두지 않아 사용자에겐 보이지 않는다.
+    @ViewBuilder
+    private var loadMoreTrigger: some View {
+        HStack {
+            Spacer()
+            if viewModel.isLoadingMore {
+                ProgressView()
+                    .padding(.vertical, Spacing.md)
+            } else {
+                Color.clear.frame(height: 1)
+            }
+            Spacer()
+        }
+        .listRowSeparator(.hidden)
+        .listRowInsets(.init(
+            top: Spacing.zero, leading: Spacing.zero,
+            bottom: Spacing.zero, trailing: Spacing.zero
+        ))
+        .onAppear {
+            Task { await viewModel.loadMore() }
+        }
     }
 
     /// 헤더용 rail 세로선 — `EventRow.railColumn`과 같은 폭·동일한 가운데 정렬로
