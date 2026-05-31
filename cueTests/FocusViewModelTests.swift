@@ -39,26 +39,52 @@ struct FocusViewModelTests {
         return (deps, scheduler)
     }
 
-    @Test func initialStateHasDefaultSettingsAndNoSession() {
+    // MARK: - 초기 상태 / 시작·정지
+
+    @Test func initialStateHasNoSessionsAndNoSelection() {
         let (deps, _) = makeDependencies()
         let viewModel = FocusViewModel(dependencies: deps)
 
-        #expect(viewModel.settings == FocusSettings.default)
+        #expect(viewModel.sessions.isEmpty)
+        #expect(viewModel.selectedSessionID == nil)
+        #expect(viewModel.selectedSession == nil)
+        #expect(viewModel.displayedSettings == FocusSettings.default)
         #expect(viewModel.session == nil)
     }
 
-    @Test func startCreatesSessionFromCurrentSettings() {
+    @Test func startUsesSelectedSessionSettings() {
         let (deps, _) = makeDependencies()
         let viewModel = FocusViewModel(dependencies: deps)
-        viewModel.settings = FocusSettings(
-            focusDuration: 90, restDuration: 30, isRepeating: false, cycleCount: 1
-        )
+        let custom = FocusSettings(focusDuration: 90, restDuration: 30, isRepeating: false, cycleCount: 1)
+        let added = viewModel.addSession(title: "테스트", settings: custom)
+        viewModel.selectSession(id: added.id)
 
         viewModel.start()
 
         #expect(viewModel.session?.phase == .focus)
         #expect(viewModel.session?.remaining == 90)
         #expect(viewModel.session?.totalCycles == 1)
+    }
+
+    @Test func startWithoutSelectionUsesDefaultSettings() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+
+        viewModel.start()
+
+        #expect(viewModel.session?.remaining == FocusSettings.default.focusDuration)
+    }
+
+    @Test func startIsNoopWhenAlreadyRunning() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        viewModel.start()
+        let first = viewModel.session
+
+        viewModel.start()
+
+        // 같은 인스턴스가 그대로 — 두 번째 start로 새 세션이 만들어지지 않는다.
+        #expect(viewModel.session === first)
     }
 
     @Test func stopSessionClearsAndAbortsCurrent() {
@@ -69,20 +95,103 @@ struct FocusViewModelTests {
         viewModel.stopSession()
 
         #expect(viewModel.session == nil)
-        // start 시 1번 schedule, abort 시 1번 cancel.
         #expect(scheduler.cancelCount >= 1)
     }
 
-    @Test func cycleCountClampedToAtLeastOne() {
-        // 사용자가 picker로 0을 선택해도 도메인은 1 이상으로 처리한다.
+    // MARK: - 세션 CRUD
+
+    @Test func addSessionAppendsToList() {
         let (deps, _) = makeDependencies()
         let viewModel = FocusViewModel(dependencies: deps)
-        viewModel.settings = FocusSettings(
-            focusDuration: 60, restDuration: 30, isRepeating: true, cycleCount: 0
-        )
+        let custom = FocusSettings(focusDuration: 30 * 60, restDuration: 5 * 60, isRepeating: true, cycleCount: 4)
 
-        viewModel.start()
+        let added = viewModel.addSession(title: "독서", settings: custom)
 
-        #expect(viewModel.session?.totalCycles == 1)
+        #expect(viewModel.sessions.count == 1)
+        #expect(viewModel.sessions[0].id == added.id)
+        #expect(viewModel.sessions[0].title == "독서")
+        #expect(viewModel.sessions[0].settings == custom)
+    }
+
+    @Test func updateSessionReplacesInPlace() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        let original = viewModel.addSession(title: "독서", settings: .default)
+        let newSettings = FocusSettings(focusDuration: 45 * 60, restDuration: 10 * 60, isRepeating: false, cycleCount: 1)
+
+        viewModel.updateSession(id: original.id, title: "운동", settings: newSettings)
+
+        #expect(viewModel.sessions.count == 1)
+        #expect(viewModel.sessions[0].id == original.id)
+        #expect(viewModel.sessions[0].title == "운동")
+        #expect(viewModel.sessions[0].settings == newSettings)
+    }
+
+    @Test func updateSessionWithUnknownIDIsNoop() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        viewModel.addSession(title: "원본", settings: .default)
+
+        viewModel.updateSession(id: UUID(), title: "다른", settings: .default)
+
+        #expect(viewModel.sessions[0].title == "원본")
+    }
+
+    @Test func deleteSessionRemovesFromList() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        let a = viewModel.addSession(title: "A", settings: .default)
+        let b = viewModel.addSession(title: "B", settings: .default)
+
+        viewModel.deleteSession(id: a.id)
+
+        #expect(viewModel.sessions.map(\.id) == [b.id])
+    }
+
+    @Test func deletingSelectedSessionClearsSelection() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        let added = viewModel.addSession(title: "독서", settings: .default)
+        viewModel.selectSession(id: added.id)
+
+        viewModel.deleteSession(id: added.id)
+
+        #expect(viewModel.selectedSessionID == nil)
+    }
+
+    @Test func deletingNonSelectedSessionKeepsSelection() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        let kept = viewModel.addSession(title: "유지", settings: .default)
+        let toRemove = viewModel.addSession(title: "삭제", settings: .default)
+        viewModel.selectSession(id: kept.id)
+
+        viewModel.deleteSession(id: toRemove.id)
+
+        #expect(viewModel.selectedSessionID == kept.id)
+    }
+
+    // MARK: - 선택
+
+    @Test func selectSessionUpdatesDisplayedSettings() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        let custom = FocusSettings(focusDuration: 45 * 60, restDuration: 10 * 60, isRepeating: false, cycleCount: 1)
+        let added = viewModel.addSession(title: "글쓰기", settings: custom)
+
+        viewModel.selectSession(id: added.id)
+
+        #expect(viewModel.selectedSession?.id == added.id)
+        #expect(viewModel.displayedSettings == custom)
+    }
+
+    @Test func selectingUnknownIDKeepsDisplayedSettingsAtDefault() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+
+        viewModel.selectSession(id: UUID())
+
+        #expect(viewModel.selectedSession == nil)
+        #expect(viewModel.displayedSettings == FocusSettings.default)
     }
 }

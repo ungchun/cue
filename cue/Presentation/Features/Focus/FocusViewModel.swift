@@ -6,17 +6,20 @@
 import Foundation
 import Observation
 
-/// 집중 탭(idle 상태)의 ViewModel — 설정을 들고 있다가 사용자가 "시작"을 누르면 `session`을
-/// 만들어 풀스크린 시트의 뷰모델로 노출한다. `session != nil`이 곧 시트 표시 신호.
+/// 집중 탭의 ViewModel — 저장된 세션 프리셋 목록(`sessions`)을 들고 있고, 사용자가
+/// 목록에서 하나를 고르면 그 세션을 메인 화면 ring·타이틀에 반영한다. "시작"이 눌리면
+/// 선택된 세션의 설정으로 상태머신(`FocusSessionViewModel`)을 만들어 같은 메인 화면 안에서
+/// 타이머를 돌린다.
 ///
-/// 알림 권한 요청과 알림 스케줄러 주입을 이 레이어에서 일괄 처리해 화면 진입 시 한 번만
-/// 권한 prompt가 뜨도록 한다(설정 시 무관, 시작 시 무관).
+/// 영속화는 다음 사이클 — 현재는 메모리에만 보관. 앱을 재시작하면 비워진다.
 @MainActor
 @Observable
 final class FocusViewModel {
-    /// 다음 세션에 쓸 설정. picker가 직접 바인딩한다.
-    var settings: FocusSettings = .default
-    /// 진행 중인 세션. nil이면 idle(설정 화면), 값이 있으면 풀스크린 시트를 띄운다.
+    /// 저장된 세션 프리셋. 사용자가 +로 만들고 수정/삭제한다.
+    private(set) var sessions: [FocusSession] = []
+    /// 메인 화면이 보여줄 세션. nil이면 기본값(25/5분·4 사이클)으로 폴백.
+    var selectedSessionID: UUID?
+    /// 진행 중인 세션 상태머신. nil이면 idle.
     var session: FocusSessionViewModel?
 
     private let scheduler: any FocusNotificationScheduling
@@ -25,20 +28,59 @@ final class FocusViewModel {
         self.scheduler = dependencies.focusNotifications
     }
 
-    /// 화면이 처음 나타날 때 한 번 호출 — 알림 권한 prompt를 미리 띄워 시작 시 끊김을 막는다.
+    /// 현재 선택된 세션. id로 매번 lookup해 update/delete와 자연스럽게 동기화된다.
+    var selectedSession: FocusSession? {
+        guard let id = selectedSessionID else { return nil }
+        return sessions.first(where: { $0.id == id })
+    }
+
+    /// 메인 ring·타이틀이 사용할 설정. 선택 없으면 `FocusSettings.default`.
+    var displayedSettings: FocusSettings {
+        selectedSession?.settings ?? .default
+    }
+
+    /// 화면이 처음 나타날 때 한 번 호출 — 알림 권한 prompt를 미리 띄운다.
     func onAppear() async {
         await scheduler.requestAuthorization()
     }
 
-    /// 현재 `settings`로 새 세션을 만든다. 이미 세션이 떠 있으면 무시.
+    /// 메인 화면의 ▶ 버튼이 호출 — 선택된 세션(또는 기본값)으로 상태머신을 만든다.
+    /// 이미 진행 중이면 무시.
     func start() {
         guard session == nil else { return }
-        session = FocusSessionViewModel(settings: settings, scheduler: scheduler)
+        session = FocusSessionViewModel(settings: displayedSettings, scheduler: scheduler)
     }
 
-    /// 진행 중인 세션을 중단·정리한다. 시트의 종료 버튼·강제 dismiss에서 호출.
+    /// 진행 중인 세션을 중단·정리한다. 종료 버튼/자동 완료에서 호출.
     func stopSession() {
         session?.abort()
         session = nil
+    }
+
+    // MARK: - 세션 프리셋 CRUD
+
+    /// 세션을 새로 만들어 목록 끝에 추가하고, 생성된 세션을 반환한다.
+    @discardableResult
+    func addSession(title: String, settings: FocusSettings) -> FocusSession {
+        let new = FocusSession(id: UUID(), title: title, settings: settings)
+        sessions.append(new)
+        return new
+    }
+
+    /// 같은 id의 세션을 새 title·settings로 덮어쓴다. 못 찾으면 no-op.
+    func updateSession(id: UUID, title: String, settings: FocusSettings) {
+        guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
+        sessions[index] = FocusSession(id: id, title: title, settings: settings)
+    }
+
+    /// 세션을 목록에서 제거. 삭제 대상이 선택된 세션이면 선택도 해제한다.
+    func deleteSession(id: UUID) {
+        sessions.removeAll { $0.id == id }
+        if selectedSessionID == id { selectedSessionID = nil }
+    }
+
+    /// 메인 화면에 띄울 세션을 고른다. 없는 id를 줘도 그대로 둠(다음 lookup에서 nil 폴백).
+    func selectSession(id: UUID) {
+        selectedSessionID = id
     }
 }
