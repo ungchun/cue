@@ -20,6 +20,7 @@ struct ScheduleViewModelTests {
         let eventsRepository = InMemoryEventsRepository(access: access, events: events)
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
         let itemRepository = InMemoryItemRepository()
+        let focusSessionsRepository = InMemoryFocusSessionsRepository()
         return Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
@@ -36,7 +37,9 @@ struct ScheduleViewModelTests {
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
-            focusNotifications: NoopFocusNotificationScheduler()
+            focusNotifications: NoopFocusNotificationScheduler(),
+            fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
         )
     }
 

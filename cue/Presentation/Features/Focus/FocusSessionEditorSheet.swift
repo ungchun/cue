@@ -42,7 +42,6 @@ struct FocusSessionEditorSheet: View {
                 }
                 Section("색상") {
                     paletteRow
-                    customColorRow
                 }
                 Section("시간") {
                     minuteRow(label: "집중 시간", minutes: focusMinutesBinding, field: .focus)
@@ -134,19 +133,6 @@ struct FocusSessionEditorSheet: View {
             }
             .accessibilityLabel(preset.name)
             .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
-
-    /// 커스텀 색 선택 — 시스템 ColorPicker. 임의 색을 골라도 hex로 저장돼 영속·표시 일관성 유지.
-    private var customColorRow: some View {
-        ColorPicker("커스텀 색", selection: customColorBinding, supportsOpacity: false)
-    }
-
-    /// ColorPicker가 요구하는 Binding<Color> ↔ 내부 `colorHex: String` 사이의 어댑터.
-    private var customColorBinding: Binding<Color> {
-        Binding(
-            get: { Color(hex: colorHex) ?? .gray },
-            set: { colorHex = $0.hexString }
-        )
     }
 
     // MARK: - 삭제 섹션 (수정 모드 전용)
@@ -250,13 +236,17 @@ struct FocusSessionEditorSheet: View {
         let hex: String
     }
 
-    /// 기본 팔레트 — Apple 시스템 컬러 8종(빨/주/노/초/파/보라/분홍/회색).
+    /// 기본 팔레트 — Apple 시스템 컬러 10종(빨/주/노/초/민트/파/인디고/보라/분홍/회색).
+    /// hex는 각 시스템 컬러의 라이트 모드 sRGB 값과 일치시켜 행 캡슐·메인 화면이 같은
+    /// 톤으로 보이도록 한다.
     private static let palette: [ColorPreset] = [
         ColorPreset(name: "빨강", displayColor: .red, hex: "#FF3B30"),
         ColorPreset(name: "주황", displayColor: .orange, hex: "#FF9500"),
         ColorPreset(name: "노랑", displayColor: .yellow, hex: "#FFCC00"),
         ColorPreset(name: "초록", displayColor: .green, hex: "#34C759"),
+        ColorPreset(name: "민트", displayColor: .mint, hex: "#00C7BE"),
         ColorPreset(name: "파랑", displayColor: .blue, hex: "#007AFF"),
+        ColorPreset(name: "인디고", displayColor: .indigo, hex: "#5856D6"),
         ColorPreset(name: "보라", displayColor: .purple, hex: "#AF52DE"),
         ColorPreset(name: "분홍", displayColor: .pink, hex: "#FF2D55"),
         ColorPreset(name: "회색", displayColor: .gray, hex: "#8E8E93"),

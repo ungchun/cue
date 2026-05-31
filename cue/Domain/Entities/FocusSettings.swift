@@ -10,7 +10,7 @@ import Foundation
 ///
 /// 단위는 초(`TimeInterval`). UI는 분 단위로 보여주지만 도메인은 초로 통일해
 /// 타이머 tick과의 환산을 단순하게 둔다.
-struct FocusSettings: Equatable, Sendable {
+struct FocusSettings: Codable, Equatable, Sendable {
     /// 집중 단계 한 번의 길이.
     var focusDuration: TimeInterval
     /// 휴식 단계 한 번의 길이. `isRepeating == false`면 무시된다(휴식 없음).

@@ -18,6 +18,7 @@ struct FocusViewModelTests {
         let itemRepository = InMemoryItemRepository()
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
         let eventsRepository = InMemoryEventsRepository(access: .granted)
+        let focusSessionsRepository = InMemoryFocusSessionsRepository()
         let deps = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
@@ -34,7 +35,9 @@ struct FocusViewModelTests {
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
-            focusNotifications: scheduler
+            focusNotifications: scheduler,
+            fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
         )
         return (deps, scheduler)
     }

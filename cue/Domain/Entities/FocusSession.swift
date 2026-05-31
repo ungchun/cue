@@ -10,7 +10,7 @@ import Foundation
 /// "독서하기"·"운동" 같은 이름으로 자주 쓰는 시간·반복 패턴을 묶어두고, 시작 시 목록에서
 /// 골라 그대로 돌린다. `colorHex`는 시트 행 캡슐·메인 화면 타이틀·ring 진행 색에
 /// 일관되게 적용된다.
-struct FocusSession: Identifiable, Equatable, Sendable {
+struct FocusSession: Codable, Identifiable, Equatable, Sendable {
     let id: UUID
     var title: String
     var settings: FocusSettings

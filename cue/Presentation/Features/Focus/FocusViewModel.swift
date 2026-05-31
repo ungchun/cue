@@ -23,9 +23,13 @@ final class FocusViewModel {
     var session: FocusSessionViewModel?
 
     private let scheduler: any FocusNotificationScheduling
+    private let fetchFocusSessions: FetchFocusSessionsUseCase
+    private let saveFocusSessions: SaveFocusSessionsUseCase
 
     init(dependencies: Dependencies) {
         self.scheduler = dependencies.focusNotifications
+        self.fetchFocusSessions = dependencies.fetchFocusSessions
+        self.saveFocusSessions = dependencies.saveFocusSessions
     }
 
     /// 현재 선택된 세션. id로 매번 lookup해 update/delete와 자연스럽게 동기화된다.
@@ -39,9 +43,10 @@ final class FocusViewModel {
         selectedSession?.settings ?? .default
     }
 
-    /// 화면이 처음 나타날 때 한 번 호출 — 알림 권한 prompt를 미리 띄운다.
+    /// 화면이 처음 나타날 때 한 번 호출 — 알림 권한 prompt + 저장된 세션 로드.
     func onAppear() async {
         await scheduler.requestAuthorization()
+        sessions = await fetchFocusSessions()
     }
 
     /// 메인 화면의 ▶ 버튼이 호출 — 선택된 세션(또는 기본값)으로 상태머신을 만든다.
@@ -60,10 +65,13 @@ final class FocusViewModel {
     // MARK: - 세션 프리셋 CRUD
 
     /// 세션을 새로 만들어 목록 끝에 추가하고, 생성된 세션을 반환한다.
+    /// 메모리 갱신 즉시 영속 저장 dispatch — UserDefaults 쓰기는 빠르지만 fire-and-forget으로
+    /// UI 흐름을 막지 않는다.
     @discardableResult
     func addSession(title: String, settings: FocusSettings, colorHex: String) -> FocusSession {
         let new = FocusSession(id: UUID(), title: title, settings: settings, colorHex: colorHex)
         sessions.append(new)
+        persist()
         return new
     }
 
@@ -71,12 +79,21 @@ final class FocusViewModel {
     func updateSession(id: UUID, title: String, settings: FocusSettings, colorHex: String) {
         guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
         sessions[index] = FocusSession(id: id, title: title, settings: settings, colorHex: colorHex)
+        persist()
     }
 
     /// 세션을 목록에서 제거. 삭제 대상이 선택된 세션이면 선택도 해제한다.
     func deleteSession(id: UUID) {
         sessions.removeAll { $0.id == id }
         if selectedSessionID == id { selectedSessionID = nil }
+        persist()
+    }
+
+    /// 현재 `sessions`를 영속 저장소에 비동기 dispatch — 호출자는 결과를 기다리지 않는다.
+    /// 직렬화 실패는 repository 내부에서 무시된다(다음 변경 때 다시 시도).
+    private func persist() {
+        let snapshot = sessions
+        Task { await saveFocusSessions(snapshot) }
     }
 
     /// 메인 화면에 띄울 세션을 고른다. 없는 id를 줘도 그대로 둠(다음 lookup에서 nil 폴백).

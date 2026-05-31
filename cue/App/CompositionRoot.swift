@@ -17,6 +17,7 @@ struct CompositionRoot {
         let itemRepository = SwiftDataItemRepository(context: container.mainContext)
         let remindersRepository = EventKitRemindersRepository()
         let eventsRepository = EventKitEventsRepository()
+        let focusSessionsRepository = UserDefaultsFocusSessionsRepository()
 
         self.modelContainer = container
         self.dependencies = Dependencies(
@@ -35,7 +36,9 @@ struct CompositionRoot {
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
-            focusNotifications: UserNotificationFocusScheduler()
+            focusNotifications: UserNotificationFocusScheduler(),
+            fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
         )
     }
 }

@@ -28,6 +28,10 @@ struct Dependencies: Sendable {
 
     /// 집중 세션의 단계 종료 알림 스케줄러. ViewModel이 schedule/cancel을 직접 호출한다.
     var focusNotifications: any FocusNotificationScheduling
+
+    /// 저장된 세션 프리셋 영속화 — onAppear 시 fetch, CRUD 직후 save.
+    var fetchFocusSessions: FetchFocusSessionsUseCase
+    var saveFocusSessions: SaveFocusSessionsUseCase
 }
 
 extension EnvironmentValues {
@@ -90,6 +94,9 @@ extension Dependencies {
             ]
         )
 
+        // 프리뷰는 인메모리 — 실제 영속화 동작은 CompositionRoot의 UserDefaults 구현으로.
+        let focusSessionsRepository = InMemoryFocusSessionsRepository()
+
         return Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
@@ -106,7 +113,9 @@ extension Dependencies {
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
-            focusNotifications: NoopFocusNotificationScheduler()
+            focusNotifications: NoopFocusNotificationScheduler(),
+            fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
         )
     }
 }
