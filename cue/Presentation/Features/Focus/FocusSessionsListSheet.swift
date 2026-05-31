@@ -48,14 +48,15 @@ struct FocusSessionsListSheet: View {
                 }
             }
             .overlay { emptyOverlay }
-            // 중간 detent로 새 세션 시트가 이 위에 스택으로 — 부모 시트는 닫히지 않는다.
+            // 새 세션 시트가 이 위에 스택으로 — 부모 시트는 닫히지 않는다.
+            // 절반(`.medium`) 대신 전체 높이만 — 폼이 길어 절반에선 키보드 올라오면 잘린다.
             .sheet(isPresented: $showingCreate) {
                 FocusSessionEditorSheet(mode: .create, viewModel: viewModel)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large])
             }
             .sheet(item: $editingSession) { session in
                 FocusSessionEditorSheet(mode: .edit(session), viewModel: viewModel)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large])
             }
         }
     }

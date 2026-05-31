@@ -126,7 +126,8 @@ struct FocusSessionEditorSheet: View {
 
     // MARK: - 행 builder
 
-    /// "집중 시간 [____] 분" 한 줄. TextField는 numberPad 키보드 + 우측 정렬.
+    /// "집중 시간 [____] 분 [- +]" 한 줄. TextField로 직접 입력하거나 Stepper -/+로 ±1.
+    /// 두 컨트롤이 같은 binding을 공유해 양쪽 어디로 바꿔도 즉시 동기화된다.
     private func minuteRow(label: String, minutes: Binding<Int>, field: Field) -> some View {
         HStack {
             Text(label)
@@ -139,6 +140,8 @@ struct FocusSessionEditorSheet: View {
                 .frame(width: Spacing.xxl)
             Text("분")
                 .foregroundStyle(.secondary)
+            Stepper("", value: minutes, in: 1...59)
+                .labelsHidden()
         }
     }
 
