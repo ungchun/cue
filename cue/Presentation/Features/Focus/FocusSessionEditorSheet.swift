@@ -100,11 +100,10 @@ struct FocusSessionEditorSheet: View {
             }
         }
         .sheet(isPresented: $showingCustomColorPicker) {
+            // .presentationDetents는 CustomColorPickerSheet 내부에서 .medium/.large를 적용.
             CustomColorPickerSheet(colorHex: $colorHex) {
                 showingCustomColorPicker = false
             }
-            // 초반 중간 높이로 — 풀 시트로 뜨면 화면이 가득 차 위압적.
-            .presentationDetents([.medium, .large])
         }
     }
 

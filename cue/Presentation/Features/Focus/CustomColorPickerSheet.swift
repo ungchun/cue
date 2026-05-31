@@ -6,167 +6,106 @@
 import SwiftUI
 import UIKit
 
-/// 시스템 컬러 피커(`UIColorPickerViewController`)를 시트로 띄우는 SwiftUI 래퍼.
+/// 임의 색을 고르는 SwiftUI 시트 — 색상 프리뷰 + HSB(색조·채도·명도) 슬라이더 3개.
 ///
-/// 외곽에 UINavigationController를 씌우면 시스템 picker가 자체 헤더("색상" + 스포이드)를
-/// 또 하나 그려 두 줄이 겹친다. 대신 picker를 그대로 띄우고 좌상단에 SwiftUI Button overlay로
-/// X 닫기를 띄운다 — 헤더는 picker의 내부 것 하나로 통일.
+/// iOS 17+에서 `UIColorPickerViewController`는 별도 scene(다른 프로세스)에서 렌더돼
+/// 시스템 스포이드 버튼을 hide할 수 없다. system picker를 포기하고 SwiftUI 네이티브로
+/// 다시 짠다 — chrome(좌상단 X, .medium 초기 detent)을 완전히 통제.
 ///
-/// 좌측 스포이드 버튼은 picker 서브클래스에서 view tree를 훑어 accessibility label로
-/// 식별해 hidden 처리. 비공개 레이아웃에 의존하므로 iOS 업데이트로 깨질 수 있다.
+/// 슬라이더 변화는 onChange로 즉시 `colorHex`에 반영 — 사용자가 X를 누르기 전부터
+/// 메인 화면·행 캡슐이 새 색으로 갱신된다.
 struct CustomColorPickerSheet: View {
     @Binding var colorHex: String
     /// 좌상단 X 버튼이 호출 — 부모(에디터 시트)가 `showingCustomColorPicker = false`로
     /// 시트를 내린다.
     let onClose: () -> Void
 
+    @State private var hue: Double = 0
+    @State private var saturation: Double = 1
+    @State private var brightness: Double = 1
+
+    /// 슬라이더 3개로부터 합성한 현재 색 — 프리뷰·슬라이더 tint·hex 동기화 모두에 사용.
+    private var currentColor: Color {
+        Color(hue: hue, saturation: saturation, brightness: brightness)
+    }
+
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            ColorPickerRepresentable(colorHex: $colorHex)
-
-            Button {
-                onClose()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.secondary)
+        NavigationStack {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                preview
+                slidersGroup
+                Spacer()
             }
-            .padding(Spacing.md)
-            .accessibilityLabel("닫기")
-        }
-    }
-}
-
-/// `UIColorPickerViewController`를 그대로 노출하는 representable. 헤더는 picker 자체의
-/// 것을 사용 — 별도 nav 바 없음.
-private struct ColorPickerRepresentable: UIViewControllerRepresentable {
-    @Binding var colorHex: String
-
-    func makeUIViewController(context: Context) -> EyedropperHidingColorPickerViewController {
-        let picker = EyedropperHidingColorPickerViewController()
-        picker.selectedColor = UIColor(Color(hex: colorHex) ?? .gray)
-        picker.supportsAlpha = false
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(
-        _ controller: EyedropperHidingColorPickerViewController, context: Context
-    ) {
-        // 단방향 — picker 내부에서 사용자가 조작하는 게 단일 출처.
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(colorHex: $colorHex)
-    }
-
-    final class Coordinator: NSObject, UIColorPickerViewControllerDelegate {
-        @Binding var colorHex: String
-
-        init(colorHex: Binding<String>) {
-            self._colorHex = colorHex
-        }
-
-        func colorPickerViewController(
-            _ viewController: UIColorPickerViewController,
-            didSelect color: UIColor,
-            continuously: Bool
-        ) {
-            colorHex = Color(color).hexString
-        }
-    }
-}
-
-/// `UIColorPickerViewController` 서브클래스 — 좌상단 스포이드 버튼을 숨긴다.
-///
-/// 공개 API로 끌 방법이 없어 view tree를 훑어 다음 단서 중 하나라도 잡히면
-/// 그 view를 `isHidden = true` 처리한다:
-///  1. 클래스명에 스포이드 관련 키워드 (`Eyedropper`/`Sample`/`Picker.*Well` 등)
-///  2. UIButton의 accessibility label에 "스포이드" / "eyedrop"
-///  3. UIButton 이미지의 SF Symbol 이름이 "eyedropper" 류 (비공개 `name` KVC)
-///  4. UIButton 이미지 description에 "eyedropper"
-///
-/// 비공개 UI 구조 의존이라 iOS 업데이트 시 깨질 수 있다. DEBUG 빌드에선 첫 layout 시
-/// 전체 view 계층을 로그로 찍어 어떤 매칭이 필요한지 진단할 수 있다.
-private final class EyedropperHidingColorPickerViewController: UIColorPickerViewController {
-    private var didLogHierarchy = false
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        hideEyedropperIfPresent(in: view)
-
-        #if DEBUG
-        if !didLogHierarchy {
-            didLogHierarchy = true
-            print("=== [CuePicker] UIColorPickerViewController hierarchy ===")
-            dump(view, indent: 0)
-            print("=== [CuePicker] end ===")
-        }
-        #endif
-    }
-
-    private func hideEyedropperIfPresent(in view: UIView) {
-        for subview in view.subviews {
-            if shouldHide(subview) {
-                subview.isHidden = true
-                continue
-            }
-            hideEyedropperIfPresent(in: subview)
-        }
-    }
-
-    /// 한 view가 스포이드의 흔적인지 4가지 단서를 OR로 판단.
-    private func shouldHide(_ view: UIView) -> Bool {
-        let className = String(describing: type(of: view)).lowercased()
-        if className.contains("eyedrop")
-            || className.contains("sample")
-            || className.contains("colorwell") {
-            return true
-        }
-
-        guard let button = view as? UIButton else { return false }
-
-        let label = button.accessibilityLabel?.lowercased() ?? ""
-        if label.contains("스포이드")
-            || label.contains("eyedrop")
-            || label.contains("eye drop") {
-            return true
-        }
-
-        let image = button.image(for: .normal) ?? button.currentImage
-        if let image {
-            // SF Symbol의 비공개 `name` KVC — 공식 API 없음. AppStore 심사에 걸릴 수 있어
-            // 추후 빼야 할 수도 있지만, 디버그/사이드로드 단계에선 가장 확실한 식별 수단.
-            if let symbolName = image.value(forKey: "name") as? String,
-               symbolName.lowercased().contains("eyedrop") {
-                return true
-            }
-            if "\(image)".lowercased().contains("eyedropper") {
-                return true
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
+            .navigationTitle("색상")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        onClose()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("닫기")
+                }
             }
         }
-
-        return false
+        // 중간 detent로 초기 표시 — 사용자가 드래그해 풀 시트로 확장 가능.
+        .presentationDetents([.medium, .large])
+        .onAppear { syncFromHex() }
+        .onChange(of: hue) { _, _ in syncToHex() }
+        .onChange(of: saturation) { _, _ in syncToHex() }
+        .onChange(of: brightness) { _, _ in syncToHex() }
     }
 
-    #if DEBUG
-    /// 디버그용 — 전체 view tree를 클래스명·frame·라벨·이미지 description과 함께 출력.
-    /// 매칭이 빗나가면 이 출력을 보고 정확한 키워드를 찾아 `shouldHide`에 추가한다.
-    private func dump(_ view: UIView, indent: Int) {
-        let prefix = String(repeating: "  ", count: indent)
-        let className = String(describing: type(of: view))
-        var details = ""
-        if let button = view as? UIButton {
-            let label = button.accessibilityLabel ?? ""
-            let imageDesc = button.image(for: .normal).map { "\($0)" } ?? ""
-            let symbolName = button.image(for: .normal)?.value(forKey: "name") as? String ?? ""
-            details = " label='\(label)' image='\(imageDesc)' symbol='\(symbolName)'"
-        }
-        print("\(prefix)\(className) frame=\(view.frame)\(details)")
-        for sub in view.subviews {
-            dump(sub, indent: indent + 1)
+    // MARK: - 프리뷰 + 슬라이더
+
+    /// 현재 색의 큼직한 미리보기 — 라운드 사각형.
+    private var preview: some View {
+        RoundedRectangle(cornerRadius: Spacing.md)
+            .fill(currentColor)
+            .frame(height: Spacing.xxl * 2)
+    }
+
+    /// 색조·채도·명도 슬라이더 3종 묶음.
+    private var slidersGroup: some View {
+        VStack(spacing: Spacing.md) {
+            sliderRow(label: "색조", value: $hue)
+            sliderRow(label: "채도", value: $saturation)
+            sliderRow(label: "명도", value: $brightness)
         }
     }
-    #endif
+
+    /// 라벨 + 슬라이더 한 줄. 라벨 폭은 한글 두 글자가 들어가도록 xxl(48)로 고정.
+    /// 슬라이더 tint를 currentColor로 두어 라이브 시각 피드백.
+    private func sliderRow(label: String, value: Binding<Double>) -> some View {
+        HStack(spacing: Spacing.md) {
+            Text(label)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .frame(width: Spacing.xxl, alignment: .leading)
+            Slider(value: value, in: 0...1)
+                .tint(currentColor)
+        }
+    }
+
+    // MARK: - hex ↔ HSB 동기화
+
+    /// 시트 첫 표시 시 부모의 hex를 HSB로 풀어 슬라이더 초기 위치를 잡는다.
+    /// SwiftUI Color는 HSB 컴포넌트 getter가 없어 UIColor 경유.
+    private func syncFromHex() {
+        guard let color = Color(hex: colorHex) else { return }
+        let uiColor = UIColor(color)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        hue = Double(h)
+        saturation = Double(s)
+        brightness = Double(b)
+    }
+
+    /// 슬라이더가 움직일 때마다 호출 — 합성색을 hex로 환원해 부모 binding에 전달.
+    private func syncToHex() {
+        colorHex = currentColor.hexString
+    }
 }
