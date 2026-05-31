@@ -114,13 +114,13 @@ struct ScheduleView: View {
 
     /// 하루 섹션 — 헤더(날짜+요일, 토/일 색 분기) + 그날의 이벤트 row들.
     /// 헤더에도 rail 세로선이 통과하도록 같은 좌측 column을 두고, row의 inset과 헤더의
-    /// inset을 일치시켜 rail이 한 줄로 이어진다.
+    /// inset을 일치시켜 rail이 한 줄로 이어진다. row 사이 시스템 separator(divider)는
+    /// 기본값 그대로 둔다.
     @ViewBuilder
     private func daySection(_ group: DayGroup) -> some View {
         Section {
             ForEach(group.events) { event in
                 EventRow(event: event)
-                    .listRowSeparator(.hidden)
                     .listRowInsets(.init(
                         top: Spacing.zero, leading: Spacing.zero,
                         bottom: Spacing.zero, trailing: Spacing.md
@@ -128,7 +128,6 @@ struct ScheduleView: View {
             }
         } header: {
             dayHeader(group)
-                .listRowSeparator(.hidden)
                 .listRowInsets(.init(
                     top: Spacing.zero, leading: Spacing.zero,
                     bottom: Spacing.zero, trailing: Spacing.md
@@ -137,8 +136,8 @@ struct ScheduleView: View {
     }
 
     /// 날짜+요일 헤더 — 좌측에 rail 통과용 세로선 column(점 없음) + 텍스트.
-    /// `.background(Color(.systemBackground))`로 sticky 헤더가 row 위에 떠 있을 때
-    /// 아래 rail이 비치지 않게 가린다.
+    /// padding을 Text에만 주고 HStack 자체엔 두지 않는다 — HStack에 padding을 걸면
+    /// padding 영역엔 rail이 안 그려져 row와 row 사이 헤더 영역에서 세로선이 끊긴다.
     private func dayHeader(_ group: DayGroup) -> some View {
         HStack(alignment: .center, spacing: Spacing.sm) {
             railSpine
@@ -146,9 +145,9 @@ struct ScheduleView: View {
                 .font(.callout.weight(.semibold))
                 .foregroundStyle(Self.headerColor(for: group.date))
                 .textCase(nil)
+                .padding(.vertical, Spacing.md)
             Spacer(minLength: Spacing.zero)
         }
-        .padding(.vertical, Spacing.sm)
         .background(Color(.systemBackground))
     }
 
@@ -233,18 +232,18 @@ private struct EventRow: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
         }
-        .padding(.vertical, Spacing.sm)
+        .padding(.vertical, Spacing.md)
     }
 
     /// 캡슐 = 캘린더 색의 옅은 배경 + 캘린더 색 글씨. EventKit이 주는 raw hex 그대로
     /// 사용(외부 데이터 표현 — 디자인 시스템 컬러 규칙 예외 항목).
     private var titleCapsule: some View {
         Text(event.title)
-            .font(.callout.weight(.semibold))
+            .font(.body.weight(.semibold))
             .foregroundStyle(eventColor)
             .lineLimit(1)
             .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.xs)
+            .padding(.vertical, Spacing.sm)
             .background(Capsule().fill(eventColor.opacity(0.18)))
     }
 
