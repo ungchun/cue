@@ -38,7 +38,7 @@ struct ScheduleView: View {
         }
         .listStyle(.plain)
         .listRowSpacing(Spacing.zero)
-        .listSectionSpacing(Spacing.md)
+        .listSectionSpacing(Spacing.sm)
         .environment(\.defaultMinListRowHeight, Spacing.zero)
         .overlay { emptyOverlay }
         .navigationBarTitleDisplayMode(.inline)
@@ -119,6 +119,11 @@ struct ScheduleView: View {
         Section {
             ForEach(group.events) { event in
                 EventRow(event: event)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(.init(
+                        top: Spacing.zero, leading: Spacing.zero,
+                        bottom: Spacing.zero, trailing: Spacing.md
+                    ))
             }
         } header: {
             Text(Self.dayHeaderFormatter.string(from: group.date))
@@ -147,13 +152,39 @@ struct ScheduleView: View {
     }
 }
 
-/// 한 이벤트 row — iOS 캘린더 리스트 룩.
-/// 제목은 캘린더 색의 옅은 캡슐 안에 캘린더 색 글씨로, 시간은 캡슐 옆 작은 보조 텍스트로.
+/// 한 이벤트 row — 좌측 rail(세로선+캘린더 색 점) + 캡슐 제목 + 시간.
+///
+/// rail은 row 전체 높이를 채워 위·아래 row와 자연스럽게 이어진다 — `.padding(.vertical)`은
+/// `content`에만 주고 row 자체엔 두지 않는다. ListRowSeparator(.hidden)으로 시스템 구분선을
+/// 끄면 rail이 단독으로 시각 구분 역할을 한다.
 private struct EventRow: View {
     let event: CalendarEvent
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
+        HStack(alignment: .center, spacing: Spacing.sm) {
+            railColumn
+            content
+        }
+    }
+
+    /// 좌측 rail = 1pt 세로선 + 가운데 캘린더 색 점(8pt). 세로선은 부모 height를 채워
+    /// 인접 row의 rail과 끊김 없이 이어진다.
+    private var railColumn: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color(.separator))
+                .frame(width: 1)
+            Circle()
+                .fill(eventColor)
+                .frame(width: Spacing.sm, height: Spacing.sm)
+        }
+        .frame(width: Spacing.lg)
+        .frame(maxHeight: .infinity)
+    }
+
+    /// row 우측 본문 — 캡슐 제목 + 우측 시간.
+    private var content: some View {
+        HStack(spacing: Spacing.sm) {
             titleCapsule
             Spacer(minLength: Spacing.sm)
             Text(timeText)
@@ -172,7 +203,7 @@ private struct EventRow: View {
             .foregroundStyle(eventColor)
             .lineLimit(1)
             .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
             .background(Capsule().fill(eventColor.opacity(0.18)))
     }
 
