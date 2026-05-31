@@ -33,16 +33,7 @@ struct ScheduleView: View {
                 .listRowSeparator(.hidden)
 
             ForEach(viewModel.eventsByDay) { group in
-                Section {
-                    ForEach(group.events) { event in
-                        EventRow(event: event)
-                    }
-                } header: {
-                    Text(Self.dayHeaderFormatter.string(from: group.date))
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(nil)
-                }
+                daySection(group)
             }
         }
         .listStyle(.plain)
@@ -120,6 +111,23 @@ struct ScheduleView: View {
         }
     }
 
+    /// 하루 섹션 — 헤더(날짜+요일, 토/일 색 분기) + 그날의 이벤트 row들.
+    /// ForEach 안에 인라인으로 두면 type-checker가 표현 무게에 막혀 timeout 진단을 띄울 수
+    /// 있어 함수로 분리한다.
+    @ViewBuilder
+    private func daySection(_ group: DayGroup) -> some View {
+        Section {
+            ForEach(group.events) { event in
+                EventRow(event: event)
+            }
+        } header: {
+            Text(Self.dayHeaderFormatter.string(from: group.date))
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(Self.headerColor(for: group.date))
+                .textCase(nil)
+        }
+    }
+
     /// 섹션 헤더 — "5월 31일 토요일" 형식. ko_KR 고정.
     private static let dayHeaderFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -127,22 +135,27 @@ struct ScheduleView: View {
         formatter.dateFormat = "M월 d일 EEEE"
         return formatter
     }()
+
+    /// 요일별 헤더 색 — 일요일 빨강, 토요일 파랑, 평일은 시스템 기본(`.primary`).
+    /// `Calendar.component(.weekday:)`은 1=일, 7=토 (`Calendar.current`).
+    private static func headerColor(for date: Date) -> Color {
+        switch Calendar.current.component(.weekday, from: date) {
+        case 1: return .red
+        case 7: return .blue
+        default: return .primary
+        }
+    }
 }
 
-/// 한 이벤트 row — 캘린더 색 점 + 제목 + 시작-종료 시간(또는 "종일").
+/// 한 이벤트 row — iOS 캘린더 리스트 룩.
+/// 제목은 캘린더 색의 옅은 캡슐 안에 캘린더 색 글씨로, 시간은 캡슐 옆 작은 보조 텍스트로.
 private struct EventRow: View {
     let event: CalendarEvent
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            Circle()
-                .fill(dotColor)
-                .frame(width: Spacing.sm, height: Spacing.sm)
-            Text(event.title)
-                .font(.body)
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-            Spacer(minLength: Spacing.md)
+            titleCapsule
+            Spacer(minLength: Spacing.sm)
             Text(timeText)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -151,8 +164,20 @@ private struct EventRow: View {
         .padding(.vertical, Spacing.xs)
     }
 
-    /// "#RRGGBB"를 SwiftUI Color로. 없으면 시스템 tint.
-    private var dotColor: Color {
+    /// 캡슐 = 캘린더 색의 옅은 배경 + 캘린더 색 글씨. EventKit이 주는 raw hex 그대로
+    /// 사용(외부 데이터 표현 — 디자인 시스템 컬러 규칙 예외 항목).
+    private var titleCapsule: some View {
+        Text(event.title)
+            .font(.callout.weight(.semibold))
+            .foregroundStyle(eventColor)
+            .lineLimit(1)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
+            .background(Capsule().fill(eventColor.opacity(0.18)))
+    }
+
+    /// 이벤트가 속한 캘린더 색. hex 파싱 실패면 시스템 accent로 fallback.
+    private var eventColor: Color {
         guard let hex = event.calendarColorHex,
               let parsed = Color(hex: hex) else { return .accentColor }
         return parsed
