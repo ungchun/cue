@@ -48,19 +48,22 @@ extension Dependencies {
                     id: "ev1", title: "팀 회의",
                     startDate: today.addingTimeInterval(10 * 60 * 60),
                     endDate: today.addingTimeInterval(11 * 60 * 60),
-                    isAllDay: false, calendarColorHex: "#0A84FF"
+                    isAllDay: false, calendarColorHex: "#0A84FF",
+                    isReadOnly: false
                 ),
                 CalendarEvent(
                     id: "ev2", title: "점심 약속",
                     startDate: today.addingTimeInterval(12 * 60 * 60 + 30 * 60),
                     endDate: today.addingTimeInterval(14 * 60 * 60),
-                    isAllDay: false, calendarColorHex: "#34C759"
+                    isAllDay: false, calendarColorHex: "#34C759",
+                    isReadOnly: false
                 ),
                 CalendarEvent(
                     id: "ev3", title: "치과 예약",
                     startDate: today.addingTimeInterval(2 * 24 * 60 * 60 + 15 * 60 * 60),
                     endDate: today.addingTimeInterval(2 * 24 * 60 * 60 + 16 * 60 * 60),
-                    isAllDay: false, calendarColorHex: "#FF3B30"
+                    isAllDay: false, calendarColorHex: "#FF3B30",
+                    isReadOnly: false
                 ),
             ]
         )

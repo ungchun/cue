@@ -51,7 +51,10 @@ final class ScheduleViewModel {
     }
 
     /// 이벤트 row 탭 — 편집 시트를 연다.
+    /// 구독 캘린더(공휴일 등 `isReadOnly == true`)는 EventKit이 수정을 막으므로 시트를
+    /// 띄우지 않고 무시한다 — 띄워도 저장이 안 되어 사용자 혼란만 만든다.
     func presentEdit(_ event: CalendarEvent) {
+        guard !event.isReadOnly else { return }
         editingEvent = event
     }
 

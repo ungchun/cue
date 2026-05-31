@@ -13,6 +13,10 @@ import Foundation
 ///
 /// `calendarColorHex`는 row 옆에 캘린더 색 점을 그리기 위한 표시용. EventKit
 /// `EKCalendar.cgColor`를 "#RRGGBB"로 매핑한 값이며 색을 못 읽으면 nil.
+///
+/// `isReadOnly`는 EventKit `EKCalendar.allowsContentModifications == false`를 의미한다.
+/// 구독 캘린더(공휴일·외부 ICS 등)는 사용자가 수정할 수 없으므로 탭해도 편집 시트를
+/// 띄우지 않는다 — 띄워도 저장이 안 되어 사용자 혼란만 만든다.
 struct CalendarEvent: Identifiable, Equatable, Sendable {
     let id: String
     var title: String
@@ -20,4 +24,5 @@ struct CalendarEvent: Identifiable, Equatable, Sendable {
     var endDate: Date
     var isAllDay: Bool
     var calendarColorHex: String?
+    var isReadOnly: Bool
 }

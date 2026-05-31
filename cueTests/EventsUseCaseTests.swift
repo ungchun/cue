@@ -45,7 +45,8 @@ struct EventsUseCaseTests {
         CalendarEvent(
             id: id, title: title,
             startDate: start, endDate: end,
-            isAllDay: isAllDay, calendarColorHex: nil
+            isAllDay: isAllDay, calendarColorHex: nil,
+            isReadOnly: false
         )
     }
 

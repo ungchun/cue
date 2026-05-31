@@ -86,12 +86,14 @@ struct ScheduleViewModelTests {
         title: String = "이벤트",
         start: Date,
         end: Date,
-        isAllDay: Bool = false
+        isAllDay: Bool = false,
+        isReadOnly: Bool = false
     ) -> CalendarEvent {
         CalendarEvent(
             id: id, title: title,
             startDate: start, endDate: end,
-            isAllDay: isAllDay, calendarColorHex: nil
+            isAllDay: isAllDay, calendarColorHex: nil,
+            isReadOnly: isReadOnly
         )
     }
 
@@ -166,6 +168,23 @@ struct ScheduleViewModelTests {
         viewModel.presentEdit(target)
 
         viewModel.dismissEdit()
+
+        #expect(viewModel.editingEvent == nil)
+    }
+
+    @Test func presentEditIgnoresReadOnlyEvent() {
+        // 구독 캘린더의 공휴일 같은 read-only 이벤트는 탭해도 시트가 안 떠야 한다.
+        let today = Calendar.current.startOfDay(for: Date())
+        let holiday = event(
+            id: "holiday",
+            start: today,
+            end: today.addingTimeInterval(24 * 60 * 60),
+            isAllDay: true,
+            isReadOnly: true
+        )
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+
+        viewModel.presentEdit(holiday)
 
         #expect(viewModel.editingEvent == nil)
     }

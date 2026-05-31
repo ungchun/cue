@@ -16,7 +16,9 @@ enum EventMapper {
             startDate: event.startDate,
             endDate: event.endDate,
             isAllDay: event.isAllDay,
-            calendarColorHex: hex(from: event.calendar.cgColor)
+            calendarColorHex: hex(from: event.calendar.cgColor),
+            // 구독 캘린더(공휴일 등)는 allowsContentModifications == false.
+            isReadOnly: !event.calendar.allowsContentModifications
         )
     }
 
