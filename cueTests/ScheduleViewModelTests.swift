@@ -31,7 +31,8 @@ struct ScheduleViewModelTests {
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
-            requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository)
+            requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
+            fetchEvents: FetchEventsUseCase(repository: eventsRepository)
         )
     }
 

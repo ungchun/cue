@@ -24,6 +24,7 @@ struct Dependencies: Sendable {
     var deleteReminderList: DeleteReminderListUseCase
 
     var requestEventsAccess: RequestEventsAccessUseCase
+    var fetchEvents: FetchEventsUseCase
 }
 
 extension EnvironmentValues {
@@ -37,6 +38,32 @@ extension Dependencies {
         let itemRepository = InMemoryItemRepository(seed: [
             Item(title: "예시 항목", note: "InMemoryItemRepository 제공"),
         ])
+
+        // 프리뷰용 캘린더 이벤트 시드 — 오늘 + 다음 며칠치를 가볍게.
+        let today = Calendar.current.startOfDay(for: Date())
+        let eventsRepository = InMemoryEventsRepository(
+            access: .granted,
+            events: [
+                CalendarEvent(
+                    id: "ev1", title: "팀 회의",
+                    startDate: today.addingTimeInterval(10 * 60 * 60),
+                    endDate: today.addingTimeInterval(11 * 60 * 60),
+                    isAllDay: false, calendarColorHex: "#0A84FF"
+                ),
+                CalendarEvent(
+                    id: "ev2", title: "점심 약속",
+                    startDate: today.addingTimeInterval(12 * 60 * 60 + 30 * 60),
+                    endDate: today.addingTimeInterval(14 * 60 * 60),
+                    isAllDay: false, calendarColorHex: "#34C759"
+                ),
+                CalendarEvent(
+                    id: "ev3", title: "치과 예약",
+                    startDate: today.addingTimeInterval(2 * 24 * 60 * 60 + 15 * 60 * 60),
+                    endDate: today.addingTimeInterval(2 * 24 * 60 * 60 + 16 * 60 * 60),
+                    isAllDay: false, calendarColorHex: "#FF3B30"
+                ),
+            ]
+        )
 
         let workListID = "preview-work"
         let personalListID = "preview-personal"
@@ -71,9 +98,8 @@ extension Dependencies {
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
-            requestEventsAccess: RequestEventsAccessUseCase(
-                repository: InMemoryEventsRepository(access: .granted)
-            )
+            requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
+            fetchEvents: FetchEventsUseCase(repository: eventsRepository)
         )
     }
 }

@@ -23,6 +23,7 @@ struct ReminderViewModelTests {
             access: access, lists: lists, reminders: reminders
         )
         let itemRepository = InMemoryItemRepository()
+        let eventsRepository = InMemoryEventsRepository(access: .granted)
         return Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
@@ -37,9 +38,8 @@ struct ReminderViewModelTests {
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
-            requestEventsAccess: RequestEventsAccessUseCase(
-                repository: InMemoryEventsRepository(access: .granted)
-            )
+            requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
+            fetchEvents: FetchEventsUseCase(repository: eventsRepository)
         )
     }
 
