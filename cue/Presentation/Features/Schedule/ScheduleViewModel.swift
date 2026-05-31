@@ -35,7 +35,10 @@ final class ScheduleViewModel {
     var editingEvent: CalendarEvent?
 
     /// 다음 페이지의 시작점. 직전 페이지의 종료 시점과 같다.
-    private var fetchedUntil: Date = Date()
+    /// `View`가 trigger row의 `.id(...)`로 이 값을 쓰면 페이지가 늘어날 때마다 row
+    /// identity가 바뀌어 `onAppear`가 자동 재호출 — 사용자가 스크롤을 위→아래로 다시
+    /// 움직이지 않아도 화면 안에 trigger가 머무는 한 다음 페이지가 계속 들어온다.
+    private(set) var fetchedUntil: Date = Date()
     /// `loadMore()` 진행 중이면 true — trigger row가 viewport에 여러 번 들어오더라도
     /// 동시 중복 fetch를 막는다.
     private(set) var isLoadingMore = false

@@ -37,6 +37,11 @@ struct ScheduleView: View {
             }
             if viewModel.access == .granted {
                 loadMoreTrigger
+                    // fetchedUntil이 바뀔 때마다 row identity가 바뀌어 onAppear가 재호출
+                    // → trigger가 viewport 안에 머무는 동안 자동으로 다음 페이지를 이어
+                    // 가져온다. 데이터가 충분히 쌓여 trigger가 viewport 밖으로 밀려나면
+                    // onAppear가 더 이상 안 호출되어 자연히 멈춘다.
+                    .id(viewModel.fetchedUntil)
             }
         }
         .listStyle(.plain)
@@ -170,18 +175,16 @@ struct ScheduleView: View {
     }
 
     /// List 바닥의 페이지네이션 trigger — viewport에 들어오면 ViewModel에 다음 2주를
-    /// 요청한다. spinner + "더 불러오는 중" 라벨을 항상 표시해 사용자에게 추가 로드가
-    /// 일어남을 명확히 알린다(fetch가 너무 빠르면 isLoadingMore가 깜빡여 인식이
-    /// 어렵기 때문에 조건 분기 없이 항상 노출).
+    /// 요청한다. spinner(인디케이터)만 표시 — 텍스트 없이 가볍게.
+    /// 호출처에서 `.id(viewModel.fetchedUntil)`을 걸면 페이지마다 onAppear가 재호출되어
+    /// 자동 무한 페이지네이션이 된다.
     private var loadMoreTrigger: some View {
-        HStack(spacing: Spacing.sm) {
+        HStack {
+            Spacer()
             ProgressView()
-                .controlSize(.small)
-            Text("더 불러오는 중")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .controlSize(.regular)
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.lg)
         .listRowSeparator(.hidden)
         .listRowInsets(.init(
