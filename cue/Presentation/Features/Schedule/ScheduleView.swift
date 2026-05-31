@@ -20,27 +20,39 @@ struct ScheduleView: View {
     @State private var eventStore = EKEventStore()
 
     var body: some View {
-        content
-            .navigationTitle("타임라인")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.presentNewEvent()
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("새 일정")
+        // 시스템 large title은 toolbar와 표준 간격을 띄우기 때문에 ReminderView와 위치가
+        // 어긋난다. 같은 룩(toolbar 바로 아래에 large title)을 만들기 위해 inline 모드로
+        // 시스템 large title을 끄고 본문 컨테이너 안에 자체 텍스트를 직접 그린다.
+        VStack(alignment: .leading, spacing: Spacing.zero) {
+            Text("타임라인")
+                .font(.largeTitle.bold())
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.xs)
+
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.presentNewEvent()
+                } label: {
+                    Image(systemName: "plus")
                 }
+                .accessibilityLabel("새 일정")
             }
-            .task {
-                await viewModel.onAppear()
-                warmUpEventStore()
-            }
-            .sheet(isPresented: $viewModel.showingNewEvent) {
-                EventEditSheet(eventStore: eventStore, onCompletion: {
-                    viewModel.dismissNewEvent()
-                })
-            }
+        }
+        .task {
+            await viewModel.onAppear()
+            warmUpEventStore()
+        }
+        .sheet(isPresented: $viewModel.showingNewEvent) {
+            EventEditSheet(eventStore: eventStore, onCompletion: {
+                viewModel.dismissNewEvent()
+            })
+        }
     }
 
     /// 권한이 허용된 직후 `eventStore`의 캘린더 목록·기본 캘린더 캐시를 미리 채워둔다.
