@@ -61,16 +61,16 @@ final class FocusViewModel {
 
     /// 세션을 새로 만들어 목록 끝에 추가하고, 생성된 세션을 반환한다.
     @discardableResult
-    func addSession(title: String, settings: FocusSettings) -> FocusSession {
-        let new = FocusSession(id: UUID(), title: title, settings: settings)
+    func addSession(title: String, settings: FocusSettings, colorHex: String) -> FocusSession {
+        let new = FocusSession(id: UUID(), title: title, settings: settings, colorHex: colorHex)
         sessions.append(new)
         return new
     }
 
-    /// 같은 id의 세션을 새 title·settings로 덮어쓴다. 못 찾으면 no-op.
-    func updateSession(id: UUID, title: String, settings: FocusSettings) {
+    /// 같은 id의 세션을 새 title·settings·colorHex로 덮어쓴다. 못 찾으면 no-op.
+    func updateSession(id: UUID, title: String, settings: FocusSettings, colorHex: String) {
         guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
-        sessions[index] = FocusSession(id: id, title: title, settings: settings)
+        sessions[index] = FocusSession(id: id, title: title, settings: settings, colorHex: colorHex)
     }
 
     /// 세션을 목록에서 제거. 삭제 대상이 선택된 세션이면 선택도 해제한다.

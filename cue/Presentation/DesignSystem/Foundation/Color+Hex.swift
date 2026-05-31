@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 extension Color {
     /// 외부 데이터(EventKit 캘린더 색 등)에서 받은 "#RRGGBB" 또는 "RRGGBB" hex 문자열을 `Color`로.
@@ -19,5 +20,16 @@ extension Color {
         let g = Double((value >> 8) & 0xff) / 255
         let b = Double(value & 0xff) / 255
         self.init(red: r, green: g, blue: b)
+    }
+
+    /// 사용자가 ColorPicker로 고른 임의 색을 저장 가능한 "#RRGGBB" 문자열로 환원한다.
+    /// SwiftUI Color → UIColor 경유로 sRGB 컴포넌트를 추출하므로 P3/HDR 색은 손실될 수 있음.
+    /// alpha는 버린다 — 세션 색은 불투명이 디자인.
+    var hexString: String {
+        let uiColor = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let clamp: (CGFloat) -> Int = { Int((max(0, min(1, $0)) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", clamp(r), clamp(g), clamp(b))
     }
 }

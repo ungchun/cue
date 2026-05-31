@@ -99,11 +99,19 @@ struct FocusView: View {
         if let session = viewModel.selectedSession {
             Text(session.title)
                 .font(.largeTitle.bold())
-                .foregroundStyle(.red)
+                .foregroundStyle(sessionColor)
                 .lineLimit(1)
         } else {
             Color.clear.frame(height: Spacing.xl)
         }
+    }
+
+    /// 선택된 세션의 색 (없거나 hex 파싱 실패 시 빨강 폴백). 메인의 타이틀·ring 트림에
+    /// 일관되게 사용해 세션별 시각 식별을 강화.
+    private var sessionColor: Color {
+        guard let hex = viewModel.selectedSession?.colorHex,
+              let color = Color(hex: hex) else { return .red }
+        return color
     }
 
     /// "1 / 4" — running이고 totalCycles > 1일 때만. 자리는 항상 유지.
@@ -130,8 +138,8 @@ struct FocusView: View {
             if viewModel.session != nil {
                 Circle()
                     .trim(from: 0, to: progress)
-                    // 환경 .tint가 더 이상 빨강이 아니라 stroke 색을 명시적으로 박는다.
-                    .stroke(Color.red, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    // 선택된 세션 색으로 — 타이틀과 같은 톤이라 어느 세션이 도는지 즉시 인지.
+                    .stroke(sessionColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 0.2), value: progress)
             }
