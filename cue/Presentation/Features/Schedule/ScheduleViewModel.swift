@@ -24,6 +24,9 @@ final class ScheduleViewModel {
     private(set) var eventsByDay: [DayGroup] = []
     /// 우상단 + 버튼이 띄우는 "신규 이벤트" 시트 표시 여부.
     var showingNewEvent = false
+    /// row 탭이 띄우는 "이벤트 편집" 시트. nil이면 닫힘.
+    /// `Identifiable`인 `CalendarEvent`를 그대로 두면 `.sheet(item:)`이 자동 binding.
+    var editingEvent: CalendarEvent?
 
     init(dependencies: Dependencies) {
         self.requestAccessUseCase = dependencies.requestEventsAccess
@@ -45,6 +48,16 @@ final class ScheduleViewModel {
     /// 시트의 저장·취소 콜백에서 호출 — 시트를 닫는다.
     func dismissNewEvent() {
         showingNewEvent = false
+    }
+
+    /// 이벤트 row 탭 — 편집 시트를 연다.
+    func presentEdit(_ event: CalendarEvent) {
+        editingEvent = event
+    }
+
+    /// 편집 시트 콜백 — 시트를 닫는다.
+    func dismissEdit() {
+        editingEvent = nil
     }
 
     /// 오늘 0시 → +30일 24시 범위의 이벤트를 가져와 날짜별로 그룹핑한다.

@@ -149,6 +149,27 @@ struct ScheduleViewModelTests {
         #expect(viewModel.eventsByDay.map(\.date) == [today, dayAfter])
     }
 
+    @Test func presentEditSetsEditingEvent() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let target = event(id: "edit-me", start: today, end: today.addingTimeInterval(60 * 60))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+
+        viewModel.presentEdit(target)
+
+        #expect(viewModel.editingEvent?.id == "edit-me")
+    }
+
+    @Test func dismissEditClearsEditingEvent() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let target = event(id: "edit-me", start: today, end: today.addingTimeInterval(60 * 60))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+        viewModel.presentEdit(target)
+
+        viewModel.dismissEdit()
+
+        #expect(viewModel.editingEvent == nil)
+    }
+
     @Test func onAppearDoesNotLoadEventsWhenDenied() async {
         let today = Calendar.current.startOfDay(for: Date())
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(

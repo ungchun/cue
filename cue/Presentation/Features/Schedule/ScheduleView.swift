@@ -66,6 +66,13 @@ struct ScheduleView: View {
                 viewModel.dismissNewEvent()
             })
         }
+        .sheet(item: $viewModel.editingEvent) { event in
+            EventEditSheet(
+                eventStore: eventStore,
+                editingEventID: event.id,
+                onCompletion: { viewModel.dismissEdit() }
+            )
+        }
     }
 
     /// 좌상단 "캘린더" 버튼 — Apple 캘린더 앱을 연다. `calshow://`는 캘린더 앱의 표준
@@ -121,6 +128,10 @@ struct ScheduleView: View {
         Section {
             ForEach(group.events) { event in
                 EventRow(event: event)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        viewModel.presentEdit(event)
+                    }
                     .listRowInsets(.init(
                         top: Spacing.zero, leading: Spacing.zero,
                         bottom: Spacing.zero, trailing: Spacing.md
