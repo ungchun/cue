@@ -10,11 +10,14 @@ import Testing
 @MainActor
 struct ScheduleViewModelTests {
 
-    /// 인메모리 fake로 일정 탭 의존성을 조립한다 — Schedule은 권한만 알면 된다.
+    /// 인메모리 fake로 일정 탭 의존성을 조립한다.
     /// 미리알림·아이템 UseCase는 일정 탭에 쓰이지 않지만 `Dependencies` 묶음이 요구하므로
     /// 채워둔다.
-    private func makeDependencies(access: EventsAccess = .granted) -> Dependencies {
-        let eventsRepository = InMemoryEventsRepository(access: access)
+    private func makeDependencies(
+        access: EventsAccess = .granted,
+        events: [CalendarEvent] = []
+    ) -> Dependencies {
+        let eventsRepository = InMemoryEventsRepository(access: access, events: events)
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
         let itemRepository = InMemoryItemRepository()
         return Dependencies(
@@ -74,5 +77,87 @@ struct ScheduleViewModelTests {
         viewModel.dismissNewEvent()
 
         #expect(viewModel.showingNewEvent == false)
+    }
+
+    // MARK: - 이벤트 로드 + 날짜별 그룹핑
+
+    private func event(
+        id: String,
+        title: String = "이벤트",
+        start: Date,
+        end: Date,
+        isAllDay: Bool = false
+    ) -> CalendarEvent {
+        CalendarEvent(
+            id: id, title: title,
+            startDate: start, endDate: end,
+            isAllDay: isAllDay, calendarColorHex: nil
+        )
+    }
+
+    @Test func onAppearLoadsEventsAfterGrant() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let event1 = event(id: "1", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [event1]))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.count == 1)
+        #expect(viewModel.eventsByDay.first?.events.map(\.id) == ["1"])
+    }
+
+    @Test func eventsByDayGroupsByCalendarDay() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let tomorrow = today.addingTimeInterval(24 * 60 * 60)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [
+            event(id: "a", start: today.addingTimeInterval(10 * 60 * 60), end: today.addingTimeInterval(11 * 60 * 60)),
+            event(id: "b", start: today.addingTimeInterval(14 * 60 * 60), end: today.addingTimeInterval(15 * 60 * 60)),
+            event(id: "c", start: tomorrow.addingTimeInterval(9 * 60 * 60), end: tomorrow.addingTimeInterval(10 * 60 * 60)),
+        ]))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.count == 2)
+        #expect(viewModel.eventsByDay[0].date == today)
+        #expect(viewModel.eventsByDay[0].events.map(\.id) == ["a", "b"])
+        #expect(viewModel.eventsByDay[1].date == tomorrow)
+        #expect(viewModel.eventsByDay[1].events.map(\.id) == ["c"])
+    }
+
+    @Test func eventsByDaySortsEventsWithinDayByStartTime() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let later = event(id: "later", start: today.addingTimeInterval(15 * 60 * 60), end: today.addingTimeInterval(16 * 60 * 60))
+        let earlier = event(id: "earlier", start: today.addingTimeInterval(9 * 60 * 60), end: today.addingTimeInterval(10 * 60 * 60))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [later, earlier]))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.first?.events.map(\.id) == ["earlier", "later"])
+    }
+
+    @Test func eventsByDaySkipsDaysWithoutEvents() async {
+        // 오늘 + 모레만 이벤트가 있고 내일은 없을 때 — 그룹에 내일이 들어가지 않는다.
+        let today = Calendar.current.startOfDay(for: Date())
+        let dayAfter = today.addingTimeInterval(2 * 24 * 60 * 60)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [
+            event(id: "today", start: today.addingTimeInterval(10 * 60 * 60), end: today.addingTimeInterval(11 * 60 * 60)),
+            event(id: "dayAfter", start: dayAfter.addingTimeInterval(10 * 60 * 60), end: dayAfter.addingTimeInterval(11 * 60 * 60)),
+        ]))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.map(\.date) == [today, dayAfter])
+    }
+
+    @Test func onAppearDoesNotLoadEventsWhenDenied() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(
+            access: .denied,
+            events: [event(id: "1", start: today, end: today.addingTimeInterval(60 * 60))]
+        ))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.isEmpty)
     }
 }
