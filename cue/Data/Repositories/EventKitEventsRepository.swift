@@ -4,7 +4,6 @@
 //
 
 import EventKit
-import Foundation
 
 /// `EventsRepository`의 EventKit 구현 — iOS "캘린더"의 접근 권한을 도메인 용어로 노출한다.
 ///

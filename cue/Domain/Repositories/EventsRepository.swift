@@ -3,8 +3,6 @@
 //  cue / Domain
 //
 
-import Foundation
-
 /// iOS "캘린더" 이벤트 저장소 추상화 — Domain이 소유하는 프로토콜. 구현은 Data 계층(EventKit).
 ///
 /// 현재는 권한 요청만 필요하다 — 신규 이벤트 입력은 iOS 캘린더 네이티브
