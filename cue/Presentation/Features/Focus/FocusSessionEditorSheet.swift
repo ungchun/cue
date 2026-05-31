@@ -78,13 +78,14 @@ struct FocusSessionEditorSheet: View {
         .onAppear {
             // 시트가 처음 뜰 때 한 번 — 편집 모드면 그 세션의 값으로, 생성 모드면 빈 상태로
             // 폼을 초기화한다. 같은 인스턴스가 재사용될 일은 없지만 안전하게 매번 reset.
+            // 자동 포커스는 두지 않는다 — 시트가 올라오자마자 키보드가 튀어오르면
+            // 시간 입력 row가 가려져 사용자가 한 박자 늦게 인지하게 된다.
             if case .edit(let session) = mode {
                 title = session.title
                 settings = session.settings
             } else {
                 title = ""
                 settings = .default
-                focusedField = .title
             }
         }
     }
