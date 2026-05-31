@@ -100,7 +100,11 @@ struct FocusSessionEditorSheet: View {
             }
         }
         .sheet(isPresented: $showingCustomColorPicker) {
-            CustomColorPickerSheet(colorHex: $colorHex)
+            CustomColorPickerSheet(colorHex: $colorHex) {
+                showingCustomColorPicker = false
+            }
+            // 초반 중간 높이로 — 풀 시트로 뜨면 화면이 가득 차 위압적.
+            .presentationDetents([.medium, .large])
         }
     }
 
