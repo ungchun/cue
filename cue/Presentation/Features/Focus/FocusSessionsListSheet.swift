@@ -66,31 +66,48 @@ struct FocusSessionsListSheet: View {
     /// 세션 한 줄. 좌측(점 + 제목)은 탭 시 선택, 우측 "수정"은 탭 시 편집 시트.
     /// 두 영역을 분리해 둬야 한쪽이 다른 쪽의 탭을 가로채지 않는다.
     private func sessionRow(_ session: FocusSession) -> some View {
-        HStack(spacing: Spacing.zero) {
-            HStack(spacing: Spacing.md) {
-                Circle()
-                    .fill(.red)
-                    .frame(width: Spacing.md, height: Spacing.md)
-                Text(session.title)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.red)
-                    .lineLimit(1)
-                Spacer(minLength: Spacing.zero)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                viewModel.selectSession(id: session.id)
-                dismiss()
-            }
-
+        HStack(spacing: Spacing.sm) {
+            titleCapsule(session.title)
+            Spacer(minLength: Spacing.sm)
+            Text(durationSummary(for: session))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .padding(.vertical, Spacing.xs)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            viewModel.selectSession(id: session.id)
+            dismiss()
+        }
+        // 가시 "수정" 버튼은 빼고 trailing swipe로 — 일정 탭의 행 패턴과 결을 맞춤.
+        .swipeActions(edge: .trailing) {
             Button("수정") {
                 editingSession = session
             }
-            .font(.callout)
-            .foregroundStyle(.red.opacity(0.5))
-            .buttonStyle(.borderless)
         }
-        .padding(.vertical, Spacing.xs)
+    }
+
+    /// 회색 캡슐 + .primary 제목. 일정 탭 EventRow의 `titleCapsule`과 같은 패턴이지만
+    /// 색을 빼고 시스템 회색(`.secondarySystemFill`)으로 — 라이트/다크 모두 자연스러움.
+    private func titleCapsule(_ title: String) -> some View {
+        Text(title)
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.sm)
+            .background(Capsule().fill(Color(.secondarySystemFill)))
+    }
+
+    /// 우측 시간 요약 — "25분"(비반복) 또는 "25분 × 4회"(반복).
+    /// 휴식 시간까지 넣으면 행이 길어져 빼고, 일과 사이클만.
+    private func durationSummary(for session: FocusSession) -> String {
+        let focusMin = Int(session.settings.focusDuration / 60)
+        if session.settings.isRepeating {
+            return "\(focusMin)분 × \(session.settings.cycleCount)회"
+        }
+        return "\(focusMin)분"
     }
 
     /// 세션이 한 건도 없을 때 List 위에 띄우는 안내.
