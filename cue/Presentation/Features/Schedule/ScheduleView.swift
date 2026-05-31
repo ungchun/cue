@@ -154,14 +154,17 @@ struct ScheduleView: View {
 
     /// 헤더용 rail 세로선 — `EventRow.railColumn`과 같은 폭·동일한 가운데 정렬로
     /// 두어 row와 헤더의 rail이 정확히 한 줄로 보이게 한다(점 없음).
+    /// `Color.clear` placeholder가 ZStack height를 greedy로 만들어 헤더 영역에서도
+    /// rail이 끊기지 않게 한다 — Rectangle만 두면 ZStack 자연 height가 0으로 collapse.
     private var railSpine: some View {
         ZStack {
+            Color.clear
+                .frame(width: Spacing.lg)
+                .frame(maxHeight: .infinity)
             Rectangle()
                 .fill(Color(.separator))
                 .frame(width: 1)
         }
-        .frame(width: Spacing.lg)
-        .frame(maxHeight: .infinity)
     }
 
     /// 섹션 헤더 — "5월 31일 토요일" 형식. ko_KR 고정.
@@ -200,8 +203,16 @@ private struct EventRow: View {
 
     /// 좌측 rail = 1pt 세로선 + 가운데 캘린더 색 점(8pt). 세로선은 부모 height를 채워
     /// 인접 row의 rail과 끊김 없이 이어진다.
+    ///
+    /// `Color.clear`를 layout placeholder로 두지 않으면 Rectangle 단독으로는 ZStack에
+    /// height를 못 알려줘 maxHeight: .infinity가 0으로 잡힌다(헤더에서 rail이 안 보이던
+    /// 원인). placeholder가 부모 height greedy로 늘어나면 그 위에 Rectangle·Circle이
+    /// overlay되어 정확히 그려진다.
     private var railColumn: some View {
         ZStack {
+            Color.clear
+                .frame(width: Spacing.lg)
+                .frame(maxHeight: .infinity)
             Rectangle()
                 .fill(Color(.separator))
                 .frame(width: 1)
@@ -209,8 +220,6 @@ private struct EventRow: View {
                 .fill(eventColor)
                 .frame(width: Spacing.sm, height: Spacing.sm)
         }
-        .frame(width: Spacing.lg)
-        .frame(maxHeight: .infinity)
     }
 
     /// row 우측 본문 — 캡슐 제목 + 우측 시간.
