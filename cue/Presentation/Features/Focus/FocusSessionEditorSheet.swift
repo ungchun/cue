@@ -101,6 +101,7 @@ struct FocusSessionEditorSheet: View {
     // MARK: - 색상 섹션
 
     /// 프리셋 색 팔레트 — adaptive grid로 폭에 맞춰 자동 줄바꿈.
+    /// 9개 프리셋 + 마지막 무지개 슬롯(커스텀 색상 진입점)으로 10칸 구성.
     private var paletteRow: some View {
         LazyVGrid(
             columns: [GridItem(.adaptive(minimum: Spacing.xxl), spacing: Spacing.md)],
@@ -109,6 +110,7 @@ struct FocusSessionEditorSheet: View {
             ForEach(Self.palette, id: \.hex) { preset in
                 colorSwatch(preset)
             }
+            customSwatch
         }
         .padding(.vertical, Spacing.xs)
     }
@@ -134,6 +136,49 @@ struct FocusSessionEditorSheet: View {
             .accessibilityLabel(preset.name)
             .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
+
+    /// 커스텀 색 진입 슬롯 — 무지개 그라디언트 원. 위에 거의 투명한 `ColorPicker`가
+    /// 덮여 있어 탭 시 시스템 컬러 피커가 열린다. 사용자가 고른 색은 hex로 환원되어
+    /// `colorHex`에 저장.
+    ///
+    /// 현재 `colorHex`가 프리셋 어디에도 없으면 "커스텀 활성" — 흰색 체크마크로 표시.
+    private var customSwatch: some View {
+        let isCustomActive = !Self.palette.contains { $0.hex.lowercased() == colorHex.lowercased() }
+        return Circle()
+            .fill(Self.rainbowGradient)
+            .frame(width: Spacing.xl, height: Spacing.xl)
+            .overlay {
+                if isCustomActive {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .overlay {
+                // 시스템 ColorPicker를 거의 투명(opacity 0.015)으로 같은 자리에 깔아
+                // 탭만 받게 한다. opacity 0이면 hit-test에서 제외될 수 있어 아주 작은 값.
+                ColorPicker("", selection: customColorBinding, supportsOpacity: false)
+                    .labelsHidden()
+                    .opacity(0.015)
+            }
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel("커스텀 색상")
+            .accessibilityAddTraits(isCustomActive ? [.isSelected] : [])
+    }
+
+    /// ColorPicker가 요구하는 Binding<Color> ↔ 내부 `colorHex: String` 어댑터.
+    private var customColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(hex: colorHex) ?? .gray },
+            set: { colorHex = $0.hexString }
+        )
+    }
+
+    /// 무지개 그라디언트 — 커스텀 슬롯의 시각 신호. AngularGradient는 conic 효과.
+    private static let rainbowGradient: AngularGradient = AngularGradient(
+        gradient: Gradient(colors: [.red, .orange, .yellow, .green, .blue, .purple, .red]),
+        center: .center
+    )
 
     // MARK: - 삭제 섹션 (수정 모드 전용)
 
@@ -236,13 +281,13 @@ struct FocusSessionEditorSheet: View {
         let hex: String
     }
 
-    /// 기본 팔레트 — Apple 시스템 컬러 10종(빨/주/노/초/민트/파/인디고/보라/분홍/회색).
+    /// 기본 팔레트 — Apple 시스템 컬러 9종(빨/주/초/민트/파/인디고/보라/분홍/회색).
+    /// 노랑은 라이트 배경 대비가 약하고 시각적으로 가장 튀어 제외. 회색은 사용자 요청으로 유지.
     /// hex는 각 시스템 컬러의 라이트 모드 sRGB 값과 일치시켜 행 캡슐·메인 화면이 같은
     /// 톤으로 보이도록 한다.
     private static let palette: [ColorPreset] = [
         ColorPreset(name: "빨강", displayColor: .red, hex: "#FF3B30"),
         ColorPreset(name: "주황", displayColor: .orange, hex: "#FF9500"),
-        ColorPreset(name: "노랑", displayColor: .yellow, hex: "#FFCC00"),
         ColorPreset(name: "초록", displayColor: .green, hex: "#34C759"),
         ColorPreset(name: "민트", displayColor: .mint, hex: "#00C7BE"),
         ColorPreset(name: "파랑", displayColor: .blue, hex: "#007AFF"),
