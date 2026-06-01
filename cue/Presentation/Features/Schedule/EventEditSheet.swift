@@ -82,3 +82,51 @@ struct EventEditSheet: UIViewControllerRepresentable {
         }
     }
 }
+
+/// `EventEditSheet`를 시트 콘텐츠로 띄우면서 첫 표시 직후 짧게 가운데 로딩 인디케이터를
+/// 덮어둔다. `EKEventEditViewController`는 lazy하게 LaunchServices/usermanagerd/persona
+/// 시스템 IPC를 호출하느라 표시 직후 약 0.5~0.8초 정도 콘텐츠가 비어 보이는 구간이 있다 —
+/// 이 시간 동안 빈 시트 대신 spinner를 보여줘 사용자가 "응답이 없다"는 인상을 받지 않게 한다.
+///
+/// IPC가 끝나는 정확한 시점을 알 방법이 없어 시간 기반으로 fade out — 빠른 케이스엔 spinner가
+/// 잠깐 보이다 사라지고, 느린 케이스엔 콘텐츠가 그려진 뒤 spinner가 자연스럽게 걷힌다.
+struct EventEditSheetContainer: View {
+    let eventStore: EKEventStore
+    let editingEventID: String?
+    let onCompletion: () -> Void
+
+    @State private var loaderVisible = true
+
+    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping () -> Void) {
+        self.eventStore = eventStore
+        self.editingEventID = editingEventID
+        self.onCompletion = onCompletion
+    }
+
+    var body: some View {
+        ZStack {
+            EventEditSheet(
+                eventStore: eventStore,
+                editingEventID: editingEventID,
+                onCompletion: onCompletion
+            )
+            if loaderVisible {
+                Color(.systemBackground)
+                    .overlay {
+                        ProgressView()
+                            .controlSize(.large)
+                    }
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
+        }
+        .task {
+            // 700ms — LaunchServices/usermanagerd 첫 IPC가 보통 그 안에 끝난다. 더 빠르면 spinner가
+            // 잠깐 보일 뿐, 더 늦으면 spinner 뒤에서 콘텐츠가 이미 준비된 상태로 fade out.
+            try? await Task.sleep(for: .milliseconds(700))
+            withAnimation(.easeOut(duration: 0.2)) {
+                loaderVisible = false
+            }
+        }
+    }
+}

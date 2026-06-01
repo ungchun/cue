@@ -81,12 +81,13 @@ struct ScheduleView: View {
             warmUpEventStore()
         }
         .sheet(isPresented: $viewModel.showingNewEvent) {
-            EventEditSheet(eventStore: eventStore, onCompletion: {
-                viewModel.dismissNewEvent()
-            })
+            EventEditSheetContainer(
+                eventStore: eventStore,
+                onCompletion: { viewModel.dismissNewEvent() }
+            )
         }
         .sheet(item: $viewModel.editingEvent) { event in
-            EventEditSheet(
+            EventEditSheetContainer(
                 eventStore: eventStore,
                 editingEventID: event.id,
                 onCompletion: { viewModel.dismissEdit() }
@@ -340,7 +341,6 @@ private struct EventRow: View {
         return formatter
     }()
 }
-
 
 #Preview {
     NavigationStack {
