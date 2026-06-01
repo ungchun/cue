@@ -116,8 +116,7 @@ struct FocusSessionsListSheet: View {
         if viewModel.sessions.isEmpty {
             ContentUnavailableView(
                 "저장된 세션이 없어요",
-                systemImage: "timer",
-                description: Text("우하단 +로 새 세션을 만드세요.")
+                systemImage: "timer"
             )
         }
     }

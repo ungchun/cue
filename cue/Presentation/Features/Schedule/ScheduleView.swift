@@ -5,6 +5,7 @@
 
 import EventKit
 import SwiftUI
+import UIKit
 
 /// 일정 탭 화면 — "타임라인" 헤더 + 우상단 신규 이벤트 + 버튼 + 향후 30일치 이벤트 리스트.
 ///
@@ -121,20 +122,36 @@ struct ScheduleView: View {
     private var emptyOverlay: some View {
         switch viewModel.access {
         case .notDetermined, .denied:
-            ContentUnavailableView(
-                "캘린더 접근이 필요해요",
-                systemImage: "calendar.badge.exclamationmark",
-                description: Text("설정 → cue 에서 캘린더 권한을 켜 주세요.")
-            )
+            deniedPlaceholder
         case .granted:
             if viewModel.eventsByDay.isEmpty {
-                ContentUnavailableView(
-                    "일정이 비어있어요",
-                    systemImage: "calendar",
-                    description: Text("우측 상단 +로 새 일정을 추가하세요.")
-                )
+                emptyTimelinePlaceholder
             }
         }
+    }
+
+    /// 권한 거부 안내 — 본문 List("타임라인" 헤더 포함)을 가리도록 systemBackground를
+    /// 깔고, ReminderView와 동일한 패턴으로 "설정 열기" 액션 버튼을 둔다.
+    private var deniedPlaceholder: some View {
+        ContentUnavailableView {
+            Label("캘린더 접근이 필요해요", systemImage: "calendar.badge.exclamationmark")
+        } actions: {
+            Button("설정 열기") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .padding(.top, Spacing.sm)
+        }
+        .background(Color(.systemBackground))
+    }
+
+    /// 권한은 있는데 향후 30일 동안 이벤트가 한 건도 없을 때.
+    private var emptyTimelinePlaceholder: some View {
+        ContentUnavailableView(
+            "일정이 비어있어요",
+            systemImage: "calendar"
+        )
     }
 
     /// 하루 섹션 — 헤더(날짜+요일, 토/일 색 분기) + 그날의 이벤트 row들.

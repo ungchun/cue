@@ -200,14 +200,13 @@ struct ReminderView: View {
     private var deniedView: some View {
         ContentUnavailableView {
             Label("미리 알림 접근 필요", systemImage: "lock")
-        } description: {
-            Text("설정에서 cue의 미리 알림 접근을 허용해 주세요.")
         } actions: {
             Button("설정 열기") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
+            .padding(.top, Spacing.sm)
         }
     }
 
