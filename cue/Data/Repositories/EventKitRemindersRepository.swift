@@ -173,6 +173,22 @@ actor EventKitRemindersRepository: RemindersRepository {
         } ?? sources.first
     }
 
+    /// `EKEventStoreChanged`는 미리알림·캘린더 변경 모두에 발송되는 공통 노티 — reminders
+    /// 측은 그 중 미리알림 변경에 대응한다. 구독자 측에서 stream을 종료해도 안에서 만든
+    /// Task가 자동 cancel되도록 `onTermination`에 연결.
+    nonisolated func changes() -> AsyncStream<Void> {
+        AsyncStream { continuation in
+            let task = Task {
+                for await _ in NotificationCenter.default.notifications(named: .EKEventStoreChanged) {
+                    if Task.isCancelled { break }
+                    continuation.yield(())
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// "#RRGGBB" → sRGB `CGColor`. 잘못된 포맷이면 nil.
     /// Mapper의 hex 추출과 역방향 대칭 — sRGB 가정.
     private static func cgColor(fromHex hex: String?) -> CGColor? {

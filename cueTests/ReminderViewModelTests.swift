@@ -39,8 +39,10 @@ struct ReminderViewModelTests {
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
+            observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             focusNotifications: NoopFocusNotificationScheduler(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
@@ -71,6 +73,52 @@ struct ReminderViewModelTests {
         #expect(viewModel.access == .granted)
         #expect(viewModel.lists == [listA])
         #expect(viewModel.allReminders.count == 1)
+    }
+
+    @Test func externalChangeReloadsRemindersAfterFirstLoad() async throws {
+        // makeDependencies는 repo를 내부 생성 — 외부 변경 시뮬레이션을 위해 직접 조립.
+        // 같은 repo 인스턴스가 ViewModel의 fetch와 변경 emit 양쪽에 쓰이도록.
+        let repo = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let itemRepo = InMemoryItemRepository()
+        let eventsRepo = InMemoryEventsRepository(access: .granted)
+        let focusRepo = InMemoryFocusSessionsRepository()
+        let deps = Dependencies(
+            fetchItems: FetchItemsUseCase(repository: itemRepo),
+            addItem: AddItemUseCase(repository: itemRepo),
+            deleteItem: DeleteItemUseCase(repository: itemRepo),
+            requestRemindersAccess: RequestRemindersAccessUseCase(repository: repo),
+            fetchReminderLists: FetchReminderListsUseCase(repository: repo),
+            fetchReminders: FetchRemindersUseCase(repository: repo),
+            toggleReminderCompletion: ToggleReminderCompletionUseCase(repository: repo),
+            addReminder: AddReminderUseCase(repository: repo),
+            updateReminder: UpdateReminderUseCase(repository: repo),
+            deleteReminder: DeleteReminderUseCase(repository: repo),
+            addReminderList: AddReminderListUseCase(repository: repo),
+            updateReminderList: UpdateReminderListUseCase(repository: repo),
+            deleteReminderList: DeleteReminderListUseCase(repository: repo),
+            observeRemindersChanges: ObserveRemindersChangesUseCase(repository: repo),
+            requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepo),
+            fetchEvents: FetchEventsUseCase(repository: eventsRepo),
+            observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepo),
+            focusNotifications: NoopFocusNotificationScheduler(),
+            fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusRepo),
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusRepo)
+        )
+        let viewModel = ReminderViewModel(dependencies: deps)
+        await viewModel.onAppear()
+        #expect(viewModel.allReminders.isEmpty)
+
+        // 외부(미리 알림 앱) 변경 시뮬레이션 — 데이터 추가 후 변경 신호 emit.
+        try await repo.addReminder(
+            title: "외부 추가", notes: nil,
+            dueDate: nil, includesTime: false,
+            toListID: listA.id
+        )
+        await repo.emitChange()
+        // observe task가 신호를 처리할 시간 — Task hop이 끝나도록 짧게 yield.
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        #expect(viewModel.allReminders.contains { $0.title == "외부 추가" })
     }
 
     @Test func onAppearWithDeniedAccessLoadsNothing() async {

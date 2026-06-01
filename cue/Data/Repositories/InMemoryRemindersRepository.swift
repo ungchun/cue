@@ -12,15 +12,30 @@ actor InMemoryRemindersRepository: RemindersRepository {
     private var access: RemindersAccess
     private var lists: [ReminderList]
     private var reminders: [Reminder]
+    /// 변경 신호 stream. single-consumer 가정(테스트·ViewModel 1쌍). 다중 구독이 필요하면
+    /// EventKit 구현처럼 NotificationCenter 패턴으로 바꾼다.
+    private let changesStream: AsyncStream<Void>
+    private let changesContinuation: AsyncStream<Void>.Continuation
 
     init(
         access: RemindersAccess = .granted,
         lists: [ReminderList] = [],
         reminders: [Reminder] = []
     ) {
+        let (stream, continuation) = AsyncStream<Void>.makeStream()
+        self.changesStream = stream
+        self.changesContinuation = continuation
         self.access = access
         self.lists = lists
         self.reminders = reminders
+    }
+
+    nonisolated func changes() -> AsyncStream<Void> { changesStream }
+
+    /// 테스트 헬퍼 — 변경 신호를 한 번 emit한다. 실 EventKit 구현은 NotificationCenter가
+    /// 자동으로 emit하므로 외부에서 호출할 필요가 없다.
+    func emitChange() {
+        changesContinuation.yield(())
     }
 
     func requestAccess() async -> RemindersAccess {

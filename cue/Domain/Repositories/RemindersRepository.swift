@@ -47,4 +47,9 @@ protocol RemindersRepository: Sendable {
     func updateList(listID: String, title: String, colorHex: String?) async throws
     /// 리스트를 삭제한다 — 안에 있는 모든 항목도 함께 제거된다 (EventKit 동작).
     func deleteList(listID: String) async throws
+
+    /// 외부에서 미리알림이 변경됐다는 신호 스트림 — 값은 싣지 않고, 구독자는 신호가 오면
+    /// `fetchLists` / `fetchReminders`로 다시 가져온다. EventKit 구현은 `EKEventStoreChanged`
+    /// 노티를 노출. 구독은 호출 측의 `Task`에 묶여 cancel 시 자동 종료된다.
+    func changes() -> AsyncStream<Void>
 }

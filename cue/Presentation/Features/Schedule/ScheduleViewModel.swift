@@ -20,10 +20,18 @@ import Observation
 final class ScheduleViewModel {
     private let requestAccessUseCase: RequestEventsAccessUseCase
     private let fetchEventsUseCase: FetchEventsUseCase
+    private let observeChangesUseCase: ObserveEventsChangesUseCase
     /// 첫 진입 시 가져올 일수. 사용자 결정: 1달, 과거 미포함.
     private static let initialDays = 30
     /// 바닥 도달 시 추가로 가져올 일수. 사용자 결정: 2주.
     private static let pageDays = 14
+    /// 첫 데이터 적재가 끝났는지. `onAppear`가 탭 전환마다 재호출되더라도 두 번째
+    /// 이상은 첫 페이지 fetch를 건너뛴다 — 변경 스트림이 알려줄 때만 reload.
+    private var hasLoaded = false
+    /// 외부 변경 신호 스트림 구독. ViewModel 생애 동안 유지되며 신호가 올 때마다 fetched 범위
+    /// 전체를 reload한다. 탭 전환에도 살아있어 다른 탭에서 발생한 변경을 놓치지 않는다.
+    /// `nonisolated(unsafe)`: Swift 6의 nonisolated `deinit`에서 cancel을 호출하기 위함.
+    nonisolated(unsafe) private var observeTask: Task<Void, Never>?
 
     private(set) var access: EventsAccess = .notDetermined
     /// 날짜별로 그룹핑된 이벤트. 일정 없는 날은 생략, 날짜·시작시간 오름차순.
@@ -46,13 +54,48 @@ final class ScheduleViewModel {
     init(dependencies: Dependencies) {
         self.requestAccessUseCase = dependencies.requestEventsAccess
         self.fetchEventsUseCase = dependencies.fetchEvents
+        self.observeChangesUseCase = dependencies.observeEventsChanges
+        startObservingChanges()
     }
 
-    /// 화면이 나타날 때 한 번 호출. 권한을 확보하고 grant 시 첫 페이지를 로드한다.
+    /// 화면이 나타날 때 호출. 첫 진입에만 첫 페이지를 로드한다. 외부 변경 구독은 init이
+    /// 시작한 별도 Task가 담당 — 탭 전환에도 살아있다.
     func onAppear() async {
         access = await requestAccessUseCase()
         guard access == .granted else { return }
-        await loadInitial()
+        if !hasLoaded {
+            await loadInitial()
+            hasLoaded = true
+        }
+    }
+
+    /// 변경 신호 stream을 별도 Task로 구독한다 — view-bound가 아니라 ViewModel 생애에 묶여
+    /// 다른 탭에서 발생한 변경도 놓치지 않는다. 신호는 첫 적재 후, 권한이 있을 때만 reload로
+    /// 이어진다 — init 시점이나 권한 없을 때 emit돼도 무시된다.
+    private func startObservingChanges() {
+        let stream = observeChangesUseCase()
+        observeTask = Task { [weak self] in
+            for await _ in stream {
+                await self?.handleExternalChange()
+            }
+        }
+    }
+
+    /// 외부 변경 신호가 왔을 때 호출 — 사용자가 페이지네이션으로 본 범위 전체를 다시
+    /// 가져와 그 범위 안의 변경을 반영한다. 페이지네이션 위치(`fetchedUntil`)는 유지.
+    private func handleExternalChange() async {
+        guard access == .granted, hasLoaded else { return }
+        let today = Calendar.current.startOfDay(for: Date())
+        do {
+            let events = try await fetchEventsUseCase(from: today, to: fetchedUntil)
+            eventsByDay = Self.groupByDay(events)
+        } catch {
+            // 실패 시 기존 표시 유지 — 다음 신호에 재시도.
+        }
+    }
+
+    deinit {
+        observeTask?.cancel()
     }
 
     /// + 버튼 액션 — 신규 이벤트 시트를 연다.

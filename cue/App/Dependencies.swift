@@ -22,9 +22,14 @@ struct Dependencies: Sendable {
     var addReminderList: AddReminderListUseCase
     var updateReminderList: UpdateReminderListUseCase
     var deleteReminderList: DeleteReminderListUseCase
+    /// 외부(미리 알림 앱)에서 변경 발생 시 신호 — ViewModel은 onAppear에 한 번 구독하고
+    /// 신호가 올 때마다 reload. 매 화면 진입에 reload하던 동작을 대체한다.
+    var observeRemindersChanges: ObserveRemindersChangesUseCase
 
     var requestEventsAccess: RequestEventsAccessUseCase
     var fetchEvents: FetchEventsUseCase
+    /// 외부(캘린더 앱) 변경 신호 — events 측 대응. 위의 reminders 대응과 같은 패턴.
+    var observeEventsChanges: ObserveEventsChangesUseCase
 
     /// 집중 세션의 단계 종료 알림 스케줄러. ViewModel이 schedule/cancel을 직접 호출한다.
     var focusNotifications: any FocusNotificationScheduling
@@ -111,8 +116,10 @@ extension Dependencies {
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
+            observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             focusNotifications: NoopFocusNotificationScheduler(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)

@@ -20,11 +20,21 @@ final class ReminderViewModel {
     private let addReminderListUseCase: AddReminderListUseCase
     private let updateReminderListUseCase: UpdateReminderListUseCase
     private let deleteReminderListUseCase: DeleteReminderListUseCase
+    private let observeChangesUseCase: ObserveRemindersChangesUseCase
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
     private(set) var allReminders: [Reminder] = []
     private(set) var isLoading = false
+    /// 첫 데이터 적재가 끝났는지. `onAppear`가 탭 전환마다 재호출되더라도 두 번째
+    /// 이상은 fetch를 건너뛴다 — 외부(미리 알림 앱)에서 실제 변경이 발생하면 그때만
+    /// `observeTask`의 stream이 신호를 보내 reload가 호출되어 인디케이터 깜박임이 사라진다.
+    private var hasLoaded = false
+    /// 외부 변경 신호 스트림 구독. ViewModel 생애 동안 유지되며 신호가 올 때마다 reload.
+    /// 탭 전환으로 view가 disappear되어도 ViewModel은 `@State`로 살아있어 구독이 끊기지 않는다.
+    /// `nonisolated(unsafe)`: Swift 6의 nonisolated `deinit`에서 cancel을 호출하기 위함.
+    /// Task는 Sendable이고 `cancel()`은 어디서 불러도 안전하다.
+    nonisolated(unsafe) private var observeTask: Task<Void, Never>?
     /// 본문에 무엇을 보여줄지 — 사용자 리스트 또는 시스템 필터. 초기 적재 직후
     /// `.list(첫 리스트.id)`로 자동 설정된다.
     var selection: ReminderSelection?
@@ -50,6 +60,31 @@ final class ReminderViewModel {
         self.addReminderListUseCase = dependencies.addReminderList
         self.updateReminderListUseCase = dependencies.updateReminderList
         self.deleteReminderListUseCase = dependencies.deleteReminderList
+        self.observeChangesUseCase = dependencies.observeRemindersChanges
+        startObservingChanges()
+    }
+
+    /// 변경 신호 stream을 별도 Task로 구독한다 — `.task` 같은 view-bound task에 묶지 않아
+    /// 탭 전환에도 살아있고, ViewModel deinit 시 자동 cleanup된다.
+    /// 신호는 첫 적재(`hasLoaded`)와 권한 확인이 끝난 뒤에만 reload로 이어진다 —
+    /// init 시점에 신호가 와도 무시되어 race를 만들지 않는다.
+    private func startObservingChanges() {
+        let stream = observeChangesUseCase()
+        observeTask = Task { [weak self] in
+            for await _ in stream {
+                await self?.handleExternalChange()
+            }
+        }
+    }
+
+    /// 외부 변경 신호를 받아 reload — 권한이 있고 첫 적재가 끝났을 때만.
+    private func handleExternalChange() async {
+        guard access == .granted, hasLoaded else { return }
+        await reload()
+    }
+
+    deinit {
+        observeTask?.cancel()
     }
 
     /// 현재 선택된 리스트.
@@ -134,11 +169,15 @@ final class ReminderViewModel {
         return allReminders.filter { $0.listID == selectedListID && $0.isCompleted }
     }
 
-    /// 화면 진입 시 — 권한을 확보하고 데이터를 적재한다.
+    /// 화면 진입 시 — 권한 확인 + 첫 진입에만 적재. 변경 구독은 `init`이 시작한 별도 Task가
+    /// 백그라운드로 담당하므로 여기서는 따로 await하지 않는다 — 탭 전환 깜박임 없음.
     func onAppear() async {
         access = await requestAccessUseCase()
         guard access == .granted else { return }
-        await reload()
+        if !hasLoaded {
+            await reload()
+            hasLoaded = true
+        }
     }
 
     /// 리스트·항목을 다시 가져온다. selection이 비어 있거나 그 리스트가 사라졌으면
