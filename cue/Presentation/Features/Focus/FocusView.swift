@@ -27,17 +27,17 @@ struct FocusView: View {
     @State private var backgroundedAt: Date?
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        // 단순한 VStack 자연 layout — 모든 자식이 `Spacing.xl` 균등 spacing, 화면 maxHeight에서
+        // 자연 center 정렬. ring 크기는 `.padding(.horizontal, .xxl)`(화면 ~76%)로 결정되고
+        // ring center 위치는 콘텐츠 center를 따라간다(정확한 화면 정중앙 강제 안 함 — 시각상
+        // 자연스러움 우선). idle 시 phaseLabel은 렌더링 안 해 자리도 안 차지하므로 시작 버튼이
+        // ring 가까이로 자연 이동.
+        VStack(spacing: Spacing.xxl) {
             titleHeader
-            cycleIndicator
-            Spacer()
             ringWithTime
-            phaseLabel
-            Spacer()
             controlRow
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // 빨강 톤은 ring·컨트롤 등 메인 요소에만 명시적으로 박는다 — 탭 루트에 .tint(.red)를
         // 걸면 자식 시트(세션 목록)의 X/+ 버튼까지 빨강이 전파돼 디자인 분리를 못 한다.
@@ -93,80 +93,95 @@ struct FocusView: View {
 
     // MARK: - 상단 타이틀
 
-    /// 선택된 세션의 이름. 선택 없으면 빈 자리로 둬 ring 위치를 일정하게 유지한다.
-    @ViewBuilder
+    /// 선택된 세션의 이름. 선택 없으면 앱 이름 "Cue"를 placeholder처럼 둔다.
+    /// 디자인 시스템 예외 — 타이틀은 ring 안 타이머(56pt)와의 시각 위계를 위해
+    /// `.largeTitle`(≈34pt)보다 살짝 큰 40pt로 명시. 타이머 < 타이틀 위계는 깨지지 않게.
+    /// `Text`의 자동 frame은 line height(≈48pt)만큼 잡혀 폰트의 ascent/descent 비대칭이
+    /// 시각 위·아래 padding 차이로 노출된다 — visual text에 가까운 `Spacing.xl(32)`로 박아
+    /// 양쪽 padding이 같아 보이게 한다 (phaseLabel과 동일 패턴).
     private var titleHeader: some View {
-        if let session = viewModel.selectedSession {
-            Text(session.title)
-                .font(.largeTitle.bold())
-                .foregroundStyle(sessionColor)
-                .lineLimit(1)
-        } else {
-            Color.clear.frame(height: Spacing.xl)
-        }
+        Text(viewModel.selectedSession?.title ?? "Cue")
+            .font(.system(size: 40, weight: .bold, design: .rounded))
+            .foregroundStyle(viewModel.selectedSession == nil ? Color.secondary : sessionColor)
+            .lineLimit(1)
+            .frame(height: Spacing.xxl)
     }
 
-    /// 선택된 세션의 색 (없거나 hex 파싱 실패 시 빨강 폴백). 메인의 타이틀·ring 트림에
-    /// 일관되게 사용해 세션별 시각 식별을 강화.
+    /// 선택된 세션의 색. 세션이 없거나 hex 파싱 실패 시 시스템 기본 accent로 폴백 —
+    /// 메인 타이틀·ring 트림·컨트롤 버튼이 모두 이 한 가지 색으로 통일된다.
     private var sessionColor: Color {
         guard let hex = viewModel.selectedSession?.colorHex,
-              let color = Color(hex: hex) else { return .red }
+              let color = Color(hex: hex) else { return .accentColor }
         return color
-    }
-
-    /// "1 / 4" — running이고 totalCycles > 1일 때만. 자리는 항상 유지.
-    @ViewBuilder
-    private var cycleIndicator: some View {
-        if let session = viewModel.session, session.totalCycles > 1 {
-            Text("\(session.currentCycle) / \(session.totalCycles)")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        } else {
-            Color.clear.frame(height: Spacing.md)
-        }
     }
 
     // MARK: - ring + 시간
 
-    /// 원형 ring + 한가운데 mm:ss. idle엔 외곽 회색 ring만, running엔 그 위에 tint
-    /// progress 트림이 시계 방향으로 차오른다.
+    /// 원형 ring + 한가운데에 큰 mm:ss 타이머와 그 바로 아래 cycle 표시("1 / 4")가 겹쳐 보인다.
+    /// idle엔 외곽 회색 ring만 보이고, running엔 그 위로 tint progress 트림이 시계 방향으로 차오른다.
+    /// `aspectRatio(1, fit)` + `.padding(.horizontal, .xxl)`로 자체 size 결정 — 화면 너비의
+    /// 약 76%(`너비 - 2 * .xxl`)가 ring 외경이 된다.
     private var ringWithTime: some View {
         ZStack {
+            // `strokeBorder`는 stroke를 frame 안쪽으로만 그린다 — `stroke`는 path 양쪽으로 그려져
+            // visual 호 외측이 frame edge 밖으로 lineWidth/2(=8pt) 나가버린다. 그 결과 VStack
+            // spacing이 ring 호 visual edge가 아니라 frame edge 기준으로 잡혀 시각이 비대칭.
+            // 진행 trim 원도 같은 시각 외측을 갖도록 `inset(by: 8)` 후 stroke center로 맞춘다.
             Circle()
-                .stroke(Color(.systemGray5), style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                .strokeBorder(Color(.systemGray5), style: StrokeStyle(lineWidth: 16, lineCap: .round))
             if viewModel.session != nil {
                 Circle()
+                    .inset(by: 8)
                     .trim(from: 0, to: progress)
                     // 선택된 세션 색으로 — 타이틀과 같은 톤이라 어느 세션이 도는지 즉시 인지.
-                    .stroke(sessionColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .stroke(sessionColor, style: StrokeStyle(lineWidth: 16, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 0.2), value: progress)
             }
-            Text(timeText)
-                .font(.largeTitle.bold())
-                .monospacedDigit()
-                .foregroundStyle(.primary)
+            VStack(spacing: Spacing.sm) {
+                phaseLabelInRing
+                // 디자인 시스템 예외 — 타이머는 화면의 시각 무게 중심이라 텍스트 스타일 최대치
+                // (`.largeTitle` ≈ 34pt)로는 부족하다. `.system(size:)`를 명시 — `system(.largeTitle, ...)`로는
+                // 같은 텍스트 스타일이라 크기가 안 늘어난다.
+                Text(timeText)
+                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                cycleIndicatorInRing
+            }
         }
         .aspectRatio(1, contentMode: .fit)
-        .padding(.horizontal, Spacing.xl)
+        .padding(.horizontal, Spacing.sm)
     }
 
-    /// ring 아래 단계 라벨 — idle이면 빈 자리, running이면 "집중 중" / "휴식 중".
+    /// ring 안 타이머 바로 아래의 사이클 표시 — running + 다회 세션에서만 나타난다.
+    /// 자리는 차지하지 않고, 안 보이는 동안엔 타이머가 ring 정중앙으로 자연스레 자리잡는다.
     @ViewBuilder
-    private var phaseLabel: some View {
+    private var cycleIndicatorInRing: some View {
+        if let session = viewModel.session, session.totalCycles > 1 {
+            Text("\(session.currentCycle) / \(session.totalCycles)")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+    }
+
+    /// ring 안 타이머 위쪽 단계 라벨 — running일 때만 "집중 중" / "휴식 중". idle엔 렌더링
+    /// 자체를 안 해 ring 안 timer가 정중앙으로 자연 정렬된다.
+    @ViewBuilder
+    private var phaseLabelInRing: some View {
         if let session = viewModel.session {
             Text(session.phase == .focus ? "집중 중" : "휴식 중")
-                .font(.headline)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
-        } else {
-            Color.clear.frame(height: Spacing.lg)
         }
     }
 
     // MARK: - 하단 컨트롤
 
     /// running이면 일시정지/스킵/종료, idle이면 ▶ 시작 버튼.
+    /// 모든 버튼은 `sessionColor` 한 가지 톤으로 통일 — 선택된 세션의 색(없으면 시스템 accent)에
+    /// 맞춰 ring 트림·타이틀과 시각적으로 묶인다.
     @ViewBuilder
     private var controlRow: some View {
         if let session = viewModel.session {
@@ -182,11 +197,7 @@ struct FocusView: View {
                     session.skip()
                 }
 
-                controlButton(
-                    systemImage: "xmark",
-                    label: "종료",
-                    tint: .red
-                ) {
+                controlButton(systemImage: "xmark", label: "종료") {
                     viewModel.stopSession()
                 }
             }
@@ -204,8 +215,8 @@ struct FocusView: View {
                 Image(systemName: "play.fill")
                     .font(.title)
                     .frame(width: Spacing.xxl, height: Spacing.xxl)
-                    .background(Circle().fill(Color.red.opacity(0.15)))
-                    .foregroundStyle(.red)
+                    .background(Circle().fill(sessionColor.opacity(0.15)))
+                    .foregroundStyle(sessionColor)
                 Text("시작")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -215,12 +226,10 @@ struct FocusView: View {
         .accessibilityLabel("시작")
     }
 
-    /// 컨트롤 단일 버튼 — 원형 배경 + 아이콘 + 라벨.
-    @ViewBuilder
+    /// 컨트롤 단일 버튼 — 원형 배경 + 아이콘 + 라벨. tint는 항상 `sessionColor`.
     private func controlButton(
         systemImage: String,
         label: String,
-        tint: Color = .red,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -228,8 +237,8 @@ struct FocusView: View {
                 Image(systemName: systemImage)
                     .font(.title2)
                     .frame(width: Spacing.xxl, height: Spacing.xxl)
-                    .background(Circle().fill(tint.opacity(0.15)))
-                    .foregroundStyle(tint)
+                    .background(Circle().fill(sessionColor.opacity(0.15)))
+                    .foregroundStyle(sessionColor)
                 Text(label)
                     .font(.caption)
                     .foregroundStyle(.secondary)
