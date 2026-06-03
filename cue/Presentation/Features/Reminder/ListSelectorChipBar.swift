@@ -5,14 +5,16 @@
 
 import SwiftUI
 
-/// 미리알림 화면 하단 — 탭바 바로 위에 고정되는 칩 바.
+/// 미리알림 화면 하단 칩 바. `tabViewBottomAccessory`에 부착되어 탭바와 함께
+/// 스크롤 위치에 따라 분리(expanded)·통합(inline)된다.
 ///
-/// 구조: **단일 외곽 Liquid Glass 캡슐** 안에 모든 칩이 묶인다. 칩 순서는
-/// 시스템 필터 칩들(오늘/예정/전체) → 세로 디바이더 → 사용자 리스트 칩들.
-/// 모든 칩은 같은 시각 형태이며, 외곽 캡슐 폭을 넘어가면 함께 가로 스크롤된다.
+/// 외곽 컨테이너는 system이 자동 제공한다 — 자체 `.glassEffect` 캡슐이나 외곽
+/// padding을 두면 accessory의 system background와 **이중 캡슐**이 되어 좌우가
+/// 좁아지고 안쪽 칩이 위로 치우친다. 그래서 여기는 ScrollView만 남기고
+/// 외곽 장식은 모두 system에 맡긴다.
+///
+/// 칩 순서: 시스템 필터(오늘/예정/전체) → 세로 디바이더 → 사용자 리스트.
 /// 선택된 칩만 안쪽 fill을 받고, 나머지는 텍스트만.
-///
-/// 외곽 캡슐은 `.glassEffect(.regular, in: .capsule)` — iOS 26 정식 API.
 struct ListSelectorChipBar: View {
     let lists: [ReminderList]
     let selection: ReminderSelection?
@@ -47,14 +49,7 @@ struct ListSelectorChipBar: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(Spacing.xs)
         }
-        // 단일 외곽 Liquid Glass 캡슐 — ScrollView 자체에 적용해
-        // 안쪽 칩 묶음이 한 컨테이너 안에서 함께 스크롤된다.
-        .glassEffect(.regular, in: .capsule)
-        .padding(.horizontal, Spacing.lg)
-        .padding(.bottom, Spacing.sm)
-        .padding(.bottom, Spacing.xs)
     }
 
     /// 칩 본체 — 선택은 안쪽 캡슐 fill + primary 텍스트, 미선택은 텍스트만(secondary).
