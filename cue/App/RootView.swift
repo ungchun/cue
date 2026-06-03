@@ -35,14 +35,24 @@ struct RootView: View {
                 }
             }
         }
-        .tabBarMinimizeBehavior(.onScrollDown)
-        // `tabViewBottomAccessory` modifier는 content가 빈 view여도 accessory **영역
-        // 자체는 system이 유지**한다 — 다른 탭에서 빈 회색 capsule이 보임. 그래서
-        // modifier 자체를 할일 탭일 때만 부착해 영역 자체가 사라지게 한다.
-        .modifier(ReminderChipBarAccessory(
-            isActive: selectedTab == .reminder,
-            viewModel: reminderViewModel
-        ))
+        // minimize 동작도 할일 탭에서만 — 다른 탭(집중/일정/설정)에선 `.never`로
+        // 항상 expanded. 그렇지 않으면 inline 상태에서 우측 [설정] 누른 직후 탭바가
+        // minimize 그대로 유지되고 가운데가 빈 자리로 남는다(chip bar accessory도 hide).
+        // 탭 전환 시 system이 자동 expanded 복귀시키지 않으므로 직접 분기.
+        .tabBarMinimizeBehavior(selectedTab == .reminder ? .onScrollDown : .never)
+        // `tabViewBottomAccessory(isEnabled:content:)` — Apple이 정확히 이 시나리오용으로
+        // 제공한 시그니처. `isEnabled: false`면 system이 modifier·영역 모두 자동 hide,
+        // `isEnabled: true`면 chip bar 표시. modifier 자체를 if/else로 분기시키지 말고
+        // 이 파라미터를 쓰라는 게 Apple 공식 권장 — view identity 변동이 없어 탭 전환
+        // ping-pong이 일어나지 않는다.
+        .tabViewBottomAccessory(isEnabled: selectedTab == .reminder) {
+            ListSelectorChipBar(
+                lists: reminderViewModel.lists,
+                selection: reminderViewModel.selection,
+                onSelectList: { reminderViewModel.select($0) },
+                onSelectFilter: { reminderViewModel.selectFilter($0) }
+            )
+        }
     }
 
     /// 탭에 대응하는 화면을 만든다.
@@ -53,32 +63,6 @@ struct RootView: View {
         case .reminder: ReminderView(viewModel: reminderViewModel)
         case .schedule: ScheduleView(viewModel: scheduleViewModel)
         case .settings: SettingsView()
-        }
-    }
-}
-
-/// `tabViewBottomAccessory`를 조건부로 부착한다. 활성 시에만 chip bar accessory를
-/// 붙이고, 비활성 시엔 modifier 자체를 안 붙여 system accessory 영역 자체가 사라진다.
-///
-/// `tabViewBottomAccessory`의 content를 `EmptyView`로 비우는 방식은 영역이 유지되어
-/// 다른 탭에서 빈 회색 자리가 보이는 부작용이 있다 — 그래서 modifier 자체를 분기.
-private struct ReminderChipBarAccessory: ViewModifier {
-    let isActive: Bool
-    let viewModel: ReminderViewModel
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if isActive {
-            content.tabViewBottomAccessory {
-                ListSelectorChipBar(
-                    lists: viewModel.lists,
-                    selection: viewModel.selection,
-                    onSelectList: { viewModel.select($0) },
-                    onSelectFilter: { viewModel.selectFilter($0) }
-                )
-            }
-        } else {
-            content
         }
     }
 }
