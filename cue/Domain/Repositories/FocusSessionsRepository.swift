@@ -15,4 +15,11 @@ protocol FocusSessionsRepository: Sendable {
     func fetchAll() async -> [FocusSession]
     /// 현재 메모리 상태 그대로 영속 저장 — 기존 데이터는 덮어쓰기.
     func save(_ sessions: [FocusSession]) async
+
+    /// 마지막으로 선택된 세션의 id. 저장된 값이 없거나 잘못된 포맷이면 nil.
+    /// "어느 세션이 선택돼 있었는지"는 sessions 목록과 별도 키로 저장한다 — 의미가 다르고
+    /// 변경 빈도도 다르며, 한쪽 직렬화 실패가 다른 쪽에 번지지 않게 분리.
+    func fetchSelectedSessionID() async -> UUID?
+    /// 선택된 세션 id를 영속화. nil이면 저장값을 지운다(=선택 없음 상태 기억).
+    func saveSelectedSessionID(_ id: UUID?) async
 }

@@ -37,6 +37,10 @@ struct Dependencies: Sendable {
     /// 저장된 세션 프리셋 영속화 — onAppear 시 fetch, CRUD 직후 save.
     var fetchFocusSessions: FetchFocusSessionsUseCase
     var saveFocusSessions: SaveFocusSessionsUseCase
+
+    /// 마지막으로 선택된 세션 id 영속화 — 앱 재시작 후에도 같은 세션을 메인 화면에 띄운다.
+    var fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
+    var saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
 }
 
 extension EnvironmentValues {
@@ -122,7 +126,9 @@ extension Dependencies {
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             focusNotifications: NoopFocusNotificationScheduler(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
-            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
+            fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
+            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository)
         )
     }
 }

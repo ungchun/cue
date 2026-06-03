@@ -40,7 +40,9 @@ struct CompositionRoot {
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             focusNotifications: UserNotificationFocusScheduler(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
-            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
+            fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
+            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository)
         )
     }
 }

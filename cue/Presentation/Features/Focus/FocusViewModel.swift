@@ -11,7 +11,8 @@ import Observation
 /// 선택된 세션의 설정으로 상태머신(`FocusSessionViewModel`)을 만들어 같은 메인 화면 안에서
 /// 타이머를 돌린다.
 ///
-/// 영속화는 다음 사이클 — 현재는 메모리에만 보관. 앱을 재시작하면 비워진다.
+/// 세션 프리셋 목록과 "마지막으로 선택한 세션"은 모두 영속화된다 — 앱 재시작 후에도
+/// 같은 세션이 메인 화면에 자동으로 떠 있다. 진행 중인 세션 자체는 영속화하지 않는다.
 @MainActor
 @Observable
 final class FocusViewModel {
@@ -25,11 +26,15 @@ final class FocusViewModel {
     private let scheduler: any FocusNotificationScheduling
     private let fetchFocusSessions: FetchFocusSessionsUseCase
     private let saveFocusSessions: SaveFocusSessionsUseCase
+    private let fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
+    private let saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
 
     init(dependencies: Dependencies) {
         self.scheduler = dependencies.focusNotifications
         self.fetchFocusSessions = dependencies.fetchFocusSessions
         self.saveFocusSessions = dependencies.saveFocusSessions
+        self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
+        self.saveSelectedFocusSessionID = dependencies.saveSelectedFocusSessionID
     }
 
     /// 현재 선택된 세션. id로 매번 lookup해 update/delete와 자연스럽게 동기화된다.
@@ -43,10 +48,30 @@ final class FocusViewModel {
         selectedSession?.settings ?? .default
     }
 
-    /// 화면이 처음 나타날 때 한 번 호출 — 알림 권한 prompt + 저장된 세션 로드.
+    /// 화면이 처음 나타날 때 한 번 호출 — 알림 권한 prompt + 저장된 세션·선택 복원.
+    ///
+    /// 복원 정책:
+    /// - 저장된 id가 현재 sessions에 존재 → 그 세션을 선택.
+    /// - 저장된 id가 없거나 사라졌는데 sessions가 비어 있지 않으면 → 첫 번째를 자동 선택.
+    ///   ("선택 없음" 상태를 보여주는 것보다, 사용자가 만들어둔 첫 프리셋을 띄우는 게 자연스럽다.)
+    /// - sessions 자체가 비어 있으면 → nil (placeholder + 기본 설정).
+    /// 사용자가 한 번이라도 진행 중인(`session != nil`) 상태에서 onAppear가 다시 불릴
+    /// 일은 없지만, 만약 그렇다면 그 세션을 깨지 않도록 복원은 idle에서만 수행한다.
     func onAppear() async {
         await scheduler.requestAuthorization()
         sessions = await fetchFocusSessions()
+        guard session == nil else { return }
+        let storedID = await fetchSelectedFocusSessionID()
+        if let storedID, sessions.contains(where: { $0.id == storedID }) {
+            selectedSessionID = storedID
+        } else if let first = sessions.first {
+            selectedSessionID = first.id
+            // 저장값이 비어 있거나 무효였던 경우 → 첫 항목을 새 영속값으로 박는다.
+            // 다음 onAppear에서도 일관되게 같은 세션이 떠 있게 된다.
+            persistSelectedID(first.id)
+        } else {
+            selectedSessionID = nil
+        }
     }
 
     /// 메인 화면의 ▶ 버튼이 호출 — 선택된 세션(또는 기본값)으로 상태머신을 만든다.
@@ -82,10 +107,13 @@ final class FocusViewModel {
         persist()
     }
 
-    /// 세션을 목록에서 제거. 삭제 대상이 선택된 세션이면 선택도 해제한다.
+    /// 세션을 목록에서 제거. 삭제 대상이 선택된 세션이면 선택도 해제하고 영속값도 nil로.
     func deleteSession(id: UUID) {
         sessions.removeAll { $0.id == id }
-        if selectedSessionID == id { selectedSessionID = nil }
+        if selectedSessionID == id {
+            selectedSessionID = nil
+            persistSelectedID(nil)
+        }
         persist()
     }
 
@@ -96,8 +124,15 @@ final class FocusViewModel {
         Task { await saveFocusSessions(snapshot) }
     }
 
+    /// 선택된 세션 id를 영속 저장소에 비동기 dispatch. sessions 영속화와 같은 fire-and-forget.
+    private func persistSelectedID(_ id: UUID?) {
+        Task { await saveSelectedFocusSessionID(id) }
+    }
+
     /// 메인 화면에 띄울 세션을 고른다. 없는 id를 줘도 그대로 둠(다음 lookup에서 nil 폴백).
+    /// 변경된 id는 즉시 영속화 — 앱을 끄고 다시 켜도 같은 세션이 떠 있는다.
     func selectSession(id: UUID) {
         selectedSessionID = id
+        persistSelectedID(id)
     }
 }
