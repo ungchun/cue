@@ -99,16 +99,19 @@ struct FocusView: View {
     /// `Text`의 자동 frame은 line height(≈48pt)만큼 잡혀 폰트의 ascent/descent 비대칭이
     /// 시각 위·아래 padding 차이로 노출된다 — visual text에 가까운 `Spacing.xl(32)`로 박아
     /// 양쪽 padding이 같아 보이게 한다 (phaseLabel과 동일 패턴).
+    ///
+    /// 색은 `.primary`(라이트/다크 자동 대비) — 세션 색을 ring 트림에만 남기고
+    /// 타이틀·컨트롤은 무채색으로 통일해 진행 표시(ring)에만 시선이 묶이게 한다.
     private var titleHeader: some View {
         Text(viewModel.selectedSession?.title ?? "Cue")
             .font(.system(size: 40, weight: .bold, design: .rounded))
-            .foregroundStyle(viewModel.selectedSession == nil ? Color.secondary : sessionColor)
+            .foregroundStyle(Color.primary)
             .lineLimit(1)
             .frame(height: Spacing.xxl)
     }
 
     /// 선택된 세션의 색. 세션이 없거나 hex 파싱 실패 시 시스템 기본 accent로 폴백 —
-    /// 메인 타이틀·ring 트림·컨트롤 버튼이 모두 이 한 가지 색으로 통일된다.
+    /// 현재는 ring 트림에만 사용. 타이틀·컨트롤은 `.primary` 무채색으로 분리.
     private var sessionColor: Color {
         guard let hex = viewModel.selectedSession?.colorHex,
               let color = Color(hex: hex) else { return .accentColor }
@@ -180,8 +183,8 @@ struct FocusView: View {
     // MARK: - 하단 컨트롤
 
     /// running이면 일시정지/스킵/종료, idle이면 ▶ 시작 버튼.
-    /// 모든 버튼은 `sessionColor` 한 가지 톤으로 통일 — 선택된 세션의 색(없으면 시스템 accent)에
-    /// 맞춰 ring 트림·타이틀과 시각적으로 묶인다.
+    /// 모든 버튼은 `.primary` 무채색 한 톤으로 통일 — 진행 표시(ring)는 세션 색,
+    /// 컨트롤은 무채색으로 분리해 시선이 ring으로 묶이게 한다.
     @ViewBuilder
     private var controlRow: some View {
         if let session = viewModel.session {
@@ -206,7 +209,7 @@ struct FocusView: View {
         }
     }
 
-    /// idle 시 메인 화면의 시작 진입점.
+    /// idle 시 메인 화면의 시작 진입점. `.primary` 톤 — 컨트롤 버튼과 동일.
     private var startButton: some View {
         Button {
             viewModel.start()
@@ -215,8 +218,8 @@ struct FocusView: View {
                 Image(systemName: "play.fill")
                     .font(.title)
                     .frame(width: Spacing.xxl, height: Spacing.xxl)
-                    .background(Circle().fill(sessionColor.opacity(0.15)))
-                    .foregroundStyle(sessionColor)
+                    .background(Circle().fill(Color.primary.opacity(0.12)))
+                    .foregroundStyle(Color.primary)
                 Text("시작")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -226,7 +229,7 @@ struct FocusView: View {
         .accessibilityLabel("시작")
     }
 
-    /// 컨트롤 단일 버튼 — 원형 배경 + 아이콘 + 라벨. tint는 항상 `sessionColor`.
+    /// 컨트롤 단일 버튼 — 원형 무채색 배경 + `.primary` 아이콘 + `.secondary` 라벨.
     private func controlButton(
         systemImage: String,
         label: String,
@@ -237,8 +240,8 @@ struct FocusView: View {
                 Image(systemName: systemImage)
                     .font(.title2)
                     .frame(width: Spacing.xxl, height: Spacing.xxl)
-                    .background(Circle().fill(sessionColor.opacity(0.15)))
-                    .foregroundStyle(sessionColor)
+                    .background(Circle().fill(Color.primary.opacity(0.12)))
+                    .foregroundStyle(Color.primary)
                 Text(label)
                     .font(.caption)
                     .foregroundStyle(.secondary)
