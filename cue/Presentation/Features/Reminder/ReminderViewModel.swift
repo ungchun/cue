@@ -21,6 +21,8 @@ final class ReminderViewModel {
     private let updateReminderListUseCase: UpdateReminderListUseCase
     private let deleteReminderListUseCase: DeleteReminderListUseCase
     private let observeChangesUseCase: ObserveRemindersChangesUseCase
+    private let startLiveActivityUseCase: StartReminderLiveActivityUseCase
+    private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
@@ -42,6 +44,11 @@ final class ReminderViewModel {
     /// 옵션 메뉴 — 완료된 항목 섹션을 함께 보여줄지. 기본 OFF.
     var showsCompleted = false
 
+    /// 라이브 액티비티 활성 상태 — 동그라미 버튼의 시각 상태 + 토글 분기에 사용.
+    /// 사용자가 시스템 UI에서 종료한 경우 sync는 미흡(추후 service `isActive(_:)` query
+    /// 추가 시 보강). 우선은 단순 로컬 토글.
+    private(set) var liveActivityActive = false
+
     /// 사용자 리스트가 선택돼 있을 때만 그 ID. 시스템 필터 모드면 nil.
     /// 기존 호출처(옵션 메뉴, 시트, 삭제 confirmation 등)가 이 값으로 list 컨텍스트를 본다.
     var selectedListID: String? {
@@ -61,6 +68,8 @@ final class ReminderViewModel {
         self.updateReminderListUseCase = dependencies.updateReminderList
         self.deleteReminderListUseCase = dependencies.deleteReminderList
         self.observeChangesUseCase = dependencies.observeRemindersChanges
+        self.startLiveActivityUseCase = dependencies.startReminderLiveActivity
+        self.endLiveActivityUseCase = dependencies.endReminderLiveActivity
         startObservingChanges()
     }
 
@@ -81,6 +90,26 @@ final class ReminderViewModel {
     private func handleExternalChange() async {
         guard access == .granted, hasLoaded else { return }
         await reload()
+    }
+
+    /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
+    /// 활성이면 즉시 종료. 아니면 현재 selection 제목 + visible reminders 스냅샷으로 시작.
+    /// cap(6) + remaining 계산은 `StartReminderLiveActivityUseCase`에서.
+    func toggleLiveActivity(listTitle: String) async {
+        if liveActivityActive {
+            await endLiveActivityUseCase()
+            liveActivityActive = false
+            return
+        }
+        do {
+            try await startLiveActivityUseCase(
+                listTitle: listTitle,
+                reminders: visibleReminders
+            )
+            liveActivityActive = true
+        } catch {
+            errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+        }
     }
 
     deinit {

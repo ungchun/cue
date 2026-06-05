@@ -28,6 +28,9 @@ final class FocusViewModel {
     private let saveFocusSessions: SaveFocusSessionsUseCase
     private let fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     private let saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
+    private let startLiveActivity: StartFocusLiveActivityUseCase
+    private let updateLiveActivity: UpdateFocusLiveActivityUseCase
+    private let endLiveActivity: EndFocusLiveActivityUseCase
 
     init(dependencies: Dependencies) {
         self.scheduler = dependencies.focusNotifications
@@ -35,6 +38,9 @@ final class FocusViewModel {
         self.saveFocusSessions = dependencies.saveFocusSessions
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
         self.saveSelectedFocusSessionID = dependencies.saveSelectedFocusSessionID
+        self.startLiveActivity = dependencies.startFocusLiveActivity
+        self.updateLiveActivity = dependencies.updateFocusLiveActivity
+        self.endLiveActivity = dependencies.endFocusLiveActivity
     }
 
     /// 현재 선택된 세션. id로 매번 lookup해 update/delete와 자연스럽게 동기화된다.
@@ -75,10 +81,23 @@ final class FocusViewModel {
     }
 
     /// 메인 화면의 ▶ 버튼이 호출 — 선택된 세션(또는 기본값)으로 상태머신을 만든다.
-    /// 이미 진행 중이면 무시.
+    /// 이미 진행 중이면 무시. 라이브 액티비티 hooks를 함께 주입해 — 세션 자체가 phase
+    /// 전환·pause/resume·완료 시점에 LA `update`/`end`를 호출한다(cue 컨셉: 종료 상태가
+    /// 아니면 라이브 액티비티 활성).
     func start() {
         guard session == nil else { return }
-        session = FocusSessionViewModel(settings: displayedSettings, scheduler: scheduler)
+        let hooks = FocusSessionViewModel.LiveActivityHooks(
+            sessionID: UUID(),
+            sessionTitle: selectedSession?.title ?? "집중",
+            start: startLiveActivity,
+            update: updateLiveActivity,
+            end: endLiveActivity
+        )
+        session = FocusSessionViewModel(
+            settings: displayedSettings,
+            scheduler: scheduler,
+            liveActivity: hooks
+        )
     }
 
     /// 진행 중인 세션을 중단·정리한다. 종료 버튼/자동 완료에서 호출.

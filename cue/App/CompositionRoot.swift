@@ -18,6 +18,8 @@ struct CompositionRoot {
         let remindersRepository = EventKitRemindersRepository()
         let eventsRepository = EventKitEventsRepository()
         let focusSessionsRepository = UserDefaultsFocusSessionsRepository()
+        // 라이브 액티비티 service — @MainActor 격리. ActivityKit 호출은 모두 main actor에서.
+        let liveActivityService: any LiveActivityService = ActivityKitLiveActivityService()
 
         self.modelContainer = container
         self.dependencies = Dependencies(
@@ -42,7 +44,15 @@ struct CompositionRoot {
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
             fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
-            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository)
+            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
+            startFocusLiveActivity: StartFocusLiveActivityUseCase(service: liveActivityService),
+            updateFocusLiveActivity: UpdateFocusLiveActivityUseCase(service: liveActivityService),
+            endFocusLiveActivity: EndFocusLiveActivityUseCase(service: liveActivityService),
+            startReminderLiveActivity: StartReminderLiveActivityUseCase(service: liveActivityService),
+            endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
+            startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: liveActivityService),
+            endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: liveActivityService),
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService)
         )
     }
 }

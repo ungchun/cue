@@ -21,6 +21,8 @@ final class ScheduleViewModel {
     private let requestAccessUseCase: RequestEventsAccessUseCase
     private let fetchEventsUseCase: FetchEventsUseCase
     private let observeChangesUseCase: ObserveEventsChangesUseCase
+    private let startLiveActivityUseCase: StartScheduleLiveActivityUseCase
+    private let endLiveActivityUseCase: EndScheduleLiveActivityUseCase
     /// 첫 진입 시 가져올 일수. 사용자 결정: 1달, 과거 미포함.
     private static let initialDays = 30
     /// 바닥 도달 시 추가로 가져올 일수. 사용자 결정: 2주.
@@ -55,6 +57,8 @@ final class ScheduleViewModel {
         self.requestAccessUseCase = dependencies.requestEventsAccess
         self.fetchEventsUseCase = dependencies.fetchEvents
         self.observeChangesUseCase = dependencies.observeEventsChanges
+        self.startLiveActivityUseCase = dependencies.startScheduleLiveActivity
+        self.endLiveActivityUseCase = dependencies.endScheduleLiveActivity
         startObservingChanges()
     }
 
@@ -98,9 +102,45 @@ final class ScheduleViewModel {
         observeTask?.cancel()
     }
 
+    /// 라이브 액티비티 활성 상태 — 동그라미 버튼의 시각 상태 + 토글 분기.
+    private(set) var liveActivityActive = false
+    /// 라이브 액티비티 시작 실패 등 사용자에게 알릴 에러 — View가 alert로 표시.
+    var errorMessage: String?
+
     /// + 버튼 액션 — 신규 이벤트 시트를 연다.
     func presentNewEvent() {
         showingNewEvent = true
+    }
+
+    /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
+    /// 활성이면 즉시 종료. 아니면 `eventsByDay`에서 오늘·내일 구간을 분리해 service로 보낸다.
+    /// 그룹 매칭 — 오늘 자정~내일 자정 / 내일 자정~모레 자정. 일정 없는 날 그룹은 자연히 제외.
+    func toggleLiveActivity() async {
+        if liveActivityActive {
+            await endLiveActivityUseCase()
+            liveActivityActive = false
+            return
+        }
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: .now)
+        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? startOfToday
+        let startOfDayAfter = calendar.date(byAdding: .day, value: 1, to: startOfTomorrow) ?? startOfTomorrow
+
+        var todayEvents: [CalendarEvent] = []
+        var tomorrowEvents: [CalendarEvent] = []
+        for group in eventsByDay {
+            if group.date >= startOfToday && group.date < startOfTomorrow {
+                todayEvents.append(contentsOf: group.events)
+            } else if group.date >= startOfTomorrow && group.date < startOfDayAfter {
+                tomorrowEvents.append(contentsOf: group.events)
+            }
+        }
+        do {
+            try await startLiveActivityUseCase(today: todayEvents, tomorrow: tomorrowEvents)
+            liveActivityActive = true
+        } catch {
+            errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+        }
     }
 
     /// 시트의 저장·취소 콜백에서 호출 — 시트를 닫는다.

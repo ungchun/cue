@@ -41,6 +41,21 @@ struct Dependencies: Sendable {
     /// 마지막으로 선택된 세션 id 영속화 — 앱 재시작 후에도 같은 세션을 메인 화면에 띄운다.
     var fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     var saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
+
+    // MARK: - Live Activity
+
+    /// 라이브 액티비티 트리거 — Focus는 자동(세션 시작/페이즈 전환), Reminder/Schedule은 사용자가
+    /// 동그라미 버튼으로 토글. 구체 service는 `CompositionRoot`에서 `ActivityKitLiveActivityService`,
+    /// preview는 `DisabledLiveActivityService`(no-op).
+    var startFocusLiveActivity: StartFocusLiveActivityUseCase
+    var updateFocusLiveActivity: UpdateFocusLiveActivityUseCase
+    var endFocusLiveActivity: EndFocusLiveActivityUseCase
+    var startReminderLiveActivity: StartReminderLiveActivityUseCase
+    var endReminderLiveActivity: EndReminderLiveActivityUseCase
+    var startScheduleLiveActivity: StartScheduleLiveActivityUseCase
+    var endScheduleLiveActivity: EndScheduleLiveActivityUseCase
+    /// 앱 시작 시 호출 — 시스템에 살아있는 Activity 인스턴스를 service가 재포착.
+    var syncLiveActivities: SyncLiveActivitiesUseCase
 }
 
 extension EnvironmentValues {
@@ -106,6 +121,9 @@ extension Dependencies {
         // 프리뷰는 인메모리 — 실제 영속화 동작은 CompositionRoot의 UserDefaults 구현으로.
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
 
+        // 프리뷰는 no-op service — `isEnabled = false`라 start/update가 모두 즉시 return.
+        let liveActivityService: any LiveActivityService = DisabledLiveActivityService()
+
         return Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
@@ -128,7 +146,15 @@ extension Dependencies {
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
             fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
-            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository)
+            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
+            startFocusLiveActivity: StartFocusLiveActivityUseCase(service: liveActivityService),
+            updateFocusLiveActivity: UpdateFocusLiveActivityUseCase(service: liveActivityService),
+            endFocusLiveActivity: EndFocusLiveActivityUseCase(service: liveActivityService),
+            startReminderLiveActivity: StartReminderLiveActivityUseCase(service: liveActivityService),
+            endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
+            startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: liveActivityService),
+            endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: liveActivityService),
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService)
         )
     }
 }

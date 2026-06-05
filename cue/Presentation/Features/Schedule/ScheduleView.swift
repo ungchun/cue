@@ -32,9 +32,7 @@ struct ScheduleView: View {
         // List 첫 row에 직접 박는다. List가 가진 자체 top inset 덕에 toolbar↔title 간격이
         // 자연스럽게 맞고, 두 탭의 헤더 라인이 일치한다.
         List {
-            Text("타임라인")
-                .font(.largeTitle.bold())
-                .listRowSeparator(.hidden)
+            timelineTitleRow
 
             ForEach(viewModel.eventsByDay) { group in
                 daySection(group)
@@ -93,6 +91,44 @@ struct ScheduleView: View {
                 onCompletion: { viewModel.dismissEdit() }
             )
         }
+        .alert("오류", isPresented: errorBinding) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+    }
+
+    /// errorMessage가 있으면 alert 표시 — ReminderView와 동일 패턴.
+    private var errorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )
+    }
+
+    /// List 안에 직접 그리는 large title — "타임라인". 우측엔 라이브 액티비티 트리거
+    /// 자리(`liveActivityCircle`) — 데모 UI. ReminderView `listTitleRow`와 동일 패턴.
+    private var timelineTitleRow: some View {
+        HStack(alignment: .center) {
+            Text("타임라인")
+                .font(.largeTitle.bold())
+            Spacer()
+            liveActivityCircle
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    /// 라이브 액티비티 토글 버튼 — 탭하면 오늘·내일 일정을 잠금화면·Dynamic Island에
+    /// 띄우거나 종료한다. 활성/비활성 색 분기는 ReminderView와 동일 패턴.
+    private var liveActivityCircle: some View {
+        Button {
+            Task { await viewModel.toggleLiveActivity() }
+        } label: {
+            Circle()
+                .fill(viewModel.liveActivityActive ? Color.accentColor : Color.secondary)
+                .frame(width: Spacing.xxl, height: Spacing.xxl)
+        }
+        .buttonStyle(.plain)
     }
 
     /// 좌상단 "캘린더" 버튼 — Apple 캘린더 앱을 연다. `calshow://`는 캘린더 앱의 표준

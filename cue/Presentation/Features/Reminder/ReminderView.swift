@@ -357,11 +357,31 @@ struct ReminderView: View {
 
     /// List 안에 직접 그리는 large title — selection별 라벨·색을 적용. 스크롤되면
     /// 컨텐츠와 함께 위로 사라지고 navigation bar inline title이 채워진다.
+    /// 우측엔 라이브 액티비티 트리거 자리(`liveActivityCircle`) — 데모 UI.
     private var listTitleRow: some View {
-        Text(currentTitle)
-            .font(.largeTitle.bold())
-            .foregroundStyle(currentTitleColor)
-            .listRowSeparator(.hidden)
+        HStack(alignment: .center) {
+            Text(currentTitle)
+                .font(.largeTitle.bold())
+                .foregroundStyle(currentTitleColor)
+            Spacer()
+            liveActivityCircle
+        }
+        .listRowSeparator(.hidden)
+    }
+
+    /// 라이브 액티비티 토글 버튼 — 탭하면 현재 selection의 미리알림을 잠금화면·
+    /// Dynamic Island에 띄우거나 종료한다. 활성일 땐 `accentColor`로 채워지고,
+    /// 비활성일 땐 `.secondary`로 옅어져 상태를 한눈에 구분.
+    /// Spacing.xxl(48pt) — HIG 최소 터치 타깃(44pt) 이상.
+    private var liveActivityCircle: some View {
+        Button {
+            Task { await viewModel.toggleLiveActivity(listTitle: currentTitle) }
+        } label: {
+            Circle()
+                .fill(viewModel.liveActivityActive ? Color.accentColor : Color.secondary)
+                .frame(width: Spacing.xxl, height: Spacing.xxl)
+        }
+        .buttonStyle(.plain)
     }
 
     /// 현재 selection의 large title 라벨 — 사용자 리스트면 그 이름, 시스템 필터면 필터 라벨.
