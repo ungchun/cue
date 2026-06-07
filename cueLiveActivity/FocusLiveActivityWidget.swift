@@ -59,13 +59,13 @@ struct FocusLiveActivityWidget: Widget {
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
         // 단순 구조: [좌 일시정지] [가운데 VStack(타이틀/타이머/phase)] [우 종료].
-        // 가운데 VStack에 .frame(maxWidth: .infinity)로 좌·우 button 사이 영역 전부 흡수.
-        // VStack 자식들이 frame center에 정렬되어 24:46 center = LA 정중앙.
-        HStack(spacing: 0) {
+        // 가운데 VStack에 .frame(maxWidth: .infinity, alignment: .center)로 button 사이 영역 흡수.
+        // alignment 명시 — SwiftUI default가 .center지만 widget runtime에서 명시가 안전.
+        HStack(alignment: .center, spacing: 0) {
             pauseResumeButton(state: context.state)
                 .frame(width: 56)
             centerStack(context: context)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .center)
             endButton
                 .frame(width: 56)
         }
@@ -147,18 +147,23 @@ struct FocusLiveActivityWidget: Widget {
     private func centerStack(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        VStack(spacing: Spacing.xxs) {
+        // alignment 명시 + 각 Text가 frame을 부모 width로 채우고 그 안에서 center —
+        // SwiftUI default가 center지만 widget context에서 명시적으로 강제하는 게 결정적.
+        VStack(alignment: .center, spacing: Spacing.xxs) {
             Text(context.attributes.sessionTitle)
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .center)
             timerText(state: context.state)
                 .font(.system(size: 48, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .center)
             Text(phaseLabel(context.state.phase))
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
