@@ -48,8 +48,15 @@ struct FocusLiveActivityWidget: Widget {
 
     // MARK: - Lock screen / Expanded
 
-    /// 잠금화면 LA — 가장 단순한 SwiftUI 표준 패턴.
-    /// HStack { 일시정지, Spacer, 중앙 VStack, Spacer, 종료 }.
+    /// 잠금화면 LA — 중앙 정렬을 버튼 레이아웃과 분리한 overlay 패턴.
+    ///
+    /// **왜 overlay** — `HStack { 버튼, Spacer, 중앙, Spacer, 버튼 }`은 이론상 정중앙이지만
+    /// WidgetKit 렌더에서 `Button(intent:)`의 hit area/intent metadata 때문에 좌우 버튼의
+    /// 실제 레이아웃 폭이 시각 폭과 어긋나 중앙이 한쪽으로 치우친다. frame/fixedSize/
+    /// GeometryReader 시도가 다 안 먹은 원인이 여기. 해법은 *중앙 위치 결정을 버튼 폭과
+    /// 디커플*하는 것. `HStack { pause, Spacer, end }`로 버튼만 좌우 edge에 고정하고,
+    /// 중앙 VStack은 같은 컨테이너의 `.overlay`로 얹는다 — overlay의 default alignment
+    /// `.center`가 부모(=가용 폭 전체)의 기하 중심에 무조건 정렬한다.
     @ViewBuilder
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
@@ -57,21 +64,10 @@ struct FocusLiveActivityWidget: Widget {
         HStack {
             pauseResumeButton(state: context.state)
             Spacer()
-            VStack(spacing: Spacing.xxs) {
-                Text(context.attributes.sessionTitle)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                timerText(state: context.state)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.primary)
-                Text(phaseLabel(context.state.phase))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
             endButton
+        }
+        .overlay {
+            centerStack(context: context)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
