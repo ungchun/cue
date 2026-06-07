@@ -58,28 +58,19 @@ struct FocusLiveActivityWidget: Widget {
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // GeometryReader + .position absolute 좌표 — SwiftUI HStack/ZStack의 layout 미세 차이를
-        // 완전히 우회. 24:46 center = width / 2 = LA 정중앙으로 강제. button center도 양쪽
-        // edge에서 동일한 inset 좌표.
-        GeometryReader { geo in
-            let halfHeight = geo.size.height / 2
-            let buttonHalf: CGFloat = 28  // 56 / 2
-            let edgeInset: CGFloat = Spacing.md  // 16
-
-            // 중앙 24:46 — 정확히 width의 절반 좌표에 박힘
-            centerStack(context: context)
-                .position(x: geo.size.width / 2, y: halfHeight)
-
-            // 좌측 일시정지 — left edge에서 (16 + 28) = 44pt 위치
+        // 단순 구조: [좌 일시정지] [가운데 VStack(타이틀/타이머/phase)] [우 종료].
+        // 가운데 VStack에 .frame(maxWidth: .infinity)로 좌·우 button 사이 영역 전부 흡수.
+        // VStack 자식들이 frame center에 정렬되어 24:46 center = LA 정중앙.
+        HStack(spacing: 0) {
             pauseResumeButton(state: context.state)
-                .position(x: edgeInset + buttonHalf, y: halfHeight)
-
-            // 우측 종료 — right edge에서 (16 + 28) = 44pt 위치
+                .frame(width: 56)
+            centerStack(context: context)
+                .frame(maxWidth: .infinity)
             endButton
-                .position(x: geo.size.width - edgeInset - buttonHalf, y: halfHeight)
+                .frame(width: 56)
         }
-        // GeometryReader는 부모 height을 흡수 — minHeight 명시로 LA 영역 확보.
-        .frame(minHeight: 120)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.md)
         .overlay {
             timerStroke(
                 state: context.state,
