@@ -75,9 +75,9 @@ struct FocusLiveActivityWidget: Widget {
         }
         // HStack이 부모 width를 채워야 양쪽 Spacer가 균등 — 명시 없으면 0폭으로 잡힐 수 있음.
         .frame(maxWidth: .infinity)
-        // inner horizontal padding — 좌·우 안쪽으로 32pt씩. 좌측 button이 stroke·LA mask
-        // 영역과 충분히 떨어져 잘림 없음.
-        .padding(.horizontal, Spacing.xl)
+        // inner horizontal padding — 좌·우 안쪽으로 8pt씩. button을 LA edge에 가깝게 밀어
+        // 시각 무게 좌·우 끝으로 분산. centerStack은 button-safe padding으로 overlap 방지.
+        .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.md)
         .overlay {
             timerStroke(
