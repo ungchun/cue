@@ -48,25 +48,79 @@ struct FocusLiveActivityWidget: Widget {
 
     // MARK: - Lock screen / Expanded
 
-    /// 잠금화면 표시. expanded와 동일 구조 — 외곽 sessionColor stroke + 3 column.
+    /// 잠금화면 표시. 외곽 sessionColor stroke가 **timer에 맞춰 차오르는** 둥근 사각형 path +
+    /// 좌·우 버튼 사이 가운데 정렬된 3단 콘텐츠.
+    ///
+    /// **레이아웃 — HStack + Spacer 균등 배분**: 좌·우 버튼이 동일 사이즈(56pt)라 양쪽 Spacer가
+    /// 같은 width를 가져 centerStack은 자연 정중앙. ZStack 절대 정렬을 쓰면 centerStack 폭이
+    /// 좌·우 버튼 영역으로 침범해 overlap이 생긴다 — HStack이 visual containment를 보장.
     @ViewBuilder
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        HStack(spacing: Spacing.md) {
+        HStack(spacing: Spacing.sm) {
             pauseResumeButton(state: context.state)
             Spacer(minLength: Spacing.zero)
             centerStack(context: context)
             Spacer(minLength: Spacing.zero)
             endButton
         }
-        .padding(.horizontal, Spacing.md)
+        // `.frame(maxWidth: .infinity)` — HStack에 부모 width를 명시로 흘려야 Spacer가
+        // 좌·우 균등 배분된다. 명시 안 하면 일부 widget context에서 Spacer가 0폭으로
+        // 잡혀 좌·우 자식이 frame edge에 붙는다(LA system mask에 잘림).
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.md)
         .overlay {
-            RoundedRectangle(cornerRadius: Spacing.xl, style: .continuous)
-                .strokeBorder(sessionColor(attributes: context.attributes), lineWidth: 4)
+            timerStroke(
+                state: context.state,
+                color: sessionColor(attributes: context.attributes)
+            )
         }
-        .padding(Spacing.xs)
+        // outer padding — LA system mask가 컨테이너 RoundedRect로 자르므로 content·stroke가
+        // 그 mask 안쪽으로 충분히 들어와야 한다. xs(4)는 좌측 element가 잘림 — sm(8) 이상으로.
+        .padding(Spacing.sm)
+    }
+
+    /// 외곽 stroke — pause 분기. dynamic은 `TimelineView(.periodic)`이 매초 view body를 다시
+    /// 평가해 그 시각의 progress로 trim. paused는 정적.
+    ///
+    /// **왜 TimelineView**: `ProgressView(timerInterval:) + custom ProgressViewStyle`은 widget
+    /// runtime에서 fractionCompleted가 매 프레임 갱신되지 않는다(시스템 default style만 갱신
+    /// 대상). `TimelineView(.periodic(by: 1))`은 widget context에서도 자체 timer로 view body가
+    /// 매 schedule 시점에 재평가되어 custom path drawing에 그 시각이 그대로 흘러간다 —
+    /// WidgetKit reload budget을 소비하지 않는 별도 메커니즘.
+    @ViewBuilder
+    private func timerStroke(
+        state: FocusLiveActivityAttributes.ContentState,
+        color: Color
+    ) -> some View {
+        if let pauseTime = state.pauseTime {
+            StrokedRoundedRect(
+                progress: progress(at: pauseTime, state: state),
+                color: color
+            )
+        } else {
+            // 0.5초 — 1초면 사람 눈에 뚝뚝 끊기고, 너무 짧게 가면 widget budget 영향.
+            // 0.5초가 매끄러움/리소스의 보통 spot.
+            TimelineView(.periodic(from: state.phaseStartDate, by: 0.5)) { context in
+                StrokedRoundedRect(
+                    progress: progress(at: context.date, state: state),
+                    color: color
+                )
+            }
+        }
+    }
+
+    /// 특정 시점의 phase 진행 비율 — 0(시작) → 1(종료) clamp.
+    private func progress(
+        at date: Date,
+        state: FocusLiveActivityAttributes.ContentState
+    ) -> Double {
+        let total = state.phaseEndDate.timeIntervalSince(state.phaseStartDate)
+        guard total > 0 else { return 0 }
+        let elapsed = date.timeIntervalSince(state.phaseStartDate)
+        return min(1, max(0, elapsed / total))
     }
 
     /// Dynamic Island expanded center — 잠금화면과 같은 3 column 구조(외곽 stroke 없음:
@@ -86,30 +140,35 @@ struct FocusLiveActivityWidget: Widget {
     }
 
     /// 중앙 3단 — 세션 타이틀(상단) / 큰 mm:ss 카운트다운(중간) / phase 라벨(하단).
+    ///
+    /// **디자인 시스템 예외 — 카운트다운 폰트 크기**: 잠금화면 LA의 시각 무게 중심이라
+    /// 텍스트 스타일 최대(`.largeTitle` ≈ 34pt)보다 크게. 메인 앱 FocusView의 56pt와
+    /// 동일 패턴으로 `.system(size:)`를 명시.
     private func centerStack(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
         VStack(spacing: Spacing.xxs) {
             Text(context.attributes.sessionTitle)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
+                .font(.headline)
+                .foregroundStyle(.primary)
                 .lineLimit(1)
             timerText(state: context.state)
-                .font(.largeTitle.weight(.bold))
+                .font(.system(size: 48, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.primary)
             Text(phaseLabel(context.state.phase))
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
 
     /// 좌측 일시정지/재개 버튼 — `pauseTime` 유무로 아이콘 토글, 액션은 단일 intent.
+    /// 디자인 시스템 예외 — 사용자 액션 타깃이라 토큰 최대(`Spacing.xxl=48`)보다 크게 56pt.
     private func pauseResumeButton(state: FocusLiveActivityAttributes.ContentState) -> some View {
         Button(intent: PauseResumeFocusIntent()) {
             Image(systemName: state.pauseTime == nil ? "pause.fill" : "play.fill")
-                .font(.title3)
-                .frame(width: Spacing.xxl, height: Spacing.xxl)
+                .font(.title2)
+                .frame(width: 56, height: 56)
                 .background(Circle().fill(Color.secondary.opacity(0.3)))
                 .foregroundStyle(.primary)
         }
@@ -117,12 +176,12 @@ struct FocusLiveActivityWidget: Widget {
         .accessibilityLabel(state.pauseTime == nil ? "일시정지" : "재개")
     }
 
-    /// 우측 종료 버튼 — destructive 컨벤션대로 .red 배경.
+    /// 우측 종료 버튼 — destructive 컨벤션대로 .red 배경. 일시정지 버튼과 동일 크기.
     private var endButton: some View {
         Button(intent: EndFocusIntent()) {
             Image(systemName: "xmark")
-                .font(.title3)
-                .frame(width: Spacing.xxl, height: Spacing.xxl)
+                .font(.title2)
+                .frame(width: 56, height: 56)
                 .background(Circle().fill(Color.red))
                 .foregroundStyle(.white)
         }
@@ -204,6 +263,35 @@ struct FocusLiveActivityWidget: Widget {
         case .focus: return "집중 중"
         case .breakTime: return "휴식 중"
         case .completed: return "완료"
+        }
+    }
+}
+
+// MARK: - 외곽 timer-driven stroke
+
+/// 둥근 사각형 path를 따라 `progress` 비율만큼 stroke를 그리는 shape. `TimelineView`가
+/// 매초 새 `progress`로 이 view를 다시 만들어 path 진행을 따라 stroke가 차오르는 효과.
+///
+/// **lineCap은 `.butt`** — round로 두면 progress가 0.0 / 1.0 부근에서 끝점이 모서리 밖으로
+/// 살짝 튀어 어색하다. butt cap이 trim 진행과 가장 깔끔.
+private struct StrokedRoundedRect: View {
+    let progress: Double
+    let color: Color
+
+    var body: some View {
+        let cornerRadius = Spacing.xl
+        let lineWidth: CGFloat = 4
+        ZStack {
+            // 배경 — 같은 색의 옅은 stroke. 0%에서도 외곽이 보이도록.
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(color.opacity(0.2), lineWidth: lineWidth)
+            // progress — path 진행을 따라 trim된 stroke.
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .trim(from: 0, to: max(0, min(1, progress)))
+                .stroke(
+                    color,
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt)
+                )
         }
     }
 }
