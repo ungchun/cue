@@ -63,7 +63,11 @@
 		65D105422FD07A7600081EB7 /* Exceptions for "cue" folder in "cueLiveActivityExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Presentation/DesignSystem/Foundation/Color+Hex.swift",
 				Presentation/DesignSystem/Foundation/Spacing.swift,
+				Shared/AppGroup/FocusLiveActivityAction.swift,
+				Shared/AppGroup/FocusLiveActivityActionQueue.swift,
+				Shared/AppGroup/SharedAppGroup.swift,
 				Shared/LiveActivity/FocusLiveActivityAttributes.swift,
 				Shared/LiveActivity/LiveEventItem.swift,
 				Shared/LiveActivity/LiveFocusPhase.swift,
