@@ -160,6 +160,7 @@ struct FocusLiveActivityWidget: Widget {
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                     .background(Color.green.opacity(0.4))
                 Spacer(minLength: 0)
             }
@@ -172,6 +173,7 @@ struct FocusLiveActivityWidget: Widget {
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.primary)
+                    .fixedSize(horizontal: true, vertical: false)
                     .background(Color.green.opacity(0.4))
                 Spacer(minLength: 0)
             }
@@ -183,6 +185,7 @@ struct FocusLiveActivityWidget: Widget {
                 Text(phaseLabel(context.state.phase))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: true, vertical: false)
                     .background(Color.green.opacity(0.4))
                 Spacer(minLength: 0)
             }
