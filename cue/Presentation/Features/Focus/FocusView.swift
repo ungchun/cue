@@ -182,25 +182,36 @@ struct FocusView: View {
 
     // MARK: - 하단 컨트롤
 
-    /// running이면 일시정지/스킵/종료, idle이면 ▶ 시작 버튼.
-    /// 모든 버튼은 `.primary` 무채색 한 톤으로 통일 — 진행 표시(ring)는 세션 색,
-    /// 컨트롤은 무채색으로 분리해 시선이 ring으로 묶이게 한다.
+    /// 컨트롤 레이아웃 — **가운데 자리 = 현재 상태의 primary 토글**, 종료는 destructive로 분리.
+    /// - **idle** — ▶ 시작(sessionColor) 단독.
+    /// - **running** — [스킵] [⏸ 일시정지] [종료(.red)]. 가운데 일시정지 무채색.
+    /// - **paused** — [스킵] [▶ 재개] [종료(.red)]. 가운데 재개 `sessionColor`로 강조.
+    ///
+    /// 가운데 위치를 토글 자리로 못박아두면 사용자는 같은 자리를 두 번 탭해 일시정지↔재개를
+    /// 오갈 수 있다(Fitts's law — 같은 target에 반복 액션은 cost 0). 또한 ring 트림과 같은
+    /// 색(sessionColor)이 재개 버튼에만 떠 있어 "이 세션을 다시 켜는 액션"이라는 의미가
+    /// 색만으로 전달된다. 종료는 HIG destructive 컨벤션대로 `.red`로 명시 분리.
     @ViewBuilder
     private var controlRow: some View {
         if let session = viewModel.session {
             HStack(spacing: Spacing.xl) {
-                controlButton(
-                    systemImage: session.isPaused ? "play.fill" : "pause.fill",
-                    label: session.isPaused ? "재개" : "일시정지"
-                ) {
-                    session.isPaused ? session.resume() : session.pause()
-                }
-
                 controlButton(systemImage: "forward.end.fill", label: "스킵") {
                     session.skip()
                 }
-
-                controlButton(systemImage: "xmark", label: "종료") {
+                if session.isPaused {
+                    controlButton(
+                        systemImage: "play.fill",
+                        label: "재개",
+                        tint: sessionColor
+                    ) {
+                        session.resume()
+                    }
+                } else {
+                    controlButton(systemImage: "pause.fill", label: "일시정지") {
+                        session.pause()
+                    }
+                }
+                controlButton(systemImage: "xmark", label: "종료", tint: .red) {
                     viewModel.stopSession()
                 }
             }
@@ -209,7 +220,8 @@ struct FocusView: View {
         }
     }
 
-    /// idle 시 메인 화면의 시작 진입점. `.primary` 톤 — 컨트롤 버튼과 동일.
+    /// idle 시 메인 화면의 시작 진입점. **`sessionColor`로 강조** — 재개 버튼과 같은
+    /// 색이라 "이 세션을 켜는 액션 = 이 색"이라는 일관된 의미를 만든다.
     private var startButton: some View {
         Button {
             viewModel.start()
@@ -218,8 +230,8 @@ struct FocusView: View {
                 Image(systemName: "play.fill")
                     .font(.title)
                     .frame(width: Spacing.xxl, height: Spacing.xxl)
-                    .background(Circle().fill(Color.primary.opacity(0.12)))
-                    .foregroundStyle(Color.primary)
+                    .background(Circle().fill(sessionColor.opacity(0.15)))
+                    .foregroundStyle(sessionColor)
                 Text("시작")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -229,19 +241,24 @@ struct FocusView: View {
         .accessibilityLabel("시작")
     }
 
-    /// 컨트롤 단일 버튼 — 원형 무채색 배경 + `.primary` 아이콘 + `.secondary` 라벨.
+    /// 컨트롤 단일 버튼 — 원형 배경 + 아이콘 + `.secondary` 라벨. tint 기본 `.primary`
+    /// 무채색. 재개 버튼처럼 강조가 필요한 경우 `tint: sessionColor`로 호출.
     private func controlButton(
         systemImage: String,
         label: String,
+        tint: Color = .primary,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        // 무채색 톤은 .12, 채도 있는 sessionColor는 .15 — 동일 alpha면 sessionColor 쪽이
+        // 시각상 더 옅게 깔리기 때문에 보정.
+        let fillOpacity: Double = tint == .primary ? 0.12 : 0.15
+        return Button(action: action) {
             VStack(spacing: Spacing.xs) {
                 Image(systemName: systemImage)
                     .font(.title2)
                     .frame(width: Spacing.xxl, height: Spacing.xxl)
-                    .background(Circle().fill(Color.primary.opacity(0.12)))
-                    .foregroundStyle(Color.primary)
+                    .background(Circle().fill(tint.opacity(fillOpacity)))
+                    .foregroundStyle(tint)
                 Text(label)
                     .font(.caption)
                     .foregroundStyle(.secondary)
