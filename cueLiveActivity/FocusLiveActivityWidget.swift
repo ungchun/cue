@@ -58,11 +58,12 @@ struct FocusLiveActivityWidget: Widget {
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // ZStack absolute center — centerStack은 부모 ZStack의 정확한 정중앙에 박힌다.
-        // 양쪽 버튼은 별도 HStack layer로 LA 좌·우 edge에 위치. centerStack의 width와
-        // 무관하게 24:46이 LA width / 2 좌표에 정렬되어 layout 미세 차이를 차단.
+        // ZStack absolute center — centerStack은 ZStack 정확한 정중앙에 박힘. 양쪽 button 영역과
+        // 겹치지 않도록 centerStack에 양쪽 56(button width)+sm(spacing) 만큼 horizontal padding.
+        // 양쪽 padding이 동일하므로 centerStack 가용 영역 center = ZStack center = LA center 유지.
         ZStack {
             centerStack(context: context)
+                .padding(.horizontal, 56 + Spacing.sm)
             HStack(spacing: 0) {
                 pauseResumeButton(state: context.state)
                     .frame(width: 56)
