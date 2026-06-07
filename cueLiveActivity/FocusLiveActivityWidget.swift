@@ -58,18 +58,23 @@ struct FocusLiveActivityWidget: Widget {
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        HStack(spacing: Spacing.sm) {
+        // 핵심 — `HStack.spacing = 0` + 양쪽 버튼에 `.frame(width:)` 명시 + 양쪽 Spacer(0)으로
+        // 좌·우 완벽 대칭. spacing이 있으면 자식 사이 간격이 시각 무게 비대칭을 만들고,
+        // 자연 width의 button은 widget context에서 가끔 미세하게 다르게 잡힌다.
+        HStack(spacing: 0) {
             pauseResumeButton(state: context.state)
-            Spacer(minLength: Spacing.zero)
+                .frame(width: 56)
+            Spacer(minLength: 0)
             centerStack(context: context)
-            Spacer(minLength: Spacing.zero)
+            Spacer(minLength: 0)
             endButton
+                .frame(width: 56)
         }
-        // `.frame(maxWidth: .infinity)` — HStack에 부모 width를 명시로 흘려야 Spacer가
-        // 좌·우 균등 배분된다. 명시 안 하면 일부 widget context에서 Spacer가 0폭으로
-        // 잡혀 좌·우 자식이 frame edge에 붙는다(LA system mask에 잘림).
+        // HStack이 부모 width를 채워야 양쪽 Spacer가 균등 — 명시 없으면 0폭으로 잡힐 수 있음.
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, Spacing.lg)
+        // inner horizontal padding — 좌·우 안쪽으로 32pt씩. 좌측 button이 stroke·LA mask
+        // 영역과 충분히 떨어져 잘림 없음.
+        .padding(.horizontal, Spacing.xl)
         .padding(.vertical, Spacing.md)
         .overlay {
             timerStroke(
@@ -77,9 +82,9 @@ struct FocusLiveActivityWidget: Widget {
                 color: sessionColor(attributes: context.attributes)
             )
         }
-        // outer padding — LA system mask가 컨테이너 RoundedRect로 자르므로 content·stroke가
-        // 그 mask 안쪽으로 충분히 들어와야 한다. xs(4)는 좌측 element가 잘림 — sm(8) 이상으로.
-        .padding(Spacing.sm)
+        // outer padding — LA system mask가 RoundedRect로 자르므로 content·stroke가
+        // 그 mask 안쪽으로 충분히 들어와야. md(16)로 안전 영역 확보.
+        .padding(Spacing.md)
     }
 
     /// 외곽 stroke — pause 분기. dynamic은 `TimelineView(.periodic)`이 매초 view body를 다시
