@@ -58,27 +58,28 @@ struct FocusLiveActivityWidget: Widget {
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // ZStack absolute center — centerStack은 ZStack 정확한 정중앙에 박힘. 양쪽 button 영역과
-        // 겹치지 않도록 centerStack에 양쪽 56(button width)+sm(spacing) 만큼 horizontal padding.
-        // 양쪽 padding이 동일하므로 centerStack 가용 영역 center = ZStack center = LA center 유지.
-        ZStack {
+        // GeometryReader + .position absolute 좌표 — SwiftUI HStack/ZStack의 layout 미세 차이를
+        // 완전히 우회. 24:46 center = width / 2 = LA 정중앙으로 강제. button center도 양쪽
+        // edge에서 동일한 inset 좌표.
+        GeometryReader { geo in
+            let halfHeight = geo.size.height / 2
+            let buttonHalf: CGFloat = 28  // 56 / 2
+            let edgeInset: CGFloat = Spacing.md  // 16
+
+            // 중앙 24:46 — 정확히 width의 절반 좌표에 박힘
             centerStack(context: context)
-                .padding(.horizontal, 56 + Spacing.sm)
-            HStack(spacing: 0) {
-                pauseResumeButton(state: context.state)
-                    .frame(width: 56)
-                Spacer(minLength: 0)
-                endButton
-                    .frame(width: 56)
-            }
-            .frame(maxWidth: .infinity)
+                .position(x: geo.size.width / 2, y: halfHeight)
+
+            // 좌측 일시정지 — left edge에서 (16 + 28) = 44pt 위치
+            pauseResumeButton(state: context.state)
+                .position(x: edgeInset + buttonHalf, y: halfHeight)
+
+            // 우측 종료 — right edge에서 (16 + 28) = 44pt 위치
+            endButton
+                .position(x: geo.size.width - edgeInset - buttonHalf, y: halfHeight)
         }
-        // HStack이 부모 width를 채워야 양쪽 Spacer가 균등 — 명시 없으면 0폭으로 잡힐 수 있음.
-        .frame(maxWidth: .infinity)
-        // inner horizontal padding — 좌·우 안쪽으로 8pt씩. button을 LA edge에 가깝게 밀어
-        // 시각 무게 좌·우 끝으로 분산. centerStack은 button-safe padding으로 overlap 방지.
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.md)
+        // GeometryReader는 부모 height을 흡수 — minHeight 명시로 LA 영역 확보.
+        .frame(minHeight: 120)
         .overlay {
             timerStroke(
                 state: context.state,
