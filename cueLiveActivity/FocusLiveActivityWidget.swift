@@ -58,19 +58,17 @@ struct FocusLiveActivityWidget: Widget {
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // 단순 구조: [좌 일시정지] [가운데 VStack(타이틀/타이머/phase)] [우 종료].
-        // **외부 HStack에 .frame(maxWidth: .infinity)** — 이게 누락되면 HStack가 LA width를
-        // 안 받고 좌측 정렬돼 centerStack 영역이 LA center에서 좌측으로 치우침(35pt 측정).
-        HStack(alignment: .center, spacing: 0) {
-            pauseResumeButton(state: context.state)
-                .frame(width: 56)
+        // GeometryReader + .position 절대 좌표 — SwiftUI HStack layout의 미세 차이를 완전 제거.
+        // centerStack은 정확히 width / 2 좌표에 박힘, button은 LA edge에서 동일 inset.
+        GeometryReader { geo in
             centerStack(context: context)
-                .frame(maxWidth: .infinity, alignment: .center)
+                .position(x: geo.size.width / 2, y: geo.size.height / 2)
+            pauseResumeButton(state: context.state)
+                .position(x: 28 + Spacing.sm, y: geo.size.height / 2)
             endButton
-                .frame(width: 56)
+                .position(x: geo.size.width - 28 - Spacing.sm, y: geo.size.height / 2)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Spacing.sm)
+        .frame(minHeight: 130)
         .padding(.vertical, Spacing.md)
         .overlay {
             timerStroke(
