@@ -147,23 +147,33 @@ struct FocusLiveActivityWidget: Widget {
     private func centerStack(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // alignment 명시 + 각 Text가 frame을 부모 width로 채우고 그 안에서 center —
-        // SwiftUI default가 center지만 widget context에서 명시적으로 강제하는 게 결정적.
+        // 각 row를 HStack + 양쪽 Spacer로 — `.frame(maxWidth: .infinity, alignment: .center)`가
+        // widget runtime에서 효과 없는 케이스(측정상 59pt 좌측 치우침). Spacer 균등 배분이
+        // 가장 결정적.
         VStack(alignment: .center, spacing: Spacing.xxs) {
-            Text(context.attributes.sessionTitle)
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .center)
-            timerText(state: context.state)
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .center)
-            Text(phaseLabel(context.state.phase))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Text(context.attributes.sessionTitle)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                timerText(state: context.state)
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Text(phaseLabel(context.state.phase))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
         }
     }
 
