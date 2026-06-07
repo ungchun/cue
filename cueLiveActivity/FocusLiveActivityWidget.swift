@@ -147,9 +147,11 @@ struct FocusLiveActivityWidget: Widget {
     private func centerStack(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // 각 row를 HStack + 양쪽 Spacer로 — `.frame(maxWidth: .infinity, alignment: .center)`가
-        // widget runtime에서 효과 없는 케이스(측정상 59pt 좌측 치우침). Spacer 균등 배분이
-        // 가장 결정적.
+        // 각 HStack에 .frame(maxWidth: .infinity) — HStack이 부모 VStack의 frame width를
+        // 명시적으로 받아 Spacer가 양쪽으로 늘어날 영역 확보. 없으면 HStack 자연 width =
+        // Text width라 Spacer가 0폭 collapse.
+        //
+        // **디버그 색깔** — VStack(red), 각 HStack(blue), Text(green). 시각 확인 후 제거.
         VStack(alignment: .center, spacing: Spacing.xxs) {
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
@@ -157,24 +159,36 @@ struct FocusLiveActivityWidget: Widget {
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+                    .background(Color.green.opacity(0.4))
                 Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity)
+            .background(Color.blue.opacity(0.2))
+
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
                 timerText(state: context.state)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.primary)
+                    .background(Color.green.opacity(0.4))
                 Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity)
+            .background(Color.blue.opacity(0.2))
+
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
                 Text(phaseLabel(context.state.phase))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .background(Color.green.opacity(0.4))
                 Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity)
+            .background(Color.blue.opacity(0.2))
         }
+        .background(Color.red.opacity(0.15))
     }
 
     /// 좌측 일시정지/재개 버튼 — `pauseTime` 유무로 아이콘 토글, 액션은 단일 intent.
