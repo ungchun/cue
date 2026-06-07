@@ -59,8 +59,8 @@ struct FocusLiveActivityWidget: Widget {
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
         // 단순 구조: [좌 일시정지] [가운데 VStack(타이틀/타이머/phase)] [우 종료].
-        // 가운데 VStack에 .frame(maxWidth: .infinity, alignment: .center)로 button 사이 영역 흡수.
-        // alignment 명시 — SwiftUI default가 .center지만 widget runtime에서 명시가 안전.
+        // **외부 HStack에 .frame(maxWidth: .infinity)** — 이게 누락되면 HStack가 LA width를
+        // 안 받고 좌측 정렬돼 centerStack 영역이 LA center에서 좌측으로 치우침(35pt 측정).
         HStack(alignment: .center, spacing: 0) {
             pauseResumeButton(state: context.state)
                 .frame(width: 56)
@@ -69,6 +69,7 @@ struct FocusLiveActivityWidget: Widget {
             endButton
                 .frame(width: 56)
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.md)
         .overlay {
