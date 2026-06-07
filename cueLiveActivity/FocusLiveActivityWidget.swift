@@ -16,10 +16,12 @@ import WidgetKit
 /// - **Dynamic Island compact**: 좌측 `sessionColor` 진행 ring + 우측 카운트다운.
 /// - **Dynamic Island minimal**: `sessionColor` 작은 timer 아이콘.
 ///
-/// **타이머 표시 분기** — `pauseTime`이 nil이면 `Text(timerInterval:countsDown:)`이
-/// 시스템 위임으로 매 프레임 자동 갱신, set이면 그 시점의 잔여를 정적 텍스트로 박는다.
-/// (iOS의 `Text(timerInterval:pauseTime:)`이 일부 환경에서 pauseTime을 묵묵히 무시하는 케이스
-/// 우회 — widget이 직접 분기.)
+/// **타이머 표시 분기** — `pauseTime`이 nil이면 `TimelineView(.periodic by: 1)`이 매초
+/// 정적 `Text(formatRemaining(...))`을 재평가, set이면 그 시점의 잔여를 한 번만 박아 멈춘다.
+/// (`Text(timerInterval:)`는 widget runtime에서 visible 텍스트보다 넓은 frame을 reserve하고
+/// visible을 frame leading에 박아 외부 어떤 정렬 modifier도 시각 중앙을 못 잡고, 일부
+/// 환경에서 pauseTime을 묵묵히 무시한다. 정적 Text는 intrinsic width = visible width라
+/// 둘 다 회피되고 표준 SwiftUI 정렬이 그대로 작동.)
 ///
 /// **App Intent 버튼** — `PauseResumeFocusIntent` / `EndFocusIntent`이 큐에 enqueue하고
 /// 시각 피드백을 위한 LA `update`를 즉시 보낸다. 메인 앱이 active되면 큐를 drain해
@@ -220,8 +222,18 @@ struct FocusLiveActivityWidget: Widget {
 
     // MARK: - Helpers
 
-    /// 카운트다운 표시 — pause 여부로 동적/정적 분기.
-    /// `pauseTime`이 있으면 그 시점의 잔여(`phaseEndDate - pauseTime`)를 mm:ss로 박아둔다.
+    /// 카운트다운 표시 — pause 여부로 정적/타임라인 분기, 양쪽 다 정적 `Text`.
+    ///
+    /// **왜 `Text(timerInterval:)`를 안 쓰나** — widget runtime에서 visible 텍스트보다
+    /// 넓은 frame을 reserve하고 visible을 frame `.leading`에 박는다. 외부 `.frame`,
+    /// `Spacer`, `.multilineTextAlignment`, `GeometryReader`, `.fixedSize` 어떤
+    /// modifier도 그 internal leading 정렬을 못 덮어 시각 중앙이 영구적으로 깨진다
+    /// (이전 5건의 잠금화면 LA 센터링 시도가 모두 실패한 진짜 원인). 정적 `Text`는
+    /// intrinsic width = visible width라 표준 SwiftUI 정렬이 그대로 작동.
+    ///
+    /// running 분기는 `TimelineView(.periodic by: 1)`로 매초 view body 재평가 —
+    /// widget reload budget을 소비하지 않는 별도 메커니즘(`timerStroke`가 이미 같은
+    /// 방식으로 동작 검증됨).
     @ViewBuilder
     private func timerText(
         state: FocusLiveActivityAttributes.ContentState,
@@ -231,11 +243,10 @@ struct FocusLiveActivityWidget: Widget {
             let remaining = max(0, state.phaseEndDate.timeIntervalSince(pauseTime))
             Text(formatRemaining(remaining, showsHours: showsHours))
         } else {
-            Text(
-                timerInterval: state.phaseStartDate...state.phaseEndDate,
-                countsDown: true,
-                showsHours: showsHours
-            )
+            TimelineView(.periodic(from: state.phaseStartDate, by: 1)) { context in
+                let remaining = max(0, state.phaseEndDate.timeIntervalSince(context.date))
+                Text(formatRemaining(remaining, showsHours: showsHours))
+            }
         }
     }
 
