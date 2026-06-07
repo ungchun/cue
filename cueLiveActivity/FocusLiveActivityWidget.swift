@@ -48,27 +48,32 @@ struct FocusLiveActivityWidget: Widget {
 
     // MARK: - Lock screen / Expanded
 
-    /// 잠금화면 표시. 외곽 sessionColor stroke가 **timer에 맞춰 차오르는** 둥근 사각형 path +
-    /// 좌·우 버튼 사이 가운데 정렬된 3단 콘텐츠.
-    ///
-    /// **레이아웃 — HStack + Spacer 균등 배분**: 좌·우 버튼이 동일 사이즈(56pt)라 양쪽 Spacer가
-    /// 같은 width를 가져 centerStack은 자연 정중앙. ZStack 절대 정렬을 쓰면 centerStack 폭이
-    /// 좌·우 버튼 영역으로 침범해 overlap이 생긴다 — HStack이 visual containment를 보장.
+    /// 잠금화면 LA — 가장 단순한 SwiftUI 표준 패턴.
+    /// HStack { 일시정지, Spacer, 중앙 VStack, Spacer, 종료 }.
     @ViewBuilder
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // GeometryReader + .position 절대 좌표 — SwiftUI HStack layout의 미세 차이를 완전 제거.
-        // centerStack은 정확히 width / 2 좌표에 박힘, button은 LA edge에서 동일 inset.
-        GeometryReader { geo in
-            centerStack(context: context)
-                .position(x: geo.size.width / 2, y: geo.size.height / 2)
+        HStack {
             pauseResumeButton(state: context.state)
-                .position(x: 28 + Spacing.sm, y: geo.size.height / 2)
+            Spacer()
+            VStack(spacing: Spacing.xxs) {
+                Text(context.attributes.sessionTitle)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                timerText(state: context.state)
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                Text(phaseLabel(context.state.phase))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
             endButton
-                .position(x: geo.size.width - 28 - Spacing.sm, y: geo.size.height / 2)
         }
-        .frame(minHeight: 130)
+        .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
         .overlay {
             timerStroke(
@@ -76,9 +81,7 @@ struct FocusLiveActivityWidget: Widget {
                 color: sessionColor(attributes: context.attributes)
             )
         }
-        // outer padding — LA system mask가 RoundedRect로 자르므로 content·stroke가
-        // 그 mask 안쪽으로 충분히 들어와야. md(16)로 안전 영역 확보.
-        .padding(Spacing.md)
+        .padding(Spacing.sm)
     }
 
     /// 외곽 stroke — pause 분기. dynamic은 `TimelineView(.periodic)`이 매초 view body를 다시
@@ -146,51 +149,19 @@ struct FocusLiveActivityWidget: Widget {
     private func centerStack(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // 각 HStack에 .frame(maxWidth: .infinity) — HStack이 부모 VStack의 frame width를
-        // 명시적으로 받아 Spacer가 양쪽으로 늘어날 영역 확보. 없으면 HStack 자연 width =
-        // Text width라 Spacer가 0폭 collapse.
-        //
-        // **디버그 색깔** — VStack(red), 각 HStack(blue), Text(green). 시각 확인 후 제거.
-        VStack(alignment: .center, spacing: Spacing.xxs) {
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                Text(context.attributes.sessionTitle)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .background(Color.green.opacity(0.4))
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity)
-            .background(Color.blue.opacity(0.2))
-
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                timerText(state: context.state)
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .background(Color.green.opacity(0.4))
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity)
-            .background(Color.blue.opacity(0.2))
-
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-                Text(phaseLabel(context.state.phase))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .background(Color.green.opacity(0.4))
-                Spacer(minLength: 0)
-            }
-            .frame(maxWidth: .infinity)
-            .background(Color.blue.opacity(0.2))
+        VStack(spacing: Spacing.xxs) {
+            Text(context.attributes.sessionTitle)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            timerText(state: context.state)
+                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+            Text(phaseLabel(context.state.phase))
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .background(Color.red.opacity(0.15))
     }
 
     /// 좌측 일시정지/재개 버튼 — `pauseTime` 유무로 아이콘 토글, 액션은 단일 intent.
