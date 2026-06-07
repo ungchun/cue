@@ -28,5 +28,8 @@ struct FocusLiveActivityAttributes: ActivityAttributes {
 
     let sessionID: UUID
     let sessionTitle: String
+    /// 세션 색 hex(예: `#FFD400`). 시작 시 박혀 활동 동안 불변이라 attributes로.
+    /// nil이면 widget이 시스템 accent로 폴백.
+    let colorHex: String?
     let startedAt: Date
 }

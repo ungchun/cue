@@ -26,9 +26,12 @@ protocol LiveActivityService: Sendable {
     /// 집중 세션 라이브 액티비티 시작. 기존 Focus 인스턴스가 있으면 먼저 end.
     /// `phaseStartDate`·`phaseEndDate`는 widget timer interval의 안정적 양 끝 — 시스템 타이머가
     /// 그 사이를 매 프레임 자동 갱신한다.
+    /// `colorHex`는 외곽 stroke·아이콘 등에 widget이 사용하는 세션 색. nil이면 widget이
+    /// 시스템 accent로 폴백. 활동 시작 후 불변 → attributes에 저장.
     func startFocus(
         sessionID: UUID,
         sessionTitle: String,
+        colorHex: String?,
         phase: LiveFocusPhase,
         phaseStartDate: Date,
         phaseEndDate: Date

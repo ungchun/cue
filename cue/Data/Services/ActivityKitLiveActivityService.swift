@@ -56,6 +56,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     func startFocus(
         sessionID: UUID,
         sessionTitle: String,
+        colorHex: String?,
         phase: LiveFocusPhase,
         phaseStartDate: Date,
         phaseEndDate: Date
@@ -71,6 +72,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         let attributes = FocusLiveActivityAttributes(
             sessionID: sessionID,
             sessionTitle: sessionTitle,
+            colorHex: colorHex,
             startedAt: .now
         )
         let state = FocusLiveActivityAttributes.ContentState(

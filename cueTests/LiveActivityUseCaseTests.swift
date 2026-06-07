@@ -89,6 +89,7 @@ struct LiveActivityUseCaseTests {
         try await StartFocusLiveActivityUseCase(service: service)(
             sessionID: id,
             sessionTitle: "딥워크",
+            colorHex: "#FFD400",
             phase: .focus,
             phaseStartDate: start,
             phaseEndDate: end
@@ -97,9 +98,29 @@ struct LiveActivityUseCaseTests {
         let call = try #require(await service.startFocusCalls.first)
         #expect(call.sessionID == id)
         #expect(call.sessionTitle == "딥워크")
+        #expect(call.colorHex == "#FFD400")
         #expect(call.phase == .focus)
         #expect(call.phaseStartDate == start)
         #expect(call.phaseEndDate == end)
+    }
+
+    @Test func startFocusForwardsNilColorHex() async throws {
+        let service = RecordingLiveActivityService()
+        let id = UUID()
+        let end = Date(timeIntervalSince1970: 1_700_000_000)
+        let start = end.addingTimeInterval(-1500)
+
+        try await StartFocusLiveActivityUseCase(service: service)(
+            sessionID: id,
+            sessionTitle: "기본 세션",
+            colorHex: nil,
+            phase: .focus,
+            phaseStartDate: start,
+            phaseEndDate: end
+        )
+
+        let call = try #require(await service.startFocusCalls.first)
+        #expect(call.colorHex == nil)
     }
 
     @Test func updateFocusForwardsPauseTime() async throws {
@@ -185,7 +206,7 @@ struct LiveActivityUseCaseTests {
 private final actor RecordingLiveActivityService: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startFocusCalls: [(sessionID: UUID, sessionTitle: String, phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date)] = []
+    private(set) var startFocusCalls: [(sessionID: UUID, sessionTitle: String, colorHex: String?, phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date)] = []
     private(set) var updateFocusCalls: [(phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date, pauseTime: Date?)] = []
     private(set) var endFocusCount = 0
 
@@ -200,11 +221,12 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     func startFocus(
         sessionID: UUID,
         sessionTitle: String,
+        colorHex: String?,
         phase: LiveFocusPhase,
         phaseStartDate: Date,
         phaseEndDate: Date
     ) async throws {
-        startFocusCalls.append((sessionID, sessionTitle, phase, phaseStartDate, phaseEndDate))
+        startFocusCalls.append((sessionID, sessionTitle, colorHex, phase, phaseStartDate, phaseEndDate))
     }
 
     func updateFocus(

@@ -89,6 +89,7 @@ final class FocusViewModel {
         let hooks = FocusSessionViewModel.LiveActivityHooks(
             sessionID: UUID(),
             sessionTitle: selectedSession?.title ?? "집중",
+            colorHex: selectedSession?.colorHex,
             start: startLiveActivity,
             update: updateLiveActivity,
             end: endLiveActivity

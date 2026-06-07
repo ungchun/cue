@@ -26,11 +26,13 @@ final class FocusSessionViewModel {
     private let liveActivity: LiveActivityHooks?
 
     /// 세션과 라이브 액티비티를 연결하는 묶음. `FocusViewModel.start()`가 만들어 주입.
-    /// session 식별자·표시 타이틀·세 use case를 함께 들고 다닌다 — init 시그니처가 다섯
+    /// session 식별자·표시 타이틀·색·세 use case를 함께 들고 다닌다 — init 시그니처가 여러
     /// 인자로 부풀지 않게.
     struct LiveActivityHooks: Sendable {
         let sessionID: UUID
         let sessionTitle: String
+        /// 세션 색 hex. widget이 외곽 stroke·아이콘 등에 사용. nil이면 시스템 accent로 폴백.
+        let colorHex: String?
         let start: StartFocusLiveActivityUseCase
         let update: UpdateFocusLiveActivityUseCase
         let end: EndFocusLiveActivityUseCase
@@ -81,6 +83,7 @@ final class FocusSessionViewModel {
                 try? await hooks.start(
                     sessionID: hooks.sessionID,
                     sessionTitle: hooks.sessionTitle,
+                    colorHex: hooks.colorHex,
                     phase: .focus,
                     phaseStartDate: phaseStart,
                     phaseEndDate: phaseEnd

@@ -19,6 +19,7 @@ struct DisabledLiveActivityService: LiveActivityService {
     func startFocus(
         sessionID: UUID,
         sessionTitle: String,
+        colorHex: String?,
         phase: LiveFocusPhase,
         phaseStartDate: Date,
         phaseEndDate: Date

@@ -14,6 +14,7 @@ struct StartFocusLiveActivityUseCase: Sendable {
     func callAsFunction(
         sessionID: UUID,
         sessionTitle: String,
+        colorHex: String?,
         phase: LiveFocusPhase,
         phaseStartDate: Date,
         phaseEndDate: Date
@@ -21,6 +22,7 @@ struct StartFocusLiveActivityUseCase: Sendable {
         try await service.startFocus(
             sessionID: sessionID,
             sessionTitle: sessionTitle,
+            colorHex: colorHex,
             phase: phase,
             phaseStartDate: phaseStartDate,
             phaseEndDate: phaseEndDate
