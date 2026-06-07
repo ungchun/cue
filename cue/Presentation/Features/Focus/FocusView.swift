@@ -80,6 +80,13 @@ struct FocusView: View {
                     backgroundedAt = Date()
                 }
             case .active:
+                // 잠금화면·Dynamic Island에서 누른 액션을 **먼저** 흡수 — paused/end 의도가
+                // 흘러간 시간보다 우선되어 정확한 상태로 회복된다.
+                viewModel.handleLiveActivityActions(
+                    FocusLiveActivityActionQueue.shared.drain()
+                )
+                // 그 다음 백그라운드 elapsed tick — `tick` 자체가 `isPaused`/`isComplete`
+                // 가드를 갖고 있어 paused/ended 상태면 자연 무시된다.
                 if let date = backgroundedAt {
                     let elapsed = Date().timeIntervalSince(date)
                     if elapsed > 0 { viewModel.session?.tick(seconds: elapsed) }

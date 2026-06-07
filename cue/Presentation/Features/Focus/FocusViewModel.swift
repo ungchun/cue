@@ -107,6 +107,29 @@ final class FocusViewModel {
         session = nil
     }
 
+    /// 잠금화면·Dynamic Island의 App Intent가 큐에 enqueue한 액션들을 받아 ViewModel에
+    /// 반영한다. 메인 앱이 `.active`로 들어올 때마다 호출 — 빈 배열이면 no-op.
+    ///
+    /// 액션 → 메서드 매핑:
+    /// - `.pause` → `session?.pause()` (idempotent — 이미 paused면 무시됨)
+    /// - `.resume` → `session?.resume()` (idempotent — 진행 중이면 무시됨)
+    /// - `.end` → `stopSession()` (이미 nil이면 no-op)
+    ///
+    /// `FocusSessionViewModel`의 pause/resume이 LA `update`를 다시 보내므로 widget이 미리
+    /// 토글해둔 `pauseTime` 위에 정확한 `phaseStartDate`·`phaseEndDate`가 덮여 일관성 회복.
+    func handleLiveActivityActions(_ actions: [FocusLiveActivityAction]) {
+        for action in actions {
+            switch action {
+            case .pause:
+                session?.pause()
+            case .resume:
+                session?.resume()
+            case .end:
+                stopSession()
+            }
+        }
+    }
+
     // MARK: - 세션 프리셋 CRUD
 
     /// 세션을 새로 만들어 목록 끝에 추가하고, 생성된 세션을 반환한다.
