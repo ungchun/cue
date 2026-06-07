@@ -48,36 +48,41 @@ struct FocusLiveActivityWidget: Widget {
 
     // MARK: - Lock screen / Expanded
 
-    /// 잠금화면 LA — 중앙 정렬을 버튼 레이아웃과 분리한 overlay 패턴.
+    /// 잠금화면 LA — centerStack을 size 결정 베이스로 두고 버튼 HStack을 overlay.
     ///
-    /// **왜 overlay** — `HStack { 버튼, Spacer, 중앙, Spacer, 버튼 }`은 이론상 정중앙이지만
-    /// WidgetKit 렌더에서 `Button(intent:)`의 hit area/intent metadata 때문에 좌우 버튼의
-    /// 실제 레이아웃 폭이 시각 폭과 어긋나 중앙이 한쪽으로 치우친다. frame/fixedSize/
-    /// GeometryReader 시도가 다 안 먹은 원인이 여기. 해법은 *중앙 위치 결정을 버튼 폭과
-    /// 디커플*하는 것. `HStack { pause, Spacer, end }`로 버튼만 좌우 edge에 고정하고,
-    /// 중앙 VStack은 같은 컨테이너의 `.overlay`로 얹는다 — overlay의 default alignment
-    /// `.center`가 부모(=가용 폭 전체)의 기하 중심에 무조건 정렬한다.
+    /// **왜 베이스 뒤집기** — 이전 시도들(Spacer 변형, frame, fixedSize, GeometryReader,
+    /// 그리고 직전 시도인 "HStack 베이스 + centerStack overlay")은 모두 *HStack을
+    /// 베이스로* 두고 중앙을 찾으려 했다. HStack 베이스에 centerStack을 overlay로 얹으면
+    /// 부모 reported height = HStack height = 56pt (버튼 높이)로 collapse하고, centerStack의
+    /// 위아래가 LA 클립 영역 밖으로 사라진다 (타이머·휴식 중 라벨이 안 보이는 증상).
+    ///
+    /// 베이스를 centerStack으로 바꾸면 부모 height = centerStack height가 보장되고,
+    /// `.frame(maxWidth: .infinity)`로 폭을 LA 전체로 확장하면 centerStack 컨텐츠는
+    /// 그 frame의 default `.center` 정렬로 기하 중심에 위치한다. 버튼 HStack을 그 위에
+    /// overlay하면 같은 full-width × centerStack height 영역에 sized 돼서 Spacer가
+    /// 좌우 edge로 버튼을 밀고, 중앙 위치는 베이스의 정체성 자체라 어긋날 여지가 없다.
     @ViewBuilder
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        HStack {
-            pauseResumeButton(state: context.state)
-            Spacer()
-            endButton
-        }
-        .overlay {
-            centerStack(context: context)
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
-        .overlay {
-            timerStroke(
-                state: context.state,
-                color: sessionColor(attributes: context.attributes)
-            )
-        }
-        .padding(Spacing.sm)
+        centerStack(context: context)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                HStack {
+                    pauseResumeButton(state: context.state)
+                    Spacer()
+                    endButton
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.md)
+            .overlay {
+                timerStroke(
+                    state: context.state,
+                    color: sessionColor(attributes: context.attributes)
+                )
+            }
+            .padding(Spacing.sm)
     }
 
     /// 외곽 stroke — pause 분기. dynamic은 `TimelineView(.periodic)`이 매초 view body를 다시
