@@ -58,17 +58,19 @@ struct FocusLiveActivityWidget: Widget {
     private func lockScreenContent(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        // 핵심 — centerStack에 `.frame(maxWidth: .infinity)`. Spacer 두 개 균등 배분 방식은
-        // widget runtime에서 미세 비대칭이 생긴다(좌측 spacing 55pt vs 우측 70pt 측정).
-        // centerStack이 좌·우 버튼 사이 영역 전부를 흡수하면 자식(24:46 등)이 그 frame center =
-        // LA 정중앙에 정확히 박힌다 — Spacer 의존 제거.
-        HStack(spacing: 0) {
-            pauseResumeButton(state: context.state)
-                .frame(width: 56)
+        // ZStack absolute center — centerStack은 부모 ZStack의 정확한 정중앙에 박힌다.
+        // 양쪽 버튼은 별도 HStack layer로 LA 좌·우 edge에 위치. centerStack의 width와
+        // 무관하게 24:46이 LA width / 2 좌표에 정렬되어 layout 미세 차이를 차단.
+        ZStack {
             centerStack(context: context)
-                .frame(maxWidth: .infinity)
-            endButton
-                .frame(width: 56)
+            HStack(spacing: 0) {
+                pauseResumeButton(state: context.state)
+                    .frame(width: 56)
+                Spacer(minLength: 0)
+                endButton
+                    .frame(width: 56)
+            }
+            .frame(maxWidth: .infinity)
         }
         // HStack이 부모 width를 채워야 양쪽 Spacer가 균등 — 명시 없으면 0폭으로 잡힐 수 있음.
         .frame(maxWidth: .infinity)
