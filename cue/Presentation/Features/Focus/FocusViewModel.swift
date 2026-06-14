@@ -35,6 +35,11 @@ final class FocusViewModel {
     private let updateLiveActivity: UpdateFocusLiveActivityUseCase
     private let endLiveActivity: EndFocusLiveActivityUseCase
     private let restoreLiveActivity: RestoreFocusLiveActivityUseCase
+    /// 세션 tick 타이머 — **뷰가 아니라 ViewModel이 소유**한다. SwiftUI 뷰의 `.onReceive`는
+    /// 백그라운드에서 안 도는데, keep-alive로 앱이 살아 있는 동안에도 단계 전환이 일어나려면
+    /// 뷰와 무관하게 도는 타이머가 필요하다. `DispatchSourceTimer`(.main)는 앱이 살아 있으면
+    /// 백그라운드에서도 발화한다.
+    private var tickTimer: DispatchSourceTimer?
 
     init(dependencies: Dependencies) {
         self.scheduler = dependencies.focusNotifications
@@ -105,8 +110,9 @@ final class FocusViewModel {
             liveActivity: liveActivityHooks(),
             persist: snapshotPersister()
         )
-        // 복원된 세션도 진행 중이므로 keep-alive 시작(완료로 정리되면 stopSession이 stop).
+        // 복원된 세션도 진행 중이므로 keep-alive + 틱 시작(완료로 정리되면 stopSession이 정리).
         audioKeepAlive.start()
+        startTicking()
         // 앱이 죽은 동안 LA에서 누른 정지/재개/종료를 먼저 반영 — cold launch는 scenePhase
         // .active 전환이 없어 View가 큐를 drain하지 않으므로 여기서 처리한다.
         handleLiveActivityActions(FocusLiveActivityActionQueue.shared.drain())
@@ -126,6 +132,7 @@ final class FocusViewModel {
         FocusLiveActivityActionQueue.shared.clear()
         // 백그라운드/잠금에서도 타이머가 돌아 단계 전환·LA 갱신이 작동하도록 keep-alive 시작.
         audioKeepAlive.start()
+        startTicking()
         session = FocusSessionViewModel(
             settings: displayedSettings,
             scheduler: scheduler,
@@ -155,8 +162,31 @@ final class FocusViewModel {
         return { snapshot in Task { await save(snapshot) } }
     }
 
+    /// 매초 `session.tick()`을 구동 — 단계 전환·LA 갱신·`remaining` 표시 갱신의 단일 소스.
+    /// keep-alive로 앱이 살아 있는 한 백그라운드/잠금에서도 발화한다. 자연 완료 시 정리.
+    private func startTicking() {
+        stopTicking()
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + 1, repeating: 1.0)
+        timer.setEventHandler { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, let session = self.session else { return }
+                session.tick()
+                if session.isComplete { self.stopSession() }
+            }
+        }
+        timer.resume()
+        tickTimer = timer
+    }
+
+    private func stopTicking() {
+        tickTimer?.cancel()
+        tickTimer = nil
+    }
+
     /// 진행 중인 세션을 중단·정리한다. 종료 버튼/자동 완료에서 호출.
     func stopSession() {
+        stopTicking()
         session?.abort()
         session = nil
         audioKeepAlive.stop()

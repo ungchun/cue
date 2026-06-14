@@ -3,7 +3,6 @@
 //  cue / Presentation
 //
 
-import Combine
 import SwiftUI
 import UIKit
 
@@ -18,12 +17,10 @@ struct FocusView: View {
     /// 세션 목록 시트 표시 — 우상단 버튼이 true로 올린다.
     @State private var showingSessions = false
 
-    /// 1초마다 publish — `tick`은 일시정지·완료·세션 없음 상태에 자체 가드. deadline 파생이라
-    /// 매초 호출이 `remaining`을 벽시계로 다시 박을 뿐, 시간을 누적 감산하지 않는다.
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
-    /// 포그라운드 복귀 시 `tick()` 한 번으로 흘러간 시간을 벽시계 기준 재계산 —
-    /// 별도 background 시각 기록이 필요 없다(deadline 기반).
+    /// 매초 tick은 **ViewModel 소유 타이머**가 구동한다 — 뷰의 `.onReceive`는 백그라운드에서
+    /// 안 돌아 단계 전환을 못 시키기 때문(keep-alive로 앱이 살아 있어도). 뷰는 표시만 한다.
+    ///
+    /// 포그라운드 복귀 시 LA 액션 큐 drain + 즉시 tick 한 번(벽시계 추격)은 scenePhase에서.
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -57,9 +54,6 @@ struct FocusView: View {
         .task { await viewModel.onAppear() }
         .sheet(isPresented: $showingSessions) {
             FocusSessionsListSheet(viewModel: viewModel)
-        }
-        .onReceive(ticker) { _ in
-            viewModel.session?.tick()
         }
         .onChange(of: viewModel.session?.phase) { _, newPhase in
             // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. nil → non-nil 변화(세션 시작)에도
