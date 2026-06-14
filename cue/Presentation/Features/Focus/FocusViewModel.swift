@@ -3,225 +3,294 @@
 //  cue / Presentation
 //
 
+import AlarmKit
+import ActivityKit
 import Foundation
 import Observation
 
-/// 집중 탭의 ViewModel — 저장된 세션 프리셋 목록(`sessions`)을 들고 있고, 사용자가
-/// 목록에서 하나를 고르면 그 세션을 메인 화면 ring·타이틀에 반영한다. "시작"이 눌리면
-/// 선택된 세션의 설정으로 상태머신(`FocusSessionViewModel`)을 만들어 같은 메인 화면 안에서
-/// 타이머를 돌린다.
+/// 집중 탭의 ViewModel.
 ///
-/// 세션 프리셋 목록과 "마지막으로 선택한 세션"은 모두 영속화된다 — 앱 재시작 후에도
-/// 같은 세션이 메인 화면에 자동으로 떠 있다. 진행 중인 세션 자체는 영속화하지 않는다.
+/// **세션 프리셋**(`sessions`)을 들고 사용자가 고른 세션을 메인 화면 ring·타이틀에 반영한다.
+/// 프리셋 목록과 마지막 선택은 영속화돼 재시작 후에도 같은 세션이 떠 있다.
+///
+/// **진행 중 세션은 AlarmKit이 단일 엔진**이다 — "시작"이 선택 세션 설정으로 단계별 알람을 예약하고,
+/// 잠금화면·Dynamic Island 카운트다운 LA + 경계 알림 + 단계 전환을 시스템이 구동한다(앱이 죽어도
+/// 시스템 소유라 발화).
+///
+/// **표시 상태는 VM이 권위 있게 들고 즉시 갱신한다** — 인앱 버튼(시작·일시정지·재개·스킵·종료)은
+/// 누른 즉시 VM 상태를 바꿔 ring이 바로 반응한다. `Activity.content.state`는 같은 프로세스에서
+/// 즉시 신선해지지 않으므로(백그라운드 왕복 필요) 라이브 표시의 source로 쓰지 않는다. 대신
+/// `alarmUpdates`의 `Alarm.state`(신뢰 가능)로 잠금화면에서 누른 일시정지/재개/전환을 반영하고,
+/// 포그라운드 복귀(`refresh`)·재실행(`onAppear`)에선 `Activity`를 한 번 읽어 백그라운드에서 바뀐
+/// 단계를 채택한다.
 @MainActor
 @Observable
 final class FocusViewModel {
-    /// 저장된 세션 프리셋. 사용자가 +로 만들고 수정/삭제한다.
     private(set) var sessions: [FocusSession] = []
-    /// 메인 화면이 보여줄 세션. nil이면 기본값(25/5분·4 사이클)으로 폴백.
     var selectedSessionID: UUID?
-    /// 진행 중인 세션 상태머신. nil이면 idle.
-    var session: FocusSessionViewModel?
 
-    private let scheduler: any FocusNotificationScheduling
-    private let audioKeepAlive: any BackgroundAudioKeeping
+    // MARK: - 진행 중 세션 상태 (VM 권위 — 메인 ring/컨트롤이 읽음)
+
+    private(set) var isActive = false
+    private(set) var phase: FocusPhase = .focus
+    private(set) var remaining: TimeInterval = 0
+    private(set) var phaseDuration: TimeInterval = 0
+    private(set) var currentCycle = 1
+    private(set) var totalCycles = 1
+    private(set) var isPaused = false
+
+    /// 현재 단계 종료 시각(running). 매초 `remaining = fireDate - now` 재계산의 기준.
+    private var fireDate: Date?
+    /// 일시정지 시점의 잔여 — 재개 때 `fireDate = now + frozenRemaining`로 이어붙인다.
+    private var frozenRemaining: TimeInterval = 0
+    /// 현재 진행 중 알람 id — 일시정지/재개/종료 제어 대상.
+    private var currentAlarmID: UUID?
+    /// 이미 자동 전환을 트리거한 알람 id — 한 번 `.alerting`에 여러 alarmUpdates가 와도 중복 advance 방지.
+    private var advancedAlarmIDs: Set<UUID> = []
+    private var updatesTask: Task<Void, Never>?
+    private var displayTask: Task<Void, Never>?
+
     private let fetchFocusSessions: FetchFocusSessionsUseCase
     private let saveFocusSessions: SaveFocusSessionsUseCase
     private let fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     private let saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
-    private let fetchActiveFocusSession: FetchActiveFocusSessionUseCase
-    private let saveActiveFocusSession: SaveActiveFocusSessionUseCase
-    private let startLiveActivity: StartFocusLiveActivityUseCase
-    private let updateLiveActivity: UpdateFocusLiveActivityUseCase
-    private let endLiveActivity: EndFocusLiveActivityUseCase
-    private let restoreLiveActivity: RestoreFocusLiveActivityUseCase
-    /// 세션 tick 타이머 — **뷰가 아니라 ViewModel이 소유**한다. SwiftUI 뷰의 `.onReceive`는
-    /// 백그라운드에서 안 도는데, keep-alive로 앱이 살아 있는 동안에도 단계 전환이 일어나려면
-    /// 뷰와 무관하게 도는 타이머가 필요하다. `DispatchSourceTimer`(.main)는 앱이 살아 있으면
-    /// 백그라운드에서도 발화한다.
-    private var tickTimer: DispatchSourceTimer?
 
     init(dependencies: Dependencies) {
-        self.scheduler = dependencies.focusNotifications
-        self.audioKeepAlive = dependencies.focusAudioKeepAlive
         self.fetchFocusSessions = dependencies.fetchFocusSessions
         self.saveFocusSessions = dependencies.saveFocusSessions
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
         self.saveSelectedFocusSessionID = dependencies.saveSelectedFocusSessionID
-        self.fetchActiveFocusSession = dependencies.fetchActiveFocusSession
-        self.saveActiveFocusSession = dependencies.saveActiveFocusSession
-        self.startLiveActivity = dependencies.startFocusLiveActivity
-        self.updateLiveActivity = dependencies.updateFocusLiveActivity
-        self.endLiveActivity = dependencies.endFocusLiveActivity
-        self.restoreLiveActivity = dependencies.restoreFocusLiveActivity
     }
 
-    /// 현재 선택된 세션. id로 매번 lookup해 update/delete와 자연스럽게 동기화된다.
     var selectedSession: FocusSession? {
         guard let id = selectedSessionID else { return nil }
         return sessions.first(where: { $0.id == id })
     }
 
-    /// 메인 ring·타이틀이 사용할 설정. 선택 없으면 `FocusSettings.default`.
     var displayedSettings: FocusSettings {
         selectedSession?.settings ?? .default
     }
 
-    /// 화면이 처음 나타날 때 한 번 호출 — 알림 권한 prompt + 저장된 세션·선택 복원.
-    ///
-    /// 복원 정책:
-    /// - 저장된 id가 현재 sessions에 존재 → 그 세션을 선택.
-    /// - 저장된 id가 없거나 사라졌는데 sessions가 비어 있지 않으면 → 첫 번째를 자동 선택.
-    ///   ("선택 없음" 상태를 보여주는 것보다, 사용자가 만들어둔 첫 프리셋을 띄우는 게 자연스럽다.)
-    /// - sessions 자체가 비어 있으면 → nil (placeholder + 기본 설정).
-    /// 사용자가 한 번이라도 진행 중인(`session != nil`) 상태에서 onAppear가 다시 불릴
-    /// 일은 없지만, 만약 그렇다면 그 세션을 깨지 않도록 복원은 idle에서만 수행한다.
+    // MARK: - 생명주기
+
     func onAppear() async {
-        await scheduler.requestAuthorization()
         sessions = await fetchFocusSessions()
-        guard session == nil else { return }
         await restoreSelection()
-        await restoreActiveSessionIfNeeded()
+        adoptFromActivity()
+        if isActive { startObserving() }
     }
 
-    /// 마지막 선택 세션을 복원해 idle 메인 화면에 띄운다(진행 중 세션과 무관 — idle 표시용).
+    /// 포그라운드 복귀 — 백그라운드에서 잠금화면 버튼·자동 전환으로 바뀐 단계를 채택한다.
+    func refresh() {
+        adoptFromActivity()
+        if isActive, updatesTask == nil { startObserving() }
+    }
+
     private func restoreSelection() async {
         let storedID = await fetchSelectedFocusSessionID()
         if let storedID, sessions.contains(where: { $0.id == storedID }) {
             selectedSessionID = storedID
         } else if let first = sessions.first {
             selectedSessionID = first.id
-            // 저장값이 비어 있거나 무효였던 경우 → 첫 항목을 새 영속값으로 박는다.
-            // 다음 onAppear에서도 일관되게 같은 세션이 떠 있게 된다.
             persistSelectedID(first.id)
         } else {
             selectedSessionID = nil
         }
     }
 
-    /// 앱 강제 종료 후 재실행 시 저장된 진행 중 세션 스냅샷이 있으면 복원 — X(종료)나 자연
-    /// 완료 전까지 앱을 껐다 켜도 타이머가 유지된다. 절대 시각 기반이라 복원 직후 `tick()`
-    /// 한 번이 다운타임을 벽시계로 정확히 따라잡는다.
-    private func restoreActiveSessionIfNeeded() async {
-        guard session == nil, let snapshot = await fetchActiveFocusSession() else { return }
-        session = FocusSessionViewModel(
-            restoring: snapshot,
-            scheduler: scheduler,
-            liveActivity: liveActivityHooks(),
-            persist: snapshotPersister()
-        )
-        // 복원된 세션도 진행 중이므로 keep-alive + 틱 시작(완료로 정리되면 stopSession이 정리).
-        audioKeepAlive.start()
-        startTicking()
-        // 앱이 죽은 동안 LA에서 누른 정지/재개/종료를 먼저 반영 — cold launch는 scenePhase
-        // .active 전환이 없어 View가 큐를 drain하지 않으므로 여기서 처리한다.
-        handleLiveActivityActions(FocusLiveActivityActionQueue.shared.drain())
-        // 다운타임만큼 벽시계로 따라잡기(그 사이 자연 완료됐으면 tick이 완료 처리).
-        session?.tick()
-        if session?.isComplete == true { stopSession() }
-    }
+    // MARK: - 세션 제어 (인앱 — 누른 즉시 VM 상태 갱신)
 
-    /// 메인 화면의 ▶ 버튼이 호출 — 선택된 세션(또는 기본값)으로 상태머신을 만든다.
-    /// 이미 진행 중이면 무시. 라이브 액티비티 hooks를 함께 주입해 — 세션 자체가 phase
-    /// 전환·pause/resume·완료 시점에 LA `update`/`end`를 호출한다(cue 컨셉: 종료 상태가
-    /// 아니면 라이브 액티비티 활성).
     func start() {
-        guard session == nil else { return }
-        // 이전 세션이 남긴 LA 액션 잔재를 폐기 — 안 그러면 다음 복원 때 stale 액션이 적용돼
-        // 잔여가 엉뚱하게 부풀거나(예: 오래된 pause 시각) 세션이 종료된다.
-        FocusLiveActivityActionQueue.shared.clear()
-        // 백그라운드/잠금에서도 타이머가 돌아 단계 전환·LA 갱신이 작동하도록 keep-alive 시작.
-        audioKeepAlive.start()
-        startTicking()
-        session = FocusSessionViewModel(
-            settings: displayedSettings,
-            scheduler: scheduler,
-            liveActivity: liveActivityHooks(),
-            sessionID: UUID(),
-            // 세션 선택 없으면 앱 화면 titleHeader와 동일하게 앱 이름 "Cue"로 — LA 상단도 일치.
+        guard !isActive else { return }
+        advancedAlarmIDs.removeAll()
+        let settings = displayedSettings
+        FocusAlarmPlan(
+            focusDuration: settings.focusDuration,
+            restDuration: settings.restDuration,
+            totalCycles: settings.totalCycles,
             sessionTitle: selectedSession?.title ?? "Cue",
-            colorHex: selectedSession?.colorHex,
-            persist: snapshotPersister()
-        )
-    }
+            colorHex: selectedSession?.colorHex
+        ).save()
 
-    /// LA use case 묶음 — 새 시작과 복원이 공유한다.
-    private func liveActivityHooks() -> FocusSessionViewModel.LiveActivityHooks {
-        FocusSessionViewModel.LiveActivityHooks(
-            start: startLiveActivity,
-            update: updateLiveActivity,
-            end: endLiveActivity,
-            restore: restoreLiveActivity
-        )
-    }
-
-    /// 세션이 상태를 바꾸거나 종료할 때마다 호출할 스냅샷 영속 클로저. 비동기 save를 Task로
-    /// 띄워 상태머신을 막지 않는다(fire-and-forget — LA update dispatch와 같은 패턴).
-    private func snapshotPersister() -> @Sendable (ActiveFocusSessionSnapshot?) -> Void {
-        let save = saveActiveFocusSession
-        return { snapshot in Task { await save(snapshot) } }
-    }
-
-    /// 매초 `session.tick()`을 구동 — 단계 전환·LA 갱신·`remaining` 표시 갱신의 단일 소스.
-    /// keep-alive로 앱이 살아 있는 한 백그라운드/잠금에서도 발화한다. 자연 완료 시 정리.
-    private func startTicking() {
-        stopTicking()
-        let timer = DispatchSource.makeTimerSource(queue: .main)
-        timer.schedule(deadline: .now() + 1, repeating: 1.0)
-        timer.setEventHandler { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self, let session = self.session else { return }
-                session.tick()
-                if session.isComplete { self.stopSession() }
+        beginPhase(.focus, cycle: 1, duration: settings.focusDuration, totalCycles: settings.totalCycles)
+        startObserving()
+        Task {
+            await ensureAuthorized()
+            guard AlarmManager.shared.authorizationState == .authorized else {
+                // 권한 거부 — 낙관적 상태를 되돌린다(인앱 타이머만 도는 상황 방지).
+                FocusAlarmPlan.clear()
+                clearActive()
+                return
             }
+            currentAlarmID = await FocusAlarmScheduling.schedule(phase: .focus, cycle: 1)
         }
-        timer.resume()
-        tickTimer = timer
     }
 
-    private func stopTicking() {
-        tickTimer?.cancel()
-        tickTimer = nil
-    }
-
-    /// 진행 중인 세션을 중단·정리한다. 종료 버튼/자동 완료에서 호출.
     func stopSession() {
-        stopTicking()
-        session?.abort()
-        session = nil
-        audioKeepAlive.stop()
-        // 종료된 세션의 잔여 LA 액션을 폐기 — 다음 세션/복원에 새어 들어가지 않게.
-        FocusLiveActivityActionQueue.shared.clear()
+        cancelAllFocusAlarms()
+        FocusAlarmPlan.clear()
+        clearActive()
     }
 
-    /// 잠금화면·Dynamic Island의 App Intent가 큐에 enqueue한 액션들을 받아 ViewModel에
-    /// 반영한다. 메인 앱이 `.active`로 들어올 때마다 호출 — 빈 배열이면 no-op.
-    ///
-    /// 액션 → 메서드 매핑(누른 시각 `at`을 그대로 넘겨 drain 지연만큼의 시간 누수 방지):
-    /// - `.pause(at:)` → `session?.pause(at:)` (idempotent — 이미 paused면 무시됨)
-    /// - `.resume(at:)` → `session?.resume(at:)` (idempotent — 진행 중이면 무시됨)
-    /// - `.end` → `stopSession()` (이미 nil이면 no-op)
-    ///
-    /// `FocusSessionViewModel`의 pause/resume이 LA `update`를 다시 보내므로 widget이 미리
-    /// 토글해둔 `pauseTime` 위에 정확한 `phaseStartDate`·`phaseEndDate`가 덮여 일관성 회복.
-    func handleLiveActivityActions(_ actions: [FocusLiveActivityAction]) {
-        for action in actions {
-            switch action {
-            case .pause(let at):
-                session?.pause(at: at)
-            case .resume(let at):
-                session?.resume(at: at)
-            case .end:
-                stopSession()
+    func pause() {
+        guard isActive, !isPaused else { return }
+        isPaused = true
+        if let fire = fireDate { frozenRemaining = max(0, fire.timeIntervalSinceNow) }
+        remaining = frozenRemaining
+        fireDate = nil
+        if let id = currentAlarmID { try? AlarmManager.shared.pause(id: id) }
+    }
+
+    func resume() {
+        guard isActive, isPaused else { return }
+        isPaused = false
+        fireDate = Date().addingTimeInterval(frozenRemaining)
+        remaining = frozenRemaining
+        if let id = currentAlarmID { try? AlarmManager.shared.resume(id: id) }
+    }
+
+    func skip() {
+        advance()
+    }
+
+    // MARK: - 단계 진입/전환
+
+    /// 현재 단계 다음으로 — 없으면 종료. 인앱 상태를 즉시 바꾸고 새 알람을 예약한다.
+    /// 사용자 스킵과 (포그라운드) 단계 종료 자동 전환이 공유한다.
+    private func advance() {
+        let plan = FocusAlarmPlan.load()
+        let total = plan?.totalCycles ?? totalCycles
+        let next = FocusAlarmScheduling.nextStep(
+            after: phase == .focus ? .focus : .rest,
+            cycle: currentCycle,
+            totalCycles: total
+        )
+        cancelAllFocusAlarms()
+        guard let next else { stopSession(); return }
+        let nextPhase: FocusPhase = next.phase == .focus ? .focus : .rest
+        let duration = (next.phase == .focus ? plan?.focusDuration : plan?.restDuration) ?? phaseDuration
+        beginPhase(nextPhase, cycle: next.cycle, duration: duration, totalCycles: total)
+        Task {
+            currentAlarmID = await FocusAlarmScheduling.schedule(phase: next.phase, cycle: next.cycle)
+        }
+    }
+
+    /// 한 단계 진입 — 표시 상태를 즉시 세팅(낙관적). 실제 알람 예약은 호출자가 Task로 이어서.
+    private func beginPhase(_ phase: FocusPhase, cycle: Int, duration: TimeInterval, totalCycles: Int) {
+        isActive = true
+        isPaused = false
+        self.phase = phase
+        self.currentCycle = cycle
+        self.totalCycles = totalCycles
+        self.phaseDuration = duration
+        self.remaining = duration
+        self.fireDate = Date().addingTimeInterval(duration)
+        self.frozenRemaining = duration
+    }
+
+    // MARK: - AlarmKit 관찰/동기화
+
+    private func ensureAuthorized() async {
+        if AlarmManager.shared.authorizationState == .notDetermined {
+            _ = try? await AlarmManager.shared.requestAuthorization()
+        }
+    }
+
+    private func startObserving() {
+        updatesTask?.cancel()
+        updatesTask = Task { [weak self] in
+            for await alarms in AlarmManager.shared.alarmUpdates {
+                guard let self else { return }
+                self.handle(alarms)
             }
         }
+        startDisplayTick()
+    }
+
+    /// `alarmUpdates`로 **포그라운드 단계 종료 자동 전환**만 처리한다 — 현재 알람이 `.alerting`이
+    /// 되면(집중/휴식 끝) 다음 단계로 넘긴다. 일시정지/재개의 라이브 표시는 인앱 버튼이 즉시
+    /// 반영하고(VM 권위), 잠금화면에서 누른 변경은 포그라운드 복귀 시 `adoptFromActivity`가 반영한다
+    /// — 여기서 `Alarm.state`로 isPaused를 건드리면 로컬 낙관값과 echo가 충돌(레이스)하므로 안 한다.
+    private func handle(_ alarms: [Alarm]) {
+        guard isActive, let id = currentAlarmID,
+              let cur = alarms.first(where: { $0.id == id }) else { return }
+        if cur.state == .alerting, !advancedAlarmIDs.contains(id) {
+            advancedAlarmIDs.insert(id)
+            advance()
+        }
+    }
+
+    /// 포그라운드/재실행 시 살아있는 집중 알람을 Activity에서 채택(백그라운드 전환 반영). 이 시점의
+    /// `Activity.content.state`는 신선하다(프로세스가 막 활성화됨).
+    private func adoptFromActivity() {
+        let activities = Activity<AlarmAttributes<FocusAlarmMetadata>>.activities
+        guard let activity = activities.first, let meta = activity.attributes.metadata else {
+            clearActive()
+            return
+        }
+        isActive = true
+        currentAlarmID = activity.content.state.alarmID
+        phase = meta.phase == .focus ? .focus : .rest
+        currentCycle = meta.cycle
+        totalCycles = meta.totalCycles
+        switch activity.content.state.mode {
+        case .countdown(let c):
+            isPaused = false
+            fireDate = c.fireDate
+            phaseDuration = c.totalCountdownDuration
+            remaining = max(0, c.fireDate.timeIntervalSinceNow)
+            frozenRemaining = remaining
+        case .paused(let p):
+            isPaused = true
+            fireDate = nil
+            phaseDuration = p.totalCountdownDuration
+            remaining = max(0, p.totalCountdownDuration - p.previouslyElapsedDuration)
+            frozenRemaining = remaining
+        case .alert:
+            fireDate = nil
+            remaining = 0
+        @unknown default:
+            break
+        }
+    }
+
+    /// 포그라운드 ring을 위해 매초 `remaining`을 다시 계산.
+    private func startDisplayTick() {
+        displayTask?.cancel()
+        displayTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                if self.isActive, !self.isPaused, let fire = self.fireDate {
+                    self.remaining = max(0, fire.timeIntervalSinceNow)
+                }
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
+    private func stopObserving() {
+        updatesTask?.cancel(); updatesTask = nil
+        displayTask?.cancel(); displayTask = nil
+    }
+
+    private func cancelAllFocusAlarms() {
+        FocusAlarmScheduling.cancelAll()
+    }
+
+    private func clearActive() {
+        stopObserving()
+        isActive = false
+        isPaused = false
+        currentAlarmID = nil
+        advancedAlarmIDs.removeAll()
+        fireDate = nil
+        remaining = 0
+        currentCycle = 1
+        phase = .focus
     }
 
     // MARK: - 세션 프리셋 CRUD
 
-    /// 세션을 새로 만들어 목록 끝에 추가하고, 생성된 세션을 반환한다.
-    /// 메모리 갱신 즉시 영속 저장 dispatch — UserDefaults 쓰기는 빠르지만 fire-and-forget으로
-    /// UI 흐름을 막지 않는다.
     @discardableResult
     func addSession(title: String, settings: FocusSettings, colorHex: String) -> FocusSession {
         let new = FocusSession(id: UUID(), title: title, settings: settings, colorHex: colorHex)
@@ -230,14 +299,12 @@ final class FocusViewModel {
         return new
     }
 
-    /// 같은 id의 세션을 새 title·settings·colorHex로 덮어쓴다. 못 찾으면 no-op.
     func updateSession(id: UUID, title: String, settings: FocusSettings, colorHex: String) {
         guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
         sessions[index] = FocusSession(id: id, title: title, settings: settings, colorHex: colorHex)
         persist()
     }
 
-    /// 세션을 목록에서 제거. 삭제 대상이 선택된 세션이면 선택도 해제하고 영속값도 nil로.
     func deleteSession(id: UUID) {
         sessions.removeAll { $0.id == id }
         if selectedSessionID == id {
@@ -247,20 +314,15 @@ final class FocusViewModel {
         persist()
     }
 
-    /// 현재 `sessions`를 영속 저장소에 비동기 dispatch — 호출자는 결과를 기다리지 않는다.
-    /// 직렬화 실패는 repository 내부에서 무시된다(다음 변경 때 다시 시도).
     private func persist() {
         let snapshot = sessions
         Task { await saveFocusSessions(snapshot) }
     }
 
-    /// 선택된 세션 id를 영속 저장소에 비동기 dispatch. sessions 영속화와 같은 fire-and-forget.
     private func persistSelectedID(_ id: UUID?) {
         Task { await saveSelectedFocusSessionID(id) }
     }
 
-    /// 메인 화면에 띄울 세션을 고른다. 없는 id를 줘도 그대로 둠(다음 lookup에서 nil 폴백).
-    /// 변경된 id는 즉시 영속화 — 앱을 끄고 다시 켜도 같은 세션이 떠 있는다.
     func selectSession(id: UUID) {
         selectedSessionID = id
         persistSelectedID(id)

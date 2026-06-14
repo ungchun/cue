@@ -48,35 +48,22 @@ struct FocusView: View {
                 }
                 .accessibilityLabel("세션")
                 // 세션 진행 중엔 목록을 잠근다 — 다른 세션으로 갈아타려면 먼저 종료해야 한다.
-                .disabled(viewModel.session != nil)
+                .disabled(viewModel.isActive)
             }
         }
         .task { await viewModel.onAppear() }
         .sheet(isPresented: $showingSessions) {
             FocusSessionsListSheet(viewModel: viewModel)
         }
-        .onChange(of: viewModel.session?.phase) { _, newPhase in
-            // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. nil → non-nil 변화(세션 시작)에도
-            // 트리거되지만 시작 자체를 알리는 신호로 자연스럽다.
-            guard newPhase != nil else { return }
+        .onChange(of: viewModel.phase) { _, _ in
+            // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. 진행 중일 때만.
+            guard viewModel.isActive else { return }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
-        }
-        .onChange(of: viewModel.session?.isComplete) { _, completed in
-            if completed == true {
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
-                viewModel.stopSession()
-            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            // 잠금화면·Dynamic Island에서 누른 액션을 **먼저** 흡수 — paused/end 의도가
-            // 흘러간 시간보다 우선되어 정확한 상태로 회복된다.
-            viewModel.handleLiveActivityActions(
-                FocusLiveActivityActionQueue.shared.drain()
-            )
-            // deadline 기반이라 흘러간 시간은 tick() 한 번이 벽시계로 정확히 따라잡는다 —
-            // `tick`은 `isPaused`/`isComplete` 가드가 있어 paused/ended면 자연 무시.
-            viewModel.session?.tick()
+            // 백그라운드 동안 잠금화면 버튼·자동 전환으로 바뀐 알람 상태를 메인 화면에 동기화.
+            viewModel.refresh()
         }
     }
 
@@ -121,7 +108,7 @@ struct FocusView: View {
             // 진행 trim 원도 같은 시각 외측을 갖도록 `inset(by: 8)` 후 stroke center로 맞춘다.
             Circle()
                 .strokeBorder(Color(.systemGray5), style: StrokeStyle(lineWidth: 16, lineCap: .round))
-            if viewModel.session != nil {
+            if viewModel.isActive {
                 Circle()
                     .inset(by: 8)
                     .trim(from: 0, to: progress)
@@ -150,8 +137,8 @@ struct FocusView: View {
     /// 자리는 차지하지 않고, 안 보이는 동안엔 타이머가 ring 정중앙으로 자연스레 자리잡는다.
     @ViewBuilder
     private var cycleIndicatorInRing: some View {
-        if let session = viewModel.session, session.totalCycles > 1 {
-            Text("\(session.currentCycle) / \(session.totalCycles)")
+        if viewModel.isActive, viewModel.totalCycles > 1 {
+            Text("\(viewModel.currentCycle) / \(viewModel.totalCycles)")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
@@ -162,8 +149,8 @@ struct FocusView: View {
     /// 자체를 안 해 ring 안 timer가 정중앙으로 자연 정렬된다.
     @ViewBuilder
     private var phaseLabelInRing: some View {
-        if let session = viewModel.session {
-            Text(session.phase == .focus ? "집중 중" : "휴식 중")
+        if viewModel.isActive {
+            Text(viewModel.phase == .focus ? "집중 중" : "휴식 중")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -182,22 +169,18 @@ struct FocusView: View {
     /// 색만으로 전달된다. 종료는 HIG destructive 컨벤션대로 `.red`로 명시 분리.
     @ViewBuilder
     private var controlRow: some View {
-        if let session = viewModel.session {
+        if viewModel.isActive {
             HStack(spacing: Spacing.xl) {
                 controlButton(systemImage: "forward.end.fill", label: "스킵") {
-                    session.skip()
+                    viewModel.skip()
                 }
-                if session.isPaused {
-                    controlButton(
-                        systemImage: "play.fill",
-                        label: "재개",
-                        tint: sessionColor
-                    ) {
-                        session.resume()
+                if viewModel.isPaused {
+                    controlButton(systemImage: "play.fill", label: "재개") {
+                        viewModel.resume()
                     }
                 } else {
                     controlButton(systemImage: "pause.fill", label: "일시정지") {
-                        session.pause()
+                        viewModel.pause()
                     }
                 }
                 controlButton(systemImage: "xmark", label: "종료", tint: .red) {
@@ -215,14 +198,14 @@ struct FocusView: View {
         Button {
             viewModel.start()
         } label: {
-            VStack(spacing: Spacing.xs) {
+            VStack(spacing: Spacing.md) {
                 Image(systemName: "play.fill")
                     .font(.title)
-                    .frame(width: Spacing.xxl, height: Spacing.xxl)
-                    .background(Circle().fill(sessionColor.opacity(0.15)))
-                    .foregroundStyle(sessionColor)
+                    .frame(width: 56, height: 56)
+                    .background(Circle().fill(Color.primary.opacity(0.12)))
+                    .foregroundStyle(Color.primary)
                 Text("시작")
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }
@@ -242,14 +225,14 @@ struct FocusView: View {
         // 시각상 더 옅게 깔리기 때문에 보정.
         let fillOpacity: Double = tint == .primary ? 0.12 : 0.15
         return Button(action: action) {
-            VStack(spacing: Spacing.xs) {
+            VStack(spacing: Spacing.md) {
                 Image(systemName: systemImage)
                     .font(.title2)
-                    .frame(width: Spacing.xxl, height: Spacing.xxl)
+                    .frame(width: 56, height: 56)
                     .background(Circle().fill(tint.opacity(fillOpacity)))
                     .foregroundStyle(tint)
                 Text(label)
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }
@@ -261,17 +244,17 @@ struct FocusView: View {
 
     /// running 시 0(시작) → 1(단계 종료)으로 차오르는 비율. idle이면 0(트림 안 그려짐).
     private var progress: Double {
-        guard let session = viewModel.session else { return 0 }
-        let total = session.phaseDuration
+        guard viewModel.isActive else { return 0 }
+        let total = viewModel.phaseDuration
         guard total > 0 else { return 0 }
-        return max(0, min(1, 1 - session.remaining / total))
+        return max(0, min(1, 1 - viewModel.remaining / total))
     }
 
     /// "mm:ss". running이면 남은 시간, idle이면 선택 세션(또는 기본) 집중 시간을 보여준다.
     /// **올림(ceil)** 표시 — LA의 시스템 `Text(timerInterval:)`도 올림으로 카운트다운하므로,
     /// 분수 초(`phaseEndDate - now`) 구간에서 앱과 LA가 같은 숫자를 띄워 싱크가 맞는다.
     private var timeText: String {
-        let seconds = viewModel.session?.remaining ?? viewModel.displayedSettings.focusDuration
+        let seconds = viewModel.isActive ? viewModel.remaining : viewModel.displayedSettings.focusDuration
         return Duration.seconds(max(0, seconds.rounded(.up)))
             .formatted(.time(pattern: .minuteSecond))
     }

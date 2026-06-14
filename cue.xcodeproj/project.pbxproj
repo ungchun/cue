@@ -69,6 +69,10 @@
 				Shared/AppGroup/FocusLiveActivityActionQueue.swift,
 				Shared/AppGroup/FocusPhaseEndNotification.swift,
 				Shared/AppGroup/SharedAppGroup.swift,
+				Shared/LiveActivity/FocusAlarmIntents.swift,
+				Shared/LiveActivity/FocusAlarmMetadata.swift,
+				Shared/LiveActivity/FocusAlarmPlan.swift,
+				Shared/LiveActivity/FocusAlarmScheduling.swift,
 				Shared/LiveActivity/FocusLiveActivityAttributes.swift,
 				Shared/LiveActivity/FocusLiveActivityIntents.swift,
 				Shared/LiveActivity/LiveEventItem.swift,
@@ -472,12 +476,12 @@
 				DEVELOPMENT_TEAM = F92UQYH2RA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "iOS 캘린더 이벤트를 cue에서 보고 만들기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "iOS 미리 알림을 cue에서 보고 관리하기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -510,12 +514,12 @@
 				DEVELOPMENT_TEAM = F92UQYH2RA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "iOS 캘린더 이벤트를 cue에서 보고 만들기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "iOS 미리 알림을 cue에서 보고 관리하기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

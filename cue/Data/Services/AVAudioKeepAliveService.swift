@@ -76,10 +76,12 @@ final class AVAudioKeepAliveService: BackgroundAudioKeeping {
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames)!
         buffer.frameLength = frames
         guard let channels = buffer.floatChannelData else { return buffer }
-        let amplitude: Float = 0.002
+        // ⚠️ 진단용 — 들리는 톤(440Hz, 0.1). 잠금 후에도 소리가 계속 나면 keep-alive가
+        // 백그라운드에서 살아 있다는 증거. 확인 후 무음(0.002)으로 되돌리거나 집중 사운드로 교체.
+        let amplitude: Float = 0.1
         let sampleRate = Float(format.sampleRate)
         for frame in 0..<Int(frames) {
-            let value = amplitude * sin(2 * .pi * 50 * Float(frame) / sampleRate)
+            let value = amplitude * sin(2 * .pi * 440 * Float(frame) / sampleRate)
             for ch in 0..<Int(format.channelCount) {
                 channels[ch][frame] = value
             }
