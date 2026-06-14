@@ -24,6 +24,7 @@ final class FocusViewModel {
     var session: FocusSessionViewModel?
 
     private let scheduler: any FocusNotificationScheduling
+    private let audioKeepAlive: any BackgroundAudioKeeping
     private let fetchFocusSessions: FetchFocusSessionsUseCase
     private let saveFocusSessions: SaveFocusSessionsUseCase
     private let fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
@@ -37,6 +38,7 @@ final class FocusViewModel {
 
     init(dependencies: Dependencies) {
         self.scheduler = dependencies.focusNotifications
+        self.audioKeepAlive = dependencies.focusAudioKeepAlive
         self.fetchFocusSessions = dependencies.fetchFocusSessions
         self.saveFocusSessions = dependencies.saveFocusSessions
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
@@ -103,6 +105,8 @@ final class FocusViewModel {
             liveActivity: liveActivityHooks(),
             persist: snapshotPersister()
         )
+        // 복원된 세션도 진행 중이므로 keep-alive 시작(완료로 정리되면 stopSession이 stop).
+        audioKeepAlive.start()
         // 앱이 죽은 동안 LA에서 누른 정지/재개/종료를 먼저 반영 — cold launch는 scenePhase
         // .active 전환이 없어 View가 큐를 drain하지 않으므로 여기서 처리한다.
         handleLiveActivityActions(FocusLiveActivityActionQueue.shared.drain())
@@ -120,6 +124,8 @@ final class FocusViewModel {
         // 이전 세션이 남긴 LA 액션 잔재를 폐기 — 안 그러면 다음 복원 때 stale 액션이 적용돼
         // 잔여가 엉뚱하게 부풀거나(예: 오래된 pause 시각) 세션이 종료된다.
         FocusLiveActivityActionQueue.shared.clear()
+        // 백그라운드/잠금에서도 타이머가 돌아 단계 전환·LA 갱신이 작동하도록 keep-alive 시작.
+        audioKeepAlive.start()
         session = FocusSessionViewModel(
             settings: displayedSettings,
             scheduler: scheduler,
@@ -153,6 +159,7 @@ final class FocusViewModel {
     func stopSession() {
         session?.abort()
         session = nil
+        audioKeepAlive.stop()
         // 종료된 세션의 잔여 LA 액션을 폐기 — 다음 세션/복원에 새어 들어가지 않게.
         FocusLiveActivityActionQueue.shared.clear()
     }

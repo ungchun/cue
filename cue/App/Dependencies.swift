@@ -33,6 +33,9 @@ struct Dependencies: Sendable {
 
     /// 집중 세션의 단계 종료 알림 스케줄러. ViewModel이 schedule/cancel을 직접 호출한다.
     var focusNotifications: any FocusNotificationScheduling
+    /// 세션 동안 백그라운드 오디오로 앱을 깨어 있게 유지 — 잠금/백그라운드에서도 단계 전환·
+    /// LA 갱신이 작동하게 한다. 세션 시작/복원에 start, 종료/완료에 stop.
+    var focusAudioKeepAlive: any BackgroundAudioKeeping
 
     /// 저장된 세션 프리셋 영속화 — onAppear 시 fetch, CRUD 직후 save.
     var fetchFocusSessions: FetchFocusSessionsUseCase
@@ -149,6 +152,7 @@ extension Dependencies {
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             focusNotifications: NoopFocusNotificationScheduler(),
+            focusAudioKeepAlive: DisabledAudioKeepAliveService(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
             fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),

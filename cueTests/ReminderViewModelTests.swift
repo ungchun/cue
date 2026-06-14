@@ -44,6 +44,7 @@ struct ReminderViewModelTests {
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             focusNotifications: NoopFocusNotificationScheduler(),
+            focusAudioKeepAlive: DisabledAudioKeepAliveService(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
             fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
@@ -114,8 +115,22 @@ struct ReminderViewModelTests {
             fetchEvents: FetchEventsUseCase(repository: eventsRepo),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepo),
             focusNotifications: NoopFocusNotificationScheduler(),
+            focusAudioKeepAlive: DisabledAudioKeepAliveService(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusRepo),
-            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusRepo)
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusRepo),
+            fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusRepo),
+            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusRepo),
+            fetchActiveFocusSession: FetchActiveFocusSessionUseCase(repository: focusRepo),
+            saveActiveFocusSession: SaveActiveFocusSessionUseCase(repository: focusRepo),
+            startFocusLiveActivity: StartFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            updateFocusLiveActivity: UpdateFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endFocusLiveActivity: EndFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            restoreFocusLiveActivity: RestoreFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            startReminderLiveActivity: StartReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endReminderLiveActivity: EndReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
+            startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
         )
         let viewModel = ReminderViewModel(dependencies: deps)
         await viewModel.onAppear()
