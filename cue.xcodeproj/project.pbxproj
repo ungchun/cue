@@ -67,6 +67,7 @@
 				Presentation/DesignSystem/Foundation/Spacing.swift,
 				Shared/AppGroup/FocusLiveActivityAction.swift,
 				Shared/AppGroup/FocusLiveActivityActionQueue.swift,
+				Shared/AppGroup/FocusPhaseEndNotification.swift,
 				Shared/AppGroup/SharedAppGroup.swift,
 				Shared/LiveActivity/FocusLiveActivityAttributes.swift,
 				Shared/LiveActivity/FocusLiveActivityIntents.swift,

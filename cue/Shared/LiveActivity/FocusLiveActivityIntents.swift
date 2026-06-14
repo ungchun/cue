@@ -6,6 +6,7 @@
 import ActivityKit
 import AppIntents
 import Foundation
+import UserNotifications
 
 // MARK: - 타깃 멤버십 (회귀 방지)
 //
@@ -44,6 +45,10 @@ struct PauseResumeFocusIntent: LiveActivityIntent {
             // 일시정지 — 누른 시각으로 freeze. phaseEndDate는 그대로, pauseTime만 set.
             FocusLiveActivityActionQueue.shared.enqueue(.pause(at: pressedAt))
             newState.pauseTime = pressedAt
+            // 예약된 단계 종료 알림을 즉시 취소 — 정지 중엔 단계가 끝나지 않으므로. drain(앱
+            // 재오픈)까지 기다리면 그 전에 알림이 발송된다. 재개는 앱 resume(at:)이 재예약.
+            UNUserNotificationCenter.current()
+                .removePendingNotificationRequests(withIdentifiers: [FocusPhaseEndNotification.identifier])
         } else {
             // 재개 — 정지 동안 흐른 만큼 deadline을 미뤄 카운트다운을 정확히 이어붙인다.
             // start·end를 같은 양만큼 미루면 잔여(=end - now)가 정지 직전 값으로 보존되고,
@@ -76,6 +81,10 @@ struct EndFocusIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         FocusLiveActivityActionQueue.shared.enqueue(.end)
+        // 단계 종료 pending 알림을 즉시 취소 — drain(앱 재오픈)까지 기다리면 그 전에 알림이
+        // 발송돼버린다. 인텐트가 앱 프로세스에서 실행되므로 여기서 바로 지운다.
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [FocusPhaseEndNotification.identifier])
         if let activity = Activity<FocusLiveActivityAttributes>.activities.first {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
