@@ -36,15 +36,28 @@ struct PauseResumeFocusIntent: LiveActivityIntent {
             return .result()
         }
         let state = activity.content.state
-        let action: FocusLiveActivityAction = state.pauseTime == nil ? .pause : .resume
-        FocusLiveActivityActionQueue.shared.enqueue(action)
-
-        // 즉시 피드백 — pauseTime만 토글. widget이 정적 텍스트로 freeze/dynamic 분기.
+        // 누른 시각을 한 번 떠서 큐 액션과 LA 갱신에 동일하게 쓴다 — 둘이 같은 기준 시각.
+        let pressedAt = Date.now
         var newState = state
-        newState.pauseTime = (state.pauseTime == nil) ? .now : nil
+
+        if state.pauseTime == nil {
+            // 일시정지 — 누른 시각으로 freeze. phaseEndDate는 그대로, pauseTime만 set.
+            FocusLiveActivityActionQueue.shared.enqueue(.pause(at: pressedAt))
+            newState.pauseTime = pressedAt
+        } else {
+            // 재개 — 정지 동안 흐른 만큼 deadline을 미뤄 카운트다운을 정확히 이어붙인다.
+            // start·end를 같은 양만큼 미루면 잔여(=end - now)가 정지 직전 값으로 보존되고,
+            // 메인 앱의 resume(at:)이 만드는 deadline(= pressedAt + remaining)과 정확히 일치한다.
+            let pausedFor = pressedAt.timeIntervalSince(state.pauseTime ?? pressedAt)
+            FocusLiveActivityActionQueue.shared.enqueue(.resume(at: pressedAt))
+            newState.phaseStartDate = state.phaseStartDate.addingTimeInterval(pausedFor)
+            newState.phaseEndDate = state.phaseEndDate.addingTimeInterval(pausedFor)
+            newState.pauseTime = nil
+        }
+
         let content = ActivityContent(
             state: newState,
-            staleDate: state.phaseEndDate.addingTimeInterval(30)
+            staleDate: newState.phaseEndDate.addingTimeInterval(30)
         )
         await activity.update(content)
 

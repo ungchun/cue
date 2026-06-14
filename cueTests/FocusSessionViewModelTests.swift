@@ -201,6 +201,31 @@ struct FocusSessionViewModelTests {
         #expect(vm.remaining == 55)
     }
 
+    /// pause(at:)는 drain 시점이 아니라 **누른 시각** 기준으로 freeze — LA에서 누른 뒤 앱을
+    /// 늦게 열어도 그 사이 시간이 새지 않는다(사용자 보고 버그: 40초에 멈췄는데 35초로 재개).
+    @Test func pauseAtFreezesAsOfPressTime() {
+        let (vm, _, clock) = make(focus: 60)
+
+        clock.advance(10) // 앱이 늦게 drain되는 시점
+        vm.pause(at: Date(timeIntervalSinceReferenceDate: 5)) // 실제로 누른 시각 = 5초
+
+        #expect(vm.remaining == 55) // 50(drain 기준)이 아니라 55(누른 시각 기준)
+        #expect(vm.isPaused)
+    }
+
+    /// resume(at:)는 누른 시각 기준으로 deadline을 재구성 — 누른 뒤 흐른 시간은 정상 카운트다운.
+    @Test func resumeAtRebuildsDeadlineFromPressTime() {
+        let (vm, _, clock) = make(focus: 60)
+
+        vm.pause()        // remaining 60 (clock 0)
+        clock.advance(20) // drain 시점 = 20
+        vm.resume(at: Date(timeIntervalSinceReferenceDate: 15)) // 재개 누른 시각 = 15
+        vm.tick()         // now = 20 → 재개 후 5초 경과
+
+        #expect(vm.remaining == 55) // 60(now 기준)이 아니라 55(누른 시각 15 기준)
+        #expect(vm.isPaused == false)
+    }
+
     @Test func skipFinishesCurrentPhaseImmediately() {
         let (vm, _, _) = make(focus: 60, rest: 30, cycles: 2)
 

@@ -15,11 +15,14 @@ struct FocusLiveActivityActionQueueTests {
     @Test func enqueueThenDrainReturnsActionsInOrder() {
         let queue = FocusLiveActivityActionQueue(defaults: makeIsolatedDefaults())
 
-        queue.enqueue(.pause)
-        queue.enqueue(.resume)
+        let t1 = Date(timeIntervalSinceReferenceDate: 100)
+        let t2 = Date(timeIntervalSinceReferenceDate: 200)
+        queue.enqueue(.pause(at: t1))
+        queue.enqueue(.resume(at: t2))
         queue.enqueue(.end)
 
-        #expect(queue.drain() == [.pause, .resume, .end])
+        // pause/resume의 누른 시각(timestamp)까지 round-trip 보존돼야 한다.
+        #expect(queue.drain() == [.pause(at: t1), .resume(at: t2), .end])
     }
 
     @Test func drainOnEmptyQueueReturnsEmpty() {
@@ -31,7 +34,7 @@ struct FocusLiveActivityActionQueueTests {
     @Test func drainConsumesQueueSoNextDrainIsEmpty() {
         let queue = FocusLiveActivityActionQueue(defaults: makeIsolatedDefaults())
 
-        queue.enqueue(.pause)
+        queue.enqueue(.pause(at: Date(timeIntervalSinceReferenceDate: 100)))
         _ = queue.drain()
 
         #expect(queue.drain() == [])
@@ -40,7 +43,7 @@ struct FocusLiveActivityActionQueueTests {
     @Test func enqueueAfterDrainStartsFreshQueue() {
         let queue = FocusLiveActivityActionQueue(defaults: makeIsolatedDefaults())
 
-        queue.enqueue(.pause)
+        queue.enqueue(.pause(at: Date(timeIntervalSinceReferenceDate: 100)))
         _ = queue.drain()
         queue.enqueue(.end)
 

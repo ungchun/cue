@@ -126,28 +126,36 @@ final class FocusSessionViewModel {
 
     // MARK: - 사용자 액션
 
-    /// 일시정지 — `tick`이 멈추고, 단계 종료 pending 알림은 취소된다. 현재 `remaining`을
-    /// 벽시계 기준으로 한 번 박아 고정한다. 라이브 액티비티는 `pauseTime`을 set하고 같은
-    /// `phaseEndDate`를 받으므로, LA 정지 표시(`phaseEndDate - pauseTime`)가 앱 `remaining`과
-    /// 정확히 일치한다 — 시스템 타이머 위임이라 앱이 매초 update할 필요 없음.
-    func pause() {
+    /// 일시정지 — 앱 내 컨트롤용. 지금 시각 기준으로 멈춘다.
+    func pause() { pause(at: now()) }
+
+    /// 일시정지(누른 시각 지정) — LA 버튼이 drain될 때 **누른 시각**(`date`)을 넘겨, drain이
+    /// 늦어도 그 시점 기준으로 freeze해 시간 누수를 막는다. `remaining`을 `phaseEndDate - date`로
+    /// 박고, 단계 종료 pending 알림 취소. LA는 같은 `phaseEndDate` + `pauseTime = date`를 받아
+    /// 정지 표시(`phaseEndDate - date`)가 앱 `remaining`과 정확히 일치한다.
+    func pause(at date: Date) {
         guard !isPaused, !isComplete else { return }
-        remaining = max(0, phaseEndDate.timeIntervalSince(now()))
+        remaining = max(0, phaseEndDate.timeIntervalSince(date))
         isPaused = true
         scheduler.cancelAll()
-        scheduleLiveActivityUpdate(pauseTime: now())
+        scheduleLiveActivityUpdate(pauseTime: date)
     }
 
-    /// 재개 — 고정해 둔 `remaining`으로 deadline을 다시 잡는다. `phaseEndDate = now + remaining`,
-    /// `phaseStartDate = phaseEndDate - phaseDuration`으로 interval 길이를 phaseDuration 그대로
-    /// 유지하고 `pauseTime` 해제. 앱·LA가 동일한 새 deadline을 공유한다.
-    func resume() {
+    /// 재개 — 앱 내 컨트롤용. 지금 시각 기준으로 다시 시작한다.
+    func resume() { resume(at: now()) }
+
+    /// 재개(누른 시각 지정) — **누른 시각**(`date`) 기준으로 deadline을 재구성한다.
+    /// `phaseEndDate = date + remaining`, `phaseStartDate = phaseEndDate - phaseDuration`으로
+    /// interval 길이를 유지하고 `pauseTime` 해제. drain이 누른 시각보다 늦으면 그 사이 흐른
+    /// 시간은 정상적으로 카운트다운된다(누른 순간부터 타이머가 도는 것). 알림은 실제 남은
+    /// 시각(`phaseEndDate - now`)으로 잡아 늦은 drain을 보정. 앱·LA가 동일 deadline을 공유.
+    func resume(at date: Date) {
         guard isPaused, !isComplete else { return }
         isPaused = false
-        phaseEndDate = now().addingTimeInterval(remaining)
+        phaseEndDate = date.addingTimeInterval(remaining)
         phaseStartDate = phaseEndDate.addingTimeInterval(-phaseDuration)
         scheduler.schedulePhaseEnd(
-            after: remaining,
+            after: max(0, phaseEndDate.timeIntervalSince(now())),
             title: Self.title(for: phase),
             body: Self.body(for: phase)
         )
