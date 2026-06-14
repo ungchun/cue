@@ -150,7 +150,7 @@ struct FocusView: View {
     @ViewBuilder
     private var phaseLabelInRing: some View {
         if viewModel.isActive {
-            Text(viewModel.phase == .focus ? "집중 중" : "휴식 중")
+            Text(viewModel.phase == .focus ? "집중" : "휴식")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

@@ -195,7 +195,7 @@ struct FocusAlarmLiveActivityWidget: Widget {
 
     private func subtitle(_ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>) -> String {
         guard let meta = context.attributes.metadata else { return "" }
-        let phase = meta.phase == .focus ? "집중 중" : "휴식 중"
+        let phase = meta.phase == .focus ? "집중" : "휴식"
         return meta.totalCycles > 1 ? "\(phase) · \(meta.cycle) / \(meta.totalCycles)" : phase
     }
 

@@ -75,7 +75,7 @@ enum FocusAlarmScheduling {
         let next = nextStep(after: phase, cycle: cycle, totalCycles: plan.totalCycles)
 
         let countdown = AlarmPresentation.Countdown(
-            title: LocalizedStringResource(stringLiteral: "\(label(phase)) 중"),
+            title: LocalizedStringResource(stringLiteral: label(phase)),
             pauseButton: AlarmButton(text: "일시정지", textColor: .white, systemImageName: "pause.fill")
         )
         let paused = AlarmPresentation.Paused(
