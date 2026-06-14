@@ -69,6 +69,7 @@
 				Shared/AppGroup/FocusLiveActivityActionQueue.swift,
 				Shared/AppGroup/SharedAppGroup.swift,
 				Shared/LiveActivity/FocusLiveActivityAttributes.swift,
+				Shared/LiveActivity/FocusLiveActivityIntents.swift,
 				Shared/LiveActivity/LiveEventItem.swift,
 				Shared/LiveActivity/LiveFocusPhase.swift,
 				Shared/LiveActivity/LiveReminderItem.swift,
