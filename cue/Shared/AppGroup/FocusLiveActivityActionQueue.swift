@@ -47,6 +47,12 @@ struct FocusLiveActivityActionQueue: @unchecked Sendable {
         return queue
     }
 
+    /// 큐를 반환 없이 비운다 — 세션 시작/종료 경계에서 **이전 세션의 잔재 액션**을 폐기해,
+    /// 다음 세션(특히 복원 세션)에 엉뚱하게 적용되는 걸 막는다.
+    func clear() {
+        defaults.removeObject(forKey: key)
+    }
+
     // MARK: - 내부
 
     private func currentQueue() -> [FocusLiveActivityAction] {

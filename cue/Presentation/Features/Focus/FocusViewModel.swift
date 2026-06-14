@@ -117,6 +117,9 @@ final class FocusViewModel {
     /// 아니면 라이브 액티비티 활성).
     func start() {
         guard session == nil else { return }
+        // 이전 세션이 남긴 LA 액션 잔재를 폐기 — 안 그러면 다음 복원 때 stale 액션이 적용돼
+        // 잔여가 엉뚱하게 부풀거나(예: 오래된 pause 시각) 세션이 종료된다.
+        FocusLiveActivityActionQueue.shared.clear()
         session = FocusSessionViewModel(
             settings: displayedSettings,
             scheduler: scheduler,
@@ -150,6 +153,8 @@ final class FocusViewModel {
     func stopSession() {
         session?.abort()
         session = nil
+        // 종료된 세션의 잔여 LA 액션을 폐기 — 다음 세션/복원에 새어 들어가지 않게.
+        FocusLiveActivityActionQueue.shared.clear()
     }
 
     /// 잠금화면·Dynamic Island의 App Intent가 큐에 enqueue한 액션들을 받아 ViewModel에

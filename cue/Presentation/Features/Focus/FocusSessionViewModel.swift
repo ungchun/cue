@@ -225,7 +225,9 @@ final class FocusSessionViewModel {
     /// 정지 표시(`phaseEndDate - date`)가 앱 `remaining`과 정확히 일치한다.
     func pause(at date: Date) {
         guard !isPaused, !isComplete else { return }
-        remaining = max(0, phaseEndDate.timeIntervalSince(date))
+        // phaseDuration으로 상한 클램프 — 잔여는 단계 길이를 넘을 수 없다. 늦은/엉뚱한 `date`
+        // (예: 잔재 액션의 과거 시각)가 잔여를 부풀리는 걸 방어한다.
+        remaining = min(phaseDuration, max(0, phaseEndDate.timeIntervalSince(date)))
         isPaused = true
         scheduler.cancelAll()
         scheduleLiveActivityUpdate(pauseTime: date)

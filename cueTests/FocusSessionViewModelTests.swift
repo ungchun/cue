@@ -213,6 +213,15 @@ struct FocusSessionViewModelTests {
         #expect(vm.isPaused)
     }
 
+    /// 잔재 액션의 과거 시각이 들어와도 잔여는 단계 길이를 못 넘게 클램프(33분 부풀림 버그 방어).
+    @Test func pauseAtClampsRemainingToPhaseDuration() {
+        let (vm, _, _) = make(focus: 60) // phaseEndDate = T0+60
+
+        vm.pause(at: Date(timeIntervalSinceReferenceDate: -30)) // 과거 시각
+
+        #expect(vm.remaining == 60) // 90이 아니라 60으로 클램프
+    }
+
     /// resume(at:)는 누른 시각 기준으로 deadline을 재구성 — 누른 뒤 흐른 시간은 정상 카운트다운.
     @Test func resumeAtRebuildsDeadlineFromPressTime() {
         let (vm, _, clock) = make(focus: 60)
