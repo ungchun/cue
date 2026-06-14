@@ -24,23 +24,31 @@ final class FocusSessionViewModel {
     private let settings: FocusSettings
     private let scheduler: any FocusNotificationScheduling
     /// 라이브 액티비티 hooks — nil이면 LA 호출을 모두 건너뛴다(테스트·Preview).
-    /// 세션 시작 시 `start`, phase 전환·pause/resume에서 `update`, 종료 시 `end`.
+    /// 세션 시작 시 `start`, phase 전환·pause/resume에서 `update`, 종료 시 `end`, 복원 시 `restore`.
     private let liveActivity: LiveActivityHooks?
     /// 현재 시각 provider — 테스트에서 결정적 clock을 주입하려고 추상화. 기본은 `Date.now`.
     /// 모든 시각 계산(deadline·remaining·pauseTime)이 이 하나만 읽는다.
     private let now: () -> Date
+    /// 진행 중 세션 스냅샷 영속화 hook. nil이면 영속 생략(테스트·Preview). 구조적 상태가
+    /// 바뀔 때(시작·단계 전환·정지·재개)마다 최신 스냅샷을, 종료·완료 시 nil(삭제)을 받는다.
+    /// 매 tick은 부르지 않는다 — running의 잔여는 `phaseEndDate`(이미 저장됨)에서 파생되므로.
+    private let persist: (@Sendable (ActiveFocusSessionSnapshot?) -> Void)?
 
-    /// 세션과 라이브 액티비티를 연결하는 묶음. `FocusViewModel.start()`가 만들어 주입.
-    /// session 식별자·표시 타이틀·색·세 use case를 함께 들고 다닌다 — init 시그니처가 여러
-    /// 인자로 부풀지 않게.
+    /// 세션 식별자 — 스냅샷 영속과 LA 호출에 함께 쓰인다.
+    let sessionID: UUID
+    /// LA·스냅샷에 싣는 표시 타이틀.
+    let sessionTitle: String
+    /// 세션 색 hex. widget이 아이콘 등에 사용. nil이면 시스템 accent로 폴백.
+    let colorHex: String?
+
+    /// 세션과 라이브 액티비티를 연결하는 use case 묶음. `FocusViewModel`이 만들어 주입.
+    /// 식별자·타이틀·색은 ViewModel이 직접 들고(스냅샷에도 필요) hooks엔 use case만 둔다.
     struct LiveActivityHooks: Sendable {
-        let sessionID: UUID
-        let sessionTitle: String
-        /// 세션 색 hex. widget이 외곽 stroke·아이콘 등에 사용. nil이면 시스템 accent로 폴백.
-        let colorHex: String?
         let start: StartFocusLiveActivityUseCase
         let update: UpdateFocusLiveActivityUseCase
         let end: EndFocusLiveActivityUseCase
+        /// 앱 재실행 복원 — 기존 인스턴스 채택 또는 새로 시작.
+        let restore: RestoreFocusLiveActivityUseCase
     }
 
     /// 현재 단계.
@@ -69,16 +77,25 @@ final class FocusSessionViewModel {
         phase == .focus ? settings.focusDuration : settings.restDuration
     }
 
+    /// 새 세션 시작.
     init(
         settings: FocusSettings,
         scheduler: any FocusNotificationScheduling,
         liveActivity: LiveActivityHooks? = nil,
-        now: @escaping () -> Date = { .now }
+        now: @escaping () -> Date = { .now },
+        sessionID: UUID = UUID(),
+        sessionTitle: String = "",
+        colorHex: String? = nil,
+        persist: (@Sendable (ActiveFocusSessionSnapshot?) -> Void)? = nil
     ) {
         self.settings = settings
         self.scheduler = scheduler
         self.liveActivity = liveActivity
         self.now = now
+        self.sessionID = sessionID
+        self.sessionTitle = sessionTitle
+        self.colorHex = colorHex
+        self.persist = persist
         let phaseStart = now()
         let phaseEnd = phaseStart.addingTimeInterval(settings.focusDuration)
         self.phaseStartDate = phaseStart
@@ -90,16 +107,89 @@ final class FocusSessionViewModel {
             title: Self.title(for: .focus),
             body: Self.body(for: .focus)
         )
-        // 세션 시작 = LA start. Task 안에선 hook 값만 capture — self capture 회피.
+        persistSnapshot()
+        // 세션 시작 = LA start. Task 안에선 capture 값만 — self capture 회피.
         if let hooks = liveActivity {
+            let id = sessionID, title = sessionTitle, color = colorHex
             Task {
                 try? await hooks.start(
-                    sessionID: hooks.sessionID,
-                    sessionTitle: hooks.sessionTitle,
-                    colorHex: hooks.colorHex,
+                    sessionID: id,
+                    sessionTitle: title,
+                    colorHex: color,
                     phase: .focus,
                     phaseStartDate: phaseStart,
                     phaseEndDate: phaseEnd
+                )
+            }
+        }
+    }
+
+    /// 진행 중이던 세션을 스냅샷에서 복원(앱 강제 종료 후 재실행). 새 LA를 start하지 않고
+    /// `restore`로 기존 인스턴스를 채택하거나 없으면 새로 띄운다. 시간은 절대 시각 기반이라
+    /// 복원 직후 `tick()` 한 번이면 다운타임만큼 벽시계로 정확히 따라잡는다.
+    init(
+        restoring snapshot: ActiveFocusSessionSnapshot,
+        scheduler: any FocusNotificationScheduling,
+        liveActivity: LiveActivityHooks? = nil,
+        now: @escaping () -> Date = { .now },
+        persist: (@Sendable (ActiveFocusSessionSnapshot?) -> Void)? = nil
+    ) {
+        self.settings = snapshot.settings
+        self.scheduler = scheduler
+        self.liveActivity = liveActivity
+        self.now = now
+        self.sessionID = snapshot.sessionID
+        self.sessionTitle = snapshot.sessionTitle
+        self.colorHex = snapshot.colorHex
+        self.persist = persist
+        self.phase = snapshot.phase
+        self.currentCycle = snapshot.currentCycle
+        self.totalCycles = snapshot.settings.totalCycles
+        self.isPaused = snapshot.isPaused
+
+        // 모든 저장 프로퍼티 초기화 전엔 self 프로퍼티를 못 읽으므로 로컬로 계산 후 한 번에 대입.
+        let resolvedStart: Date
+        let resolvedEnd: Date
+        let resolvedRemaining: TimeInterval
+        if snapshot.isPaused {
+            // 정지 — 잔여를 source of truth로, deadline은 now 기준 재구성(재개 시 정확).
+            let phaseDur = snapshot.phase == .focus ? snapshot.settings.focusDuration : snapshot.settings.restDuration
+            resolvedRemaining = snapshot.remaining
+            resolvedEnd = now().addingTimeInterval(snapshot.remaining)
+            resolvedStart = resolvedEnd.addingTimeInterval(-phaseDur)
+        } else {
+            // running — 절대 deadline 그대로.
+            resolvedStart = snapshot.phaseStartDate
+            resolvedEnd = snapshot.phaseEndDate
+            resolvedRemaining = max(0, snapshot.phaseEndDate.timeIntervalSince(now()))
+        }
+        self.phaseStartDate = resolvedStart
+        self.phaseEndDate = resolvedEnd
+        self.remaining = resolvedRemaining
+
+        // running이면 단계 종료 알림을 실제 남은 시각으로 재예약(정지는 재개 시 예약).
+        if !snapshot.isPaused {
+            scheduler.schedulePhaseEnd(
+                after: max(1, resolvedRemaining),
+                title: Self.title(for: snapshot.phase),
+                body: Self.body(for: snapshot.phase)
+            )
+        }
+
+        let phaseSnapshot: LiveFocusPhase = snapshot.phase == .focus ? .focus : .breakTime
+        let start = resolvedStart, end = resolvedEnd
+        let pauseTime: Date? = snapshot.isPaused ? now() : nil
+        if let hooks = liveActivity {
+            let id = sessionID, title = sessionTitle, color = colorHex
+            Task {
+                try? await hooks.restore(
+                    sessionID: id,
+                    sessionTitle: title,
+                    colorHex: color,
+                    phase: phaseSnapshot,
+                    phaseStartDate: start,
+                    phaseEndDate: end,
+                    pauseTime: pauseTime
                 )
             }
         }
@@ -139,6 +229,7 @@ final class FocusSessionViewModel {
         isPaused = true
         scheduler.cancelAll()
         scheduleLiveActivityUpdate(pauseTime: date)
+        persistSnapshot()
     }
 
     /// 재개 — 앱 내 컨트롤용. 지금 시각 기준으로 다시 시작한다.
@@ -160,6 +251,7 @@ final class FocusSessionViewModel {
             body: Self.body(for: phase)
         )
         scheduleLiveActivityUpdate(pauseTime: nil)
+        persistSnapshot()
     }
 
     /// 현재 단계를 즉시 끝낸 것으로 처리하고 다음 단계로 넘긴다(혹은 세션 종료).
@@ -178,6 +270,7 @@ final class FocusSessionViewModel {
         isComplete = true
         scheduler.cancelAll()
         scheduleLiveActivityEnd()
+        clearSnapshot()
     }
 
     // MARK: - 내부 — 단계 전환
@@ -197,6 +290,7 @@ final class FocusSessionViewModel {
                 isComplete = true
                 remaining = 0
                 scheduleLiveActivityEnd()
+                clearSnapshot()
                 return
             }
             phase = .rest
@@ -218,6 +312,31 @@ final class FocusSessionViewModel {
             body: Self.body(for: phase)
         )
         scheduleLiveActivityUpdate(pauseTime: nil)
+        persistSnapshot()
+    }
+
+    // MARK: - 스냅샷 영속
+
+    /// 현재 상태를 스냅샷으로 떠 영속 hook에 넘긴다. hook이 nil이면 no-op.
+    private func persistSnapshot() {
+        guard let persist else { return }
+        persist(ActiveFocusSessionSnapshot(
+            sessionID: sessionID,
+            sessionTitle: sessionTitle,
+            colorHex: colorHex,
+            settings: settings,
+            phase: phase,
+            currentCycle: currentCycle,
+            phaseStartDate: phaseStartDate,
+            phaseEndDate: phaseEndDate,
+            isPaused: isPaused,
+            remaining: remaining
+        ))
+    }
+
+    /// 저장된 스냅샷 삭제 — 종료·완료 시. 다음 실행에서 복원할 세션이 없음을 뜻한다.
+    private func clearSnapshot() {
+        persist?(nil)
     }
 
     // MARK: - 라이브 액티비티 호출 helpers

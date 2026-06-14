@@ -307,6 +307,138 @@ struct FocusSessionViewModelTests {
 
         #expect(scheduler.cancelCount >= 1)
     }
+
+    // MARK: - 스냅샷 영속 / 복원 (앱 강제 종료 후 복원)
+
+    private func makePersisting(
+        focus: TimeInterval = 60,
+        rest: TimeInterval = 30,
+        clock: TestClock = TestClock(),
+        spy: SnapshotSpy = SnapshotSpy()
+    ) -> (FocusSessionViewModel, TestClock, SnapshotSpy) {
+        let settings = FocusSettings(
+            focusDuration: focus, restDuration: rest, isRepeating: true, cycleCount: 4
+        )
+        let vm = FocusSessionViewModel(
+            settings: settings,
+            scheduler: FakeFocusNotificationScheduler(),
+            now: { clock.current },
+            sessionID: UUID(),
+            sessionTitle: "딥워크",
+            colorHex: "#FF3B30",
+            persist: { spy.persist($0) }
+        )
+        return (vm, clock, spy)
+    }
+
+    @Test func persistsSnapshotOnStart() {
+        let (_, _, spy) = makePersisting(focus: 60)
+
+        #expect(spy.last?.sessionTitle == "딥워크")
+        #expect(spy.last?.phase == .focus)
+        #expect(spy.last?.remaining == 60)
+        #expect(spy.last?.isPaused == false)
+    }
+
+    @Test func persistsPausedSnapshotOnPause() {
+        let (vm, _, spy) = makePersisting(focus: 60)
+
+        vm.pause()
+
+        #expect(spy.last?.isPaused == true)
+        #expect(spy.last?.remaining == 60)
+    }
+
+    @Test func clearsSnapshotOnAbort() {
+        let (vm, _, spy) = makePersisting(focus: 60)
+
+        vm.abort()
+
+        #expect(spy.clearedCount >= 1)
+    }
+
+    @Test func clearsSnapshotOnNaturalCompletion() {
+        let clock = TestClock()
+        let spy = SnapshotSpy()
+        let settings = FocusSettings(
+            focusDuration: 10, restDuration: 5, isRepeating: false, cycleCount: 1
+        )
+        let vm = FocusSessionViewModel(
+            settings: settings, scheduler: FakeFocusNotificationScheduler(),
+            now: { clock.current }, persist: { spy.persist($0) }
+        )
+
+        clock.advance(10)
+        vm.tick() // 마지막 집중 종료 → 완료
+
+        #expect(vm.isComplete)
+        #expect(spy.clearedCount >= 1)
+    }
+
+    /// running 스냅샷 복원 — 절대 deadline 기반이라 다운타임만큼 벽시계로 정확히 이어진다.
+    @Test func restoresRunningSnapshotByWallClock() {
+        let clock = TestClock() // T0
+        let snapshot = ActiveFocusSessionSnapshot(
+            sessionID: UUID(), sessionTitle: "딥워크", colorHex: nil,
+            settings: FocusSettings(focusDuration: 60, restDuration: 30, isRepeating: true, cycleCount: 4),
+            phase: .focus, currentCycle: 2,
+            phaseStartDate: Date(timeIntervalSinceReferenceDate: -20), // 시작은 과거
+            phaseEndDate: Date(timeIntervalSinceReferenceDate: 40),    // T0+40에 종료
+            isPaused: false, remaining: 40
+        )
+        let vm = FocusSessionViewModel(
+            restoring: snapshot, scheduler: FakeFocusNotificationScheduler(),
+            now: { clock.current }
+        )
+
+        #expect(vm.phase == .focus)
+        #expect(vm.currentCycle == 2)
+        #expect(vm.remaining == 40)
+
+        clock.advance(10)
+        vm.tick()
+        #expect(vm.remaining == 30) // 다운타임/경과가 벽시계로 반영
+    }
+
+    /// paused 스냅샷 복원 — 잔여가 고정 source of truth, tick에도 안 줄어든다.
+    @Test func restoresPausedSnapshotFrozen() {
+        let clock = TestClock()
+        let snapshot = ActiveFocusSessionSnapshot(
+            sessionID: UUID(), sessionTitle: "딥워크", colorHex: nil,
+            settings: FocusSettings(focusDuration: 60, restDuration: 30, isRepeating: true, cycleCount: 4),
+            phase: .focus, currentCycle: 1,
+            phaseStartDate: Date(timeIntervalSinceReferenceDate: 0),
+            phaseEndDate: Date(timeIntervalSinceReferenceDate: 0),
+            isPaused: true, remaining: 25
+        )
+        let vm = FocusSessionViewModel(
+            restoring: snapshot, scheduler: FakeFocusNotificationScheduler(),
+            now: { clock.current }
+        )
+
+        #expect(vm.isPaused)
+        #expect(vm.remaining == 25)
+
+        clock.advance(10)
+        vm.tick()
+        #expect(vm.remaining == 25) // 정지 — 그대로
+    }
+}
+
+/// 스냅샷 영속 hook의 테스트 spy. 마지막 저장값과 삭제(nil) 호출 수를 기록.
+final class SnapshotSpy: @unchecked Sendable {
+    private(set) var last: ActiveFocusSessionSnapshot?
+    private(set) var saveCount = 0
+    private(set) var clearedCount = 0
+
+    func persist(_ snapshot: ActiveFocusSessionSnapshot?) {
+        if let snapshot {
+            last = snapshot
+            saveCount += 1
+        } else {
+            clearedCount += 1
+        }
+    }
 }
 
 /// Domain `FocusNotificationScheduling`의 테스트 fake. 예약 간격과 취소 호출 수만

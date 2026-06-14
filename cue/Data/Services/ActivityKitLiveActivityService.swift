@@ -122,6 +122,50 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         focusActivity = nil
     }
 
+    func restoreFocus(
+        sessionID: UUID,
+        sessionTitle: String,
+        colorHex: String?,
+        phase: LiveFocusPhase,
+        phaseStartDate: Date,
+        phaseEndDate: Date,
+        pauseTime: Date?
+    ) async throws {
+        guard await isEnabled else { return }
+
+        let state = FocusLiveActivityAttributes.ContentState(
+            phase: phase,
+            phaseStartDate: phaseStartDate,
+            phaseEndDate: phaseEndDate,
+            pauseTime: pauseTime
+        )
+        let content = ActivityContent(
+            state: state,
+            staleDate: phaseEndDate.addingTimeInterval(30)
+        )
+
+        // 시스템에 살아있는 기존 인스턴스를 채택(앱 강제 종료 동안에도 보존됨). `sync()`가
+        // 이미 잡아뒀을 수도 있고, 아니면 여기서 직접 조회. 있으면 재연결 후 복원 상태로 update.
+        if let existing = focusActivity ?? Activity<FocusLiveActivityAttributes>.activities.first {
+            focusActivity = existing
+            await existing.update(content)
+            return
+        }
+
+        // 사용자가 LA를 쓸어 없앤 경우 — 세션·LA를 쌍으로 유지하기 위해 새로 시작.
+        let attributes = FocusLiveActivityAttributes(
+            sessionID: sessionID,
+            sessionTitle: sessionTitle,
+            colorHex: colorHex,
+            startedAt: .now
+        )
+        focusActivity = try Activity.request(
+            attributes: attributes,
+            content: content,
+            pushType: nil
+        )
+    }
+
     // MARK: - Reminder
 
     func startReminder(

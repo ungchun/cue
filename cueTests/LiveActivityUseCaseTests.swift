@@ -209,6 +209,7 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     private(set) var startFocusCalls: [(sessionID: UUID, sessionTitle: String, colorHex: String?, phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date)] = []
     private(set) var updateFocusCalls: [(phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date, pauseTime: Date?)] = []
     private(set) var endFocusCount = 0
+    private(set) var restoreFocusCalls: [(sessionID: UUID, sessionTitle: String, colorHex: String?, phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date, pauseTime: Date?)] = []
 
     private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int)] = []
     private(set) var endReminderCount = 0
@@ -240,6 +241,18 @@ private final actor RecordingLiveActivityService: LiveActivityService {
 
     func endFocus() async {
         endFocusCount += 1
+    }
+
+    func restoreFocus(
+        sessionID: UUID,
+        sessionTitle: String,
+        colorHex: String?,
+        phase: LiveFocusPhase,
+        phaseStartDate: Date,
+        phaseEndDate: Date,
+        pauseTime: Date?
+    ) async throws {
+        restoreFocusCalls.append((sessionID, sessionTitle, colorHex, phase, phaseStartDate, phaseEndDate, pauseTime))
     }
 
     func startReminder(

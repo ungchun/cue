@@ -50,6 +50,19 @@ protocol LiveActivityService: Sendable {
     /// 집중 세션 종료. 완료 결과를 잠깐 보여주기 위해 dismiss를 60초 뒤로 미룬다.
     func endFocus() async
 
+    /// 앱 재실행 시 진행 중 세션 복원용 — 시스템에 살아있는 기존 Focus Activity가 있으면
+    /// 그 핸들을 **채택**해 복원 상태로 `update`하고(중복 생성 방지·재연결), 없으면(사용자가
+    /// LA를 쓸어 없앤 경우) 새로 `start`한다. 이후 update/end가 같은 인스턴스에 도달한다.
+    func restoreFocus(
+        sessionID: UUID,
+        sessionTitle: String,
+        colorHex: String?,
+        phase: LiveFocusPhase,
+        phaseStartDate: Date,
+        phaseEndDate: Date,
+        pauseTime: Date?
+    ) async throws
+
     // MARK: - Reminder
 
     /// 미리알림 리스트 스냅샷을 라이브 액티비티로 게시.

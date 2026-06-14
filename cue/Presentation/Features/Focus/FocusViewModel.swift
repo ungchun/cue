@@ -28,9 +28,12 @@ final class FocusViewModel {
     private let saveFocusSessions: SaveFocusSessionsUseCase
     private let fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     private let saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
+    private let fetchActiveFocusSession: FetchActiveFocusSessionUseCase
+    private let saveActiveFocusSession: SaveActiveFocusSessionUseCase
     private let startLiveActivity: StartFocusLiveActivityUseCase
     private let updateLiveActivity: UpdateFocusLiveActivityUseCase
     private let endLiveActivity: EndFocusLiveActivityUseCase
+    private let restoreLiveActivity: RestoreFocusLiveActivityUseCase
 
     init(dependencies: Dependencies) {
         self.scheduler = dependencies.focusNotifications
@@ -38,9 +41,12 @@ final class FocusViewModel {
         self.saveFocusSessions = dependencies.saveFocusSessions
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
         self.saveSelectedFocusSessionID = dependencies.saveSelectedFocusSessionID
+        self.fetchActiveFocusSession = dependencies.fetchActiveFocusSession
+        self.saveActiveFocusSession = dependencies.saveActiveFocusSession
         self.startLiveActivity = dependencies.startFocusLiveActivity
         self.updateLiveActivity = dependencies.updateFocusLiveActivity
         self.endLiveActivity = dependencies.endFocusLiveActivity
+        self.restoreLiveActivity = dependencies.restoreFocusLiveActivity
     }
 
     /// 현재 선택된 세션. id로 매번 lookup해 update/delete와 자연스럽게 동기화된다.
@@ -67,6 +73,12 @@ final class FocusViewModel {
         await scheduler.requestAuthorization()
         sessions = await fetchFocusSessions()
         guard session == nil else { return }
+        await restoreSelection()
+        await restoreActiveSessionIfNeeded()
+    }
+
+    /// 마지막 선택 세션을 복원해 idle 메인 화면에 띄운다(진행 중 세션과 무관 — idle 표시용).
+    private func restoreSelection() async {
         let storedID = await fetchSelectedFocusSessionID()
         if let storedID, sessions.contains(where: { $0.id == storedID }) {
             selectedSessionID = storedID
@@ -80,26 +92,58 @@ final class FocusViewModel {
         }
     }
 
+    /// 앱 강제 종료 후 재실행 시 저장된 진행 중 세션 스냅샷이 있으면 복원 — X(종료)나 자연
+    /// 완료 전까지 앱을 껐다 켜도 타이머가 유지된다. 절대 시각 기반이라 복원 직후 `tick()`
+    /// 한 번이 다운타임을 벽시계로 정확히 따라잡는다.
+    private func restoreActiveSessionIfNeeded() async {
+        guard session == nil, let snapshot = await fetchActiveFocusSession() else { return }
+        session = FocusSessionViewModel(
+            restoring: snapshot,
+            scheduler: scheduler,
+            liveActivity: liveActivityHooks(),
+            persist: snapshotPersister()
+        )
+        // 앱이 죽은 동안 LA에서 누른 정지/재개/종료를 먼저 반영 — cold launch는 scenePhase
+        // .active 전환이 없어 View가 큐를 drain하지 않으므로 여기서 처리한다.
+        handleLiveActivityActions(FocusLiveActivityActionQueue.shared.drain())
+        // 다운타임만큼 벽시계로 따라잡기(그 사이 자연 완료됐으면 tick이 완료 처리).
+        session?.tick()
+        if session?.isComplete == true { stopSession() }
+    }
+
     /// 메인 화면의 ▶ 버튼이 호출 — 선택된 세션(또는 기본값)으로 상태머신을 만든다.
     /// 이미 진행 중이면 무시. 라이브 액티비티 hooks를 함께 주입해 — 세션 자체가 phase
     /// 전환·pause/resume·완료 시점에 LA `update`/`end`를 호출한다(cue 컨셉: 종료 상태가
     /// 아니면 라이브 액티비티 활성).
     func start() {
         guard session == nil else { return }
-        let hooks = FocusSessionViewModel.LiveActivityHooks(
+        session = FocusSessionViewModel(
+            settings: displayedSettings,
+            scheduler: scheduler,
+            liveActivity: liveActivityHooks(),
             sessionID: UUID(),
             // 세션 선택 없으면 앱 화면 titleHeader와 동일하게 앱 이름 "Cue"로 — LA 상단도 일치.
             sessionTitle: selectedSession?.title ?? "Cue",
             colorHex: selectedSession?.colorHex,
+            persist: snapshotPersister()
+        )
+    }
+
+    /// LA use case 묶음 — 새 시작과 복원이 공유한다.
+    private func liveActivityHooks() -> FocusSessionViewModel.LiveActivityHooks {
+        FocusSessionViewModel.LiveActivityHooks(
             start: startLiveActivity,
             update: updateLiveActivity,
-            end: endLiveActivity
+            end: endLiveActivity,
+            restore: restoreLiveActivity
         )
-        session = FocusSessionViewModel(
-            settings: displayedSettings,
-            scheduler: scheduler,
-            liveActivity: hooks
-        )
+    }
+
+    /// 세션이 상태를 바꾸거나 종료할 때마다 호출할 스냅샷 영속 클로저. 비동기 save를 Task로
+    /// 띄워 상태머신을 막지 않는다(fire-and-forget — LA update dispatch와 같은 패턴).
+    private func snapshotPersister() -> @Sendable (ActiveFocusSessionSnapshot?) -> Void {
+        let save = saveActiveFocusSession
+        return { snapshot in Task { await save(snapshot) } }
     }
 
     /// 진행 중인 세션을 중단·정리한다. 종료 버튼/자동 완료에서 호출.

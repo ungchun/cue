@@ -9,6 +9,7 @@ import Foundation
 actor InMemoryFocusSessionsRepository: FocusSessionsRepository {
     private var stored: [FocusSession]
     private var selectedID: UUID?
+    private var activeSession: ActiveFocusSessionSnapshot?
 
     init(sessions: [FocusSession] = [], selectedID: UUID? = nil) {
         self.stored = sessions
@@ -29,5 +30,13 @@ actor InMemoryFocusSessionsRepository: FocusSessionsRepository {
 
     func saveSelectedSessionID(_ id: UUID?) {
         selectedID = id
+    }
+
+    func fetchActiveSession() -> ActiveFocusSessionSnapshot? {
+        activeSession
+    }
+
+    func saveActiveSession(_ snapshot: ActiveFocusSessionSnapshot?) {
+        activeSession = snapshot
     }
 }

@@ -42,6 +42,10 @@ struct Dependencies: Sendable {
     var fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     var saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
 
+    /// 진행 중 세션 스냅샷 영속화 — 앱 강제 종료 후 재실행에도 타이머를 복원한다.
+    var fetchActiveFocusSession: FetchActiveFocusSessionUseCase
+    var saveActiveFocusSession: SaveActiveFocusSessionUseCase
+
     // MARK: - Live Activity
 
     /// 라이브 액티비티 트리거 — Focus는 자동(세션 시작/페이즈 전환), Reminder/Schedule은 사용자가
@@ -50,6 +54,8 @@ struct Dependencies: Sendable {
     var startFocusLiveActivity: StartFocusLiveActivityUseCase
     var updateFocusLiveActivity: UpdateFocusLiveActivityUseCase
     var endFocusLiveActivity: EndFocusLiveActivityUseCase
+    /// 앱 재실행 시 진행 중 세션의 LA 복원 — 기존 인스턴스 채택 또는 새로 시작.
+    var restoreFocusLiveActivity: RestoreFocusLiveActivityUseCase
     var startReminderLiveActivity: StartReminderLiveActivityUseCase
     var endReminderLiveActivity: EndReminderLiveActivityUseCase
     var startScheduleLiveActivity: StartScheduleLiveActivityUseCase
@@ -147,9 +153,12 @@ extension Dependencies {
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
             fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
             saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
+            fetchActiveFocusSession: FetchActiveFocusSessionUseCase(repository: focusSessionsRepository),
+            saveActiveFocusSession: SaveActiveFocusSessionUseCase(repository: focusSessionsRepository),
             startFocusLiveActivity: StartFocusLiveActivityUseCase(service: liveActivityService),
             updateFocusLiveActivity: UpdateFocusLiveActivityUseCase(service: liveActivityService),
             endFocusLiveActivity: EndFocusLiveActivityUseCase(service: liveActivityService),
+            restoreFocusLiveActivity: RestoreFocusLiveActivityUseCase(service: liveActivityService),
             startReminderLiveActivity: StartReminderLiveActivityUseCase(service: liveActivityService),
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: liveActivityService),

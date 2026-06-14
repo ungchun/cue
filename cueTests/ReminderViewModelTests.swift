@@ -45,7 +45,20 @@ struct ReminderViewModelTests {
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             focusNotifications: NoopFocusNotificationScheduler(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
-            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository)
+            saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
+            fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
+            saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
+            fetchActiveFocusSession: FetchActiveFocusSessionUseCase(repository: focusSessionsRepository),
+            saveActiveFocusSession: SaveActiveFocusSessionUseCase(repository: focusSessionsRepository),
+            startFocusLiveActivity: StartFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            updateFocusLiveActivity: UpdateFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endFocusLiveActivity: EndFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            restoreFocusLiveActivity: RestoreFocusLiveActivityUseCase(service: DisabledLiveActivityService()),
+            startReminderLiveActivity: StartReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endReminderLiveActivity: EndReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
+            startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
         )
     }
 
