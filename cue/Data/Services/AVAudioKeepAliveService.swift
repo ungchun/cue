@@ -53,10 +53,13 @@ final class AVAudioKeepAliveService: BackgroundAudioKeeping {
     private func activate() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            // `.mixWithOthers`를 쓰면 iOS가 '보조 오디오'로 보고 백그라운드 실행 권한을 안 줘
+            // keep-alive가 안 된다. 주 오디오(.playback, 옵션 없음)여야 앱이 깨어 있는다.
+            // 비용: 세션 시작 시 사용자의 다른 오디오가 멈춘다(무음 keep-alive의 불가피한 한계).
+            try session.setCategory(.playback, mode: .default)
             try session.setActive(true)
             if !engine.isRunning { try engine.start() }
-            player.scheduleBuffer(silentBuffer(), at: nil, options: .loops)
+            player.scheduleBuffer(keepAliveBuffer(), at: nil, options: .loops)
             player.play()
             isRunning = true
         } catch {
@@ -64,11 +67,23 @@ final class AVAudioKeepAliveService: BackgroundAudioKeeping {
         }
     }
 
-    /// 1초 길이의 무음(zeros) PCM 버퍼. `.loops`로 무한 반복 — 에셋 파일 없이 코드로 생성.
-    private func silentBuffer() -> AVAudioPCMBuffer {
+    /// 1초 길이의 **거의 안 들리는** keep-alive PCM 버퍼. `.loops`로 무한 반복 — 에셋 파일
+    /// 없이 코드로 생성. 완전 무음(zeros)은 일부 환경에서 iOS가 '재생 중'으로 인식 못 해
+    /// 백그라운드 유지가 안 될 수 있어, 초저진폭(0.002 ≈ -54dB) 저주파 사인으로 채워
+    /// 폰 스피커에선 사실상 무음이되 오디오 세션은 확실히 active로 인식되게 한다.
+    private func keepAliveBuffer() -> AVAudioPCMBuffer {
         let frames = AVAudioFrameCount(format.sampleRate)
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames)!
-        buffer.frameLength = frames // 채널 데이터는 0으로 초기화 = 무음
+        buffer.frameLength = frames
+        guard let channels = buffer.floatChannelData else { return buffer }
+        let amplitude: Float = 0.002
+        let sampleRate = Float(format.sampleRate)
+        for frame in 0..<Int(frames) {
+            let value = amplitude * sin(2 * .pi * 50 * Float(frame) / sampleRate)
+            for ch in 0..<Int(format.channelCount) {
+                channels[ch][frame] = value
+            }
+        }
         return buffer
     }
 
