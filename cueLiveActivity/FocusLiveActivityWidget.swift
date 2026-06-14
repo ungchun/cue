@@ -166,6 +166,9 @@ struct FocusLiveActivityWidget: Widget {
 
     /// compactLeading — sessionColor 진행 ring. `ProgressView(timerInterval:)`이 시스템 위임으로
     /// 자동 갱신. pause 시엔 진행이 멈춰 보이는 게 자연.
+    ///
+    /// `.scaleEffect(x: -1)` — 링을 수평 미러해 진행 회전 방향을 반대로(시계↔반시계) 뒤집는다.
+    /// 대칭 ring이라 미러의 유일한 가시 효과는 방향 반전이다.
     private func compactRing(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
@@ -177,6 +180,7 @@ struct FocusLiveActivityWidget: Widget {
         )
         .progressViewStyle(.circular)
         .tint(sessionColor(attributes: context.attributes))
+        .scaleEffect(x: -1, y: 1)
     }
 
     /// compactTrailing — 카운트다운 텍스트. pause 분기는 `timerText` 헬퍼 사용.
