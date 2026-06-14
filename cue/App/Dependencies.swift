@@ -31,12 +31,6 @@ struct Dependencies: Sendable {
     /// 외부(캘린더 앱) 변경 신호 — events 측 대응. 위의 reminders 대응과 같은 패턴.
     var observeEventsChanges: ObserveEventsChangesUseCase
 
-    /// 집중 세션의 단계 종료 알림 스케줄러. ViewModel이 schedule/cancel을 직접 호출한다.
-    var focusNotifications: any FocusNotificationScheduling
-    /// 세션 동안 백그라운드 오디오로 앱을 깨어 있게 유지 — 잠금/백그라운드에서도 단계 전환·
-    /// LA 갱신이 작동하게 한다. 세션 시작/복원에 start, 종료/완료에 stop.
-    var focusAudioKeepAlive: any BackgroundAudioKeeping
-
     /// 저장된 세션 프리셋 영속화 — onAppear 시 fetch, CRUD 직후 save.
     var fetchFocusSessions: FetchFocusSessionsUseCase
     var saveFocusSessions: SaveFocusSessionsUseCase
@@ -45,20 +39,11 @@ struct Dependencies: Sendable {
     var fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     var saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
 
-    /// 진행 중 세션 스냅샷 영속화 — 앱 강제 종료 후 재실행에도 타이머를 복원한다.
-    var fetchActiveFocusSession: FetchActiveFocusSessionUseCase
-    var saveActiveFocusSession: SaveActiveFocusSessionUseCase
-
     // MARK: - Live Activity
 
-    /// 라이브 액티비티 트리거 — Focus는 자동(세션 시작/페이즈 전환), Reminder/Schedule은 사용자가
-    /// 동그라미 버튼으로 토글. 구체 service는 `CompositionRoot`에서 `ActivityKitLiveActivityService`,
-    /// preview는 `DisabledLiveActivityService`(no-op).
-    var startFocusLiveActivity: StartFocusLiveActivityUseCase
-    var updateFocusLiveActivity: UpdateFocusLiveActivityUseCase
-    var endFocusLiveActivity: EndFocusLiveActivityUseCase
-    /// 앱 재실행 시 진행 중 세션의 LA 복원 — 기존 인스턴스 채택 또는 새로 시작.
-    var restoreFocusLiveActivity: RestoreFocusLiveActivityUseCase
+    /// 라이브 액티비티 트리거 — Reminder/Schedule은 사용자가 동그라미 버튼으로 토글. 구체 service는
+    /// `CompositionRoot`에서 `ActivityKitLiveActivityService`, preview는 `DisabledLiveActivityService`(no-op).
+    /// (집중 LA는 AlarmKit으로 이관 — 여기 없음.)
     var startReminderLiveActivity: StartReminderLiveActivityUseCase
     var endReminderLiveActivity: EndReminderLiveActivityUseCase
     var startScheduleLiveActivity: StartScheduleLiveActivityUseCase
@@ -151,18 +136,10 @@ extension Dependencies {
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
-            focusNotifications: NoopFocusNotificationScheduler(),
-            focusAudioKeepAlive: DisabledAudioKeepAliveService(),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
             fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
             saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
-            fetchActiveFocusSession: FetchActiveFocusSessionUseCase(repository: focusSessionsRepository),
-            saveActiveFocusSession: SaveActiveFocusSessionUseCase(repository: focusSessionsRepository),
-            startFocusLiveActivity: StartFocusLiveActivityUseCase(service: liveActivityService),
-            updateFocusLiveActivity: UpdateFocusLiveActivityUseCase(service: liveActivityService),
-            endFocusLiveActivity: EndFocusLiveActivityUseCase(service: liveActivityService),
-            restoreFocusLiveActivity: RestoreFocusLiveActivityUseCase(service: liveActivityService),
             startReminderLiveActivity: StartReminderLiveActivityUseCase(service: liveActivityService),
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: liveActivityService),

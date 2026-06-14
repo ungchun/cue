@@ -11,8 +11,8 @@ import Foundation
 /// 추가돼 있어야 한다 — 추가되지 않으면 `UserDefaults(suiteName:)`이 nil을 반환하고
 /// `.standard`로 폴백(이때 process 간 공유는 깨진다 — 디버그 시 entitlement부터 확인).
 ///
-/// 현재는 라이브 액티비티 액션 큐(`FocusLiveActivityActionQueue`)만 사용하지만, 향후
-/// 다른 공유 상태가 생기면 같은 suite를 통한다.
+/// 현재는 집중 세션 설정 스냅샷(`FocusAlarmPlan`)이 사용한다 — 메인 앱이 저장하고 위젯 익스텐션의
+/// AlarmKit 체이닝 인텐트가 읽는다. 향후 다른 공유 상태도 같은 suite를 통한다.
 enum SharedAppGroup {
     /// Group ID. Xcode entitlement(`com.apple.security.application-groups`)에 같은 값을
     /// 두 target 모두에 등록해야 process 간 공유가 작동한다.

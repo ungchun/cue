@@ -22,10 +22,4 @@ protocol FocusSessionsRepository: Sendable {
     func fetchSelectedSessionID() async -> UUID?
     /// 선택된 세션 id를 영속화. nil이면 저장값을 지운다(=선택 없음 상태 기억).
     func saveSelectedSessionID(_ id: UUID?) async
-
-    /// 진행 중인 세션 스냅샷. 저장된 값이 없거나(=진행 중 세션 없음) 포맷이 깨졌으면 nil.
-    /// 프리셋 목록·선택 id와 또 별도 키로 저장 — 변경 빈도(상태 변할 때마다)와 수명이 다르다.
-    func fetchActiveSession() async -> ActiveFocusSessionSnapshot?
-    /// 진행 중 세션 스냅샷을 영속화. nil이면 저장값을 지운다(=세션 종료/완료).
-    func saveActiveSession(_ snapshot: ActiveFocusSessionSnapshot?) async
 }

@@ -16,34 +16,6 @@ struct DisabledLiveActivityService: LiveActivityService {
         get async { false }
     }
 
-    func startFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date
-    ) async throws {}
-
-    func updateFocus(
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws {}
-
-    func endFocus() async {}
-
-    func restoreFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws {}
-
     func startReminder(
         listTitle: String,
         items: [LiveReminderItem],

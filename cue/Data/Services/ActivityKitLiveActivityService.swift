@@ -37,7 +37,6 @@ import Foundation
 /// 앱 강제 종료 후 복귀 시 시스템은 Activity를 보존하나 핸들은 잃었으므로 동기화 필요.
 actor ActivityKitLiveActivityService: LiveActivityService {
 
-    private var focusActivity: Activity<FocusLiveActivityAttributes>?
     private var reminderActivity: Activity<ReminderLiveActivityAttributes>?
     private var scheduleActivity: Activity<ScheduleLiveActivityAttributes>?
 
@@ -51,120 +50,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
     }
 
-    // MARK: - Focus
-
-    func startFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date
-    ) async throws {
-        guard await isEnabled else { return }
-
-        // 같은 kind 기존 인스턴스 자동 정리.
-        if let existing = focusActivity {
-            await existing.end(nil, dismissalPolicy: .immediate)
-            focusActivity = nil
-        }
-
-        let attributes = FocusLiveActivityAttributes(
-            sessionID: sessionID,
-            sessionTitle: sessionTitle,
-            colorHex: colorHex,
-            startedAt: .now
-        )
-        let state = FocusLiveActivityAttributes.ContentState(
-            phase: phase,
-            phaseStartDate: phaseStartDate,
-            phaseEndDate: phaseEndDate,
-            pauseTime: nil
-        )
-        // staleDate = 현재 phase 종료 + 30초 여유. 그 시점 지나면 시스템이 stale UI로 전환.
-        let content = ActivityContent(
-            state: state,
-            staleDate: phaseEndDate.addingTimeInterval(30)
-        )
-
-        focusActivity = try Activity.request(
-            attributes: attributes,
-            content: content,
-            pushType: nil
-        )
-    }
-
-    func updateFocus(
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws {
-        guard let activity = focusActivity else { return }
-        let state = FocusLiveActivityAttributes.ContentState(
-            phase: phase,
-            phaseStartDate: phaseStartDate,
-            phaseEndDate: phaseEndDate,
-            pauseTime: pauseTime
-        )
-        let content = ActivityContent(
-            state: state,
-            staleDate: phaseEndDate.addingTimeInterval(30)
-        )
-        await activity.update(content)
-    }
-
-    func endFocus() async {
-        guard let activity = focusActivity else { return }
-        // 사용자가 종료 버튼을 눌렀거나 자동 완료된 시점 — 즉시 정리. 결과를 잔류시키는
-        // `.after(now+60s)` 정책은 사용자 체감상 "닫았는데 안 닫혀"로 느껴져 변경.
-        await activity.end(nil, dismissalPolicy: .immediate)
-        focusActivity = nil
-    }
-
-    func restoreFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws {
-        guard await isEnabled else { return }
-
-        let state = FocusLiveActivityAttributes.ContentState(
-            phase: phase,
-            phaseStartDate: phaseStartDate,
-            phaseEndDate: phaseEndDate,
-            pauseTime: pauseTime
-        )
-        let content = ActivityContent(
-            state: state,
-            staleDate: phaseEndDate.addingTimeInterval(30)
-        )
-
-        // 시스템에 살아있는 기존 인스턴스를 채택(앱 강제 종료 동안에도 보존됨). `sync()`가
-        // 이미 잡아뒀을 수도 있고, 아니면 여기서 직접 조회. 있으면 재연결 후 복원 상태로 update.
-        if let existing = focusActivity ?? Activity<FocusLiveActivityAttributes>.activities.first {
-            focusActivity = existing
-            await existing.update(content)
-            return
-        }
-
-        // 사용자가 LA를 쓸어 없앤 경우 — 세션·LA를 쌍으로 유지하기 위해 새로 시작.
-        let attributes = FocusLiveActivityAttributes(
-            sessionID: sessionID,
-            sessionTitle: sessionTitle,
-            colorHex: colorHex,
-            startedAt: .now
-        )
-        focusActivity = try Activity.request(
-            attributes: attributes,
-            content: content,
-            pushType: nil
-        )
-    }
+    // 집중(Focus) LA는 AlarmKit으로 이관됨 — 여기선 Reminder/Schedule만 다룬다.
 
     // MARK: - Reminder
 
@@ -248,7 +134,6 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     func sync() async {
         // 시스템에 살아있는 첫 번째 인스턴스를 재포착. kind당 1개 정책이라 first로 충분.
-        focusActivity = Activity<FocusLiveActivityAttributes>.activities.first
         reminderActivity = Activity<ReminderLiveActivityAttributes>.activities.first
         scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
     }

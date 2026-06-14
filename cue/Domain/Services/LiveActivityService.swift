@@ -21,47 +21,7 @@ protocol LiveActivityService: Sendable {
     /// "설정 열기" UX로 분기한다.
     var isEnabled: Bool { get async }
 
-    // MARK: - Focus
-
-    /// 집중 세션 라이브 액티비티 시작. 기존 Focus 인스턴스가 있으면 먼저 end.
-    /// `phaseStartDate`·`phaseEndDate`는 widget timer interval의 안정적 양 끝 — 시스템 타이머가
-    /// 그 사이를 매 프레임 자동 갱신한다.
-    /// `colorHex`는 외곽 stroke·아이콘 등에 widget이 사용하는 세션 색. nil이면 widget이
-    /// 시스템 accent로 폴백. 활동 시작 후 불변 → attributes에 저장.
-    func startFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date
-    ) async throws
-
-    /// 집중 라이브 액티비티 상태 변경 — 일시정지/재개/스킵/페이즈 전환에서만.
-    /// 매초 update 금지(시스템 타이머 위임). resume 시 `phaseStartDate`는 `now - elapsed`로
-    /// 다시 잡아 interval 길이를 phaseDuration 그대로 유지한다.
-    func updateFocus(
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws
-
-    /// 집중 세션 종료. 완료 결과를 잠깐 보여주기 위해 dismiss를 60초 뒤로 미룬다.
-    func endFocus() async
-
-    /// 앱 재실행 시 진행 중 세션 복원용 — 시스템에 살아있는 기존 Focus Activity가 있으면
-    /// 그 핸들을 **채택**해 복원 상태로 `update`하고(중복 생성 방지·재연결), 없으면(사용자가
-    /// LA를 쓸어 없앤 경우) 새로 `start`한다. 이후 update/end가 같은 인스턴스에 도달한다.
-    func restoreFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws
+    // 집중(Focus) LA는 AlarmKit으로 이관됨 — 이 서비스는 Reminder/Schedule LA만 담당한다.
 
     // MARK: - Reminder
 

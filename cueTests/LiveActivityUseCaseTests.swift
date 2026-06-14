@@ -78,78 +78,7 @@ struct LiveActivityUseCaseTests {
         #expect(call.tomorrow.first?.calendarColorHex == nil)
     }
 
-    // MARK: - Wrappers — forwarding
-
-    @Test func startFocusForwardsAllArguments() async throws {
-        let service = RecordingLiveActivityService()
-        let id = UUID()
-        let end = Date(timeIntervalSince1970: 1_700_000_000)
-        let start = end.addingTimeInterval(-1500)
-
-        try await StartFocusLiveActivityUseCase(service: service)(
-            sessionID: id,
-            sessionTitle: "딥워크",
-            colorHex: "#FFD400",
-            phase: .focus,
-            phaseStartDate: start,
-            phaseEndDate: end
-        )
-
-        let call = try #require(await service.startFocusCalls.first)
-        #expect(call.sessionID == id)
-        #expect(call.sessionTitle == "딥워크")
-        #expect(call.colorHex == "#FFD400")
-        #expect(call.phase == .focus)
-        #expect(call.phaseStartDate == start)
-        #expect(call.phaseEndDate == end)
-    }
-
-    @Test func startFocusForwardsNilColorHex() async throws {
-        let service = RecordingLiveActivityService()
-        let id = UUID()
-        let end = Date(timeIntervalSince1970: 1_700_000_000)
-        let start = end.addingTimeInterval(-1500)
-
-        try await StartFocusLiveActivityUseCase(service: service)(
-            sessionID: id,
-            sessionTitle: "기본 세션",
-            colorHex: nil,
-            phase: .focus,
-            phaseStartDate: start,
-            phaseEndDate: end
-        )
-
-        let call = try #require(await service.startFocusCalls.first)
-        #expect(call.colorHex == nil)
-    }
-
-    @Test func updateFocusForwardsPauseTime() async throws {
-        let service = RecordingLiveActivityService()
-        let end = Date(timeIntervalSince1970: 1_700_000_000)
-        let start = end.addingTimeInterval(-1500)
-        let pause = end.addingTimeInterval(-30)
-
-        try await UpdateFocusLiveActivityUseCase(service: service)(
-            phase: .focus,
-            phaseStartDate: start,
-            phaseEndDate: end,
-            pauseTime: pause
-        )
-
-        let call = try #require(await service.updateFocusCalls.first)
-        #expect(call.phase == .focus)
-        #expect(call.phaseStartDate == start)
-        #expect(call.phaseEndDate == end)
-        #expect(call.pauseTime == pause)
-    }
-
-    @Test func endFocusCallsServiceOnce() async {
-        let service = RecordingLiveActivityService()
-
-        await EndFocusLiveActivityUseCase(service: service)()
-
-        #expect(await service.endFocusCount == 1)
-    }
+    // MARK: - Wrappers — forwarding (Reminder/Schedule. 집중 LA는 AlarmKit으로 이관됨)
 
     @Test func endReminderCallsServiceOnce() async {
         let service = RecordingLiveActivityService()
@@ -206,11 +135,6 @@ struct LiveActivityUseCaseTests {
 private final actor RecordingLiveActivityService: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startFocusCalls: [(sessionID: UUID, sessionTitle: String, colorHex: String?, phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date)] = []
-    private(set) var updateFocusCalls: [(phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date, pauseTime: Date?)] = []
-    private(set) var endFocusCount = 0
-    private(set) var restoreFocusCalls: [(sessionID: UUID, sessionTitle: String, colorHex: String?, phase: LiveFocusPhase, phaseStartDate: Date, phaseEndDate: Date, pauseTime: Date?)] = []
-
     private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int)] = []
     private(set) var endReminderCount = 0
 
@@ -218,42 +142,6 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     private(set) var endScheduleCount = 0
 
     private(set) var syncCount = 0
-
-    func startFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date
-    ) async throws {
-        startFocusCalls.append((sessionID, sessionTitle, colorHex, phase, phaseStartDate, phaseEndDate))
-    }
-
-    func updateFocus(
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws {
-        updateFocusCalls.append((phase, phaseStartDate, phaseEndDate, pauseTime))
-    }
-
-    func endFocus() async {
-        endFocusCount += 1
-    }
-
-    func restoreFocus(
-        sessionID: UUID,
-        sessionTitle: String,
-        colorHex: String?,
-        phase: LiveFocusPhase,
-        phaseStartDate: Date,
-        phaseEndDate: Date,
-        pauseTime: Date?
-    ) async throws {
-        restoreFocusCalls.append((sessionID, sessionTitle, colorHex, phase, phaseStartDate, phaseEndDate, pauseTime))
-    }
 
     func startReminder(
         listTitle: String,

@@ -4,7 +4,6 @@
 //
 
 /// 집중 세션의 단계. 한 사이클은 `focus`로 시작해 (반복 세션이면) `rest`로 끝난다.
-/// `Codable` — 진행 중 세션 스냅샷(`ActiveFocusSessionSnapshot`)에 실려 영속화된다.
 enum FocusPhase: String, Codable, Equatable, Sendable {
     /// 집중 — 사용자가 일하고 있는 단계.
     case focus

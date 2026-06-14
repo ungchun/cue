@@ -16,8 +16,6 @@ struct UserDefaultsFocusSessionsRepository: FocusSessionsRepository, @unchecked 
     /// 마지막으로 선택된 세션 id 저장 키. sessions 스키마와 의도적으로 분리 —
     /// 한쪽 스키마를 올려도 다른 쪽은 그대로 살린다.
     private static let selectedIDKey = "cue.focus.selectedSession.v1"
-    /// 진행 중 세션 스냅샷 저장 키. 또 별도 키 — 상태 변할 때마다 덮어쓰고, 종료 시 지운다.
-    private static let activeSessionKey = "cue.focus.activeSession.v1"
 
     private let defaults: UserDefaults
 
@@ -52,23 +50,5 @@ struct UserDefaultsFocusSessionsRepository: FocusSessionsRepository, @unchecked 
         } else {
             defaults.removeObject(forKey: Self.selectedIDKey)
         }
-    }
-
-    func fetchActiveSession() async -> ActiveFocusSessionSnapshot? {
-        guard let data = defaults.data(forKey: Self.activeSessionKey),
-              let snapshot = try? JSONDecoder().decode(ActiveFocusSessionSnapshot.self, from: data) else {
-            return nil
-        }
-        return snapshot
-    }
-
-    func saveActiveSession(_ snapshot: ActiveFocusSessionSnapshot?) async {
-        // nil이면 키 자체를 지운다 — 세션 종료/완료 시 호출돼 "복원할 세션 없음" 상태로.
-        guard let snapshot else {
-            defaults.removeObject(forKey: Self.activeSessionKey)
-            return
-        }
-        guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        defaults.set(data, forKey: Self.activeSessionKey)
     }
 }
