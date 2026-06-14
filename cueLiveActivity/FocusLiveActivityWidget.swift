@@ -35,7 +35,7 @@ struct FocusLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.center) {
-                    expandedContent(context: context)
+                    expandedStack(context: context)
                 }
             } compactLeading: {
                 compactRing(context: context)
@@ -80,20 +80,36 @@ struct FocusLiveActivityWidget: Widget {
             .padding(.vertical, Spacing.md)
     }
 
-    /// Dynamic Island expanded center — 잠금화면과 같은 3 column 구조(외곽 stroke 없음:
-    /// expanded 자체에 시스템이 둥근 컨테이너를 입힘).
+    /// Dynamic Island expanded 전용 세로 3단 — 타이틀(top) / 타이머+좌우 버튼(center) /
+    /// phase 라벨(bottom).
+    ///
+    /// **잠금화면 `centerStack`과 다른 점** — `centerStack`은 버튼이 타이틀·타이머·라벨
+    /// *전체*를 좌우로 감싸서 타이틀이 버튼 사이 행에 갇힌다. expanded에선 타이틀을 맨 위,
+    /// 라벨을 맨 아래로 보내야 하므로 *가운데 행만* `HStack{버튼 · 타이머 · 버튼}`으로 두고
+    /// 타이틀·라벨을 그 위아래 독립 행에 둔다. 버튼은 타이머 행에 수직 정렬돼 정중앙에 온다.
     @ViewBuilder
-    private func expandedContent(
+    private func expandedStack(
         context: ActivityViewContext<FocusLiveActivityAttributes>
     ) -> some View {
-        HStack(spacing: Spacing.md) {
-            pauseResumeButton(state: context.state)
-            Spacer(minLength: Spacing.zero)
-            centerStack(context: context)
-            Spacer(minLength: Spacing.zero)
-            endButton
+        VStack(spacing: Spacing.xs) {
+            Text(context.attributes.sessionTitle)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+            HStack(spacing: Spacing.md) {
+                pauseResumeButton(state: context.state)
+                Spacer(minLength: Spacing.zero)
+                timerText(state: context.state)
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                Spacer(minLength: Spacing.zero)
+                endButton
+            }
+            Text(phaseLabel(context.state.phase))
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, Spacing.sm)
     }
 
     /// 중앙 3단 — 세션 타이틀(상단) / 큰 mm:ss 카운트다운(중간) / phase 라벨(하단).
@@ -212,10 +228,15 @@ struct FocusLiveActivityWidget: Widget {
         return String(format: "%02d:%02d", mm, secs)
     }
 
-    /// attributes의 `colorHex` → SwiftUI Color. 미지정/디코드 실패 시 시스템 accent로 폴백.
+    /// attributes의 `colorHex` → SwiftUI Color. 미지정/디코드 실패 시 앱 프라이머리로 폴백.
+    ///
+    /// 폴백을 `.accentColor`가 아니라 `Color.indigo`로 명시 — Live Activity 렌더 컨텍스트에서
+    /// `.accentColor`는 익스텐션 AccentColor 에셋을 안정적으로 따라가지 못해 시스템 파랑으로
+    /// 떨어진다. 앱 프라이머리(AccentColor = `#5856D6`)는 systemIndigo와 동일하므로 Apple
+    /// 시스템 컬러 `Color.indigo`로 박아 LA에서도 동일한 보라로 보장한다(디자인 규칙 준수).
     private func sessionColor(attributes: FocusLiveActivityAttributes) -> Color {
         guard let hex = attributes.colorHex, let color = Color(hex: hex) else {
-            return .accentColor
+            return .indigo
         }
         return color
     }
