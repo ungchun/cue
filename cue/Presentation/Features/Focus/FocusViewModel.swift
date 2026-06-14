@@ -88,7 +88,8 @@ final class FocusViewModel {
         guard session == nil else { return }
         let hooks = FocusSessionViewModel.LiveActivityHooks(
             sessionID: UUID(),
-            sessionTitle: selectedSession?.title ?? "집중",
+            // 세션 선택 없으면 앱 화면 titleHeader와 동일하게 앱 이름 "Cue"로 — LA 상단도 일치.
+            sessionTitle: selectedSession?.title ?? "Cue",
             colorHex: selectedSession?.colorHex,
             start: startLiveActivity,
             update: updateLiveActivity,
