@@ -10,6 +10,14 @@ import Testing
 @MainActor
 struct FocusSessionViewModelTests {
 
+    /// 결정적 테스트용 가변 clock. `advance`로 벽시계를 임의로 흘린다.
+    /// 도메인이 주입된 `now: () -> Date`로만 시각을 읽으므로 테스트가 시간을 완전 통제한다.
+    final class TestClock {
+        var current: Date
+        init(_ start: Date = Date(timeIntervalSinceReferenceDate: 0)) { self.current = start }
+        func advance(_ seconds: TimeInterval) { current += seconds }
+    }
+
     /// 빠른 검증을 위해 짧은 단위(초) 설정으로 ViewModel을 만든다.
     /// 도메인은 초 단위라 단위테스트에서 `60`/`30` 같은 값을 그대로 쓸 수 있다.
     private func make(
@@ -17,20 +25,25 @@ struct FocusSessionViewModelTests {
         rest: TimeInterval = 30,
         repeating: Bool = true,
         cycles: Int = 4,
-        scheduler: FakeFocusNotificationScheduler = FakeFocusNotificationScheduler()
-    ) -> (FocusSessionViewModel, FakeFocusNotificationScheduler) {
+        scheduler: FakeFocusNotificationScheduler = FakeFocusNotificationScheduler(),
+        clock: TestClock = TestClock()
+    ) -> (FocusSessionViewModel, FakeFocusNotificationScheduler, TestClock) {
         let settings = FocusSettings(
             focusDuration: focus, restDuration: rest,
             isRepeating: repeating, cycleCount: cycles
         )
-        let viewModel = FocusSessionViewModel(settings: settings, scheduler: scheduler)
-        return (viewModel, scheduler)
+        let viewModel = FocusSessionViewModel(
+            settings: settings,
+            scheduler: scheduler,
+            now: { clock.current }
+        )
+        return (viewModel, scheduler, clock)
     }
 
     // MARK: - 초기 상태
 
     @Test func startsInFocusPhaseAtFullDuration() {
-        let (vm, _) = make(focus: 60, rest: 30)
+        let (vm, _, _) = make(focus: 60, rest: 30)
 
         #expect(vm.phase == .focus)
         #expect(vm.remaining == 60)
@@ -41,37 +54,76 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func nonRepeatingSessionHasOneTotalCycle() {
-        let (vm, _) = make(repeating: false, cycles: 4)
+        let (vm, _, _) = make(repeating: false, cycles: 4)
 
         #expect(vm.totalCycles == 1)
     }
 
-    // MARK: - tick
+    // MARK: - tick (벽시계 파생)
 
-    @Test func tickDecrementsRemaining() {
-        let (vm, _) = make(focus: 60)
+    @Test func tickRecomputesRemainingFromClock() {
+        let (vm, _, clock) = make(focus: 60)
 
-        vm.tick(seconds: 5)
+        clock.advance(5)
+        vm.tick()
 
         #expect(vm.remaining == 55)
     }
 
-    @Test func tickDoesNotGoBelowZero() {
-        let (vm, _) = make(focus: 10, rest: 5, cycles: 1, scheduler: FakeFocusNotificationScheduler())
-        // 1 cycle + non-rest 종료 시점을 확인하기 위해 일단 repeating off로 검증.
-        // 별도 케이스에서 repeating=true 단일 사이클 흐름은 분리.
+    /// remaining은 정수 tick 감산이 아니라 벽시계 파생이라 소수 초도 정확 — counter drift 없음.
+    @Test func remainingTracksWallClockFractionally() {
+        let (vm, _, clock) = make(focus: 60)
 
-        vm.tick(seconds: 999)
+        clock.advance(3.5)
+        vm.tick()
+
+        #expect(vm.remaining == 56.5)
+    }
+
+    @Test func tickDoesNotGoBelowZero() {
+        let (vm, _, clock) = make(focus: 10, rest: 5, cycles: 1)
+
+        clock.advance(999)
+        vm.tick()
 
         #expect(vm.remaining == 0)
+    }
+
+    // MARK: - 앱 / 라이브 액티비티 싱크 (deadline = single source of truth)
+
+    /// `phaseEndDate`는 시간이 흘러도 불변인 deadline이고, `remaining = phaseEndDate - now`가
+    /// 성립한다. LA에 같은 `phaseEndDate`를 넘기므로 앱과 LA가 항상 같은 값을 읽는다.
+    @Test func phaseEndDateIsStableSourceOfTruth() {
+        let (vm, _, clock) = make(focus: 60)
+        let deadline = vm.phaseEndDate
+
+        clock.advance(10)
+        vm.tick()
+
+        #expect(vm.phaseEndDate == deadline)
+        #expect(vm.remaining == 50)
+        #expect(vm.phaseEndDate.timeIntervalSince(clock.current) == vm.remaining)
+    }
+
+    /// 백그라운드로 한 단계 전체가 지나도, 포그라운드 복귀의 단일 `tick()`이 정확히 착지한다
+    /// (counter 추격 tick 없음) — '초가 확확 줄어드는' 점프의 근본 제거.
+    @Test func singleTickCatchesUpAcrossElapsedPhases() {
+        let (vm, _, clock) = make(focus: 10, rest: 5, cycles: 2)
+
+        clock.advance(12) // focus(10) 끝 + rest 2초 경과
+        vm.tick()         // 복귀 시 단 한 번
+
+        #expect(vm.phase == .rest)
+        #expect(vm.remaining == 3)
     }
 
     // MARK: - 단계 전환 (반복 ON)
 
     @Test func focusPhaseEndTransitionsToRest() {
-        let (vm, _) = make(focus: 10, rest: 5, cycles: 2)
+        let (vm, _, clock) = make(focus: 10, rest: 5, cycles: 2)
 
-        vm.tick(seconds: 10)
+        clock.advance(10)
+        vm.tick()
 
         #expect(vm.phase == .rest)
         #expect(vm.remaining == 5)
@@ -79,10 +131,10 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func restPhaseEndAdvancesCycleAndStartsNextFocus() {
-        let (vm, _) = make(focus: 10, rest: 5, cycles: 2)
+        let (vm, _, clock) = make(focus: 10, rest: 5, cycles: 2)
 
-        vm.tick(seconds: 10) // focus → rest
-        vm.tick(seconds: 5)  // rest → focus(2)
+        clock.advance(10); vm.tick() // focus → rest
+        clock.advance(5);  vm.tick() // rest → focus(2)
 
         #expect(vm.phase == .focus)
         #expect(vm.currentCycle == 2)
@@ -90,20 +142,21 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func lastFocusEndsSessionWithoutFinalRest() {
-        let (vm, _) = make(focus: 10, rest: 5, cycles: 2)
+        let (vm, _, clock) = make(focus: 10, rest: 5, cycles: 2)
 
-        vm.tick(seconds: 10) // focus(1) → rest
-        vm.tick(seconds: 5)  // rest → focus(2)
-        vm.tick(seconds: 10) // focus(2) → 완료
+        clock.advance(10); vm.tick() // focus(1) → rest
+        clock.advance(5);  vm.tick() // rest → focus(2)
+        clock.advance(10); vm.tick() // focus(2) → 완료
 
         #expect(vm.isComplete)
     }
 
     @Test func tickOverflowAppliesRemainderToNextPhase() {
-        // 10초 집중 + 5초 휴식을 한 번에 12초 흘리면 → 집중 끝, 휴식에 3초 남음.
-        let (vm, _) = make(focus: 10, rest: 5, cycles: 2)
+        // 10초 집중 + 5초 휴식 중 12초가 흐르면 → 집중 끝, 휴식에 3초 남음.
+        let (vm, _, clock) = make(focus: 10, rest: 5, cycles: 2)
 
-        vm.tick(seconds: 12)
+        clock.advance(12)
+        vm.tick()
 
         #expect(vm.phase == .rest)
         #expect(vm.remaining == 3)
@@ -112,9 +165,10 @@ struct FocusSessionViewModelTests {
     // MARK: - 단계 전환 (반복 OFF)
 
     @Test func nonRepeatingEndsAfterSingleFocus() {
-        let (vm, _) = make(focus: 10, repeating: false)
+        let (vm, _, clock) = make(focus: 10, repeating: false)
 
-        vm.tick(seconds: 10)
+        clock.advance(10)
+        vm.tick()
 
         #expect(vm.isComplete)
         #expect(vm.phase == .focus) // rest로 넘어가지 않음
@@ -123,29 +177,32 @@ struct FocusSessionViewModelTests {
     // MARK: - pause / resume / skip / abort
 
     @Test func pauseFreezesRemaining() {
-        let (vm, _) = make(focus: 60)
+        let (vm, _, clock) = make(focus: 60)
 
         vm.pause()
-        vm.tick(seconds: 10)
+        clock.advance(10)
+        vm.tick()
 
         #expect(vm.remaining == 60)
         #expect(vm.isPaused)
     }
 
     @Test func resumeContinuesTicking() {
-        let (vm, _) = make(focus: 60)
+        let (vm, _, clock) = make(focus: 60)
 
         vm.pause()
-        vm.tick(seconds: 10)
+        clock.advance(10) // pause 중 — 무시
+        vm.tick()
         vm.resume()
-        vm.tick(seconds: 5)
+        clock.advance(5)
+        vm.tick()
 
         #expect(vm.isPaused == false)
         #expect(vm.remaining == 55)
     }
 
     @Test func skipFinishesCurrentPhaseImmediately() {
-        let (vm, _) = make(focus: 60, rest: 30, cycles: 2)
+        let (vm, _, _) = make(focus: 60, rest: 30, cycles: 2)
 
         vm.skip()
 
@@ -154,7 +211,7 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func skipOnLastFocusCompletesSession() {
-        let (vm, _) = make(focus: 60, repeating: false)
+        let (vm, _, _) = make(focus: 60, repeating: false)
 
         vm.skip()
 
@@ -162,7 +219,7 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func abortMarksSessionComplete() {
-        let (vm, _) = make(focus: 60)
+        let (vm, _, _) = make(focus: 60)
 
         vm.abort()
 
@@ -172,13 +229,13 @@ struct FocusSessionViewModelTests {
     // MARK: - 알림 스케줄링
 
     @Test func startSchedulesPhaseEndNotification() {
-        let (_, scheduler) = make(focus: 60)
+        let (_, scheduler, _) = make(focus: 60)
 
         #expect(scheduler.scheduledIntervals == [60])
     }
 
     @Test func pauseCancelsPendingNotification() {
-        let (vm, scheduler) = make(focus: 60)
+        let (vm, scheduler, _) = make(focus: 60)
 
         vm.pause()
 
@@ -186,9 +243,10 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func resumeReschedulesWithCurrentRemaining() {
-        let (vm, scheduler) = make(focus: 60)
+        let (vm, scheduler, clock) = make(focus: 60)
         vm.pause()
-        vm.tick(seconds: 10) // pause 상태라 remaining 그대로 60
+        clock.advance(10) // pause 상태라 remaining 그대로 60
+        vm.tick()
 
         vm.resume()
 
@@ -197,18 +255,20 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func phaseTransitionSchedulesNextPhaseNotification() {
-        let (vm, scheduler) = make(focus: 10, rest: 5, cycles: 2)
+        let (vm, scheduler, clock) = make(focus: 10, rest: 5, cycles: 2)
 
-        vm.tick(seconds: 10) // focus → rest
+        clock.advance(10)
+        vm.tick() // focus → rest
 
         // 첫 예약(10초 = focus) + 두 번째 예약(5초 = rest)
         #expect(scheduler.scheduledIntervals == [10, 5])
     }
 
     @Test func completionCancelsAllNotifications() {
-        let (vm, scheduler) = make(focus: 10, repeating: false)
+        let (vm, scheduler, clock) = make(focus: 10, repeating: false)
 
-        vm.tick(seconds: 10) // 완료
+        clock.advance(10)
+        vm.tick() // 완료
 
         #expect(vm.isComplete)
         // 시작 시 1번 + 완료 시 1번 이상 cancel.
@@ -216,7 +276,7 @@ struct FocusSessionViewModelTests {
     }
 
     @Test func abortCancelsPendingNotification() {
-        let (vm, scheduler) = make(focus: 60)
+        let (vm, scheduler, _) = make(focus: 60)
 
         vm.abort()
 

@@ -8,9 +8,11 @@ import Observation
 
 /// 진행 중인 집중 세션의 상태머신.
 ///
-/// 단계(`focus`/`rest`) · 남은 시간(`remaining`) · 현재 사이클을 들고 있고, `tick(seconds:)`이
-/// 호출될 때마다 시간을 갉아 단계 전환·세션 완료를 처리한다. 뷰는 `Timer.publish`로
-/// 1초마다 `tick(seconds: 1)`을 부른다.
+/// 단계(`focus`/`rest`) · 종료 deadline(`phaseEndDate`) · 현재 사이클을 들고 있다.
+/// `remaining`은 `phaseEndDate - now`로 매 tick **재계산되는 파생값**이다 — 직접 감산하지
+/// 않는다(정수 counter drift, 백그라운드 추격 점프 방지). 뷰는 `Timer.publish`로 1초마다,
+/// 백그라운드 복귀 시 한 번 `tick()`을 부른다. `phaseEndDate`는 라이브 액티비티에도 그대로
+/// 넘겨 **앱·LA가 같은 deadline을 읽게 하는 single source of truth**다.
 ///
 /// 단계 종료 알림은 `FocusNotificationScheduling`에 위임 — 한 번에 하나의 pending 알림만
 /// 유지하고, 단계 전환·일시정지·스킵·중단 직전에 `cancelAll()`로 비운 뒤 다음 단계의
@@ -24,6 +26,9 @@ final class FocusSessionViewModel {
     /// 라이브 액티비티 hooks — nil이면 LA 호출을 모두 건너뛴다(테스트·Preview).
     /// 세션 시작 시 `start`, phase 전환·pause/resume에서 `update`, 종료 시 `end`.
     private let liveActivity: LiveActivityHooks?
+    /// 현재 시각 provider — 테스트에서 결정적 clock을 주입하려고 추상화. 기본은 `Date.now`.
+    /// 모든 시각 계산(deadline·remaining·pauseTime)이 이 하나만 읽는다.
+    private let now: () -> Date
 
     /// 세션과 라이브 액티비티를 연결하는 묶음. `FocusViewModel.start()`가 만들어 주입.
     /// session 식별자·표시 타이틀·색·세 use case를 함께 들고 다닌다 — init 시그니처가 여러
@@ -43,7 +48,12 @@ final class FocusSessionViewModel {
     /// 현재 phase의 시작 시각 — 라이브 액티비티 timer interval의 안정적 lowerBound로 사용.
     /// pause 동안엔 그대로, resume·phase 전환 시 갱신해 interval 길이를 phaseDuration으로 유지.
     private(set) var phaseStartDate: Date
-    /// 현재 단계의 남은 시간(초). `tick`이 갉고, pause면 멈춘다.
+    /// 현재 phase의 종료 deadline(절대 시각) — **앱·라이브 액티비티 공통 source of truth**.
+    /// `remaining`은 이 값에서 벽시계를 빼 재계산되고, LA에도 그대로 넘겨 둘이 같은 deadline을
+    /// 읽게 한다. resume·phase 전환·skip에서 갱신.
+    private(set) var phaseEndDate: Date
+    /// 현재 단계의 남은 시간(초). `tick`마다 `phaseEndDate - now`로 다시 박고, pause면 멈춘다.
+    /// **deadline 파생값** — 직접 감산하지 않는다(counter drift·백그라운드 추격 점프 방지).
     private(set) var remaining: TimeInterval
     /// 현재 사이클 번호 — 1부터 시작해 한 사이클(집중→휴식)이 끝나면 +1.
     private(set) var currentCycle: Int = 1
@@ -62,13 +72,17 @@ final class FocusSessionViewModel {
     init(
         settings: FocusSettings,
         scheduler: any FocusNotificationScheduling,
-        liveActivity: LiveActivityHooks? = nil
+        liveActivity: LiveActivityHooks? = nil,
+        now: @escaping () -> Date = { .now }
     ) {
         self.settings = settings
         self.scheduler = scheduler
         self.liveActivity = liveActivity
-        let phaseStart = Date.now
+        self.now = now
+        let phaseStart = now()
+        let phaseEnd = phaseStart.addingTimeInterval(settings.focusDuration)
         self.phaseStartDate = phaseStart
+        self.phaseEndDate = phaseEnd
         self.remaining = settings.focusDuration
         self.totalCycles = settings.totalCycles
         scheduler.schedulePhaseEnd(
@@ -78,7 +92,6 @@ final class FocusSessionViewModel {
         )
         // 세션 시작 = LA start. Task 안에선 hook 값만 capture — self capture 회피.
         if let hooks = liveActivity {
-            let phaseEnd = phaseStart.addingTimeInterval(settings.focusDuration)
             Task {
                 try? await hooks.start(
                     sessionID: hooks.sessionID,
@@ -94,45 +107,45 @@ final class FocusSessionViewModel {
 
     // MARK: - tick
 
-    /// 단계 종료 알림 없이 진행 시간을 흘려보낸다. 1초든 30초든 받는 양만큼 갉고,
-    /// 남는 분량이 있으면 다음 단계로 캐스케이드한다(예: 12초 흘렸는데 8초 남았던 단계 —
-    /// 남은 4초는 다음 단계의 시작에서 다시 차감).
-    func tick(seconds: TimeInterval) {
+    /// 벽시계 기준으로 상태를 재평가한다. 뷰의 `Timer.publish`가 1초마다, 백그라운드 복귀 시
+    /// 한 번 부른다. 인자가 없다 — 흘러간 시간은 주입된 clock(`now`)이 안다.
+    ///
+    /// deadline(`phaseEndDate`)이 지났으면 지난 경계마다 단계를 캐스케이드 전환하고,
+    /// `remaining`을 `phaseEndDate - now`로 다시 박는다. 백그라운드에서 여러 단계가 지나도
+    /// 단 한 번의 호출로 정확히 착지한다 — counter 추격 tick이 없어 '초가 확확 줄어드는'
+    /// 점프가 사라지고, 같은 deadline을 읽는 LA와 항상 일치한다.
+    func tick() {
         guard !isPaused, !isComplete else { return }
-        var remainder = seconds
-        while remainder > 0 && !isComplete {
-            if remainder < remaining {
-                remaining -= remainder
-                remainder = 0
-            } else {
-                // 현재 단계 종료. 남은 양은 다음 단계로 이월.
-                remainder -= remaining
-                remaining = 0
-                advancePhase()
-            }
+        while !isComplete, now() >= phaseEndDate {
+            advancePhase()
+        }
+        if !isComplete {
+            remaining = max(0, phaseEndDate.timeIntervalSince(now()))
         }
     }
 
     // MARK: - 사용자 액션
 
-    /// 일시정지 — `tick`이 멈추고, 단계 종료 pending 알림은 취소된다.
-    /// 라이브 액티비티는 `pauseTime`을 set하여 카운트다운 표시를 멈춘다 — 시스템 타이머
-    /// 위임이라 앱이 매초 update할 필요 없음.
+    /// 일시정지 — `tick`이 멈추고, 단계 종료 pending 알림은 취소된다. 현재 `remaining`을
+    /// 벽시계 기준으로 한 번 박아 고정한다. 라이브 액티비티는 `pauseTime`을 set하고 같은
+    /// `phaseEndDate`를 받으므로, LA 정지 표시(`phaseEndDate - pauseTime`)가 앱 `remaining`과
+    /// 정확히 일치한다 — 시스템 타이머 위임이라 앱이 매초 update할 필요 없음.
     func pause() {
         guard !isPaused, !isComplete else { return }
+        remaining = max(0, phaseEndDate.timeIntervalSince(now()))
         isPaused = true
         scheduler.cancelAll()
-        scheduleLiveActivityUpdate(pauseTime: .now)
+        scheduleLiveActivityUpdate(pauseTime: now())
     }
 
-    /// 재개 — 현재 남은 시간으로 단계 종료 알림을 다시 예약한다.
-    /// 라이브 액티비티는 `phaseStartDate = now - elapsed`, `phaseEndDate = now + remaining`으로
-    /// 다시 잡아 interval 길이를 phaseDuration 그대로 유지하고 `pauseTime` 해제.
+    /// 재개 — 고정해 둔 `remaining`으로 deadline을 다시 잡는다. `phaseEndDate = now + remaining`,
+    /// `phaseStartDate = phaseEndDate - phaseDuration`으로 interval 길이를 phaseDuration 그대로
+    /// 유지하고 `pauseTime` 해제. 앱·LA가 동일한 새 deadline을 공유한다.
     func resume() {
         guard isPaused, !isComplete else { return }
         isPaused = false
-        let elapsed = phaseDuration - remaining
-        phaseStartDate = Date.now.addingTimeInterval(-elapsed)
+        phaseEndDate = now().addingTimeInterval(remaining)
+        phaseStartDate = phaseEndDate.addingTimeInterval(-phaseDuration)
         scheduler.schedulePhaseEnd(
             after: remaining,
             title: Self.title(for: phase),
@@ -142,9 +155,11 @@ final class FocusSessionViewModel {
     }
 
     /// 현재 단계를 즉시 끝낸 것으로 처리하고 다음 단계로 넘긴다(혹은 세션 종료).
+    /// deadline을 지금으로 당겨 `advancePhase`가 그 경계에서 다음 단계를 잇게 한다.
     func skip() {
         guard !isComplete else { return }
-        remaining = 0
+        isPaused = false
+        phaseEndDate = now()
         advancePhase()
     }
 
@@ -164,47 +179,49 @@ final class FocusSessionViewModel {
     /// 재설정된다.
     private func advancePhase() {
         scheduler.cancelAll()
+        // 방금 지난 deadline을 다음 단계의 시작 경계로 — 백그라운드로 여러 단계가 한꺼번에
+        // 지나도 `.now`가 아니라 경계에서 이어붙여 캐스케이드가 정확하다.
+        let boundary = phaseEndDate
         switch phase {
         case .focus:
             // 반복 OFF거나 마지막 사이클의 집중이 끝나면 세션 종료(휴식 없음).
             if !settings.isRepeating || currentCycle >= totalCycles {
                 isComplete = true
+                remaining = 0
                 scheduleLiveActivityEnd()
                 return
             }
             phase = .rest
-            phaseStartDate = .now
-            remaining = settings.restDuration
-            scheduler.schedulePhaseEnd(
-                after: remaining,
-                title: Self.title(for: .rest),
-                body: Self.body(for: .rest)
-            )
-            scheduleLiveActivityUpdate(pauseTime: nil)
+            phaseStartDate = boundary
+            phaseEndDate = boundary.addingTimeInterval(settings.restDuration)
         case .rest:
             // 휴식이 끝나면 다음 사이클의 집중으로.
             currentCycle += 1
             phase = .focus
-            phaseStartDate = .now
-            remaining = settings.focusDuration
-            scheduler.schedulePhaseEnd(
-                after: remaining,
-                title: Self.title(for: .focus),
-                body: Self.body(for: .focus)
-            )
-            scheduleLiveActivityUpdate(pauseTime: nil)
+            phaseStartDate = boundary
+            phaseEndDate = boundary.addingTimeInterval(settings.focusDuration)
         }
+        // 남은 알림 시각은 새 deadline까지의 실시간 — 캐스케이드 중간 단계는 0으로 박혀
+        // 다음 advancePhase의 cancelAll에 지워지고, 착지 단계만 양수로 남는다.
+        remaining = max(0, phaseEndDate.timeIntervalSince(now()))
+        scheduler.schedulePhaseEnd(
+            after: remaining,
+            title: Self.title(for: phase),
+            body: Self.body(for: phase)
+        )
+        scheduleLiveActivityUpdate(pauseTime: nil)
     }
 
     // MARK: - 라이브 액티비티 호출 helpers
 
-    /// 현재 phase·remaining·pauseTime을 스냅샷 떠 LA `update`를 비동기 dispatch.
+    /// 현재 phase·deadline·pauseTime을 스냅샷 떠 LA `update`를 비동기 dispatch.
+    /// `phaseEndDate`를 그대로 넘겨 앱과 LA가 같은 deadline을 읽게 한다(싱크의 핵심).
     /// hooks가 nil이면 no-op. 매초 호출 금지 — phase 전환/pause/resume에서만 부른다.
     private func scheduleLiveActivityUpdate(pauseTime: Date?) {
         guard let hooks = liveActivity else { return }
         let phaseSnapshot = liveFocusPhase
         let startSnapshot = phaseStartDate
-        let endSnapshot = Date.now.addingTimeInterval(remaining)
+        let endSnapshot = phaseEndDate
         Task {
             try? await hooks.update(
                 phase: phaseSnapshot,

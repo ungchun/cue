@@ -18,13 +18,13 @@ struct FocusView: View {
     /// 세션 목록 시트 표시 — 우상단 버튼이 true로 올린다.
     @State private var showingSessions = false
 
-    /// 1초마다 publish — `tick`은 일시정지·완료·세션 없음 상태에 자체 가드.
+    /// 1초마다 publish — `tick`은 일시정지·완료·세션 없음 상태에 자체 가드. deadline 파생이라
+    /// 매초 호출이 `remaining`을 벽시계로 다시 박을 뿐, 시간을 누적 감산하지 않는다.
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    /// 백그라운드 진입 시각 — 복귀 시 흘러간 만큼 한 번에 tick해 단계 종료 시점을 추격.
-    /// 세션 없는 idle 상태에선 캡처하지 않는다.
+    /// 포그라운드 복귀 시 `tick()` 한 번으로 흘러간 시간을 벽시계 기준 재계산 —
+    /// 별도 background 시각 기록이 필요 없다(deadline 기반).
     @Environment(\.scenePhase) private var scenePhase
-    @State private var backgroundedAt: Date?
 
     var body: some View {
         // 단순한 VStack 자연 layout — 모든 자식이 `Spacing.xl` 균등 spacing, 화면 maxHeight에서
@@ -59,7 +59,7 @@ struct FocusView: View {
             FocusSessionsListSheet(viewModel: viewModel)
         }
         .onReceive(ticker) { _ in
-            viewModel.session?.tick(seconds: 1)
+            viewModel.session?.tick()
         }
         .onChange(of: viewModel.session?.phase) { _, newPhase in
             // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. nil → non-nil 변화(세션 시작)에도
@@ -74,27 +74,15 @@ struct FocusView: View {
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
-            switch newPhase {
-            case .background, .inactive:
-                if backgroundedAt == nil, viewModel.session != nil {
-                    backgroundedAt = Date()
-                }
-            case .active:
-                // 잠금화면·Dynamic Island에서 누른 액션을 **먼저** 흡수 — paused/end 의도가
-                // 흘러간 시간보다 우선되어 정확한 상태로 회복된다.
-                viewModel.handleLiveActivityActions(
-                    FocusLiveActivityActionQueue.shared.drain()
-                )
-                // 그 다음 백그라운드 elapsed tick — `tick` 자체가 `isPaused`/`isComplete`
-                // 가드를 갖고 있어 paused/ended 상태면 자연 무시된다.
-                if let date = backgroundedAt {
-                    let elapsed = Date().timeIntervalSince(date)
-                    if elapsed > 0 { viewModel.session?.tick(seconds: elapsed) }
-                    backgroundedAt = nil
-                }
-            @unknown default:
-                break
-            }
+            guard newPhase == .active else { return }
+            // 잠금화면·Dynamic Island에서 누른 액션을 **먼저** 흡수 — paused/end 의도가
+            // 흘러간 시간보다 우선되어 정확한 상태로 회복된다.
+            viewModel.handleLiveActivityActions(
+                FocusLiveActivityActionQueue.shared.drain()
+            )
+            // deadline 기반이라 흘러간 시간은 tick() 한 번이 벽시계로 정확히 따라잡는다 —
+            // `tick`은 `isPaused`/`isComplete` 가드가 있어 paused/ended면 자연 무시.
+            viewModel.session?.tick()
         }
     }
 
@@ -286,9 +274,11 @@ struct FocusView: View {
     }
 
     /// "mm:ss". running이면 남은 시간, idle이면 선택 세션(또는 기본) 집중 시간을 보여준다.
+    /// **올림(ceil)** 표시 — LA의 시스템 `Text(timerInterval:)`도 올림으로 카운트다운하므로,
+    /// 분수 초(`phaseEndDate - now`) 구간에서 앱과 LA가 같은 숫자를 띄워 싱크가 맞는다.
     private var timeText: String {
         let seconds = viewModel.session?.remaining ?? viewModel.displayedSettings.focusDuration
-        return Duration.seconds(max(0, seconds))
+        return Duration.seconds(max(0, seconds.rounded(.up)))
             .formatted(.time(pattern: .minuteSecond))
     }
 }
