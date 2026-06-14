@@ -11,17 +11,17 @@ import WidgetKit
 /// 집중 세션 라이브 액티비티 위젯.
 ///
 /// **레이아웃**:
-/// - **잠금화면 / Dynamic Island expanded**: 외곽 `sessionColor` stroke의 둥근 사각형 안에
-///   좌측 ⏸/▶ 토글 버튼 + 중앙 3단(타이틀 / 큰 카운트다운 / phase 라벨) + 우측 ✕ 종료 버튼.
+/// - **잠금화면 / Dynamic Island expanded**: 좌측 ⏸/▶ 토글 버튼 + 중앙 3단(타이틀 / 큰
+///   카운트다운 / phase 라벨) + 우측 ✕ 종료 버튼.
 /// - **Dynamic Island compact**: 좌측 `sessionColor` 진행 ring + 우측 카운트다운.
 /// - **Dynamic Island minimal**: `sessionColor` 작은 timer 아이콘.
 ///
-/// **타이머 표시 분기** — `pauseTime`이 nil이면 `TimelineView(.periodic by: 1)`이 매초
-/// 정적 `Text(formatRemaining(...))`을 재평가, set이면 그 시점의 잔여를 한 번만 박아 멈춘다.
-/// (`Text(timerInterval:)`는 widget runtime에서 visible 텍스트보다 넓은 frame을 reserve하고
-/// visible을 frame leading에 박아 외부 어떤 정렬 modifier도 시각 중앙을 못 잡고, 일부
-/// 환경에서 pauseTime을 묵묵히 무시한다. 정적 Text는 intrinsic width = visible width라
-/// 둘 다 회피되고 표준 SwiftUI 정렬이 그대로 작동.)
+/// **타이머 표시 분기** — `pauseTime`이 nil이면 시스템 `Text(timerInterval:countsDown:)`이
+/// OS 위임으로 매초 자동 갱신(LA는 코드 재실행 없이 이 프리미티브만 틱한다 — `TimelineView`는
+/// LA에서 ~2회만 호출돼 멈춘다), set이면 그 시점 잔여를 정적 `Text`로 박아 멈춘다. 시스템
+/// 타이머 텍스트는 단독으로 쓰면 가용 폭을 꽉 채우고 visible을 leading에 박아 시각 중앙이
+/// 깨지므로, 바깥 `Text("\(…)")` 보간에 중첩해 inline 콘텐츠로 만든 뒤
+/// `.multilineTextAlignment(.center)`로 중앙 정렬한다(Apple 포럼 확인된 우회).
 ///
 /// **App Intent 버튼** — `PauseResumeFocusIntent` / `EndFocusIntent`이 큐에 enqueue하고
 /// 시각 피드백을 위한 LA `update`를 즉시 보낸다. 메인 앱이 active되면 큐를 drain해
@@ -78,54 +78,6 @@ struct FocusLiveActivityWidget: Widget {
             }
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.md)
-            .overlay {
-                timerStroke(
-                    state: context.state,
-                    color: sessionColor(attributes: context.attributes)
-                )
-            }
-            .padding(Spacing.sm)
-    }
-
-    /// 외곽 stroke — pause 분기. dynamic은 `TimelineView(.periodic)`이 매초 view body를 다시
-    /// 평가해 그 시각의 progress로 trim. paused는 정적.
-    ///
-    /// **왜 TimelineView**: `ProgressView(timerInterval:) + custom ProgressViewStyle`은 widget
-    /// runtime에서 fractionCompleted가 매 프레임 갱신되지 않는다(시스템 default style만 갱신
-    /// 대상). `TimelineView(.periodic(by: 1))`은 widget context에서도 자체 timer로 view body가
-    /// 매 schedule 시점에 재평가되어 custom path drawing에 그 시각이 그대로 흘러간다 —
-    /// WidgetKit reload budget을 소비하지 않는 별도 메커니즘.
-    @ViewBuilder
-    private func timerStroke(
-        state: FocusLiveActivityAttributes.ContentState,
-        color: Color
-    ) -> some View {
-        if let pauseTime = state.pauseTime {
-            StrokedRoundedRect(
-                progress: progress(at: pauseTime, state: state),
-                color: color
-            )
-        } else {
-            // 0.5초 — 1초면 사람 눈에 뚝뚝 끊기고, 너무 짧게 가면 widget budget 영향.
-            // 0.5초가 매끄러움/리소스의 보통 spot.
-            TimelineView(.periodic(from: state.phaseStartDate, by: 0.5)) { context in
-                StrokedRoundedRect(
-                    progress: progress(at: context.date, state: state),
-                    color: color
-                )
-            }
-        }
-    }
-
-    /// 특정 시점의 phase 진행 비율 — 0(시작) → 1(종료) clamp.
-    private func progress(
-        at date: Date,
-        state: FocusLiveActivityAttributes.ContentState
-    ) -> Double {
-        let total = state.phaseEndDate.timeIntervalSince(state.phaseStartDate)
-        guard total > 0 else { return 0 }
-        let elapsed = date.timeIntervalSince(state.phaseStartDate)
-        return min(1, max(0, elapsed / total))
     }
 
     /// Dynamic Island expanded center — 잠금화면과 같은 3 column 구조(외곽 stroke 없음:
@@ -222,18 +174,16 @@ struct FocusLiveActivityWidget: Widget {
 
     // MARK: - Helpers
 
-    /// 카운트다운 표시 — pause 여부로 정적/타임라인 분기, 양쪽 다 정적 `Text`.
+    /// 카운트다운 표시 — pause 여부로 정적/시스템타이머 분기.
     ///
-    /// **왜 `Text(timerInterval:)`를 안 쓰나** — widget runtime에서 visible 텍스트보다
-    /// 넓은 frame을 reserve하고 visible을 frame `.leading`에 박는다. 외부 `.frame`,
-    /// `Spacer`, `.multilineTextAlignment`, `GeometryReader`, `.fixedSize` 어떤
-    /// modifier도 그 internal leading 정렬을 못 덮어 시각 중앙이 영구적으로 깨진다
-    /// (이전 5건의 잠금화면 LA 센터링 시도가 모두 실패한 진짜 원인). 정적 `Text`는
-    /// intrinsic width = visible width라 표준 SwiftUI 정렬이 그대로 작동.
+    /// **running 분기**: 시스템 `Text(timerInterval:countsDown:)`이 LA에서 OS 위임으로 매초
+    /// 자동 갱신된다(코드 재실행 없이 틱하는 유일한 텍스트 프리미티브 — `TimelineView`는 LA에서
+    /// ~2회만 호출돼 멈춘다, FB15590204). 단독으로 쓰면 가용 폭을 꽉 채우고 visible을 leading에
+    /// 박아 시각 중앙이 깨지므로, 바깥 `Text("\(…)")` 보간에 중첩해 inline 콘텐츠로 만든 뒤
+    /// `.multilineTextAlignment(.center)`로 중앙 정렬한다(Apple 포럼 확인된 우회).
     ///
-    /// running 분기는 `TimelineView(.periodic by: 1)`로 매초 view body 재평가 —
-    /// widget reload budget을 소비하지 않는 별도 메커니즘(`timerStroke`가 이미 같은
-    /// 방식으로 동작 검증됨).
+    /// **pause 분기**: `pauseTime` 시점 잔여(`phaseEndDate - pauseTime`)를 `formatRemaining`으로
+    /// 정적 박아 멈춘다.
     @ViewBuilder
     private func timerText(
         state: FocusLiveActivityAttributes.ContentState,
@@ -242,11 +192,10 @@ struct FocusLiveActivityWidget: Widget {
         if let pauseTime = state.pauseTime {
             let remaining = max(0, state.phaseEndDate.timeIntervalSince(pauseTime))
             Text(formatRemaining(remaining, showsHours: showsHours))
+                .multilineTextAlignment(.center)
         } else {
-            TimelineView(.periodic(from: state.phaseStartDate, by: 1)) { context in
-                let remaining = max(0, state.phaseEndDate.timeIntervalSince(context.date))
-                Text(formatRemaining(remaining, showsHours: showsHours))
-            }
+            Text("\(Text(timerInterval: state.phaseStartDate...state.phaseEndDate, countsDown: true, showsHours: showsHours))")
+                .multilineTextAlignment(.center)
         }
     }
 
@@ -277,35 +226,6 @@ struct FocusLiveActivityWidget: Widget {
         case .focus: return "집중 중"
         case .breakTime: return "휴식 중"
         case .completed: return "완료"
-        }
-    }
-}
-
-// MARK: - 외곽 timer-driven stroke
-
-/// 둥근 사각형 path를 따라 `progress` 비율만큼 stroke를 그리는 shape. `TimelineView`가
-/// 매초 새 `progress`로 이 view를 다시 만들어 path 진행을 따라 stroke가 차오르는 효과.
-///
-/// **lineCap은 `.butt`** — round로 두면 progress가 0.0 / 1.0 부근에서 끝점이 모서리 밖으로
-/// 살짝 튀어 어색하다. butt cap이 trim 진행과 가장 깔끔.
-private struct StrokedRoundedRect: View {
-    let progress: Double
-    let color: Color
-
-    var body: some View {
-        let cornerRadius = Spacing.xl
-        let lineWidth: CGFloat = 4
-        ZStack {
-            // 배경 — 같은 색의 옅은 stroke. 0%에서도 외곽이 보이도록.
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: lineWidth)
-            // progress — path 진행을 따라 trim된 stroke.
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .trim(from: 0, to: max(0, min(1, progress)))
-                .stroke(
-                    color,
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .butt)
-                )
         }
     }
 }
