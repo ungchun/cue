@@ -97,12 +97,10 @@ enum FocusAlarmScheduling {
             secondaryButton = nil
             secondaryIntent = nil
         }
-        // `stopButton`을 명시하면 알림에 **탭 가능한 "종료하기" 버튼**이 뜬다(WWDC25 샘플과 동일).
-        // 이 init은 26.1에서 deprecated 경고가 나지만(슬라이드-종료로 떨어질 수 있음) 기기 버전에
-        // 따라 탭 버튼이 렌더되므로 명시한다. stopButton 탭 → `stopIntent`(세션 종료) 실행.
+        // 26.1 init(stopButton 없음) — 시스템이 종료(배너에선 탭 X, 전체화면에선 slide-to-stop)를
+        // 그린다. deprecated stopButton init은 26.1에서 알림 표시를 깨뜨려 되돌림.
         let alert = AlarmPresentation.Alert(
             title: LocalizedStringResource(stringLiteral: "\(label(phase)) 완료"),
-            stopButton: AlarmButton(text: "종료하기", textColor: .white, systemImageName: "xmark"),
             secondaryButton: secondaryButton,
             secondaryButtonBehavior: secondaryButton == nil ? nil : .custom
         )
@@ -118,8 +116,9 @@ enum FocusAlarmScheduling {
         let tint = plan.colorHex.flatMap { Color(hex: $0) } ?? .indigo
         let attributes = AlarmAttributes(presentation: presentation, metadata: metadata, tintColor: tint)
 
-        // 알람 소리 끄기 — AlarmKit `sound`는 non-optional이고 `.none`이 없어 무음으로 둘 수 없다.
-        // 번들의 무음 wav(`silent.wav`, 1s)를 커스텀 사운드로 지정해 사실상 소리를 끈다(시각 알림만 남음).
+        // 알람 소리 off — `sound`는 non-optional이고 `.none`이 없어, 번들의 무음 wav(silent.wav)를
+        // 커스텀 사운드로 지정해 사실상 소리를 끈다. (알림이 안 뜬 건 사운드가 아니라 자동전환이
+        // 원인이었고 그건 해결됨.)
         return AlarmManager.AlarmConfiguration.timer(
             duration: plan.duration(for: phase),
             attributes: attributes,

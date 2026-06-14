@@ -45,8 +45,6 @@ final class FocusViewModel {
     private var frozenRemaining: TimeInterval = 0
     /// 현재 진행 중 알람 id — 일시정지/재개/종료 제어 대상.
     private var currentAlarmID: UUID?
-    /// 이미 자동 전환을 트리거한 알람 id — 한 번 `.alerting`에 여러 alarmUpdates가 와도 중복 advance 방지.
-    private var advancedAlarmIDs: Set<UUID> = []
     private var updatesTask: Task<Void, Never>?
     private var displayTask: Task<Void, Never>?
 
@@ -102,7 +100,6 @@ final class FocusViewModel {
 
     func start() {
         guard !isActive else { return }
-        advancedAlarmIDs.removeAll()
         let settings = displayedSettings
         FocusAlarmPlan(
             focusDuration: settings.focusDuration,
@@ -207,16 +204,18 @@ final class FocusViewModel {
         startDisplayTick()
     }
 
-    /// `alarmUpdates`로 **포그라운드 단계 종료 자동 전환**만 처리한다 — 현재 알람이 `.alerting`이
-    /// 되면(집중/휴식 끝) 다음 단계로 넘긴다. 일시정지/재개의 라이브 표시는 인앱 버튼이 즉시
-    /// 반영하고(VM 권위), 잠금화면에서 누른 변경은 포그라운드 복귀 시 `adoptFromActivity`가 반영한다
-    /// — 여기서 `Alarm.state`로 isPaused를 건드리면 로컬 낙관값과 echo가 충돌(레이스)하므로 안 한다.
+    /// `alarmUpdates` 처리 — **자동 전환은 하지 않는다.** 경계에서 AlarmKit 알림이 떠야 하므로
+    /// `.alerting` 알람을 취소하지 않는다(취소하면 알림이 뜰 틈 없이 다음 단계로 넘어가버림).
+    /// 현재 알람이 사라졌을 때(알림의 "다음 단계" 탭으로 새 단계가 잡혔거나 종료됨)만 인앱 상태를
+    /// Activity에서 채택/정리한다. 일시정지/재개·스킵 같은 인앱 액션은 VM이 즉시 권위 반영한다.
     private func handle(_ alarms: [Alarm]) {
-        guard isActive, let id = currentAlarmID,
-              let cur = alarms.first(where: { $0.id == id }) else { return }
-        if cur.state == .alerting, !advancedAlarmIDs.contains(id) {
-            advancedAlarmIDs.insert(id)
-            advance()
+        // currentAlarmID가 nil이면 예약 진행 중(시작 직후)이라 아무것도 하지 않는다 —
+        // 여기서 "알람 없음=종료"로 처리하면 시작하자마자 clearActive로 꺼지는 버그.
+        guard isActive, let id = currentAlarmID else { return }
+        if !alarms.contains(where: { $0.id == id }) {
+            // 현재 알람이 사라짐(알림에서 다음 단계로 넘어갔거나 종료) → 새 단계 채택 or 정리.
+            adoptFromActivity()
+            if !isActive { stopObserving() }
         }
     }
 
@@ -282,7 +281,6 @@ final class FocusViewModel {
         isActive = false
         isPaused = false
         currentAlarmID = nil
-        advancedAlarmIDs.removeAll()
         fireDate = nil
         remaining = 0
         currentCycle = 1
