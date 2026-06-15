@@ -272,7 +272,7 @@ struct ReminderView: View {
                 ForEach(section.completed) { reminder in
                     completedReminderRow(reminder)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.md, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
+                        .listRowInsets(rowInsets)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 Task { await viewModel.delete(reminder) }
@@ -313,6 +313,7 @@ struct ReminderView: View {
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
+        .listRowInsets(rowInsets)
         .onTapGesture {
             activateNewRow(forListID: listID)
         }
@@ -333,7 +334,7 @@ struct ReminderView: View {
         ForEach(reminders) { reminder in
             reminderRow(reminder)
                 .listRowSeparator(.hidden)
-                .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.md, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
+                .listRowInsets(rowInsets)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         Task {
@@ -367,6 +368,9 @@ struct ReminderView: View {
             liveActivityCircle
         }
         .listRowSeparator(.hidden)
+        // 항목 행들과 동일한 좌측 인셋(Spacing.md) — 큰 제목 leading과 동그라미 leading을
+        // 같은 세로 기준선에 맞춘다. 인셋이 없으면 plain List 기본값이라 행과 어긋난다.
+        .listRowInsets(rowInsets)
     }
 
     /// 라이브 액티비티 토글 버튼 — 탭하면 현재 selection의 미리알림을 잠금화면·
@@ -448,7 +452,7 @@ struct ReminderView: View {
         ForEach(viewModel.completedReminders) { reminder in
             completedReminderRow(reminder)
                 .listRowSeparator(.hidden)
-                .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.md, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
+                .listRowInsets(rowInsets)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         Task { await viewModel.delete(reminder) }
@@ -732,6 +736,13 @@ struct ReminderView: View {
                 .padding(.leading, titleIndent)
             }
         }
+        .listRowInsets(rowInsets)
+    }
+
+    /// 모든 행(큰 제목·항목·완료·입력·섹션 헤더) 공통 인셋 — 좌우 `Spacing.lg`(24)로 같은
+    /// 세로 기준선에 정렬. 한 곳에서 관리해 패딩을 바꿀 때 전 행이 함께 따라온다.
+    private var rowInsets: EdgeInsets {
+        .init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.lg)
     }
 
     /// 동그라미와 텍스트 사이 spacing — 모든 row에서 일관되게 사용. 토큰 합성으로 표현.

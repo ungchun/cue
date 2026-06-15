@@ -116,6 +116,8 @@ struct ScheduleView: View {
             liveActivityCircle
         }
         .listRowSeparator(.hidden)
+        // 할일 탭과 같은 좌우 인셋(24) — 두 탭의 큰 제목 leading을 같은 세로선에 맞춘다.
+        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.lg))
     }
 
     /// 라이브 액티비티 토글 버튼 — 탭하면 오늘·내일 일정을 잠금화면·Dynamic Island에
@@ -204,16 +206,19 @@ struct ScheduleView: View {
                     .onTapGesture {
                         viewModel.presentEdit(event)
                     }
+                    // leading 12(Spacing.smd): rail column(24) 중앙 세로선이 x=24에 와
+                    // 할일 탭 동그라미/제목 leading과 정렬. trailing 24로 우측도 동일.
                     .listRowInsets(.init(
-                        top: Spacing.zero, leading: Spacing.zero,
-                        bottom: Spacing.zero, trailing: Spacing.md
+                        top: Spacing.zero, leading: Spacing.smd,
+                        bottom: Spacing.zero, trailing: Spacing.lg
                     ))
             }
         } header: {
             dayHeader(group)
+                // 이벤트 행과 동일 — rail 세로선이 한 줄로 이어지도록 같은 leading/trailing.
                 .listRowInsets(.init(
-                    top: Spacing.zero, leading: Spacing.zero,
-                    bottom: Spacing.zero, trailing: Spacing.md
+                    top: Spacing.zero, leading: Spacing.smd,
+                    bottom: Spacing.zero, trailing: Spacing.lg
                 ))
         }
     }

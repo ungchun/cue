@@ -61,12 +61,6 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     ) async throws {
         guard await isEnabled else { return }
 
-        if let existing = reminderActivity {
-            await existing.end(nil, dismissalPolicy: .immediate)
-            reminderActivity = nil
-        }
-
-        let attributes = ReminderLiveActivityAttributes(listTitle: listTitle)
         let state = ReminderLiveActivityAttributes.ContentState(
             items: items,
             remaining: remaining
@@ -74,6 +68,19 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 시간 흐름과 무관 — staleDate 미지정. 사용자 동작 시점에만 update.
         let content = ActivityContent(state: state, staleDate: nil)
 
+        // 같은 리스트로 이미 떠 있으면 **부드럽게 update** — 재시작은 깜빡임 + 새 인스턴스 발생.
+        // listTitle은 attributes(불변)라, 리스트가 바뀐 경우엔 end 후 새로 request해야 한다.
+        if let existing = reminderActivity, existing.attributes.listTitle == listTitle {
+            await existing.update(content)
+            return
+        }
+
+        if let existing = reminderActivity {
+            await existing.end(nil, dismissalPolicy: .immediate)
+            reminderActivity = nil
+        }
+
+        let attributes = ReminderLiveActivityAttributes(listTitle: listTitle)
         reminderActivity = try Activity.request(
             attributes: attributes,
             content: content,

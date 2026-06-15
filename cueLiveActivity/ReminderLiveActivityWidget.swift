@@ -4,33 +4,19 @@
 //
 
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
-/// 미리알림 라이브 액티비티 위젯 — **placeholder UI**. 본격 디자인(체크리스트 row,
-/// dynamic island count badge)은 다음 사이클에서.
+/// 미리알림 라이브 액티비티 위젯.
+///
+/// 잠금화면 레이아웃: **좌상단 비움 · 우상단 미완료 카운트 · 본문 2열 체크리스트**.
+/// 각 항목 동그라미는 자기 미리알림 리스트 색(`colorHex`)으로, 없으면 시스템 색 폴백.
 struct ReminderLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ReminderLiveActivityAttributes.self) { context in
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(context.attributes.listTitle)
-                    .font(.headline)
-                ForEach(context.state.items.prefix(3)) { item in
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "circle")
-                            .foregroundStyle(.secondary)
-                        Text(item.title)
-                            .lineLimit(1)
-                    }
-                    .font(.callout)
-                }
-                if context.state.remaining > 0 {
-                    Text("+\(context.state.remaining)개 더")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding()
+            ReminderLockScreenView(state: context.state)
+                .padding(Spacing.md)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -38,7 +24,7 @@ struct ReminderLiveActivityWidget: Widget {
                         .foregroundStyle(.tint)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("\(context.state.items.count + context.state.remaining)")
+                    Text("\(totalIncomplete(context.state))")
                         .font(.title3.weight(.semibold))
                         .monospacedDigit()
                 }
@@ -58,7 +44,7 @@ struct ReminderLiveActivityWidget: Widget {
                 Image(systemName: "checklist")
                     .foregroundStyle(.tint)
             } compactTrailing: {
-                Text("\(context.state.items.count + context.state.remaining)")
+                Text("\(totalIncomplete(context.state))")
                     .monospacedDigit()
             } minimal: {
                 Image(systemName: "checklist")
@@ -66,4 +52,75 @@ struct ReminderLiveActivityWidget: Widget {
             }
         }
     }
+}
+
+/// 잠금화면 본문. 우상단 카운트 + 2열 체크리스트.
+private struct ReminderLockScreenView: View {
+    let state: ReminderLiveActivityAttributes.ContentState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            // 좌상단은 비움, 우상단에 미완료 카운트.
+            HStack {
+                Spacer(minLength: Spacing.zero)
+                Text("\(totalIncomplete(state))")
+                    .font(.title.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+            }
+
+            Grid(alignment: .leading, horizontalSpacing: Spacing.md, verticalSpacing: Spacing.smd) {
+                ForEach(rows, id: \.first?.id) { row in
+                    GridRow {
+                        ForEach(row) { item in
+                            ReminderItemCell(item: item)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 위젯이 한 번에 보여주는 항목 수(2열 × 3행). ContentState엔 backfill용으로 더 실려 있고
+    /// 여기서 앞 6개만 잘라 표시 — 체크로 하나 빠지면 다음 항목이 이 6칸을 자동으로 메운다.
+    private static let displayLimit = 6
+
+    /// 표시 항목을 2개씩 묶어 행 단위로 — 좌→우, 위→아래(읽기 순서).
+    private var rows: [[LiveReminderItem]] {
+        let shown = Array(state.items.prefix(Self.displayLimit))
+        return stride(from: 0, to: shown.count, by: 2).map { start in
+            Array(shown[start..<min(start + 2, shown.count)])
+        }
+    }
+}
+
+/// 체크리스트 한 칸 — 동그라미(리스트 색) + 제목.
+private struct ReminderItemCell: View {
+    let item: LiveReminderItem
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Button(intent: CompleteReminderIntent(reminderID: item.id)) {
+                Circle()
+                    .strokeBorder(circleColor, lineWidth: Spacing.xxs)
+                    .frame(width: Spacing.lg, height: Spacing.lg)
+            }
+            .buttonStyle(.plain)
+            Text(item.title)
+                .font(.callout)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 리스트 색이 있으면 그 색, 없으면 시스템 보조색.
+    private var circleColor: Color {
+        guard let hex = item.colorHex, let color = Color(hex: hex) else { return .secondary }
+        return color
+    }
+}
+
+/// 미완료 총개수 — 표시 항목 + 잘려나간 나머지.
+private func totalIncomplete(_ state: ReminderLiveActivityAttributes.ContentState) -> Int {
+    state.items.count + state.remaining
 }

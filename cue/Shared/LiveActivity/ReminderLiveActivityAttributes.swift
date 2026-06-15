@@ -20,3 +20,14 @@ struct ReminderLiveActivityAttributes: ActivityAttributes {
 
     let listTitle: String
 }
+
+extension ReminderLiveActivityAttributes.ContentState {
+    /// `id` 항목을 제거한 새 상태. LA에서 체크(완료)한 항목을 숨길 때 쓴다.
+    /// 표시 카운트(`items.count + remaining`)는 항목이 빠진 만큼 자동으로 줄어든다.
+    /// `remaining`은 그대로 둔다 — 잘려나간 나머지 항목의 데이터가 LA엔 없어 backfill 불가.
+    func removingItem(id: String) -> Self {
+        var copy = self
+        copy.items.removeAll { $0.id == id }
+        return copy
+    }
+}

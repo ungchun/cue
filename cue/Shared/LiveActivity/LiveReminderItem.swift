@@ -13,4 +13,8 @@ import Foundation
 struct LiveReminderItem: Codable, Hashable, Sendable, Identifiable {
     let id: String
     let title: String
+    /// 이 항목이 속한 미리알림 리스트의 색(`"#RRGGBB"`). 위젯이 체크박스 동그라미 stroke에
+    /// 사용한다. `nil`이면 위젯에서 시스템 색으로 폴백 — EventKit 리스트 색(외부 데이터)이라
+    /// 디자인 시스템 hex 금지의 예외다.
+    let colorHex: String?
 }

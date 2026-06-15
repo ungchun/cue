@@ -104,7 +104,8 @@ final class ReminderViewModel {
         do {
             try await startLiveActivityUseCase(
                 listTitle: listTitle,
-                reminders: visibleReminders
+                reminders: visibleReminders,
+                listColors: listColorsByID
             )
             liveActivityActive = true
         } catch {
@@ -119,6 +120,41 @@ final class ReminderViewModel {
     /// 현재 선택된 리스트.
     var selectedList: ReminderList? {
         lists.first { $0.id == selectedListID }
+    }
+
+    /// 리스트 ID → 색(`"#RRGGBB"`) 매핑. 라이브 액티비티가 항목별 동그라미 색을 채울 때 쓴다.
+    /// 색이 없는(`colorHex == nil`) 리스트는 매핑에서 빠져 위젯이 시스템 색으로 폴백한다.
+    var listColorsByID: [String: String] {
+        Dictionary(uniqueKeysWithValues: lists.compactMap { list in
+            list.colorHex.map { (list.id, $0) }
+        })
+    }
+
+    /// 현재 selection의 표시 제목 — LA 시작/갱신에 쓴다(View의 `currentTitle`과 동일 규칙).
+    var currentSelectionTitle: String {
+        switch selection {
+        case .list: return selectedList?.title ?? ""
+        case .systemFilter(let filter): return filter.title
+        case .none: return ""
+        }
+    }
+
+    /// 항목을 다시 가져오고, 활성 LA가 있으면 새 스냅샷으로 갱신한다.
+    /// 완료·추가·수정·삭제 등 데이터 변경 경로의 공통 마무리.
+    private func reloadReminders() async throws {
+        allReminders = try await fetchRemindersUseCase()
+        await refreshLiveActivityIfActive()
+    }
+
+    /// LA가 떠 있으면 현재 selection 스냅샷으로 다시 게시한다. 같은 리스트면 service가 부드럽게
+    /// `update`, 리스트가 바뀌었으면 재시작한다. 갱신 실패는 조용히 무시(화면 흐름 방해 금지).
+    private func refreshLiveActivityIfActive() async {
+        guard liveActivityActive else { return }
+        try? await startLiveActivityUseCase(
+            listTitle: currentSelectionTitle,
+            reminders: visibleReminders,
+            listColors: listColorsByID
+        )
     }
 
     /// 본문에 보여줄 **미완료** 항목. selection 종류에 따라 필터되고 정렬된다.
@@ -220,6 +256,8 @@ final class ReminderViewModel {
             if needsResetToFirstList, let first = lists.first {
                 selection = .list(first.id)
             }
+            // 외부(미리 알림 앱) 변경 등으로 데이터가 바뀌면 떠 있는 LA도 따라 갱신.
+            await refreshLiveActivityIfActive()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -247,7 +285,7 @@ final class ReminderViewModel {
     func toggle(_ reminder: Reminder) async {
         do {
             try await toggleCompletionUseCase(reminder)
-            allReminders = try await fetchRemindersUseCase()
+            try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -272,7 +310,7 @@ final class ReminderViewModel {
                 includesTime: includesTime,
                 listID: listID
             )
-            allReminders = try await fetchRemindersUseCase()
+            try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -304,7 +342,7 @@ final class ReminderViewModel {
                 dueDate: dueDate,
                 includesTime: includesTime
             )
-            allReminders = try await fetchRemindersUseCase()
+            try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -314,7 +352,7 @@ final class ReminderViewModel {
     func delete(_ reminder: Reminder) async {
         do {
             try await deleteReminderUseCase(reminderID: reminder.id)
-            allReminders = try await fetchRemindersUseCase()
+            try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
         }

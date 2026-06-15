@@ -17,7 +17,8 @@ struct ReminderViewModelTests {
     private func makeDependencies(
         access: RemindersAccess = .granted,
         lists: [ReminderList] = [],
-        reminders: [Reminder] = []
+        reminders: [Reminder] = [],
+        liveActivityService: any LiveActivityService = DisabledLiveActivityService()
     ) -> Dependencies {
         let remindersRepository = InMemoryRemindersRepository(
             access: access, lists: lists, reminders: reminders
@@ -47,8 +48,8 @@ struct ReminderViewModelTests {
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
             fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
             saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase(repository: focusSessionsRepository),
-            startReminderLiveActivity: StartReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
-            endReminderLiveActivity: EndReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
+            startReminderLiveActivity: StartReminderLiveActivityUseCase(service: liveActivityService),
+            endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
@@ -559,4 +560,54 @@ struct ReminderViewModelTests {
         // 다른 리스트 삭제는 selection에 영향 없음.
         #expect(viewModel.selectedListID == "B")
     }
+
+    // MARK: - Live Activity 갱신
+
+    @Test func completingReminderRefreshesActiveLiveActivity() async {
+        let recording = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [reminder(id: "1", listID: "A"), reminder(id: "2", listID: "A")],
+            liveActivityService: recording
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.toggleLiveActivity(listTitle: "회사")  // 시작 — 1번째 호출
+        #expect(viewModel.liveActivityActive)
+
+        await viewModel.toggle(reminder(id: "1", listID: "A")) // 완료 → 활성 LA 갱신
+
+        // 시작 1 + 완료 후 갱신 1 = 최소 2회. 갱신분의 항목엔 완료된 "1"이 빠져야 한다.
+        let calls = await recording.startReminderCalls
+        #expect(calls.count >= 2)
+        #expect(calls.last?.items.map(\.id) == ["2"])
+    }
+
+    @Test func completingReminderWithInactiveLiveActivityDoesNotRefresh() async {
+        let recording = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [reminder(id: "1", listID: "A")],
+            liveActivityService: recording
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.toggle(reminder(id: "1", listID: "A")) // LA 비활성 — 갱신 없어야
+
+        #expect(await recording.startReminderCalls.isEmpty)
+    }
+}
+
+/// 시작/갱신 호출을 기록하는 LA 더블. `isEnabled = true`라 ViewModel이 활성으로 전환된다.
+private actor RecordingReminderLiveActivity: LiveActivityService {
+    var isEnabled: Bool { true }
+    private(set) var startReminderCalls: [(items: [LiveReminderItem], remaining: Int)] = []
+
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int) async throws {
+        startReminderCalls.append((items, remaining))
+    }
+    func endReminder() async {}
+    func startSchedule(today: [LiveEventItem], tomorrow: [LiveEventItem]) async throws {}
+    func endSchedule() async {}
+    func sync() async {}
 }
