@@ -57,13 +57,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     func startReminder(
         listTitle: String,
         items: [LiveReminderItem],
-        remaining: Int
+        remaining: Int,
+        todayCount: Int
     ) async throws {
         guard await isEnabled else { return }
 
         let state = ReminderLiveActivityAttributes.ContentState(
             items: items,
-            remaining: remaining
+            remaining: remaining,
+            todayCount: todayCount
         )
         // 시간 흐름과 무관 — staleDate 미지정. 사용자 동작 시점에만 update.
         let content = ActivityContent(state: state, staleDate: nil)
@@ -96,7 +98,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     // MARK: - Schedule
 
-    func startSchedule(days: [LiveScheduleDay]) async throws {
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {
         guard await isEnabled else { return }
 
         if let existing = scheduleActivity {
@@ -105,7 +107,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
 
         let attributes = ScheduleLiveActivityAttributes(startedAt: .now)
-        let state = ScheduleLiveActivityAttributes.ContentState(days: days)
+        let state = ScheduleLiveActivityAttributes.ContentState(days: days, todayCount: todayCount)
         // staleDate = "이 시점 이후 정보는 오래됨"을 시스템에 알리는 미래 시각.
         // **과거 시각을 넣으면 request 직후 시스템이 즉시 stale로 처리해 화면에 표시 자체가
         // 안 뜬다** — 오늘 첫 이벤트가 이미 시작된 시각인 경우(오후에 토글)가 흔한 함정.

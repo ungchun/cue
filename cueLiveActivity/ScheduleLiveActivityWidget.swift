@@ -5,7 +5,6 @@
 
 import ActivityKit
 import SwiftUI
-import UIKit
 import WidgetKit
 
 /// 일정 라이브 액티비티 위젯.
@@ -19,62 +18,34 @@ struct ScheduleLiveActivityWidget: Widget {
                 .padding(ScheduleMetrics.outerPadding)
         } dynamicIsland: { context in
             DynamicIsland {
+                // 꾸욱 눌렀을 때 — 좌상단 월 · 우상단 "오늘 일정" 카운트 · 하단 이번 주 캘린더.
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: "calendar")
-                        .foregroundStyle(.tint)
+                    Text(WeekCalendarStrip.monthLabel(.now))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, Spacing.sm)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    // 상대시간은 다음 '시간' 이벤트만 — 종일은 startDate가 자정이라 "N시간 전"으로 잘못 표시됨.
-                    if let next = nextTimedEvent(context.state.days) {
-                        Text(next.startDate, style: .relative)
-                            .font(.caption)
-                            .monospacedDigit()
-                    }
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    if let first = firstEvent(context.state.days) {
-                        Text(first.title)
-                            .font(.headline)
-                            .lineLimit(1)
-                    } else {
-                        Text("일정 없음")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                    }
+                    // trailing은 같은 토큰도 leading보다 크게 렌더 — 한 단계 작은 caption2로 맞춤.
+                    Text("일정 \(context.state.todayCount)")
+                        .font(.caption2.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, Spacing.sm)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("일정 \(eventCount(context.state.days))개")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    WeekCalendarStrip(now: .now)
                 }
             } compactLeading: {
-                Image(systemName: "calendar")
+                Image(systemName: "circle.fill")
                     .foregroundStyle(.tint)
             } compactTrailing: {
-                if let next = nextTimedEvent(context.state.days) {
-                    Text(next.startDate, style: .relative)
-                        .monospacedDigit()
-                        .frame(maxWidth: 60)
-                }
+                EmptyView()
             } minimal: {
-                Image(systemName: "calendar")
+                Image(systemName: "circle.fill")
                     .foregroundStyle(.tint)
             }
         }
-    }
-
-    /// 다음 '시간' 이벤트(종일 제외) — 상대시간 표시용.
-    private func nextTimedEvent(_ days: [LiveScheduleDay]) -> LiveEventItem? {
-        days.flatMap(\.events).first { !$0.isAllDay }
-    }
-
-    /// 첫 이벤트(종일 포함) — 센터 제목용.
-    private func firstEvent(_ days: [LiveScheduleDay]) -> LiveEventItem? {
-        days.flatMap(\.events).first
-    }
-
-    private func eventCount(_ days: [LiveScheduleDay]) -> Int {
-        days.reduce(0) { $0 + $1.events.count }
     }
 }
 

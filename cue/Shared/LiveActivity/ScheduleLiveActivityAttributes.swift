@@ -17,6 +17,10 @@ struct ScheduleLiveActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable, Sendable {
         /// 날짜순 day 묶음(오늘부터). 위젯이 2열에 들어가는 만큼만 그린다.
         var days: [LiveScheduleDay]
+        /// 오늘 일정 수(종일 전부 + 종료 안 지난 시간 이벤트) — Dynamic Island 주간 캘린더
+        /// 스트립 우상단 카운트용. 표시 truncation과 무관하게 정확하도록 앱에서 계산해 싣는다.
+        /// 기본값 0 — 기존 ContentState 생성부 호환.
+        var todayCount: Int = 0
     }
 
     let startedAt: Date

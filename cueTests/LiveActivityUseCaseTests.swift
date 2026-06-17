@@ -95,6 +95,87 @@ struct LiveActivityUseCaseTests {
         #expect(call.remaining == 0)
     }
 
+    // MARK: - todayCount — 오늘 할일 카운트(주간 캘린더 스트립 우상단)
+
+    @Test func reminderTodayCountIncludesTodayDueAndUndatedExcludesRest() {
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: .now)
+        let now = todayStart.addingTimeInterval(12 * 3600)
+        let yesterday = cal.date(byAdding: .day, value: -1, to: todayStart)!.addingTimeInterval(9 * 3600)
+        let todayDue = todayStart.addingTimeInterval(15 * 3600)
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: todayStart)!.addingTimeInterval(9 * 3600)
+
+        let reminders = [
+            reminder(id: "undated", title: "미지정"),                                       // nil → 포함
+            reminder(id: "today", title: "오늘", dueDate: todayDue),                        // 오늘 → 포함
+            reminder(id: "overdue", title: "지남", dueDate: yesterday),                     // overdue → 제외
+            reminder(id: "future", title: "미래", dueDate: tomorrow),                       // 미래 → 제외
+            reminder(id: "doneToday", title: "완료", isCompleted: true, dueDate: todayDue), // 완료 → 제외
+            reminder(id: "doneUndated", title: "완료2", isCompleted: true),                 // 완료 → 제외
+        ]
+
+        #expect(StartReminderLiveActivityUseCase.todayCount(reminders, now: now) == 2)
+    }
+
+    @Test func reminderTodayCountIncludesDueAtMidnightExcludesJustBefore() {
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: .now)
+        let now = todayStart.addingTimeInterval(12 * 3600)
+        let atMidnight = reminder(id: "mid", title: "자정", dueDate: todayStart)               // 오늘 0시 → 포함
+        let justBefore = reminder(id: "before", title: "직전", dueDate: todayStart.addingTimeInterval(-1)) // 어제 → 제외
+
+        #expect(StartReminderLiveActivityUseCase.todayCount([atMidnight, justBefore], now: now) == 1)
+    }
+
+    @Test func startReminderCarriesTodayCount() async throws {
+        let service = RecordingLiveActivityService()
+        let cal = Calendar.current
+        let now = cal.startOfDay(for: .now).addingTimeInterval(12 * 3600)
+        let reminders = [
+            reminder(id: "a", title: "미지정"),
+            reminder(id: "b", title: "지남", dueDate: cal.date(byAdding: .day, value: -1, to: now)),
+        ]
+
+        try await StartReminderLiveActivityUseCase(service: service)(
+            listTitle: "오늘", reminders: reminders, listColors: [:], now: now
+        )
+
+        #expect(await service.startReminderCalls.first?.todayCount == 1)
+    }
+
+    @Test func scheduleTodayEventCountCountsAllDayAndUnendedTimed() {
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: .now)
+        let now = todayStart.addingTimeInterval(12 * 3600)
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: todayStart)!
+
+        let events = [
+            event(id: "allday", title: "종일", start: todayStart, end: todayStart.addingTimeInterval(86_400), colorHex: nil, isAllDay: true),  // 포함
+            event(id: "unended", title: "예정", start: now.addingTimeInterval(3600), end: now.addingTimeInterval(7200), colorHex: nil),         // 포함
+            event(id: "ongoing", title: "진행", start: now.addingTimeInterval(-600), end: now.addingTimeInterval(1800), colorHex: nil),         // 포함(end>now)
+            event(id: "ended", title: "끝남", start: todayStart.addingTimeInterval(8 * 3600), end: now.addingTimeInterval(-3600), colorHex: nil), // 제외
+            event(id: "tomorrow", title: "내일", start: tomorrow.addingTimeInterval(9 * 3600), end: tomorrow.addingTimeInterval(10 * 3600), colorHex: nil), // 제외
+            event(id: "tmrAllDay", title: "내일종일", start: tomorrow, end: tomorrow.addingTimeInterval(86_400), colorHex: nil, isAllDay: true), // 제외(오늘 아님)
+        ]
+
+        #expect(StartScheduleLiveActivityUseCase.todayEventCount(events, now: now) == 3)
+    }
+
+    @Test func startScheduleCarriesTodayCount() async throws {
+        let service = RecordingLiveActivityService()
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: .now)
+        let now = todayStart.addingTimeInterval(6 * 3600)
+        let events = [
+            event(id: "allday", title: "종일", start: todayStart, end: todayStart.addingTimeInterval(86_400), colorHex: nil, isAllDay: true),
+            event(id: "timed", title: "오늘예정", start: now.addingTimeInterval(3600), end: now.addingTimeInterval(7200), colorHex: nil),
+        ]
+
+        try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: now)
+
+        #expect(await service.startScheduleCalls.first?.todayCount == 2)
+    }
+
     // MARK: - ContentState.removingItem — LA에서 완료 항목 제거
 
     @Test func removingItemDropsMatchingItemAndLowersCount() {
@@ -118,13 +199,29 @@ struct LiveActivityUseCaseTests {
     @Test func removingUnknownItemLeavesStateUnchanged() {
         let state = ReminderLiveActivityAttributes.ContentState(
             items: [LiveReminderItem(id: "r1", title: "A", colorHex: nil)],
-            remaining: 0
+            remaining: 0,
+            todayCount: 3
         )
 
         let next = state.removingItem(id: "nope")
 
         #expect(next.items.map(\.id) == ["r1"])
         #expect(next.remaining == 0)
+        #expect(next.todayCount == 3)   // 아무것도 안 빠지면 카운트 유지
+    }
+
+    @Test func removingItemDecrementsTodayCountFlooringAtZero() {
+        let state = ReminderLiveActivityAttributes.ContentState(
+            items: [LiveReminderItem(id: "r1", title: "A", colorHex: nil)],
+            remaining: 0,
+            todayCount: 1
+        )
+
+        let next = state.removingItem(id: "r1")
+        #expect(next.todayCount == 0)
+
+        // 0에서 또 빼도 음수로 안 내려감(이미 없는 항목이라 제거도 안 일어남 → 유지).
+        #expect(next.removingItem(id: "r1").todayCount == 0)
     }
 
     // MARK: - StartSchedule — 날짜 그룹핑 + 라벨 + 종일 정렬
@@ -145,7 +242,7 @@ struct LiveActivityUseCaseTests {
 
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: now)
 
-        let days = try #require(await service.startScheduleCalls.first)
+        let days = try #require(await service.startScheduleCalls.first).days
         #expect(days.map(\.label) == ["오늘", "내일", "모레"])
         #expect(days.map { $0.events.map(\.id) } == [["t1"], ["m1"], ["mo1"]])
         #expect(days.first?.events.first?.calendarColorHex == "#FF0000")
@@ -159,7 +256,7 @@ struct LiveActivityUseCaseTests {
 
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: .now)
 
-        let label = try #require(await service.startScheduleCalls.first?.first?.label)
+        let label = try #require(await service.startScheduleCalls.first?.days.first?.label)
         // 3일 뒤는 오늘/내일/모레가 아니라 날짜 형식("4/10 (수)" 류).
         #expect(!["오늘", "내일", "모레"].contains(label))
         #expect(label.contains("/"))
@@ -184,7 +281,7 @@ struct LiveActivityUseCaseTests {
 
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: .now)
 
-        let days = try #require(await service.startScheduleCalls.first)
+        let days = try #require(await service.startScheduleCalls.first).days
         let total = days.reduce(0) { $0 + $1.events.count }
         #expect(total <= StartScheduleLiveActivityUseCase.maxTotalEvents)
     }
@@ -202,7 +299,7 @@ struct LiveActivityUseCaseTests {
 
         try await StartScheduleLiveActivityUseCase(service: service)(events: [yesterdayAllDay, yesterdayMultiDay, todayUpcoming], now: now)
 
-        let days = try #require(await service.startScheduleCalls.first)
+        let days = try #require(await service.startScheduleCalls.first).days
         let ids = days.flatMap { $0.events.map(\.id) }
         #expect(!ids.contains("yall"))    // 어제 종일 제외
         #expect(!ids.contains("ymulti"))  // 어제 시작 멀티데이 제외
@@ -244,7 +341,7 @@ struct LiveActivityUseCaseTests {
 
         try await StartScheduleLiveActivityUseCase(service: service)(events: [ended, ongoing, future, allDay], now: now)
 
-        let days = try #require(await service.startScheduleCalls.first)
+        let days = try #require(await service.startScheduleCalls.first).days
         let ids = days.flatMap { $0.events.map(\.id) }
         #expect(!ids.contains("ended"))     // 끝난 시간 이벤트 제외
         #expect(ids.contains("ongoing"))    // 진행 중 유지
@@ -265,7 +362,7 @@ struct LiveActivityUseCaseTests {
 
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: now)
 
-        let firstDay = try #require(await service.startScheduleCalls.first?.first)
+        let firstDay = try #require(await service.startScheduleCalls.first?.days.first)
         // 종일이 위로.
         #expect(firstDay.events.map(\.id) == ["allday", "timed"])
         #expect(firstDay.events.first?.isAllDay == true)
@@ -299,13 +396,13 @@ struct LiveActivityUseCaseTests {
 
     // MARK: - Helpers
 
-    private func reminder(id: String, title: String, listID: String = "list-1") -> Reminder {
+    private func reminder(id: String, title: String, listID: String = "list-1", isCompleted: Bool = false, dueDate: Date? = nil) -> Reminder {
         Reminder(
             id: id,
             title: title,
-            isCompleted: false,
+            isCompleted: isCompleted,
             notes: nil,
-            dueDate: nil,
+            dueDate: dueDate,
             listID: listID
         )
     }
@@ -328,10 +425,10 @@ struct LiveActivityUseCaseTests {
 private final actor RecordingLiveActivityService: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int)] = []
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int)] = []
     private(set) var endReminderCount = 0
 
-    private(set) var startScheduleCalls: [[LiveScheduleDay]] = []
+    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int)] = []
     private(set) var endScheduleCount = 0
 
     private(set) var syncCount = 0
@@ -339,17 +436,18 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     func startReminder(
         listTitle: String,
         items: [LiveReminderItem],
-        remaining: Int
+        remaining: Int,
+        todayCount: Int
     ) async throws {
-        startReminderCalls.append((listTitle, items, remaining))
+        startReminderCalls.append((listTitle, items, remaining, todayCount))
     }
 
     func endReminder() async {
         endReminderCount += 1
     }
 
-    func startSchedule(days: [LiveScheduleDay]) async throws {
-        startScheduleCalls.append(days)
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {
+        startScheduleCalls.append((days, todayCount))
     }
 
     func endSchedule() async {

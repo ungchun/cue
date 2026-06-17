@@ -16,6 +16,10 @@ struct ReminderLiveActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable, Sendable {
         var items: [LiveReminderItem]
         var remaining: Int
+        /// 오늘 처리할 할일 수(오늘 마감 + 마감 미지정, 지난·완료 제외) — Dynamic Island 주간
+        /// 캘린더 스트립 우상단 카운트용. 앱에서 도메인 데이터로 계산해 싣는다(위젯엔 날짜·완료
+        /// 정보가 없어 직접 못 셈). 기본값 0 — 기존 ContentState 생성부 호환.
+        var todayCount: Int = 0
     }
 
     let listTitle: String
@@ -25,9 +29,13 @@ extension ReminderLiveActivityAttributes.ContentState {
     /// `id` 항목을 제거한 새 상태. LA에서 체크(완료)한 항목을 숨길 때 쓴다.
     /// 표시 카운트(`items.count + remaining`)는 항목이 빠진 만큼 자동으로 줄어든다.
     /// `remaining`은 그대로 둔다 — 잘려나간 나머지 항목의 데이터가 LA엔 없어 backfill 불가.
+    /// 실제로 항목이 빠졌으면 `todayCount`도 1 줄인다 — 완료한 할일은 오늘 카운트에서 빠지므로.
     func removingItem(id: String) -> Self {
         var copy = self
         copy.items.removeAll { $0.id == id }
+        if copy.items.count != items.count {
+            copy.todayCount = max(0, todayCount - 1)
+        }
         return copy
     }
 }

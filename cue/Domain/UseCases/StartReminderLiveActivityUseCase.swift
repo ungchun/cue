@@ -3,6 +3,8 @@
 //  cue / Domain
 //
 
+import Foundation
+
 /// 미리알림 리스트 스냅샷을 라이브 액티비티로 게시.
 ///
 /// 위젯은 앞 6개만 보여주지만, ContentState엔 `storageLimit`(20)개까지 싣는다 — LA에서 항목을
@@ -20,7 +22,8 @@ struct StartReminderLiveActivityUseCase: Sendable {
     func callAsFunction(
         listTitle: String,
         reminders: [Reminder],
-        listColors: [String: String]
+        listColors: [String: String],
+        now: Date = .now
     ) async throws {
         let visible = reminders.prefix(Self.storageLimit).map {
             LiveReminderItem(id: $0.id, title: $0.title, colorHex: listColors[$0.listID])
@@ -29,7 +32,21 @@ struct StartReminderLiveActivityUseCase: Sendable {
         try await service.startReminder(
             listTitle: listTitle,
             items: Array(visible),
-            remaining: remaining
+            remaining: remaining,
+            todayCount: Self.todayCount(reminders, now: now)
         )
+    }
+
+    /// Dynamic Island 주간 캘린더 스트립의 "오늘 할일" 카운트.
+    /// 포함: 미완료 AND (마감일 없음 OR 마감일이 오늘). 제외: 완료, 마감 지남(overdue), 미래 마감.
+    static func todayCount(_ reminders: [Reminder], now: Date) -> Int {
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: now)
+        let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: todayStart) ?? todayStart
+        return reminders.filter { reminder in
+            guard !reminder.isCompleted else { return false }
+            guard let due = reminder.dueDate else { return true }   // 마감 미지정 → 카운트
+            return due >= todayStart && due < tomorrowStart          // 오늘 마감만(지남·미래 제외)
+        }.count
     }
 }

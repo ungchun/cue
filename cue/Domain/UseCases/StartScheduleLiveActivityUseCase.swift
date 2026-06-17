@@ -26,8 +26,19 @@ struct StartScheduleLiveActivityUseCase: Sendable {
     func callAsFunction(events: [CalendarEvent], now: Date = .now) async throws -> Bool {
         let days = Self.groupIntoDays(events, now: now)
         guard !days.isEmpty else { return false }   // 다가오는 일정 없으면 LA 안 띄움
-        try await service.startSchedule(days: days)
+        try await service.startSchedule(days: days, todayCount: Self.todayEventCount(events, now: now))
         return true
+    }
+
+    /// Dynamic Island 주간 캘린더 스트립의 "오늘 일정" 카운트.
+    /// 포함: 오늘 종일 전부 + 오늘 시간 이벤트 중 아직 종료 안 된 것(endDate > now). 다른 날 제외.
+    static func todayEventCount(_ events: [CalendarEvent], now: Date) -> Int {
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: now)
+        return events.filter { event in
+            guard calendar.isDate(event.startDate, inSameDayAs: todayStart) else { return false }
+            return event.isAllDay || event.endDate > now
+        }.count
     }
 
     static func groupIntoDays(_ events: [CalendarEvent], now: Date) -> [LiveScheduleDay] {

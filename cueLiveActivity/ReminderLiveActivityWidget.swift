@@ -19,35 +19,31 @@ struct ReminderLiveActivityWidget: Widget {
                 .padding(Spacing.md)
         } dynamicIsland: { context in
             DynamicIsland {
+                // 꾸욱 눌렀을 때 — 좌상단 월 · 우상단 "오늘 할일" 카운트 · 하단 이번 주 캘린더.
                 DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: "checklist")
-                        .foregroundStyle(.tint)
+                    Text(WeekCalendarStrip.monthLabel(.now))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, Spacing.sm)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("\(totalIncomplete(context.state))")
-                        .font(.title3.weight(.semibold))
+                    // trailing은 같은 토큰도 leading보다 크게 렌더 — 한 단계 작은 caption2로 맞춤.
+                    Text("할일 \(context.state.todayCount)")
+                        .font(.caption2.weight(.semibold))
                         .monospacedDigit()
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    Text(context.attributes.listTitle)
-                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, Spacing.sm)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if let first = context.state.items.first {
-                        Text(first.title)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
+                    WeekCalendarStrip(now: .now)
                 }
             } compactLeading: {
-                Image(systemName: "checklist")
+                Image(systemName: "circle.fill")
                     .foregroundStyle(.tint)
             } compactTrailing: {
-                Text("\(totalIncomplete(context.state))")
-                    .monospacedDigit()
+                EmptyView()
             } minimal: {
-                Image(systemName: "checklist")
+                Image(systemName: "circle.fill")
                     .foregroundStyle(.tint)
             }
         }
@@ -63,7 +59,7 @@ private struct ReminderLockScreenView: View {
             // 좌상단은 비움, 우상단에 미완료 카운트.
             HStack {
                 Spacer(minLength: Spacing.zero)
-                Text("\(totalIncomplete(state))")
+                Text("\(ReminderDynamicIsland.incompleteCount(state))")
                     .font(.title.weight(.bold))
                     .monospacedDigit()
                     .foregroundStyle(.primary)
@@ -118,9 +114,4 @@ private struct ReminderItemCell: View {
         guard let hex = item.colorHex, let color = Color(hex: hex) else { return .secondary }
         return color
     }
-}
-
-/// 미완료 총개수 — 표시 항목 + 잘려나간 나머지.
-private func totalIncomplete(_ state: ReminderLiveActivityAttributes.ContentState) -> Int {
-    state.items.count + state.remaining
 }
