@@ -34,7 +34,7 @@ struct FocusAlarmLiveActivityWidget: Widget {
             } compactTrailing: {
                 countdown(context.state).monospacedDigit().frame(maxWidth: 44)
             } minimal: {
-                Image(systemName: "timer").foregroundStyle(color(context))
+                compactRing(context.state, color: color(context))
             }
         }
     }
