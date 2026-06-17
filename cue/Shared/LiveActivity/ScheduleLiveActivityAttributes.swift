@@ -15,8 +15,8 @@ import Foundation
 /// 시스템 timer 표현(`Text(_:style: .relative)`)이 매 프레임 자동 갱신하므로 매초 update 금지.
 struct ScheduleLiveActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable, Sendable {
-        var today: [LiveEventItem]
-        var tomorrow: [LiveEventItem]
+        /// 날짜순 day 묶음(오늘부터). 위젯이 2열에 들어가는 만큼만 그린다.
+        var days: [LiveScheduleDay]
     }
 
     let startedAt: Date

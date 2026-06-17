@@ -96,10 +96,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     // MARK: - Schedule
 
-    func startSchedule(
-        today: [LiveEventItem],
-        tomorrow: [LiveEventItem]
-    ) async throws {
+    func startSchedule(days: [LiveScheduleDay]) async throws {
         guard await isEnabled else { return }
 
         if let existing = scheduleActivity {
@@ -108,17 +105,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
 
         let attributes = ScheduleLiveActivityAttributes(startedAt: .now)
-        let state = ScheduleLiveActivityAttributes.ContentState(
-            today: today,
-            tomorrow: tomorrow
-        )
+        let state = ScheduleLiveActivityAttributes.ContentState(days: days)
         // staleDate = "이 시점 이후 정보는 오래됨"을 시스템에 알리는 미래 시각.
         // **과거 시각을 넣으면 request 직후 시스템이 즉시 stale로 처리해 화면에 표시 자체가
         // 안 뜬다** — 오늘 첫 이벤트가 이미 시작된 시각인 경우(오후에 토글)가 흔한 함정.
         // 따라서 `> now`인 미래 시작 시각 중 가장 가까운 것만 staleDate로 채택, 없으면 nil
         // (시간 흐름과 무관 — 사용자 동작에서만 갱신).
         let now = Date.now
-        let upcomingStart = (today + tomorrow)
+        let upcomingStart = days
+            .flatMap(\.events)
             .map(\.startDate)
             .filter { $0 > now }
             .min()

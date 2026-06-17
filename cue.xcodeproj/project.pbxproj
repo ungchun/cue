@@ -73,8 +73,10 @@
 				Shared/LiveActivity/FocusAlarmScheduling.swift,
 				Shared/LiveActivity/LiveEventItem.swift,
 				Shared/LiveActivity/LiveReminderItem.swift,
+				Shared/LiveActivity/LiveScheduleDay.swift,
 				Shared/LiveActivity/ReminderLiveActivityAttributes.swift,
 				Shared/LiveActivity/ScheduleLiveActivityAttributes.swift,
+				Shared/LiveActivity/SchedulePacker.swift,
 			);
 			target = 65D102F12FD032BD00081EB7 /* cueLiveActivityExtension */;
 		};

@@ -113,31 +113,17 @@ final class ScheduleViewModel {
     }
 
     /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
-    /// 활성이면 즉시 종료. 아니면 `eventsByDay`에서 오늘·내일 구간을 분리해 service로 보낸다.
-    /// 그룹 매칭 — 오늘 자정~내일 자정 / 내일 자정~모레 자정. 일정 없는 날 그룹은 자연히 제외.
+    /// 활성이면 종료. 아니면 `eventsByDay`의 모든 이벤트를 use case로 보내 게시한다 — 다가오는
+    /// 일정이 없으면 use case가 `false`를 반환해 LA를 띄우지 않는다(날짜 그룹·라벨·캡은 use case가 처리).
     func toggleLiveActivity() async {
         if liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false
             return
         }
-        let calendar = Calendar.current
-        let startOfToday = calendar.startOfDay(for: .now)
-        let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? startOfToday
-        let startOfDayAfter = calendar.date(byAdding: .day, value: 1, to: startOfTomorrow) ?? startOfTomorrow
-
-        var todayEvents: [CalendarEvent] = []
-        var tomorrowEvents: [CalendarEvent] = []
-        for group in eventsByDay {
-            if group.date >= startOfToday && group.date < startOfTomorrow {
-                todayEvents.append(contentsOf: group.events)
-            } else if group.date >= startOfTomorrow && group.date < startOfDayAfter {
-                tomorrowEvents.append(contentsOf: group.events)
-            }
-        }
         do {
-            try await startLiveActivityUseCase(today: todayEvents, tomorrow: tomorrowEvents)
-            liveActivityActive = true
+            liveActivityActive = try await startLiveActivityUseCase(events: eventsByDay.flatMap(\.events))
+            if !liveActivityActive { await endLiveActivityUseCase() }
         } catch {
             errorMessage = "라이브 액티비티를 시작할 수 없습니다."
         }

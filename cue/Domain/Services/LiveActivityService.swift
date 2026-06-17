@@ -39,11 +39,8 @@ protocol LiveActivityService: Sendable {
 
     // MARK: - Schedule
 
-    /// 오늘·내일 일정 스냅샷을 라이브 액티비티로 게시.
-    func startSchedule(
-        today: [LiveEventItem],
-        tomorrow: [LiveEventItem]
-    ) async throws
+    /// 일정 스냅샷(날짜별 묶음, 오늘부터)을 라이브 액티비티로 게시.
+    func startSchedule(days: [LiveScheduleDay]) async throws
 
     /// 일정 라이브 액티비티 즉시 종료.
     func endSchedule() async

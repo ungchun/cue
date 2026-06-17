@@ -17,4 +17,11 @@ struct LiveEventItem: Codable, Hashable, Sendable, Identifiable {
     let startDate: Date
     let endDate: Date
     let calendarColorHex: String?
+    /// 종일 이벤트 여부. 위젯이 종일이면 색 캡슐로 제목만, 아니면 좌측 색 막대 + 제목 +
+    /// 시간(시작—끝)으로 그린다.
+    ///
+    /// 비옵셔널이라 합성 Decodable은 이 키를 필수로 요구한다(누락 시 기본값 안 됨). LA의
+    /// ContentState는 매 게시마다 새로 만들어지는 transient 스냅샷이고 영속 마이그레이션이
+    /// 없으므로 안전하다 — 구버전 LA가 떠 있다면 앱이 다음 활동에서 재게시한다.
+    let isAllDay: Bool
 }
