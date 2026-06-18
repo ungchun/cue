@@ -16,6 +16,7 @@ struct SchedulePackerTests {
                 title: "이벤트 \(i)",
                 startDate: Date(timeIntervalSince1970: Double(i * 3600)),
                 endDate: Date(timeIntervalSince1970: Double(i * 3600 + 1800)),
+                timeText: "",
                 calendarColorHex: nil,
                 isAllDay: allDay
             )

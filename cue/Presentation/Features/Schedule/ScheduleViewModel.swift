@@ -53,12 +53,16 @@ final class ScheduleViewModel {
     /// 동시 중복 fetch를 막는다.
     private(set) var isLoadingMore = false
 
-    init(dependencies: Dependencies) {
+    /// 현재 시각 공급자 — "종료 지난 일정 숨김" 필터의 기준. 테스트에서 고정값 주입.
+    private let now: () -> Date
+
+    init(dependencies: Dependencies, now: @escaping () -> Date = { Date() }) {
         self.requestAccessUseCase = dependencies.requestEventsAccess
         self.fetchEventsUseCase = dependencies.fetchEvents
         self.observeChangesUseCase = dependencies.observeEventsChanges
         self.startLiveActivityUseCase = dependencies.startScheduleLiveActivity
         self.endLiveActivityUseCase = dependencies.endScheduleLiveActivity
+        self.now = now
         startObservingChanges()
     }
 
@@ -89,10 +93,11 @@ final class ScheduleViewModel {
     /// 가져와 그 범위 안의 변경을 반영한다. 페이지네이션 위치(`fetchedUntil`)는 유지.
     private func handleExternalChange() async {
         guard access == .granted, hasLoaded else { return }
-        let today = Calendar.current.startOfDay(for: Date())
+        let nowDate = now()
+        let today = Calendar.current.startOfDay(for: nowDate)
         do {
             let events = try await fetchEventsUseCase(from: today, to: fetchedUntil)
-            eventsByDay = Self.groupByDay(events)
+            eventsByDay = Self.groupByDay(events, now: nowDate)
         } catch {
             // 실패 시 기존 표시 유지 — 다음 신호에 재시도.
         }
@@ -155,11 +160,12 @@ final class ScheduleViewModel {
         isLoadingMore = true
         defer { isLoadingMore = false }
 
+        let nowDate = now()
         let from = fetchedUntil
         let to = Calendar.current.date(byAdding: .day, value: Self.pageDays, to: from) ?? from
         do {
             let events = try await fetchEventsUseCase(from: from, to: to)
-            eventsByDay = Self.merge(existing: eventsByDay, new: Self.groupByDay(events))
+            eventsByDay = Self.merge(existing: eventsByDay, new: Self.groupByDay(events, now: nowDate))
             fetchedUntil = to
         } catch {
             // fetchedUntil 유지 — 다음 호출에서 재시도.
@@ -168,13 +174,14 @@ final class ScheduleViewModel {
 
     /// 첫 페이지(오늘 → +initialDays) 로드. 실패 시 빈 배열로 둔다.
     private func loadInitial() async {
-        let today = Calendar.current.startOfDay(for: Date())
+        let nowDate = now()
+        let today = Calendar.current.startOfDay(for: nowDate)
         let to = Calendar.current.date(
             byAdding: .day, value: Self.initialDays, to: today
         ) ?? today
         do {
             let events = try await fetchEventsUseCase(from: today, to: to)
-            eventsByDay = Self.groupByDay(events)
+            eventsByDay = Self.groupByDay(events, now: nowDate)
             fetchedUntil = to
         } catch {
             eventsByDay = []
@@ -183,10 +190,18 @@ final class ScheduleViewModel {
 
     /// 이벤트들을 시작일의 캘린더 자정으로 묶고, 그룹은 날짜 오름차순, 그룹 내부는
     /// 시작 시간 오름차순으로 정렬한다.
-    static func groupByDay(_ events: [CalendarEvent]) -> [DayGroup] {
+    ///
+    /// 오늘 자정(`startOfDay(now)`)보다 이른 시작일은 오늘로 끌어올린다 — 여러 날 걸친
+    /// 일정이 과거에 시작했어도 오늘 진행 중이면 지난 날짜 헤더가 아니라 오늘 그룹에 묶인다.
+    ///
+    /// **종료 시간이 지난 시간 이벤트는 오늘이라도 숨긴다**(`endDate >= now`) — 종일은 시간
+    /// 무관하게 유지. LA(`StartScheduleLiveActivityUseCase.groupIntoDays`)와 동일 기준.
+    static func groupByDay(_ events: [CalendarEvent], now: Date) -> [DayGroup] {
         let calendar = Calendar.current
-        let buckets = Dictionary(grouping: events) { event in
-            calendar.startOfDay(for: event.startDate)
+        let floor = calendar.startOfDay(for: now)
+        let visible = events.filter { $0.isAllDay || $0.endDate >= now }
+        let buckets = Dictionary(grouping: visible) { event in
+            max(calendar.startOfDay(for: event.startDate), floor)
         }
         return buckets
             .map { date, events in

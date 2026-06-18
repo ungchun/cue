@@ -349,7 +349,9 @@ struct LiveActivityUseCaseTests {
         #expect(ids.contains("allday"))     // 종일은 항상 유지
     }
 
-    @Test func startScheduleSortsAllDayFirstWithinDay() async throws {
+    @Test func startScheduleSortsByStartTimeWithinDay() async throws {
+        // 인앱(ScheduleViewModel)과 동일하게 순수 시작시간순. 종일은 시작이 자정(00:00)이라
+        // 같은 날 시간 일정보다 자연히 위로 온다.
         let service = RecordingLiveActivityService()
         let cal = Calendar.current
         let today = cal.startOfDay(for: .now)
@@ -363,9 +365,43 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: now)
 
         let firstDay = try #require(await service.startScheduleCalls.first?.days.first)
-        // 종일이 위로.
-        #expect(firstDay.events.map(\.id) == ["allday", "timed"])
-        #expect(firstDay.events.first?.isAllDay == true)
+        #expect(firstDay.events.map(\.id) == ["allday", "timed"])   // 00:00 < 09:00
+    }
+
+    // MARK: - 멀티데이 끌어올림 + timeText 굽기
+
+    @Test func startSchedulePullsOngoingMultiDayIntoTodayAsInProgress() async throws {
+        let service = RecordingLiveActivityService()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        let now = today.addingTimeInterval(22 * 3600)   // 오늘 22:00
+        // 이틀 전 시작 ~ 이틀 후 종료 (오늘 진행 중).
+        let start = cal.date(byAdding: .day, value: -2, to: today)!.addingTimeInterval(6 * 3600)
+        let end = cal.date(byAdding: .day, value: 2, to: today)!.addingTimeInterval(8 * 3600)
+        let multi = event(id: "multi", title: "여러날", start: start, end: end, colorHex: nil)
+
+        try await StartScheduleLiveActivityUseCase(service: service)(events: [multi], now: now)
+
+        let days = try #require(await service.startScheduleCalls.first).days
+        #expect(days.first?.label == "오늘")                 // 지난 날짜 헤더 아니라 오늘로
+        let item = try #require(days.first?.events.first)
+        #expect(item.id == "multi")
+        #expect(item.timeText == "진행 중")
+    }
+
+    @Test func startScheduleMultiDayEndingTodayShowsArrowEndTime() async throws {
+        let service = RecordingLiveActivityService()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        let now = today.addingTimeInterval(22 * 3600)
+        let start = cal.date(byAdding: .day, value: -2, to: today)!.addingTimeInterval(6 * 3600)
+        let end = today.addingTimeInterval(23 * 3600)   // 오늘 23:00 종료
+        let multi = event(id: "ending", title: "오늘끝", start: start, end: end, colorHex: nil)
+
+        try await StartScheduleLiveActivityUseCase(service: service)(events: [multi], now: now)
+
+        let item = try #require(await service.startScheduleCalls.first?.days.first?.events.first)
+        #expect(item.timeText.hasPrefix("→"))   // "→ 오후 11:00"
     }
 
     // MARK: - Wrappers — forwarding (Reminder/Schedule. 집중 LA는 AlarmKit으로 이관됨)

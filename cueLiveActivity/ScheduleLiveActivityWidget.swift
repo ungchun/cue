@@ -129,21 +129,12 @@ private struct ScheduleEventRow: View {
         }
     }
 
-    private var timeText: String {
-        let f = Self.timeFormatter
-        return "\(f.string(from: event.startDate)) — \(f.string(from: event.endDate))"
-    }
+    /// 게시 시점에 그 날 기준으로 계산해 둔 시간 문구(진행 중 / → 종료 / 시작 → 등).
+    private var timeText: String { event.timeText }
 
     /// 캘린더 색(외부 데이터 hex). 없거나 파싱 실패면 시스템 accent.
     private var color: Color {
         guard let hex = event.calendarColorHex, let parsed = Color(hex: hex) else { return .accentColor }
         return parsed
     }
-
-    private static let timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "a h:mm"
-        return formatter
-    }()
 }

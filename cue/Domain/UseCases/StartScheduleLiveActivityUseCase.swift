@@ -46,23 +46,27 @@ struct StartScheduleLiveActivityUseCase: Sendable {
     static func groupIntoDays(_ events: [CalendarEvent], now: Date) -> [LiveScheduleDay] {
         let calendar = Calendar.current
         let todayStart = calendar.startOfDay(for: now)
-        // EventKit fetch가 오늘 0시 경계에 걸치는 어제 종일/멀티데이 이벤트까지 반환하므로:
-        // 1) 시작일이 오늘 이전인 이벤트는 통째로 제외(종일 포함) — 어제 일정이 LA에 안 뜨게.
-        // 2) 오늘 이미 끝난 시간 이벤트(endDate < now)도 제외 — 단 오늘 종일은 시간 무관하게 유지.
+        // 오늘까지 걸치는 일정만 — 인앱 화면과 동일 기준:
+        // 1) `endDate > todayStart` : 어제 안에서 끝난 일정은 제외(오늘로 안 넘어옴).
+        // 2) 시간 이벤트는 `endDate >= now` 로 이미 끝난 건 숨김(종일은 시간 무관 유지).
+        // 오늘 이전 '시작'이라도 오늘까지 진행 중이면 포함 — 아래 grouping에서 오늘로 끌어올린다.
         let upcoming = events.filter { event in
-            calendar.startOfDay(for: event.startDate) >= todayStart
+            event.endDate > todayStart
                 && (event.isAllDay || event.endDate >= now)
         }
-        let grouped = Dictionary(grouping: upcoming) { calendar.startOfDay(for: $0.startDate) }
+        // 시작일이 오늘 이전이면 오늘 그룹으로 끌어올림(멀티데이가 지난 날짜 헤더 대신 오늘에 묶이게).
+        let grouped = Dictionary(grouping: upcoming) {
+            max(calendar.startOfDay(for: $0.startDate), todayStart)
+        }
 
         var remaining = maxTotalEvents
         var days: [LiveScheduleDay] = []
         for dayStart in grouped.keys.sorted().prefix(maxDays) {
             if remaining <= 0 { break }
             let dayEvents = (grouped[dayStart] ?? [])
-                .sorted(by: allDayFirstThenStart)
+                .sorted { $0.startDate < $1.startDate }   // 인앱(ScheduleViewModel)과 동일 — 순수 시작시간순
                 .prefix(min(maxEventsPerDay, remaining))
-                .map(map)
+                .map { map($0, dayStart: dayStart) }
             if dayEvents.isEmpty { continue }
             remaining -= dayEvents.count
             days.append(LiveScheduleDay(
@@ -72,12 +76,6 @@ struct StartScheduleLiveActivityUseCase: Sendable {
             ))
         }
         return days
-    }
-
-    /// 종일 이벤트가 위, 그 아래 시작 시각 오름차순.
-    private static func allDayFirstThenStart(_ lhs: CalendarEvent, _ rhs: CalendarEvent) -> Bool {
-        if lhs.isAllDay != rhs.isAllDay { return lhs.isAllDay }
-        return lhs.startDate < rhs.startDate
     }
 
     /// 날짜 라벨 — 0/1/2일 차는 오늘/내일/모레, 그 뒤는 `"M/d (요일)"`.
@@ -99,13 +97,19 @@ struct StartScheduleLiveActivityUseCase: Sendable {
         return formatter
     }()
 
-    /// 표시용 매핑 — id/title/시각/캘린더 색/종일 여부.
-    private static func map(_ event: CalendarEvent) -> LiveEventItem {
+    /// 표시용 매핑 — id/title/시각/캘린더 색/종일 여부 + 그 날(dayStart) 기준 시간 문구.
+    private static func map(_ event: CalendarEvent, dayStart: Date) -> LiveEventItem {
         LiveEventItem(
             id: event.id,
             title: event.title,
             startDate: event.startDate,
             endDate: event.endDate,
+            timeText: ScheduleTimeText.string(
+                start: event.startDate,
+                end: event.endDate,
+                isAllDay: event.isAllDay,
+                groupDate: dayStart
+            ),
             calendarColorHex: event.calendarColorHex,
             isAllDay: event.isAllDay
         )

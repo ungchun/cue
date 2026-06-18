@@ -78,6 +78,7 @@
 				Shared/LiveActivity/ReminderLiveActivityAttributes.swift,
 				Shared/LiveActivity/ScheduleLiveActivityAttributes.swift,
 				Shared/LiveActivity/SchedulePacker.swift,
+				Shared/LiveActivity/ScheduleTimeText.swift,
 			);
 			target = 65D102F12FD032BD00081EB7 /* cueLiveActivityExtension */;
 		};

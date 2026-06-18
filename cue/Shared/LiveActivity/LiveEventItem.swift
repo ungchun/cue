@@ -16,6 +16,10 @@ struct LiveEventItem: Codable, Hashable, Sendable, Identifiable {
     let title: String
     let startDate: Date
     let endDate: Date
+    /// 게시 시점에 그 행이 속한 날(day group) 기준으로 미리 계산한 시간 문구
+    /// ("하루 종일" / "오전 9:00 - 오전 10:00" / "오전 6:00 →" / "→ 오전 8:00" / "진행 중").
+    /// 위젯은 day별 날짜를 모르므로 use case가 `ScheduleTimeText`로 구워 넣는다.
+    let timeText: String
     let calendarColorHex: String?
     /// 종일 이벤트 여부. 위젯이 종일이면 색 캡슐로 제목만, 아니면 좌측 색 막대 + 제목 +
     /// 시간(시작—끝)으로 그린다.

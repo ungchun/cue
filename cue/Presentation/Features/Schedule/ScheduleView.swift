@@ -201,7 +201,7 @@ struct ScheduleView: View {
     private func daySection(_ group: DayGroup) -> some View {
         Section {
             ForEach(group.events) { event in
-                EventRow(event: event)
+                EventRow(event: event, groupDate: group.date)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.presentEdit(event)
@@ -304,8 +304,11 @@ struct ScheduleView: View {
 /// rail은 row 전체 높이를 채워 위·아래 row와 자연스럽게 이어진다 — `.padding(.vertical)`은
 /// `content`에만 주고 row 자체엔 두지 않는다. ListRowSeparator(.hidden)으로 시스템 구분선을
 /// 끄면 rail이 단독으로 시각 구분 역할을 한다.
-private struct EventRow: View {
+struct EventRow: View {
     let event: CalendarEvent
+    /// 이 행이 속한 섹션의 날짜(자정). 여러 날 걸친 일정의 시간 문구를 시작·진행중·종료로
+    /// 가르는 기준 — 같은 일정이라도 어느 날 섹션에 있느냐로 표시가 달라진다.
+    let groupDate: Date
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.sm) {
@@ -368,19 +371,25 @@ private struct EventRow: View {
         return parsed
     }
 
-    /// 종일은 "종일", 아니면 "오전 9:00 - 오전 10:00" 형식 (ko_KR).
     private var timeText: String {
-        if event.isAllDay { return "종일" }
-        let formatter = Self.timeFormatter
-        return "\(formatter.string(from: event.startDate)) - \(formatter.string(from: event.endDate))"
+        Self.timeText(for: event, in: groupDate)
     }
 
-    private static let timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "a h:mm"
-        return formatter
-    }()
+    /// 섹션 날짜(`groupDate`, 자정) 기준으로 행에 보일 시간 문구를 만든다 (ko_KR).
+    /// - 종일: "하루 종일"
+    /// - 하루짜리 시간 일정: "오전 9:00 - 오전 10:00"
+    /// - 여러 날 걸친 시간 일정 — 같은 일정이 클램프로 한 섹션에만 뜨므로, 그 섹션이
+    ///   시작일이면 "오전 6:00 →"(이후로 계속), 종료일이면 "→ 오전 8:00"(이전부터 이어짐),
+    ///   사이 날이면 "진행 중".
+    static func timeText(for event: CalendarEvent, in groupDate: Date, calendar: Calendar = .current) -> String {
+        ScheduleTimeText.string(
+            start: event.startDate,
+            end: event.endDate,
+            isAllDay: event.isAllDay,
+            groupDate: groupDate,
+            calendar: calendar
+        )
+    }
 }
 
 #Preview {

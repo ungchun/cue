@@ -112,7 +112,7 @@ struct ScheduleViewModelTests {
     @Test func onAppearLoadsEventsAfterGrant() async {
         let today = Calendar.current.startOfDay(for: Date())
         let event1 = event(id: "1", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60))
-        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [event1]))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [event1]), now: { today })
 
         await viewModel.onAppear()
 
@@ -127,7 +127,7 @@ struct ScheduleViewModelTests {
             event(id: "a", start: today.addingTimeInterval(10 * 60 * 60), end: today.addingTimeInterval(11 * 60 * 60)),
             event(id: "b", start: today.addingTimeInterval(14 * 60 * 60), end: today.addingTimeInterval(15 * 60 * 60)),
             event(id: "c", start: tomorrow.addingTimeInterval(9 * 60 * 60), end: tomorrow.addingTimeInterval(10 * 60 * 60)),
-        ]))
+        ]), now: { today })
 
         await viewModel.onAppear()
 
@@ -142,7 +142,7 @@ struct ScheduleViewModelTests {
         let today = Calendar.current.startOfDay(for: Date())
         let later = event(id: "later", start: today.addingTimeInterval(15 * 60 * 60), end: today.addingTimeInterval(16 * 60 * 60))
         let earlier = event(id: "earlier", start: today.addingTimeInterval(9 * 60 * 60), end: today.addingTimeInterval(10 * 60 * 60))
-        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [later, earlier]))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [later, earlier]), now: { today })
 
         await viewModel.onAppear()
 
@@ -156,11 +156,66 @@ struct ScheduleViewModelTests {
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [
             event(id: "today", start: today.addingTimeInterval(10 * 60 * 60), end: today.addingTimeInterval(11 * 60 * 60)),
             event(id: "dayAfter", start: dayAfter.addingTimeInterval(10 * 60 * 60), end: dayAfter.addingTimeInterval(11 * 60 * 60)),
-        ]))
+        ]), now: { today })
 
         await viewModel.onAppear()
 
         #expect(viewModel.eventsByDay.map(\.date) == [today, dayAfter])
+    }
+
+    // MARK: - 진행 중 멀티데이 일정 (과거 시작일 → 오늘 그룹으로 클램프)
+
+    @Test func ongoingMultiDayEventGroupsUnderTodayNotItsStartDay() async {
+        // 16~20일처럼 과거에 시작해 오늘도 진행 중인 일정은, 시작일(과거) 헤더가 아니라
+        // 오늘 그룹에 묶여야 한다 — 지난 날짜 헤더가 뜨지 않도록.
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let twoDaysAgo = cal.date(byAdding: .day, value: -2, to: today)!
+        let endsInTwoDays = cal.date(byAdding: .day, value: 2, to: today)!
+        let ongoing = event(id: "ongoing", start: twoDaysAgo, end: endsInTwoDays, isAllDay: true)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [ongoing]))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.map(\.date) == [today])
+        #expect(viewModel.eventsByDay.first?.events.map(\.id) == ["ongoing"])
+    }
+
+    @Test func todayAndFutureEventsKeepTheirOwnDayAfterClamp() async {
+        // 클램프는 과거 시작일만 끌어올린다 — 오늘·미래 시작 일정은 자기 날짜 그대로.
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: today)!
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [
+            event(id: "today", start: today.addingTimeInterval(10 * 60 * 60), end: today.addingTimeInterval(11 * 60 * 60)),
+            event(id: "tomorrow", start: tomorrow.addingTimeInterval(10 * 60 * 60), end: tomorrow.addingTimeInterval(11 * 60 * 60)),
+        ]), now: { today })
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.map(\.date) == [today, tomorrow])
+    }
+
+    @Test func endedTimedEventsHiddenButOngoingAndAllDayKept() async {
+        // 현재 시각 정오 기준 — 오전에 끝난 시간 일정은 오늘이라도 숨기고,
+        // 진행 중 시간 일정과 종일 일정은 유지한다(LA와 동일 기준).
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let noon = today.addingTimeInterval(12 * 60 * 60)
+        let ended = event(id: "ended", start: today.addingTimeInterval(9 * 60 * 60), end: today.addingTimeInterval(10 * 60 * 60))
+        let ongoing = event(id: "ongoing", start: today.addingTimeInterval(11 * 60 * 60), end: today.addingTimeInterval(14 * 60 * 60))
+        let allDay = event(id: "allday", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let viewModel = ScheduleViewModel(
+            dependencies: makeDependencies(events: [ended, ongoing, allDay]),
+            now: { noon }
+        )
+
+        await viewModel.onAppear()
+
+        let ids = Set(viewModel.eventsByDay.flatMap(\.events).map(\.id))
+        #expect(!ids.contains("ended"))     // 오전에 끝남 → 숨김
+        #expect(ids.contains("ongoing"))    // 진행 중 → 유지
+        #expect(ids.contains("allday"))     // 종일 → 유지
     }
 
     @Test func presentEditSetsEditingEvent() {
@@ -222,7 +277,7 @@ struct ScheduleViewModelTests {
         let existing = event(id: "existing",
                               start: today.addingTimeInterval(10 * 60 * 60),
                               end: today.addingTimeInterval(11 * 60 * 60))
-        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [existing]))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [existing]), now: { today })
         await viewModel.onAppear()
 
         await viewModel.loadMore()
