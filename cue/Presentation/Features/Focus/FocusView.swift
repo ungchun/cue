@@ -115,6 +115,8 @@ struct FocusView: View {
                     // 선택된 세션 색으로 — 타이틀과 같은 톤이라 어느 세션이 도는지 즉시 인지.
                     .stroke(sessionColor, style: StrokeStyle(lineWidth: 16, lineCap: .round))
                     .rotationEffect(.degrees(-90))
+                    // iOS 기본과 동일 방향(왼→오)으로 통일 — trim 베이스가 오→왼이라 미러로 뒤집음.
+                    .scaleEffect(x: -1, y: 1)
                     .animation(.linear(duration: 0.2), value: progress)
             }
             VStack(spacing: Spacing.sm) {

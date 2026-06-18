@@ -94,7 +94,7 @@ struct FocusAlarmLiveActivityWidget: Widget {
     // MARK: - compactLeading 진행 ring (시간초에 맞춰 줄어듦)
 
     /// 카운트다운에 맞춰 차는/줄어드는 원형 ring. `ProgressView(timerInterval:)`이 시스템 위임으로
-    /// 자동 갱신(앱 코드 없이 틱). `.scaleEffect(x: -1)`로 진행 회전 방향 반전(기존 디자인).
+    /// 자동 갱신(앱 코드 없이 틱). 방향은 iOS 기본(시계방향, 왼→오) — 미러 없음.
     @ViewBuilder
     private func compactRing(_ state: AlarmPresentationState, color: Color) -> some View {
         switch state.mode {
@@ -109,7 +109,6 @@ struct FocusAlarmLiveActivityWidget: Widget {
             )
             .progressViewStyle(.circular)
             .tint(color)
-            .scaleEffect(x: -1, y: 1)
         case .paused(let p):
             let frac = p.totalCountdownDuration > 0
                 ? max(0, min(1, 1 - p.previouslyElapsedDuration / p.totalCountdownDuration))
@@ -117,7 +116,6 @@ struct FocusAlarmLiveActivityWidget: Widget {
             ProgressView(value: frac)
                 .progressViewStyle(.circular)
                 .tint(color)
-                .scaleEffect(x: -1, y: 1)
         case .alert:
             Image(systemName: "timer").foregroundStyle(color)
         @unknown default:

@@ -16,10 +16,12 @@ struct StartScheduleLiveActivityUseCase: Sendable {
     let service: any LiveActivityService
 
     static let maxDays = 5
-    static let maxEventsPerDay = 6
+    /// 하루에 싣는 최대 이벤트 수. 실제 표시량은 `SchedulePacker`가 160pt 높이로 자르므로,
+    /// 이 값은 "한 날이 2열을 꽉 채울 만큼"만 넉넉히 두면 된다(높이가 진짜 한계가 되게).
+    static let maxEventsPerDay = 10
     /// ContentState에 싣는 총 이벤트 상한 — 4KB 한도 안전 마진. 위젯이 보여줄 수 있는 양보다
     /// 약간 넉넉. 이 수를 채우면 이후 날/이벤트는 버린다.
-    static let maxTotalEvents = 10
+    static let maxTotalEvents = 14
 
     /// 게시했으면 `true`, 보여줄 (다가오는) 일정이 없어 건너뛰었으면 `false`.
     @discardableResult

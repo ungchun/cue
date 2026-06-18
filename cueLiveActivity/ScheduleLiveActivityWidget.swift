@@ -40,7 +40,7 @@ struct ScheduleLiveActivityWidget: Widget {
                 Image(systemName: "circle.fill")
                     .foregroundStyle(.tint)
             } compactTrailing: {
-                EmptyView()
+                DayProgressRing()
             } minimal: {
                 Image(systemName: "circle.fill")
                     .foregroundStyle(.tint)
