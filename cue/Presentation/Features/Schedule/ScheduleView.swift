@@ -228,7 +228,6 @@ struct ScheduleView: View {
                 .padding(.bottom, Spacing.xs)
             Spacer(minLength: Spacing.zero)
         }
-        .background(Color(.systemBackground))
     }
 
     /// List 바닥의 페이지네이션 trigger — viewport에 들어오면 ViewModel에 다음 2주를
