@@ -53,7 +53,10 @@ struct FloatingMessageButton: View {
             // 번지는 링은 clip **뒤**(아래)에 둔다 — clipShape가 캡슐 밖으로 번지는 링까지
             // 잘라 안 보이던 버그 수정. 채움 뒤라 캡슐 밖으로 나온 부분만 보인다.
             .background(pulseRing)
-            .shadow(color: .primary.opacity(0.28), radius: Spacing.xs, y: Spacing.xxs)
+            // 그림자 2겹 — 아래로 떨어지는 또렷한 드롭 + 사방으로 번지는 부드러운 글로우.
+            // 둘 다 primary 기반이라 라이트=그림자, 다크=발광으로 적응하며 입체감을 강조한다.
+            .shadow(color: .primary.opacity(0.35), radius: Spacing.sm, y: Spacing.xs)
+            .shadow(color: .primary.opacity(0.18), radius: Spacing.md)
         }
         .buttonStyle(.plain)
         .disabled(isCoolingDown)
@@ -73,7 +76,7 @@ struct FloatingMessageButton: View {
                 Capsule()
                     .stroke(.primary, lineWidth: 2)
                     .padding(pulse ? -(Spacing.sm + Spacing.xxs) : Spacing.zero)
-                    .opacity(pulse ? 0 : 0.6)
+                    .opacity(pulse ? 0 : 0.1)
                     .animation(
                         .easeOut(duration: 5.0)
                             .repeatForever(autoreverses: false)
