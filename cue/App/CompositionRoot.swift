@@ -18,6 +18,7 @@ struct CompositionRoot {
         let remindersRepository = EventKitRemindersRepository()
         let eventsRepository = EventKitEventsRepository()
         let focusSessionsRepository = UserDefaultsFocusSessionsRepository()
+        let memoRepository = UserDefaultsMemoRepository()
         // 라이브 액티비티 service — @MainActor 격리. ActivityKit 호출은 모두 main actor에서.
         let liveActivityService: any LiveActivityService = ActivityKitLiveActivityService()
 
@@ -48,6 +49,10 @@ struct CompositionRoot {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: liveActivityService),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: liveActivityService),
+            fetchMemo: FetchMemoUseCase(repository: memoRepository),
+            saveMemo: SaveMemoUseCase(repository: memoRepository),
+            startMemoLiveActivity: StartMemoLiveActivityUseCase(service: liveActivityService),
+            endMemoLiveActivity: EndMemoLiveActivityUseCase(service: liveActivityService),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService)
         )
     }

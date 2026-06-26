@@ -8,19 +8,21 @@ import SwiftUI
 /// 앱의 하단 탭. 탭을 추가하면 case와 메타데이터(`title`·`systemImage`)를 함께 늘린다.
 /// 탭 선언 순서가 그대로 탭바 좌→우 순서. `allCases`가 그 순서를 보장한다.
 enum AppTab: CaseIterable, Identifiable {
-    case focus     // 뽀모도로 — 단계 종료 알림까지. Live Activity·앱 차단은 다음 사이클.
-    case reminder
+    case memo      // 메모 — 큰 텍스트 + Live Activity.
     case schedule  // 타임라인 + 신규 이벤트 시트(EKEventEditViewController). 시간순 리스트는 다음 사이클에서.
-    case settings
+    case reminder
+    case focus     // 뽀모도로 — 단계 종료 알림까지. Live Activity·앱 차단은 다음 사이클.
+    case settings  // 설정 — 우측 끝(5번째). role nil이라 다른 탭과 한 캡슐에 같이(분리 안 함).
 
     var id: Self { self }
 
     /// 탭 레이블에 표시할 이름.
     var title: String {
         switch self {
-        case .focus: "집중"
-        case .reminder: "할일"
+        case .memo: "메모"
         case .schedule: "일정"
+        case .reminder: "할일"
+        case .focus: "집중"
         case .settings: "설정"
         }
     }
@@ -28,21 +30,16 @@ enum AppTab: CaseIterable, Identifiable {
     /// 탭 아이콘으로 쓸 SF Symbol 이름.
     var systemImage: String {
         switch self {
-        case .focus: "timer"
-        case .reminder: "list.bullet"
+        case .memo: "note.text"
         case .schedule: "calendar"
+        case .reminder: "list.bullet"
+        case .focus: "timer"
         case .settings: "gearshape"
         }
     }
 
-    /// 탭의 시스템 role. `.settings`는 `.search` role로 두어 — iOS 26에서 탭바가
-    /// `.onScrollDown` minimize될 때 active 탭과 함께 별도 entity로 우측에 남는다
-    /// (Apple Music의 검색 탭과 동일 동작). 일반 탭은 active일 때만 남기 때문에,
-    /// "설정을 항상 우측에 띄워두려는" 의도는 search role로만 가능.
-    var role: TabRole? {
-        switch self {
-        case .settings: .search
-        case .focus, .reminder, .schedule: nil
-        }
-    }
+
+    /// 탭의 시스템 role — 모두 일반(nil). 설정도 `.search`가 아니라 nil이라 다른 탭과 한
+    /// 캡슐에 같이 들어간다(분리되지 않고 5개가 나란히).
+    var role: TabRole? { nil }
 }

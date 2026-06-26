@@ -358,34 +358,19 @@ struct ReminderView: View {
 
     /// List 안에 직접 그리는 large title — selection별 라벨·색을 적용. 스크롤되면
     /// 컨텐츠와 함께 위로 사라지고 navigation bar inline title이 채워진다.
-    /// 우측엔 라이브 액티비티 트리거 자리(`liveActivityCircle`) — 데모 UI.
+    /// (라이브 액티비티 토글은 우하단 메시지 버튼으로 이동.)
     private var listTitleRow: some View {
         HStack(alignment: .center) {
             Text(currentTitle)
                 .font(.largeTitle.bold())
                 .foregroundStyle(currentTitleColor)
             Spacer()
-            liveActivityCircle
+            FloatingMessageButton()
         }
         .listRowSeparator(.hidden)
-        // 항목 행들과 동일한 좌측 인셋(Spacing.md) — 큰 제목 leading과 동그라미 leading을
-        // 같은 세로 기준선에 맞춘다. 인셋이 없으면 plain List 기본값이라 행과 어긋난다.
-        .listRowInsets(rowInsets)
-    }
-
-    /// 라이브 액티비티 토글 버튼 — 탭하면 현재 selection의 미리알림을 잠금화면·
-    /// Dynamic Island에 띄우거나 종료한다. 활성일 땐 `accentColor`로 채워지고,
-    /// 비활성일 땐 `.secondary`로 옅어져 상태를 한눈에 구분.
-    /// Spacing.xxl(48pt) — HIG 최소 터치 타깃(44pt) 이상.
-    private var liveActivityCircle: some View {
-        Button {
-            Task { await viewModel.toggleLiveActivity(listTitle: currentTitle) }
-        } label: {
-            Circle()
-                .fill(viewModel.liveActivityActive ? Color.accentColor : Color.secondary)
-                .frame(width: Spacing.xxl, height: Spacing.xxl)
-        }
-        .buttonStyle(.plain)
+        // leading은 다른 행과 동일(rowInsets)하게 맞추되, trailing만 md로 줄여 LIVE 버튼
+        // 오른쪽 끝을 상단 툴바 버튼과 맞춘다.
+        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
     }
 
     /// 현재 selection의 large title 라벨 — 사용자 리스트면 그 이름, 시스템 필터면 필터 라벨.

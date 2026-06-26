@@ -74,6 +74,7 @@
 				Shared/LiveActivity/LiveEventItem.swift,
 				Shared/LiveActivity/LiveReminderItem.swift,
 				Shared/LiveActivity/LiveScheduleDay.swift,
+				Shared/LiveActivity/MemoLiveActivityAttributes.swift,
 				Shared/LiveActivity/ReminderDynamicIsland.swift,
 				Shared/LiveActivity/ReminderLiveActivityAttributes.swift,
 				Shared/LiveActivity/ScheduleLiveActivityAttributes.swift,

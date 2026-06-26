@@ -18,5 +18,6 @@ struct cueLiveActivityBundle: WidgetBundle {
         ReminderLiveActivityWidget()
         ScheduleLiveActivityWidget()
         FocusAlarmLiveActivityWidget()
+        MemoLiveActivityWidget()
     }
 }

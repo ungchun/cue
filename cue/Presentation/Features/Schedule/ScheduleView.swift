@@ -106,31 +106,19 @@ struct ScheduleView: View {
         )
     }
 
-    /// List 안에 직접 그리는 large title — "타임라인". 우측엔 라이브 액티비티 트리거
-    /// 자리(`liveActivityCircle`) — 데모 UI. ReminderView `listTitleRow`와 동일 패턴.
+    /// List 안에 직접 그리는 large title — "타임라인". (라이브 액티비티 토글은 우하단
+    /// 메시지 버튼으로 이동.)
     private var timelineTitleRow: some View {
         HStack(alignment: .center) {
             Text("타임라인")
                 .font(.largeTitle.bold())
             Spacer()
-            liveActivityCircle
+            FloatingMessageButton()
         }
         .listRowSeparator(.hidden)
         // 할일 탭과 같은 좌우 인셋(24) — 두 탭의 큰 제목 leading을 같은 세로선에 맞춘다.
-        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.lg))
-    }
-
-    /// 라이브 액티비티 토글 버튼 — 탭하면 오늘·내일 일정을 잠금화면·Dynamic Island에
-    /// 띄우거나 종료한다. 활성/비활성 색 분기는 ReminderView와 동일 패턴.
-    private var liveActivityCircle: some View {
-        Button {
-            Task { await viewModel.toggleLiveActivity() }
-        } label: {
-            Circle()
-                .fill(viewModel.liveActivityActive ? Color.accentColor : Color.secondary)
-                .frame(width: Spacing.xxl, height: Spacing.xxl)
-        }
-        .buttonStyle(.plain)
+        // trailing은 LIVE 버튼 오른쪽 끝을 상단 툴바 버튼과 맞추기 위해 md로(시스템 여백 근사).
+        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
     }
 
     /// 좌상단 "캘린더" 버튼 — Apple 캘린더 앱을 연다. `calshow://`는 캘린더 앱의 표준

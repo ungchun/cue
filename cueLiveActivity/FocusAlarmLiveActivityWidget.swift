@@ -8,8 +8,10 @@
 //  알람 dismiss). 뷰만 우리가 그리고 데이터·구동은 전적으로 AlarmKit(`context.state.mode`)이 한다.
 //  버튼은 공식 샘플대로 `Button(intent:)` + `state.alarmID`로 AlarmManager 제어.
 //
-//  UI는 기존 Focus LA 디자인 — 중앙에 큰 라운드 카운트다운, **좌측 일시정지/재개 · 우측 종료** 원형
-//  아이콘 버튼이 시간을 사이에 두고 좌우에 배치. 상단 세션 타이틀, 하단 단계·사이클.
+//  UI는 시스템 타이머 LA와 동일한 레이아웃 — **좌측에 [일시정지/재개][종료] 버튼 묶음(동일 크기)**,
+//  우측에 단계 라벨(집중/휴식) + 큰 카운트다운(오른쪽 끝 밀착). 잠금화면은 한 HStack, Dynamic
+//  Island expanded는 leading(버튼)/trailing(시간) 리전 — 카메라 양옆 L자로 위부터 채워 상단
+//  여백을 없앤다. 색은 세션색(`tintColor`, 세션 없으면 앱 메인 보라) — 재생 버튼·라벨·시간에 적용.
 //
 
 import ActivityKit
@@ -25,70 +27,101 @@ struct FocusAlarmLiveActivityWidget: Widget {
                 .activityBackgroundTint(.black)
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
-            DynamicIsland {
-                DynamicIslandExpandedRegion(.center) {
-                    expanded(context: context)
+            let tint = context.attributes.tintColor
+            // 좌(버튼)·우(시간)를 leading/trailing 리전에 둔다 — 이 둘은 카메라 양옆의 "L자"
+            // 영역으로 **위쪽부터** 채워져 상단 여백이 없다(애플 기본 타이머와 동일). `.center`
+            // 단독은 카메라 아래에만 놓여 상단 공백이 생기므로 쓰지 않는다. 시간은 liveCountdown
+            // 으로 폭이 5자에 고정돼 좁아, trailing 리전에서 줄바꿈되지 않는다.
+            return DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    buttonGroup(context.state, tint: tint)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    timeGroup(context, tint: tint, timeSize: 44)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .lineLimit(1)
                 }
             } compactLeading: {
-                compactRing(context.state, color: color(context))
+                compactRing(context.state, color: tint)
             } compactTrailing: {
                 countdown(context.state).monospacedDigit().frame(maxWidth: 44)
             } minimal: {
-                compactRing(context.state, color: color(context))
+                compactRing(context.state, color: tint)
             }
         }
     }
 
-    // MARK: - Lock screen — 중앙 시간 + 좌우 버튼
+    // MARK: - Lock screen — 좌측 버튼 묶음 + 우측 단계·시간
 
-    /// centerStack을 베이스로 두고 버튼 HStack을 overlay — 시간이 기하 중심에 오고 좌우 버튼이
-    /// edge로 밀린다(기존 Focus LA와 동일 패턴).
+    /// 좌측에 [재생·일시정지][종료] 버튼 묶음, `Spacer`로 밀어 우측에 단계 라벨(집중/휴식) +
+    /// 큰 카운트다운(시간은 오른쪽 끝에 밀착). 색은 세션색(`tintColor`, 세션 없으면 앱 메인 보라).
     private func lockScreen(
         context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>
     ) -> some View {
-        centerStack(context: context)
-            .frame(maxWidth: .infinity)
-            .overlay {
-                HStack {
-                    leftButton(context.state)
-                    Spacer()
-                    stopButton(context.state)
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.md)
+        let tint = context.attributes.tintColor
+        return HStack(spacing: Spacing.sm) {
+            buttonGroup(context.state, tint: tint)
+            Spacer(minLength: Spacing.sm)
+            timeGroup(context, tint: tint, timeSize: 48)
+        }
+        .frame(maxWidth: .infinity)
+        // 우측 패딩을 줄여 시간이 오른쪽 끝에 붙는다(좌측은 버튼 호흡 위해 md 유지).
+        .padding(.leading, Spacing.md)
+        .padding(.trailing, Spacing.sm)
+        .padding(.vertical, Spacing.md)
     }
 
-    private func centerStack(
-        context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>
-    ) -> some View {
-        VStack(spacing: Spacing.xxs) {
-            countdown(context.state)
-                .font(.system(size: 48, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.primary)
-            Text(subtitle(context)).font(.caption).foregroundStyle(.secondary)
+    // MARK: - 공유 조각 — 버튼 묶음 / 단계·시간 묶음
+
+    /// 좌측 버튼 묶음 — [재생·일시정지][종료]를 좁은 간격으로 붙인다.
+    private func buttonGroup(_ state: AlarmPresentationState, tint: Color) -> some View {
+        HStack(spacing: Spacing.xs) {
+            leftButton(state, tint: tint)
+            stopButton(state)
         }
     }
 
-    // MARK: - Dynamic Island expanded — 타이틀 / [좌버튼 · 시간 · 우버튼] / 라벨
-
-    private func expanded(
-        context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>
+    /// 우측 단계 라벨 + 카운트다운 — 라벨은 작게, 시간은 큰 가는 폰트로 숫자 바로 옆에 밀착.
+    private func timeGroup(
+        _ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>,
+        tint: Color,
+        timeSize: CGFloat
     ) -> some View {
-        VStack(spacing: Spacing.xs) {
-            HStack(spacing: Spacing.md) {
-                leftButton(context.state)
-                Spacer(minLength: Spacing.zero)
-                countdown(context.state)
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+            Text(phaseLabel(context))
+                .font(.headline)
+                .foregroundStyle(tint)
+            liveCountdown(
+                context.state,
+                font: .system(size: timeSize, weight: .regular, design: .rounded),
+                tint: tint
+            )
+        }
+    }
+
+    /// `Text(timerInterval:)`은 시:분:초(h:mm:ss) 기준으로 폭을 넓게 예약해, mm:ss만 보일 땐
+    /// 라벨과 숫자 사이에 빈 칸이 생긴다. 보이지 않는 "00:00" 템플릿으로 프레임을 mm:ss 실제
+    /// 폭에 고정하고(타이머가 이 제안 폭에 맞춰 좁게 렌더), 그 위에 우측정렬 overlay — 라벨이
+    /// 숫자 바로 옆에 붙고 숫자는 오른쪽 끝에 정렬된다. `clipped`는 혹시 모를 폭 초과 안전망.
+    /// (`fixedSize`는 타이머를 거대한 자연폭으로 부풀려 clip에 잘려 사라지므로 쓰지 않는다.)
+    private func liveCountdown(
+        _ state: AlarmPresentationState,
+        font: Font,
+        tint: Color
+    ) -> some View {
+        Text(verbatim: "00:00")
+            .font(font)
+            .monospacedDigit()
+            .hidden()
+            .overlay(alignment: .trailing) {
+                countdown(state)
+                    .font(font)
                     .monospacedDigit()
-                    .foregroundStyle(.primary)
-                Spacer(minLength: Spacing.zero)
-                stopButton(context.state)
+                    .foregroundStyle(tint)
+                    .multilineTextAlignment(.trailing)
             }
-            Text(subtitle(context)).font(.caption).foregroundStyle(.secondary)
-        }
+            .clipped()
     }
 
     // MARK: - compactLeading 진행 ring (시간초에 맞춰 줄어듦)
@@ -132,7 +165,6 @@ struct FocusAlarmLiveActivityWidget: Widget {
             let now = Date.now
             if c.fireDate > now {
                 Text(timerInterval: now...c.fireDate, countsDown: true)
-                    .multilineTextAlignment(.center)
             } else {
                 Text("00:00")
             }
@@ -148,15 +180,16 @@ struct FocusAlarmLiveActivityWidget: Widget {
     // MARK: - 버튼 (좌: 일시정지/재개, 우: 종료) — 원형 아이콘
 
     /// 좌측 — countdown이면 일시정지, paused면 재개, alert면 자리만 비움(레이아웃 유지).
+    /// 세션색(`tint`)으로 채워 "이 세션 진행 중" 의미를 색으로 전달한다.
     @ViewBuilder
-    private func leftButton(_ state: AlarmPresentationState) -> some View {
+    private func leftButton(_ state: AlarmPresentationState, tint: Color) -> some View {
         let id = state.alarmID.uuidString
         switch state.mode {
         case .countdown:
-            iconButton("pause.fill", bg: Color.secondary.opacity(0.3), fg: .white,
+            iconButton("pause.fill", bg: tint, fg: .white, size: 56, iconFont: .title,
                        intent: FocusAlarmPauseIntent(alarmID: id), label: "일시정지")
         case .paused:
-            iconButton("play.fill", bg: Color.secondary.opacity(0.3), fg: .white,
+            iconButton("play.fill", bg: tint, fg: .white, size: 56, iconFont: .title,
                        intent: FocusAlarmResumeIntent(alarmID: id), label: "재개")
         case .alert:
             Color.clear.frame(width: 56, height: 56)
@@ -165,9 +198,10 @@ struct FocusAlarmLiveActivityWidget: Widget {
         }
     }
 
-    /// 우측 — 종료(빨강 원 ✕).
+    /// 우측 — 종료(중립 그레이 원 ✕). 진행/재개 색과 분리해 destructive를 톤다운. 크기는
+    /// 재생 버튼과 **동일(56)** — 시스템 타이머 LA처럼 좌측 두 버튼이 같은 크기로 나란히.
     private func stopButton(_ state: AlarmPresentationState) -> some View {
-        iconButton("xmark", bg: .red, fg: .white,
+        iconButton("xmark", bg: Color.secondary.opacity(0.3), fg: .white, size: 56, iconFont: .title,
                    intent: FocusAlarmStopIntent(alarmID: state.alarmID.uuidString), label: "종료")
     }
 
@@ -175,13 +209,15 @@ struct FocusAlarmLiveActivityWidget: Widget {
         _ image: String,
         bg: Color,
         fg: Color,
+        size: CGFloat,
+        iconFont: Font,
         intent: I,
         label: String
     ) -> some View {
         Button(intent: intent) {
             Image(systemName: image)
-                .font(.title)
-                .frame(width: 56, height: 56)
+                .font(iconFont)
+                .frame(width: size, height: size)
                 .background(Circle().fill(bg))
                 .foregroundStyle(fg)
         }
@@ -191,14 +227,10 @@ struct FocusAlarmLiveActivityWidget: Widget {
 
     // MARK: - Helpers
 
-    private func subtitle(_ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>) -> String {
+    /// 우측 시간 앞에 붙는 단계 라벨 — "타이머" 대신 상태에 따라 "집중"/"휴식".
+    private func phaseLabel(_ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>) -> String {
         guard let meta = context.attributes.metadata else { return "" }
-        let phase = meta.phase == .focus ? "집중" : "휴식"
-        return meta.totalCycles > 1 ? "\(phase) · \(meta.cycle) / \(meta.totalCycles)" : phase
-    }
-
-    private func color(_ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>) -> Color {
-        context.attributes.tintColor
+        return meta.phase == .focus ? "집중" : "휴식"
     }
 
     private func format(_ seconds: TimeInterval) -> String {

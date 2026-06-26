@@ -86,20 +86,13 @@ struct FocusView: View {
             .frame(height: Spacing.xxl)
     }
 
-    /// 선택된 세션의 색. 세션이 없거나 hex 파싱 실패 시 시스템 기본 accent로 폴백 —
-    /// 현재는 ring 트림에만 사용. 타이틀·컨트롤은 `.primary` 무채색으로 분리.
+    /// 선택된 세션의 색. 세션이 없거나 hex 파싱 실패 시 앱 메인색(`.accentColor`, 보라 계열)
+    /// 으로 폴백. ring 트림과 시작·일시정지·재개 버튼의 강조색으로 함께 쓴다 — "이 세션을
+    /// 켜는 액션 = 이 색"이라는 의미를 색만으로 전달한다. 세션이 없어도 무채색이 아니라 앱
+    /// 메인색으로 떠 액션 버튼이 항상 강조된다.
     private var sessionColor: Color {
         guard let hex = viewModel.selectedSession?.colorHex,
               let color = Color(hex: hex) else { return .accentColor }
-        return color
-    }
-
-    /// 시작·재개 버튼 강조색 — "이 세션을 켜는 액션 = 이 색"을 색만으로 전달한다.
-    /// 세션이 없거나 hex 파싱 실패 시엔 무채색 `.primary`로 폴백(ring의 `.accentColor`
-    /// 폴백과 분리 — 액션 버튼은 선택 세션이 없을 때 색을 강조하지 않는다).
-    private var actionColor: Color {
-        guard let hex = viewModel.selectedSession?.colorHex,
-              let color = Color(hex: hex) else { return .primary }
         return color
     }
 
@@ -170,9 +163,9 @@ struct FocusView: View {
     // MARK: - 하단 컨트롤
 
     /// 컨트롤 레이아웃 — **가운데 자리 = 현재 상태의 primary 토글**, 종료는 무채색으로 분리.
-    /// - **idle** — ▶ 시작(actionColor) 단독.
-    /// - **running** — [스킵] [⏸ 일시정지(actionColor)] [종료(.secondary)].
-    /// - **paused** — [스킵] [▶ 재개(actionColor)] [종료(.secondary)].
+    /// - **idle** — ▶ 시작(sessionColor) 단독.
+    /// - **running** — [스킵] [⏸ 일시정지(sessionColor)] [종료(.secondary)].
+    /// - **paused** — [스킵] [▶ 재개(sessionColor)] [종료(.secondary)].
     ///
     /// 가운데 위치를 토글 자리로 못박아두면 사용자는 같은 자리를 두 번 탭해 일시정지↔재개를
     /// 오갈 수 있다(Fitts's law — 같은 target에 반복 액션은 cost 0). 또한 시작 버튼과 같은
@@ -186,11 +179,11 @@ struct FocusView: View {
                     viewModel.skip()
                 }
                 if viewModel.isPaused {
-                    controlButton(systemImage: "play.fill", label: "재개", tint: actionColor) {
+                    controlButton(systemImage: "play.fill", label: "재개", tint: sessionColor) {
                         viewModel.resume()
                     }
                 } else {
-                    controlButton(systemImage: "pause.fill", label: "일시정지", tint: actionColor) {
+                    controlButton(systemImage: "pause.fill", label: "일시정지", tint: sessionColor) {
                         viewModel.pause()
                     }
                 }
@@ -203,12 +196,12 @@ struct FocusView: View {
         }
     }
 
-    /// idle 시 메인 화면의 시작 진입점. **`actionColor`로 강조** — 재개 버튼과 같은
+    /// idle 시 메인 화면의 시작 진입점. **`sessionColor`로 강조** — 재개 버튼과 같은
     /// 색이라 "이 세션을 켜는 액션 = 이 색"이라는 일관된 의미를 만든다. 세션이 없으면
-    /// `.primary` 무채색으로 폴백한다.
+    /// 앱 메인색(`.accentColor`)으로 폴백한다.
     private var startButton: some View {
-        // 무채색 톤은 .12, 채도 있는 actionColor는 .15 — controlButton과 동일 보정.
-        let color = actionColor
+        // 무채색 톤은 .12, 채도 있는 sessionColor는 .15 — controlButton과 동일 보정.
+        let color = sessionColor
         let fillOpacity: Double = color == .primary ? 0.12 : 0.15
         return Button {
             viewModel.start()

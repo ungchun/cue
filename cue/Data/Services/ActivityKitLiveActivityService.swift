@@ -39,6 +39,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     private var reminderActivity: Activity<ReminderLiveActivityAttributes>?
     private var scheduleActivity: Activity<ScheduleLiveActivityAttributes>?
+    private var memoActivity: Activity<MemoLiveActivityAttributes>?
 
     init() {}
 
@@ -134,11 +135,41 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         scheduleActivity = nil
     }
 
+    // MARK: - Memo
+
+    func startMemo(text: String, colorHex: String) async throws {
+        guard await isEnabled else { return }
+
+        let state = MemoLiveActivityAttributes.ContentState(text: text, colorHex: colorHex)
+        // 시간 흐름과 무관 — staleDate 미지정. 사용자가 텍스트·색을 바꿀 때만 update.
+        let content = ActivityContent(state: state, staleDate: nil)
+
+        // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
+        if let existing = memoActivity {
+            await existing.update(content)
+            return
+        }
+
+        let attributes = MemoLiveActivityAttributes(startedAt: .now)
+        memoActivity = try Activity.request(
+            attributes: attributes,
+            content: content,
+            pushType: nil
+        )
+    }
+
+    func endMemo() async {
+        guard let activity = memoActivity else { return }
+        await activity.end(nil, dismissalPolicy: .immediate)
+        memoActivity = nil
+    }
+
     // MARK: - Sync
 
     func sync() async {
         // 시스템에 살아있는 첫 번째 인스턴스를 재포착. kind당 1개 정책이라 first로 충분.
         reminderActivity = Activity<ReminderLiveActivityAttributes>.activities.first
         scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
+        memoActivity = Activity<MemoLiveActivityAttributes>.activities.first
     }
 }

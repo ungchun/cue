@@ -467,6 +467,9 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int)] = []
     private(set) var endScheduleCount = 0
 
+    private(set) var startMemoCalls: [(text: String, colorHex: String)] = []
+    private(set) var endMemoCount = 0
+
     private(set) var syncCount = 0
 
     func startReminder(
@@ -488,6 +491,14 @@ private final actor RecordingLiveActivityService: LiveActivityService {
 
     func endSchedule() async {
         endScheduleCount += 1
+    }
+
+    func startMemo(text: String, colorHex: String) async throws {
+        startMemoCalls.append((text, colorHex))
+    }
+
+    func endMemo() async {
+        endMemoCount += 1
     }
 
     func sync() async {

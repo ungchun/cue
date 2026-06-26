@@ -52,6 +52,10 @@ struct ReminderViewModelTests {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            fetchMemo: FetchMemoUseCase(repository: InMemoryMemoRepository()),
+            saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
+            startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
         )
     }
@@ -115,6 +119,10 @@ struct ReminderViewModelTests {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            fetchMemo: FetchMemoUseCase(repository: InMemoryMemoRepository()),
+            saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
+            startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
         )
         let viewModel = ReminderViewModel(dependencies: deps)
@@ -609,5 +617,7 @@ private actor RecordingReminderLiveActivity: LiveActivityService {
     func endReminder() async {}
     func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
     func endSchedule() async {}
+    func startMemo(text: String, colorHex: String) async throws {}
+    func endMemo() async {}
     func sync() async {}
 }

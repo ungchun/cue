@@ -47,6 +47,10 @@ struct ScheduleViewModelTests {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            fetchMemo: FetchMemoUseCase(repository: InMemoryMemoRepository()),
+            saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
+            startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
+            endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
         )
     }

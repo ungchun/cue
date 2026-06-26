@@ -48,6 +48,14 @@ struct Dependencies: Sendable {
     var endReminderLiveActivity: EndReminderLiveActivityUseCase
     var startScheduleLiveActivity: StartScheduleLiveActivityUseCase
     var endScheduleLiveActivity: EndScheduleLiveActivityUseCase
+
+    /// 단일 메모 영속화 — onAppear 시 fetch, 텍스트·색 변경 직후 save.
+    var fetchMemo: FetchMemoUseCase
+    var saveMemo: SaveMemoUseCase
+    /// 메모 라이브 액티비티 트리거 — 사용자가 동그라미 버튼으로 토글. 큰 텍스트 카드.
+    var startMemoLiveActivity: StartMemoLiveActivityUseCase
+    var endMemoLiveActivity: EndMemoLiveActivityUseCase
+
     /// 앱 시작 시 호출 — 시스템에 살아있는 Activity 인스턴스를 service가 재포착.
     var syncLiveActivities: SyncLiveActivitiesUseCase
 }
@@ -114,6 +122,7 @@ extension Dependencies {
 
         // 프리뷰는 인메모리 — 실제 영속화 동작은 CompositionRoot의 UserDefaults 구현으로.
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
+        let memoRepository = InMemoryMemoRepository(memo: Memo(text: "나 오늘 할 수 있다", colorHex: "#FF3B30"))
 
         // 프리뷰는 no-op service — `isEnabled = false`라 start/update가 모두 즉시 return.
         let liveActivityService: any LiveActivityService = DisabledLiveActivityService()
@@ -144,6 +153,10 @@ extension Dependencies {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: liveActivityService),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: liveActivityService),
+            fetchMemo: FetchMemoUseCase(repository: memoRepository),
+            saveMemo: SaveMemoUseCase(repository: memoRepository),
+            startMemoLiveActivity: StartMemoLiveActivityUseCase(service: liveActivityService),
+            endMemoLiveActivity: EndMemoLiveActivityUseCase(service: liveActivityService),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService)
         )
     }
