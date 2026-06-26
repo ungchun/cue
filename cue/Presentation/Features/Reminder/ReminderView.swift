@@ -365,7 +365,9 @@ struct ReminderView: View {
                 .font(.largeTitle.bold())
                 .foregroundStyle(currentTitleColor)
             Spacer()
-            FloatingMessageButton()
+            FloatingMessageButton {
+                await viewModel.toggleLiveActivity(listTitle: currentTitle)
+            }
         }
         .listRowSeparator(.hidden)
         // leading은 다른 행과 동일(rowInsets)하게 맞추되, trailing만 md로 줄여 LIVE 버튼

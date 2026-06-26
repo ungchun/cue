@@ -113,7 +113,9 @@ struct ScheduleView: View {
             Text("타임라인")
                 .font(.largeTitle.bold())
             Spacer()
-            FloatingMessageButton()
+            FloatingMessageButton {
+                await viewModel.toggleLiveActivity()
+            }
         }
         .listRowSeparator(.hidden)
         // 할일 탭과 같은 좌우 인셋(24) — 두 탭의 큰 제목 leading을 같은 세로선에 맞춘다.

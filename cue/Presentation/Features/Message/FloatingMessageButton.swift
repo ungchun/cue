@@ -13,6 +13,9 @@ import SwiftUI
 /// 탭하면 심볼 펄스 한 번 재생 후 **3초간 쿨다운** — 그동안 번짐은 멈추고, 글자는
 /// disabled 톤으로 흐려지며, 실제로 버튼이 비활성화돼 다시 눌리지 않는다.
 struct FloatingMessageButton: View {
+    /// 탭 시 실행할 동작 — 라이브 액티비티 토글(시작/종료)을 호출처(ViewModel)가 주입한다.
+    let action: () async -> Void
+
     /// on-air 번짐(캡슐 외곽선 확산) 반복 구동 플래그. onAppear에서 true로 켜 애니메이션 시작.
     @State private var pulse = false
     /// 탭할 때마다 +1 — 심볼 펄스 이펙트를 다시 재생시키는 트리거.
@@ -27,7 +30,7 @@ struct FloatingMessageButton: View {
             guard !isCoolingDown else { return }
             tapCount += 1
             startCooldown()
-            // TODO: 라이브 액티비티 켜기 연결 (현재 placeholder — 동작 없음).
+            Task { await action() }
         } label: {
             HStack(spacing: Spacing.smd) {
                 Image(systemName: "arrow.turn.left.up")
@@ -95,5 +98,5 @@ struct FloatingMessageButton: View {
 }
 
 #Preview {
-    FloatingMessageButton()
+    FloatingMessageButton {}
 }
