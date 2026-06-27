@@ -34,10 +34,13 @@ struct GrowingTextView: View {
     var submitOnReturn: Bool = false
     /// 텍스트 정렬 — 기본 `.natural`(좌측). 메모 화면처럼 가운데 정렬이 필요하면 `.center`.
     var textAlignment: NSTextAlignment = .natural
+    /// `true`면 포커스(편집 중)일 때 placeholder를 숨긴다 — 텍스트가 비어도. 기본은 iOS
+    /// 표준(첫 글자 입력 전까지 유지)인 `false`.
+    var hidesPlaceholderWhenFocused: Bool = false
 
     var body: some View {
         ZStack(alignment: textAlignment == .center ? .top : .topLeading) {
-            if text.isEmpty {
+            if text.isEmpty && !(hidesPlaceholderWhenFocused && isFocused) {
                 Text(placeholder)
                     .font(Font(font))
                     .foregroundStyle(.secondary)

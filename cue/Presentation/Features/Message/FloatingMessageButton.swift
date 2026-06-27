@@ -16,14 +16,17 @@ struct FloatingMessageButton: View {
     /// 탭 시 실행할 동작 — 라이브 액티비티 토글(시작/종료)을 호출처(ViewModel)가 주입한다.
     let action: () async -> Void
 
-    /// on-air 번짐(캡슐 외곽선 확산) 반복 구동 플래그. onAppear에서 true로 켜 애니메이션 시작.
-    @State private var pulse = false
     /// 탭할 때마다 +1 — 심볼 펄스 이펙트를 다시 재생시키는 트리거.
     @State private var tapCount = 0
     /// 탭 직후 3초 쿨다운 — true면 번짐 멈춤·글자 흐려짐·버튼 비활성.
     @State private var isCoolingDown = false
+    /// 호출처의 `.disabled(_:)` 반영 — false면 dim + 번짐 정지(메모: 입력 없을 때 등).
+    @Environment(\.isEnabled) private var isEnabled
 
     private static let cooldown: Duration = .seconds(3)
+
+    /// 쿨다운이거나 비활성이면 흐리게/멈춤 — disabled 시각.
+    private var isDimmed: Bool { isCoolingDown || !isEnabled }
 
     var body: some View {
         Button {
@@ -40,8 +43,8 @@ struct FloatingMessageButton: View {
                 Text("켜기")
             }
             .font(.title3.weight(.bold))
-            // 쿨다운 동안 글자·아이콘을 secondary 톤으로 — disabled 느낌.
-            .foregroundStyle(isCoolingDown ? Color.secondary : Color.primary)
+            // 쿨다운·비활성이면 글자·아이콘을 secondary 톤으로 — disabled 느낌.
+            .foregroundStyle(isDimmed ? Color.secondary : Color.primary)
             // 위아래·좌우 패딩 동일(14 = smd+xxs) — 사방으로 여유 있는 타원.
             .padding(Spacing.smd + Spacing.xxs)
             // 리퀴드 글래스 대신 불투명한 채움 + 테두리 + 그림자 — 솔리드한 "누르고 싶은"
@@ -63,35 +66,34 @@ struct FloatingMessageButton: View {
         .accessibilityLabel("라이브 메시지 켜기")
     }
 
-    /// 켜짐(on-air)을 알리는 번짐 — 절반 주기 어긋난 두 캡슐 외곽선이 바깥으로 퍼지며
-    /// 페이드아웃을 반복한다. 음수 패딩으로 사방 동일한 절대 거리만큼 커진다(scaleEffect는
-    /// 가로 긴 캡슐에서 좌우가 더 멀리 퍼져 불균일). 쿨다운 동안엔 숨겨 멈춘다.
+    /// 켜짐(on-air)을 알리는 번짐 — 버튼과 똑같은 캡슐을 버튼 가장자리(scale 1)에서 시작해
+    /// 살짝 키우며(scale 1.12) 페이드아웃한다.
     ///
-    /// 각 링의 `onAppear`에서 `pulse`를 켠다 — 최초 등장은 물론, 쿨다운으로 숨겼다 다시
-    /// 나타날 때도 onAppear가 재호출돼 애니메이션이 다시 시작된다.
+    /// **시간 기반(`TimelineView`)**으로 그린다 — `.animation(repeatForever)` 같은 암시적
+    /// 애니메이션을 쓰면, 메모처럼 입력에 따라 버튼이 이동하는 레이아웃에서 그 애니메이션이
+    /// 버튼의 *위치 이동*까지 캡처해 펄스가 대각선에서 날아오거나 어긋났다. 시간에서 scale·
+    /// opacity만 계산하고 위치는 매 프레임 레이아웃 그대로 따라가므로, 버튼이 어떻게 움직이든
+    /// 펄스는 항상 버튼에 딱 붙는다. 쿨다운/비활성 동안엔 숨겨 멈춘다.
     @ViewBuilder
     private var pulseRing: some View {
-        if !isCoolingDown {
-            ForEach(0..<2, id: \.self) { index in
+        if !isDimmed {
+            TimelineView(.animation) { context in
+                let elapsed = context.date.timeIntervalSinceReferenceDate
+                let phase = elapsed.truncatingRemainder(dividingBy: Self.pulsePeriod) / Self.pulsePeriod
                 Capsule()
-                    .stroke(.primary, lineWidth: 2)
-                    .padding(pulse ? -(Spacing.sm + Spacing.xxs) : Spacing.zero)
-                    .opacity(pulse ? 0 : 0.1)
-                    .animation(
-                        .easeOut(duration: 5.0)
-                            .repeatForever(autoreverses: false)
-                            .delay(Double(index) * 2.5),
-                        value: pulse
-                    )
-                    .onAppear { pulse = true }
+                    .stroke(.primary, lineWidth: 1.5)
+                    .scaleEffect(1 + 0.12 * phase)
+                    .opacity((1 - phase) * 0.5)
             }
         }
     }
 
-    /// 3초 쿨다운 시작 — 번짐을 즉시 멈추고(`pulse=false`) 버튼을 비활성화한다. 끝나면
-    /// 다시 활성화되고, pulseRing이 재등장하며 onAppear가 번짐을 재개한다.
+    /// 펄스 한 사이클(초) — 버튼 가장자리에서 시작해 이 시간 동안 퍼지며 사라진다.
+    private static let pulsePeriod: Double = 2.2
+
+    /// 3초 쿨다운 시작 — 버튼을 비활성화한다. 쿨다운 동안 `isDimmed`가 참이라 pulseRing이
+    /// 숨겨져 번짐이 멈추고, 끝나면 다시 나타나 재개된다.
     private func startCooldown() {
-        pulse = false
         isCoolingDown = true
         Task {
             try? await Task.sleep(for: Self.cooldown)
