@@ -29,7 +29,7 @@ struct MemoView: View {
                     GrowingTextView(
                         text: textBinding,
                         isFocused: $inputFocused,
-                        placeholder: "여기에 적어보세요",
+                        placeholder: "무엇을 기억할까요?",
                         font: Self.memoFont,
                         textColor: .label,
                         textAlignment: .center,
