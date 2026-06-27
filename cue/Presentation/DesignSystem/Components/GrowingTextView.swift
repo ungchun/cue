@@ -32,13 +32,17 @@ struct GrowingTextView: View {
     /// `true`면 Return 키 입력 시 줄바꿈 대신 `resignFirstResponder`를 호출 — 외부 commit 흐름이
     /// focus 해제 onChange를 받아 저장한다. `false`면 기본 UITextView 동작(줄바꿈).
     var submitOnReturn: Bool = false
+    /// 텍스트 정렬 — 기본 `.natural`(좌측). 메모 화면처럼 가운데 정렬이 필요하면 `.center`.
+    var textAlignment: NSTextAlignment = .natural
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: textAlignment == .center ? .top : .topLeading) {
             if text.isEmpty {
                 Text(placeholder)
                     .font(Font(font))
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: textAlignment == .center ? .infinity : nil)
+                    .multilineTextAlignment(textAlignment == .center ? .center : .leading)
                     .allowsHitTesting(false)
             }
             Representable(
@@ -46,7 +50,8 @@ struct GrowingTextView: View {
                 isFocused: $isFocused,
                 font: font,
                 textColor: textColor,
-                submitOnReturn: submitOnReturn
+                submitOnReturn: submitOnReturn,
+                textAlignment: textAlignment
             )
         }
         // UIViewRepresentable은 SwiftUI에 firstTextBaseline을 보고하지 않으므로 직접 명시 —
@@ -62,6 +67,7 @@ private struct Representable: UIViewRepresentable {
     var font: UIFont
     var textColor: UIColor
     var submitOnReturn: Bool
+    var textAlignment: NSTextAlignment
 
     func makeUIView(context: Context) -> UITextView {
         let view = AutoFocusTextView()
@@ -71,6 +77,7 @@ private struct Representable: UIViewRepresentable {
         view.isScrollEnabled = false
         view.font = font
         view.textColor = textColor
+        view.textAlignment = textAlignment
         view.adjustsFontForContentSizeCategory = true
         view.delegate = context.coordinator
         view.text = text
@@ -84,7 +91,24 @@ private struct Representable: UIViewRepresentable {
         // `didMoveToWindow`는 UIKit lifecycle hook — view가 window에 추가되는 그 순간에 호출돼
         // 첫 responder transfer가 같은 tick에 일어나 키보드가 안 내려간다.
         view.becomeFirstResponderOnMount = isFocused
+        // 키보드 위 "완료"로 dismiss. SwiftUI `.keyboard` toolbar는 UIViewRepresentable
+        // 응답자엔 안 붙으므로 UITextView에 inputAccessoryView를 직접 단다.
+        view.inputAccessoryView = Self.makeKeyboardAccessory(for: view)
         return view
+    }
+
+    /// 키보드 위 액세서리 바 — 오른쪽 정렬 chevron 아이콘으로 키보드를 내린다(앱 전역 동일
+    /// 패턴). 기본 44pt보다 높은 60pt로 둬 버튼이 키보드 위로 떠 보이게 한다.
+    private static func makeKeyboardAccessory(for textView: UITextView) -> UIToolbar {
+        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 100, height: 60))
+        let done = UIBarButtonItem(
+            title: nil,
+            image: UIImage(systemName: "keyboard.chevron.compact.down"),
+            primaryAction: UIAction { [weak textView] _ in textView?.resignFirstResponder() },
+            menu: nil
+        )
+        toolbar.items = [.flexibleSpace(), done]
+        return toolbar
     }
 
     /// SwiftUI가 제안한 너비에 맞춰 wrap된 높이를 정확히 돌려준다.
@@ -99,6 +123,7 @@ private struct Representable: UIViewRepresentable {
         if uiView.text != text { uiView.text = text }
         if uiView.font != font { uiView.font = font }
         if uiView.textColor != textColor { uiView.textColor = textColor }
+        if uiView.textAlignment != textAlignment { uiView.textAlignment = textAlignment }
 
         // become만 처리(resign은 UIKit transfer에 위임 — 명시 resign이 race 일으킴).
         // closure 안에서 binding 최신 값을 re-read한다 — capture된 stale 값으로 호출하면

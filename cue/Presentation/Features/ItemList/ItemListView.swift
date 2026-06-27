@@ -39,6 +39,7 @@ struct ItemListView: View {
             }
         }
         .navigationTitle("cue")
+        .keyboardDismissToolbar()
         .overlay {
             if viewModel.isLoading {
                 ProgressView()

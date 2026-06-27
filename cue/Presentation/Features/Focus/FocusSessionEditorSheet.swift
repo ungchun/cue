@@ -78,12 +78,9 @@ struct FocusSessionEditorSheet: View {
                     }
                     .disabled(trimmedTitle.isEmpty)
                 }
-                // numberPad는 Return이 없어 키보드 위 toolbar의 "완료"로 닫는다.
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("완료") { focusedField = nil }
-                }
             }
+            // numberPad는 Return이 없어 키보드 위 toolbar의 "완료"로 닫는다(공통 modifier).
+            .keyboardDismissToolbar()
         }
         .onAppear {
             // 시트가 처음 뜰 때 한 번 — 편집 모드면 그 세션의 값으로, 생성 모드면 빈 상태로

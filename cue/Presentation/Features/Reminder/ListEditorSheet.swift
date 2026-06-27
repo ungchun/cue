@@ -78,6 +78,7 @@ struct ListEditorSheet: View {
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarItems }
+            .keyboardDismissToolbar()
             .task {
                 // Form/SwiftUI 레이아웃이 잡힌 후 포커스가 안정적으로 들어가도록 약간 미룬다.
                 if case .new = mode {

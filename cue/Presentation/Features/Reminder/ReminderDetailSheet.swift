@@ -182,6 +182,7 @@ struct ReminderDetailSheet: View {
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+            .keyboardDismissToolbar()
             .environment(\.locale, koLocale)
         }
     }
