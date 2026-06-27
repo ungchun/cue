@@ -33,10 +33,14 @@ struct GrowingTextView: View {
     /// focus 해제 onChange를 받아 저장한다. `false`면 기본 UITextView 동작(줄바꿈).
     var submitOnReturn: Bool = false
     /// 텍스트 정렬 — 기본 `.natural`(좌측). 메모 화면처럼 가운데 정렬이 필요하면 `.center`.
+    /// `.center`라도 텍스트가 2줄을 넘으면 좌측(`.left`)으로 전환된다 — 긴 메모가 가운데
+    /// 정렬돼 줄마다 들쭉날쭉해지는 걸 막고 "왼쪽부터 채우는" 형태로.
     var textAlignment: NSTextAlignment = .natural
     /// `true`면 포커스(편집 중)일 때 placeholder를 숨긴다 — 텍스트가 비어도. 기본은 iOS
     /// 표준(첫 글자 입력 전까지 유지)인 `false`.
     var hidesPlaceholderWhenFocused: Bool = false
+    /// 설정 시 이 줄 수까지만 높이가 자라고, 넘으면 내부 스크롤된다(nil이면 무한 확장).
+    var maxLines: Int? = nil
 
     var body: some View {
         ZStack(alignment: textAlignment == .center ? .top : .topLeading) {
@@ -54,7 +58,8 @@ struct GrowingTextView: View {
                 font: font,
                 textColor: textColor,
                 submitOnReturn: submitOnReturn,
-                textAlignment: textAlignment
+                textAlignment: textAlignment,
+                maxLines: maxLines
             )
         }
         // UIViewRepresentable은 SwiftUI에 firstTextBaseline을 보고하지 않으므로 직접 명시 —
@@ -71,6 +76,7 @@ private struct Representable: UIViewRepresentable {
     var textColor: UIColor
     var submitOnReturn: Bool
     var textAlignment: NSTextAlignment
+    var maxLines: Int?
 
     func makeUIView(context: Context) -> UITextView {
         let view = AutoFocusTextView()
@@ -119,6 +125,23 @@ private struct Representable: UIViewRepresentable {
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
         guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
         let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        let lineHeight = (uiView.font ?? font).lineHeight
+
+        // 가운데 정렬(.center)이라도 2줄을 넘으면 좌측 정렬로 — "왼쪽부터 채우는" 형태.
+        // 변경됐을 때만 set해 layout 루프를 피한다.
+        if textAlignment == .center, lineHeight > 0 {
+            let lines = Int((fitting.height / lineHeight).rounded())
+            let desired: NSTextAlignment = lines > 2 ? .left : .center
+            if uiView.textAlignment != desired { uiView.textAlignment = desired }
+        }
+
+        // maxLines가 있으면 그 높이까지만 자라고 넘으면 내부 스크롤.
+        if let maxLines, lineHeight > 0 {
+            let maxHeight = ceil(lineHeight * CGFloat(maxLines))
+            let exceeded = fitting.height > maxHeight
+            if uiView.isScrollEnabled != exceeded { uiView.isScrollEnabled = exceeded }
+            if exceeded { return CGSize(width: width, height: maxHeight) }
+        }
         return CGSize(width: width, height: fitting.height)
     }
 
@@ -126,7 +149,11 @@ private struct Representable: UIViewRepresentable {
         if uiView.text != text { uiView.text = text }
         if uiView.font != font { uiView.font = font }
         if uiView.textColor != textColor { uiView.textColor = textColor }
-        if uiView.textAlignment != textAlignment { uiView.textAlignment = textAlignment }
+        // .center는 줄 수에 따라 sizeThatFits가 center↔left를 관리하므로 여기서 덮지 않는다.
+        // 그 외(natural/left)만 base 정렬을 그대로 유지한다.
+        if textAlignment != .center, uiView.textAlignment != textAlignment {
+            uiView.textAlignment = textAlignment
+        }
 
         // become만 처리(resign은 UIKit transfer에 위임 — 명시 resign이 race 일으킴).
         // closure 안에서 binding 최신 값을 re-read한다 — capture된 stale 값으로 호출하면

@@ -20,46 +20,47 @@ struct MemoLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: MemoLiveActivityAttributes.self) { context in
             // 잠금화면 — 카드 배경을 사용자 색으로 칠하고 가운데 큰 흰 텍스트.
-            bigText(context.state.text, size: 56)
+            bigText(context.state.text, size: 44)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.md)
                 .activityBackgroundTint(cardColor(context.state.colorHex))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
-            let color = cardColor(context.state.colorHex)
-            return DynamicIsland {
-                // 꾸욱 눌렀을 때 — 가운데에 메모 텍스트.
+            DynamicIsland {
+                // 꾸욱 눌렀을 때 — 메모 텍스트를 expanded 영역 한가운데에. maxWidth·maxHeight
+                // 모두 무한으로 채우고 center 정렬해 좌우·상하 정중앙에 오게 한다.
                 DynamicIslandExpandedRegion(.center) {
-                    bigText(context.state.text, size: 28)
-                        .frame(maxWidth: .infinity)
+                    bigText(context.state.text, size: 24)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                         .padding(.horizontal, Spacing.sm)
                 }
             } compactLeading: {
-                Image(systemName: "note.text")
-                    .foregroundStyle(color)
+                // 일정·할일과 동일 — 동그라미 점.
+                Image(systemName: "circle.fill")
+                    .foregroundStyle(.tint)
             } compactTrailing: {
-                // 색을 카드색으로 입힌 짧은 미리보기. 폭이 좁아 한 줄로 잘린다.
-                Text(context.state.text)
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
-                    .foregroundStyle(color)
-                    .frame(maxWidth: 80)
+                // 일정·할일과 동일 — 오늘(자정까지) 잔여를 나타내는 원형 링.
+                DayProgressRing()
             } minimal: {
-                Image(systemName: "note.text")
-                    .foregroundStyle(color)
+                Image(systemName: "circle.fill")
+                    .foregroundStyle(.tint)
             }
         }
     }
 
-    /// 카드를 채우는 큰 텍스트 — 흰색, 가운데 정렬, 긴 문장은 축소·줄바꿈.
+    /// 카드를 채우는 큰 텍스트 — 흰색, 긴 문장은 축소·줄바꿈.
+    /// 줄 정렬은 `.leading`(왼쪽부터) — 여러 줄일 때 들쭉날쭉하지 않고 단락처럼 채워진다.
+    /// 블록 자체는 호출처 frame이 가운데 두므로, 한두 줄 짧은 메모는 가운데로 보인다.
     private func bigText(_ text: String, size: CGFloat) -> some View {
         Text(text)
             .font(.system(size: size, weight: .heavy, design: .rounded))
             .foregroundStyle(.white)
-            .multilineTextAlignment(.center)
+            .multilineTextAlignment(.leading)
             .lineLimit(4)
-            .minimumScaleFactor(0.3)
+            // 1줄 짧은 메모는 기본 크기 그대로, 여러 줄로 길어져도 0.5배까지만 줄어 너무
+            // 작아지지 않게 — "1줄은 크고 멀티라인은 작은" 편차를 줄인다.
+            .minimumScaleFactor(0.5)
     }
 
     /// 카드 배경 색 — 사용자 지정 hex. 비었거나 파싱 실패면 시스템 accent.

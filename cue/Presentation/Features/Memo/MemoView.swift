@@ -33,7 +33,8 @@ struct MemoView: View {
                         font: Self.memoFont,
                         textColor: .label,
                         textAlignment: .center,
-                        hidesPlaceholderWhenFocused: true
+                        hidesPlaceholderWhenFocused: true,
+                        maxLines: 5
                     )
                     // 텍스트 필드 오른쪽 끝의 지우기(x) — 입력 있을 때만 보이되, 빈 칸은 항상
                     // 차지해 레이아웃이 흔들리지 않게(opacity로만 토글).
