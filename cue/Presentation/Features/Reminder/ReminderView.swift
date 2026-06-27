@@ -371,8 +371,9 @@ struct ReminderView: View {
         }
         .listRowSeparator(.hidden)
         // leading은 다른 행과 동일(rowInsets)하게 맞추되, trailing만 md로 줄여 LIVE 버튼
-        // 오른쪽 끝을 상단 툴바 버튼과 맞춘다.
-        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
+        // 오른쪽 끝을 상단 툴바 버튼과 맞춘다. bottom은 lg로 키워 켜기 버튼 글로우가
+        // List row 클립 경계에 잘리지 않고(=닿는 선 없이) 떠 보이게 한다.
+        .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.lg, trailing: Spacing.md))
     }
 
     /// 현재 selection의 large title 라벨 — 사용자 리스트면 그 이름, 시스템 필터면 필터 라벨.
