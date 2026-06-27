@@ -28,11 +28,26 @@ struct MemoLiveActivityWidget: Widget {
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
-                // 꾸욱 눌렀을 때 — 메모 텍스트를 expanded 영역 한가운데에. maxWidth·maxHeight
-                // 모두 무한으로 채우고 center 정렬해 좌우·상하 정중앙에 오게 한다.
-                DynamicIslandExpandedRegion(.center) {
+                // 좌상단 — 앱 정체성 라벨 "Cue"(락스크린 헤더와 같은 자리·역할).
+                DynamicIslandExpandedRegion(.leading) {
+                    Text("Cue")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, Spacing.sm)
+                }
+                // 우상단 — 오늘(자정까지) "N시간 남음".
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text("\(hoursLeftToday())시간 남음")
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, Spacing.sm)
+                }
+                // 메모 텍스트 — Reminder 위젯처럼 bottom 리전(full폭, 위 코너 아래)에 둔다.
+                // center에 큰 텍스트를 두면 위 코너(leading/trailing)와 겹쳐 가려진다.
+                DynamicIslandExpandedRegion(.bottom) {
                     bigText(context.state.text, size: 24)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.horizontal, Spacing.sm)
                 }
             } compactLeading: {
@@ -66,5 +81,14 @@ struct MemoLiveActivityWidget: Widget {
     /// 카드 배경 색 — 사용자 지정 hex. 비었거나 파싱 실패면 시스템 accent.
     private func cardColor(_ hex: String) -> Color {
         Color(hex: hex) ?? .accentColor
+    }
+
+    /// 오늘 자정까지 남은 시간(시 단위, 올림). DayProgressRing과 같은 자정 기준.
+    /// 렌더 시점 값이라 LA 콘텐츠 갱신 때 갱신된다(링은 timerInterval로 별도 자동 갱신).
+    private func hoursLeftToday(_ now: Date = .now) -> Int {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: now)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        return max(0, Int(ceil(end.timeIntervalSince(now) / 3600)))
     }
 }
