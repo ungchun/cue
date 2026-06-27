@@ -15,6 +15,6 @@ struct Memo: Codable, Equatable, Sendable {
     /// "#RRGGBB" 형식의 사용자 지정 카드 색. 파싱 실패 시 위젯이 시스템 accent로 폴백.
     var colorHex: String
 
-    /// 첫 실행·미저장 상태의 기본값 — 빈 텍스트 + 스크린샷 기준 레드.
-    static let `default` = Memo(text: "", colorHex: "#FF3B30")
+    /// 첫 실행·미저장 상태의 기본값 — 빈 텍스트 + 검은 카드(위젯이 흰 텍스트라 검정/하양).
+    static let `default` = Memo(text: "", colorHex: "#000000")
 }
