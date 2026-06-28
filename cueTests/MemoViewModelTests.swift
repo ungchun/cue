@@ -85,15 +85,17 @@ struct MemoViewModelTests {
         #expect(await service.startMemoCalls.first?.text == "나 오늘 할 수 있다")
     }
 
-    @Test func toggleTwiceEndsLiveActivity() async {
+    /// 떠 있을 때 다시 누르면 끄지 않고 **끄고 다시 켠다(새로고침)** — 활성 유지, end 1회 + start 2회.
+    @Test func toggleAgainRestartsLiveActivity() async {
         let (viewModel, _, service) = makeViewModel(memo: Memo(text: "할 일", colorHex: "#FF3B30"))
         await viewModel.onAppear()
 
-        await viewModel.toggleLiveActivity()
-        await viewModel.toggleLiveActivity()
+        await viewModel.toggleLiveActivity()   // 시작
+        await viewModel.toggleLiveActivity()   // 끄고 다시 켜기(새로고침)
 
-        #expect(viewModel.liveActivityActive == false)
+        #expect(viewModel.liveActivityActive == true)
         #expect(await service.endMemoCount == 1)
+        #expect(await service.startMemoCalls.count == 2)
     }
 
     @Test func toggleDoesNothingWhenTextEmpty() async {

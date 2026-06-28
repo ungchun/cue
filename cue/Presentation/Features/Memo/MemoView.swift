@@ -17,6 +17,8 @@ import UIKit
 struct MemoView: View {
     @Bindable var viewModel: MemoViewModel
     @State private var inputFocused = false
+    /// 앱 공통 토스트 — "켜기"로 라이브가 켜지면 상단 토스트를 띄운다.
+    @Environment(\.toastCenter) private var toastCenter
 
     var body: some View {
         VStack(spacing: Spacing.zero) {
@@ -52,7 +54,11 @@ struct MemoView: View {
                 HStack {
                     Spacer()
                     FloatingMessageButton {
+                        let wasActive = viewModel.liveActivityActive
                         await viewModel.toggleLiveActivity()
+                        if viewModel.liveActivityActive {
+                            toastCenter.show(wasActive ? "새로고침" : "라이브")
+                        }
                     }
                     .disabled(!hasText)
                 }

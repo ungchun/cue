@@ -121,10 +121,10 @@ final class ScheduleViewModel {
     /// 활성이면 종료. 아니면 `eventsByDay`의 모든 이벤트를 use case로 보내 게시한다 — 다가오는
     /// 일정이 없으면 use case가 `false`를 반환해 LA를 띄우지 않는다(날짜 그룹·라벨·캡은 use case가 처리).
     func toggleLiveActivity() async {
+        // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false
-            return
         }
         do {
             liveActivityActive = try await startLiveActivityUseCase(events: eventsByDay.flatMap(\.events))

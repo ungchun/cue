@@ -26,6 +26,8 @@ struct ScheduleView: View {
     // 좌상단 "캘린더" 버튼 — Apple Calendar 앱 호출용 SwiftUI 환경 핸들.
     // ReminderView의 "미리 알림" 버튼과 동일 패턴.
     @Environment(\.openURL) private var openURL
+    /// 앱 공통 토스트 — "켜기"로 라이브가 켜지면 상단 토스트를 띄운다.
+    @Environment(\.toastCenter) private var toastCenter
 
     var body: some View {
         // ReminderView와 동일한 패턴: navigation bar는 inline 모드로 두고 large title은
@@ -114,7 +116,11 @@ struct ScheduleView: View {
                 .font(.largeTitle.bold())
             Spacer()
             FloatingMessageButton {
+                let wasActive = viewModel.liveActivityActive
                 await viewModel.toggleLiveActivity()
+                if viewModel.liveActivityActive {
+                    toastCenter.show(wasActive ? "새로고침" : "라이브")
+                }
             }
         }
         .listRowSeparator(.hidden)

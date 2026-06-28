@@ -303,34 +303,37 @@ struct ReminderViewModelTests {
         #expect(added?.listID == "A")
     }
 
-    /// 전체(.all) visibleReminders는 생성순(추가한 순서) — 먼저 추가한 게 위, 나중에 추가한 게 아래.
-    /// 마감일 순서와 무관하다(미리 알림 앱 "전체"와 동일).
-    @Test func allFilterSortsByCreationOrder() async {
+    /// 전체(.all) visibleReminders는 **마감일 오름차순**(가까운 순) — 화면은 `allModeSections`로
+    /// 따로 그리므로 이 평탄 목록은 라이브 액티비티 스냅샷 전용이다. 마감 없음은 맨 뒤.
+    @Test func allFilterSortsByDueDateForLiveActivity() async {
         let now = Date()
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA],
             reminders: [
-                // 입력 순서를 일부러 섞고, 마감일도 생성순과 어긋나게 둔다.
-                reminder(id: "second", dueDate: now.addingTimeInterval(3600),
+                // 생성순과 어긋나게 두고 마감일 순으로 정렬되는지 본다. 마감 없는 항목은 맨 뒤.
+                reminder(id: "due-near", dueDate: now.addingTimeInterval(3600),
                          creationDate: now.addingTimeInterval(20), listID: "A"),
-                reminder(id: "first", dueDate: now.addingTimeInterval(7200),
+                reminder(id: "due-far", dueDate: now.addingTimeInterval(7200),
                          creationDate: now.addingTimeInterval(10), listID: "A"),
-                reminder(id: "third", creationDate: now.addingTimeInterval(30), listID: "A"),
+                reminder(id: "no-due", creationDate: now.addingTimeInterval(5), listID: "A"),
             ]
         ))
         await viewModel.onAppear()
 
         viewModel.selectFilter(.all)
 
-        #expect(viewModel.visibleReminders.map(\.id) == ["first", "second", "third"])
+        // 마감 가까운 순 → due-near, due-far, 마감 없는 no-due는 맨 뒤.
+        #expect(viewModel.visibleReminders.map(\.id) == ["due-near", "due-far", "no-due"])
     }
 
-    /// 예정(.scheduled) visibleReminders도 생성순 — 마감일이 빠르든 늦든 추가한 순서대로.
-    @Test func scheduledFilterSortsByCreationOrder() async {
+    /// 예정(.scheduled) visibleReminders는 **마감일 오름차순** — 생성순과 무관하게
+    /// 가장 빠른 마감이 위, 가장 먼 마감이 아래.
+    @Test func scheduledFilterSortsByDueDateAscending() async {
         let now = Date()
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA],
             reminders: [
+                // due-soon은 나중에 추가됐지만(생성일이 더 늦음) 마감이 더 빠르다 → 위로 와야 한다.
                 reminder(id: "due-soon", dueDate: now.addingTimeInterval(3600),
                          creationDate: now.addingTimeInterval(20), listID: "A"),
                 reminder(id: "due-later", dueDate: now.addingTimeInterval(7200),
@@ -341,8 +344,8 @@ struct ReminderViewModelTests {
 
         viewModel.selectFilter(.scheduled)
 
-        // 생성순: due-later가 먼저 추가됐으니 위.
-        #expect(viewModel.visibleReminders.map(\.id) == ["due-later", "due-soon"])
+        // 마감일 오름차순: 빠른 due-soon이 위.
+        #expect(viewModel.visibleReminders.map(\.id) == ["due-soon", "due-later"])
     }
 
     /// 전체(.all) 화면 렌더링 경로인 allModeSections도 각 섹션을 생성순으로 정렬한다.

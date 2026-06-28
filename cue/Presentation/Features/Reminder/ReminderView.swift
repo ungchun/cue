@@ -9,6 +9,8 @@ import UIKit
 /// 할일 탭 화면 — 선택된 리스트의 미완료 항목을 보여주고 완료 토글을 제공한다.
 struct ReminderView: View {
     let viewModel: ReminderViewModel
+    /// 앱 공통 토스트 — "켜기"로 라이브가 켜지면 상단 토스트를 띄운다.
+    @Environment(\.toastCenter) private var toastCenter
 
     @State private var newTitle = ""
     @State private var newMemo = ""
@@ -175,14 +177,18 @@ struct ReminderView: View {
                 }
             }
 
-            Section {
-                Button(role: .destructive) {
-                    showingDeleteListConfirmation = true
-                } label: {
-                    Label("목록 삭제", systemImage: "trash")
+            // 목록 삭제 — 시스템 필터(오늘/예정/전체)엔 삭제할 리스트가 없으므로 행 자체를 숨긴다.
+            if viewModel.selectedList != nil {
+                Section {
+                    Button(role: .destructive) {
+                        showingDeleteListConfirmation = true
+                    } label: {
+                        Label("목록 삭제", systemImage: "trash")
+                    }
+                    // 앱 전체 .tint(.primary) 때문에 아이콘이 무채색이 되므로, 이 행만 빨강으로
+                    // 되돌려 쓰레기통 아이콘을 destructive 텍스트와 같은 색으로 맞춘다.
+                    .tint(.red)
                 }
-                // 선택된 리스트가 없으면 삭제할 게 없음.
-                .disabled(viewModel.selectedList == nil)
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -209,13 +215,11 @@ struct ReminderView: View {
                 .pickerStyle(.inline)
             }
         } label: {
-            // 두 번째 Text가 메뉴 행의 회색 서브타이틀로 렌더 — 현재 선택된 정렬 기준 표시.
-            Label {
-                Text("다음으로 정렬")
-                Text(currentSortFieldLabel)
-            } icon: {
-                Image(systemName: "arrow.up.arrow.down")
-            }
+            // Menu 라벨에 Label(제목+아이콘) 다음으로 형제 Text를 두면, 그 Text가 메뉴 행의
+            // 회색 서브타이틀로 렌더된다 — 현재 선택된 정렬 기준 표시(이미지의 미리 알림 앱과 동일).
+            // (Label의 title 빌더 안에 두 Text를 넣는 방식은 서브타이틀로 안 잡혀 형제 구조로 둔다.)
+            Label("다음으로 정렬", systemImage: "arrow.up.arrow.down")
+            Text(currentSortFieldLabel)
         }
     }
 
@@ -460,7 +464,11 @@ struct ReminderView: View {
                 .foregroundStyle(currentTitleColor)
             Spacer()
             FloatingMessageButton {
+                let wasActive = viewModel.liveActivityActive
                 await viewModel.toggleLiveActivity(listTitle: currentTitle)
+                if viewModel.liveActivityActive {
+                    toastCenter.show(wasActive ? "새로고침" : "라이브")
+                }
             }
         }
         .listRowSeparator(.hidden)

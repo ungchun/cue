@@ -105,10 +105,10 @@ final class ReminderViewModel {
     /// 활성이면 즉시 종료. 아니면 현재 selection 제목 + visible reminders 스냅샷으로 시작.
     /// cap(6) + remaining 계산은 `StartReminderLiveActivityUseCase`에서.
     func toggleLiveActivity(listTitle: String) async {
+        // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false
-            return
         }
         do {
             try await startLiveActivityUseCase(
@@ -169,8 +169,9 @@ final class ReminderViewModel {
     /// 본문에 보여줄 **미완료** 항목. selection 종류에 따라 필터되고 정렬된다.
     /// - `.list(id)`: 그 리스트의 미완료. 스코프(`list:<id>`)의 정렬 설정 적용(기본 수동·생성순 시드).
     /// - `.systemFilter(.today)`: 오늘 자정 이전 마감(overdue 포함) 미완료. `today` 스코프 정렬 설정 적용.
-    /// - `.systemFilter(.scheduled)`: 마감일이 있는 모든 미완료, **생성순**(고정).
-    /// - `.systemFilter(.all)`: 모든 미완료, **생성순**(고정) — 미리 알림 앱과 동일.
+    /// - `.systemFilter(.scheduled)`: 마감일이 있는 모든 미완료, **마감일 오름차순**(빠른 순, 고정).
+    /// - `.systemFilter(.all)`: 모든 미완료, **마감일 오름차순**(가까운 순, 마감 없음 맨 뒤).
+    ///   화면은 `allModeSections`로 따로 그리므로 이 목록은 LA 스냅샷 전용이다.
     var visibleReminders: [Reminder] {
         let incomplete = allReminders.filter { !$0.isCompleted }
         switch selection {
@@ -185,11 +186,15 @@ final class ReminderViewModel {
                                             return due < tomorrowMidnight }
             return sortedBySettings(items, scope: Self.todayScopeKey)
         case .systemFilter(.scheduled):
+            // 마감일 오름차순 — 가장 빠른 마감이 위, 가장 먼 마감이 아래(고정).
             return incomplete
                 .filter { $0.dueDate != nil }
-                .sorted(by: creationDateAscendingNilLast)
+                .sorted { compareOptionalDate($0.dueDate, $1.dueDate, ascending: true) }
         case .systemFilter(.all):
-            return incomplete.sorted(by: creationDateAscendingNilLast)
+            // 화면(전체)은 `allModeSections`(리스트별·생성순)로 그리므로, 이 평탄 목록은 사실상
+            // **라이브 액티비티 스냅샷 전용**이다. LA는 마감일 오름차순(가까운 순)으로,
+            // 마감 없음은 맨 뒤로 보여준다.
+            return incomplete.sorted { compareOptionalDate($0.dueDate, $1.dueDate, ascending: true) }
         case .none:
             return []
         }

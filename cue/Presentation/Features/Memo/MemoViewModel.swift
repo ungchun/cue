@@ -65,15 +65,14 @@ final class MemoViewModel {
         await refreshLiveActivityIfActive()
     }
 
-    /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
-    /// 활성이면 종료. 아니면 현재 메모로 게시한다(빈 텍스트면 버튼이 비활성이라 평상시 안 옴).
+    /// 켜기 버튼 액션 — 꺼져 있으면 켜고, **떠 있으면 끄고 다시 켠다(새로고침)**. 더는 단순
+    /// 종료하지 않는다. 빈 텍스트면 버튼이 비활성이라 평상시 이 경로로 오지 않는다(마지막 방어선).
     func toggleLiveActivity() async {
+        guard canStartLiveActivity else { return }
         if liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false
-            return
         }
-        guard canStartLiveActivity else { return }
         do {
             try await startLiveActivityUseCase(memo)
             liveActivityActive = true
