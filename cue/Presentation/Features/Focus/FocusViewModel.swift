@@ -39,6 +39,16 @@ final class FocusViewModel {
     private(set) var totalCycles = 1
     private(set) var isPaused = false
 
+    // MARK: - 설정에서 읽는 토글 (onAppear에 동기화)
+
+    /// 단계 전환 시 인앱 햅틱을 줄지 — View가 읽어 `onChange` 햅틱을 게이트한다. 기본 켜짐.
+    private(set) var hapticEnabled = true
+    /// 단계 종료 알림 소리를 낼지 — `start()`가 `FocusAlarmPlan`에 굳혀 보낸다. 기본 무음.
+    private var soundEnabled = false
+    /// 포그라운드에서 단계 종료 시 알림 없이 자동으로 다음 단계로 넘어갈지. 기본 꺼짐(현재 동작 —
+    /// 종료 알림 탭 대기). 잠금/백그라운드는 AlarmKit 구조상 항상 알림 탭이 필요하다.
+    private(set) var autoAdvanceEnabled = false
+
     /// 현재 단계 종료 시각(running). 매초 `remaining = fireDate - now` 재계산의 기준.
     private var fireDate: Date?
     /// 일시정지 시점의 잔여 — 재개 때 `fireDate = now + frozenRemaining`로 이어붙인다.
@@ -52,12 +62,14 @@ final class FocusViewModel {
     private let saveFocusSessions: SaveFocusSessionsUseCase
     private let fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     private let saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
+    private let fetchAppSettings: FetchAppSettingsUseCase
 
     init(dependencies: Dependencies) {
         self.fetchFocusSessions = dependencies.fetchFocusSessions
         self.saveFocusSessions = dependencies.saveFocusSessions
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
         self.saveSelectedFocusSessionID = dependencies.saveSelectedFocusSessionID
+        self.fetchAppSettings = dependencies.fetchAppSettings
     }
 
     var selectedSession: FocusSession? {
@@ -72,6 +84,10 @@ final class FocusViewModel {
     // MARK: - 생명주기
 
     func onAppear() async {
+        let settings = await fetchAppSettings()
+        hapticEnabled = settings.focusHaptic
+        soundEnabled = settings.focusEndSound
+        autoAdvanceEnabled = settings.focusAutoAdvance
         sessions = await fetchFocusSessions()
         await restoreSelection()
         adoptFromActivity()
@@ -106,7 +122,8 @@ final class FocusViewModel {
             restDuration: settings.restDuration,
             totalCycles: settings.totalCycles,
             sessionTitle: selectedSession?.title ?? "Cue",
-            colorHex: selectedSession?.colorHex
+            colorHex: selectedSession?.colorHex,
+            soundEnabled: soundEnabled
         ).save()
 
         beginPhase(.focus, cycle: 1, duration: settings.focusDuration, totalCycles: settings.totalCycles)
@@ -260,7 +277,14 @@ final class FocusViewModel {
             while !Task.isCancelled {
                 guard let self else { return }
                 if self.isActive, !self.isPaused, let fire = self.fireDate {
-                    self.remaining = max(0, fire.timeIntervalSinceNow)
+                    let rem = max(0, fire.timeIntervalSinceNow)
+                    self.remaining = rem
+                    // 포그라운드 자동 전환 — 단계 종료 시각에 닿으면 알림 대기 없이 다음 단계로.
+                    // (잠금/백그라운드에선 displayTask가 돌지 않아 자연히 알림 탭 경로로 빠진다.)
+                    // advance()는 skip()과 동일 경로 — 다음 단계 예약 or 종료.
+                    if rem <= 0, self.autoAdvanceEnabled {
+                        self.advance()
+                    }
                 }
                 try? await Task.sleep(for: .seconds(1))
             }

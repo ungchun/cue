@@ -146,6 +146,10 @@ struct ReminderView: View {
     /// 시트·삭제 액션의 실제 백엔드는 다음 사이클에서 — 지금은 UI 진입까지만.
     private var optionsMenu: some View {
         Menu {
+            // 다음으로 정렬 — 오늘·개별 리스트에서만. 완료 토글 위에 둔다(Apple 미리 알림과 동일).
+            if viewModel.canSort {
+                sortMenu
+            }
             // 오늘/예정은 마감일 필터라 완료 항목 매핑이 모호 — 토글 자체를 숨겨 혼동을 줄인다.
             if canToggleCompleted {
                 Button {
@@ -182,6 +186,82 @@ struct ReminderView: View {
             }
         } label: {
             Image(systemName: "ellipsis")
+        }
+    }
+
+    /// "다음으로 정렬" 서브메뉴 — 정렬 기준(수동/마감일/생성일/제목)과, 기준이 수동이 아닐 때
+    /// 방향(기준별 라벨)을 inline Picker로. Picker(.inline)가 라디오 체크마크를 자동으로 그린다.
+    private var sortMenu: some View {
+        Menu {
+            Picker("정렬 기준", selection: sortFieldBinding) {
+                Text("수동").tag(ReminderSortField.manual)
+                Text("마감일").tag(ReminderSortField.dueDate)
+                Text("생성일").tag(ReminderSortField.creationDate)
+                Text("제목").tag(ReminderSortField.title)
+            }
+            .pickerStyle(.inline)
+
+            if viewModel.currentSortPreference.field != .manual {
+                Picker("정렬 방향", selection: sortDirectionBinding) {
+                    Text(ascendingLabel).tag(ReminderSortDirection.ascending)
+                    Text(descendingLabel).tag(ReminderSortDirection.descending)
+                }
+                .pickerStyle(.inline)
+            }
+        } label: {
+            // 두 번째 Text가 메뉴 행의 회색 서브타이틀로 렌더 — 현재 선택된 정렬 기준 표시.
+            Label {
+                Text("다음으로 정렬")
+                Text(currentSortFieldLabel)
+            } icon: {
+                Image(systemName: "arrow.up.arrow.down")
+            }
+        }
+    }
+
+    /// 현재 선택된 정렬 기준의 한국어 라벨 — "다음으로 정렬" 서브타이틀에 표시.
+    private var currentSortFieldLabel: String {
+        switch viewModel.currentSortPreference.field {
+        case .manual: return "수동"
+        case .dueDate: return "마감일"
+        case .creationDate: return "생성일"
+        case .title: return "제목"
+        }
+    }
+
+    /// 정렬 기준 바인딩 — 선택 즉시 ViewModel에 반영(persist 포함).
+    private var sortFieldBinding: Binding<ReminderSortField> {
+        Binding(
+            get: { viewModel.currentSortPreference.field },
+            set: { newValue in Task { await viewModel.selectSortField(newValue) } }
+        )
+    }
+
+    /// 정렬 방향 바인딩.
+    private var sortDirectionBinding: Binding<ReminderSortDirection> {
+        Binding(
+            get: { viewModel.currentSortPreference.direction },
+            set: { newValue in Task { await viewModel.selectSortDirection(newValue) } }
+        )
+    }
+
+    /// 오름차순 방향 라벨 — 정렬 기준별로 문구가 다르다(이미지의 미리 알림 앱과 동일).
+    private var ascendingLabel: String {
+        switch viewModel.currentSortPreference.field {
+        case .dueDate: return "이른 항목 순으로"
+        case .creationDate: return "오래된 항목 순"
+        case .title: return "가나다 순"
+        case .manual: return "오름차순"
+        }
+    }
+
+    /// 내림차순 방향 라벨.
+    private var descendingLabel: String {
+        switch viewModel.currentSortPreference.field {
+        case .dueDate: return "늦은 항목 순으로"
+        case .creationDate: return "최신 항목 순"
+        case .title: return "역순"
+        case .manual: return "내림차순"
         }
     }
 
@@ -251,9 +331,17 @@ struct ReminderView: View {
     }
 
     /// 리스트/오늘/예정 selection 본문 — 단일 ForEach + 입력 행.
+    /// 오늘·개별 리스트(`canSort`)에선 `.onMove`로 드래그 재배열을 허용한다 — 드롭하는 순간
+    /// ViewModel이 정렬 기준을 '수동'으로 바꾸고 순서를 저장한다(예정은 canSort=false라 비활성).
     @ViewBuilder
     private var singleModeContent: some View {
-        remindersForEach(viewModel.visibleReminders)
+        ForEach(viewModel.visibleReminders) { reminder in
+            swipeableRow(reminder)
+        }
+        .onMove { source, destination in
+            guard viewModel.canSort else { return }
+            Task { await viewModel.moveReminders(fromOffsets: source, toOffset: destination) }
+        }
         newReminderRow
             .listRowSeparator(.hidden)
     }
@@ -328,25 +416,31 @@ struct ReminderView: View {
         }
     }
 
-    /// reminder row + swipe(삭제) — single/all 모드 공통.
+    /// reminder row + swipe(삭제) — `.all` 섹션용 ForEach(재배열 없음).
     @ViewBuilder
     private func remindersForEach(_ reminders: [Reminder]) -> some View {
         ForEach(reminders) { reminder in
-            reminderRow(reminder)
-                .listRowSeparator(.hidden)
-                .listRowInsets(rowInsets)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        Task {
-                            await flushInlineEditAwaiting()
-                            try? await Task.sleep(for: .milliseconds(120))
-                            await viewModel.delete(reminder)
-                        }
-                    } label: {
-                        Label("삭제", systemImage: "trash")
-                    }
-                }
+            swipeableRow(reminder)
         }
+    }
+
+    /// reminder row + swipe(삭제) 한 줄 — single/all 모드 공통 행 본문.
+    @ViewBuilder
+    private func swipeableRow(_ reminder: Reminder) -> some View {
+        reminderRow(reminder)
+            .listRowSeparator(.hidden)
+            .listRowInsets(rowInsets)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    Task {
+                        await flushInlineEditAwaiting()
+                        try? await Task.sleep(for: .milliseconds(120))
+                        await viewModel.delete(reminder)
+                    }
+                } label: {
+                    Label("삭제", systemImage: "trash")
+                }
+            }
     }
 
     /// `.all` 모드 섹션 헤더 — 리스트 이름을 그 리스트 색으로, 폰트는 large title보다 한 단계 작게.

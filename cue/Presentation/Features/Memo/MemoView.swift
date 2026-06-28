@@ -30,7 +30,7 @@ struct MemoView: View {
                         text: textBinding,
                         isFocused: $inputFocused,
                         placeholder: "무엇을 기억할까요?",
-                        font: Self.memoFont,
+                        font: memoFont,
                         textColor: .label,
                         textAlignment: .center,
                         hidesPlaceholderWhenFocused: true,
@@ -69,9 +69,9 @@ struct MemoView: View {
         }
     }
 
-    /// 큰 제목 굵게(`largeTitle` + bold) — Dynamic Type 텍스트 스타일 기반 UIFont.
-    private static var memoFont: UIFont {
-        let base = UIFont.preferredFont(forTextStyle: .largeTitle)
+    /// 설정 글자 크기에 맞춘 굵은 제목 글꼴 — 텍스트 스타일 기반 UIFont(Dynamic Type 반영).
+    private var memoFont: UIFont {
+        let base = UIFont.preferredFont(forTextStyle: viewModel.textSize.inputTextStyle)
         let descriptor = base.fontDescriptor.withSymbolicTraits(.traitBold) ?? base.fontDescriptor
         return UIFont(descriptor: descriptor, size: 0)
     }

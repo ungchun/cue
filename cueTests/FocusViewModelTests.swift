@@ -14,11 +14,14 @@ struct FocusViewModelTests {
     /// 여기선 세션 프리셋 CRUD·선택·영속만 검증한다. 영속 테스트에서 같은 repository를 두 ViewModel
     /// 인스턴스가 공유해야 하므로 외부 주입을 허용한다.
     private func makeDependencies(
-        focusSessionsRepository: InMemoryFocusSessionsRepository = InMemoryFocusSessionsRepository()
+        focusSessionsRepository: InMemoryFocusSessionsRepository = InMemoryFocusSessionsRepository(),
+        appSettings: AppSettings = .default
     ) -> (Dependencies, InMemoryFocusSessionsRepository) {
         let itemRepository = InMemoryItemRepository()
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
+        let reminderSortRepository = InMemoryReminderSortRepository()
         let eventsRepository = InMemoryEventsRepository(access: .granted)
+        let appSettingsRepository = InMemoryAppSettingsRepository(storage: appSettings)
         let deps = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
@@ -34,6 +37,8 @@ struct FocusViewModelTests {
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
+            fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
+            saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
@@ -49,7 +54,9 @@ struct FocusViewModelTests {
             saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
-            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
+            fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
+            saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )
         return (deps, focusSessionsRepository)
     }
@@ -256,5 +263,38 @@ struct FocusViewModelTests {
 
         let storedAfterDelete = await repo.fetchSelectedSessionID()
         #expect(storedAfterDelete == nil)
+    }
+
+    // MARK: - 설정 토글 로드
+
+    /// 로드 전 햅틱 기본값은 켜짐(현재 동작 유지).
+    @Test func hapticEnabledDefaultsTrueBeforeLoad() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)
+        #expect(viewModel.hapticEnabled == true)
+    }
+
+    /// onAppear는 집중 햅틱 설정을 읽어 VM에 반영한다 — View가 이 값으로 단계전환 햅틱을 게이트한다.
+    @Test func onAppearLoadsHapticToggleFromSettings() async {
+        var settings = AppSettings.default
+        settings.focusHaptic = false
+        let (deps, _) = makeDependencies(appSettings: settings)
+        let viewModel = FocusViewModel(dependencies: deps)
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.hapticEnabled == false)
+    }
+
+    /// onAppear는 자동 다음 단계 설정을 읽어 VM에 반영한다 — 포그라운드 자동 전환의 게이트.
+    @Test func onAppearLoadsAutoAdvanceFromSettings() async {
+        var settings = AppSettings.default
+        settings.focusAutoAdvance = true
+        let (deps, _) = makeDependencies(appSettings: settings)
+        let viewModel = FocusViewModel(dependencies: deps)
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.autoAdvanceEnabled == true)
     }
 }

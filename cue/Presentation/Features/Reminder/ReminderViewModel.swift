@@ -21,6 +21,8 @@ final class ReminderViewModel {
     private let updateReminderListUseCase: UpdateReminderListUseCase
     private let deleteReminderListUseCase: DeleteReminderListUseCase
     private let observeChangesUseCase: ObserveRemindersChangesUseCase
+    private let fetchSortSettingsUseCase: FetchReminderSortSettingsUseCase
+    private let saveSortSettingsUseCase: SaveReminderSortSettingsUseCase
     private let startLiveActivityUseCase: StartReminderLiveActivityUseCase
     private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
 
@@ -43,6 +45,11 @@ final class ReminderViewModel {
     var errorMessage: String?
     /// 옵션 메뉴 — 완료된 항목 섹션을 함께 보여줄지. 기본 OFF.
     var showsCompleted = false
+
+    /// 섹션(오늘·개별 리스트)별 정렬 설정 캐시 — 스코프 키 → 설정. 스코프 진입 시 fetch해
+    /// 채우고, 정렬 변경·드래그 직후 갱신·persist한다. 없으면 `.default`(수동·생성일 시드).
+    /// 전체·예정은 이 캐시를 쓰지 않는다(고정 정렬).
+    private var sortSettingsByScope: [String: ReminderSortSettings] = [:]
 
     /// 라이브 액티비티 활성 상태 — 동그라미 버튼의 시각 상태 + 토글 분기에 사용.
     /// 사용자가 시스템 UI에서 종료한 경우 sync는 미흡(추후 service `isActive(_:)` query
@@ -68,6 +75,8 @@ final class ReminderViewModel {
         self.updateReminderListUseCase = dependencies.updateReminderList
         self.deleteReminderListUseCase = dependencies.deleteReminderList
         self.observeChangesUseCase = dependencies.observeRemindersChanges
+        self.fetchSortSettingsUseCase = dependencies.fetchReminderSortSettings
+        self.saveSortSettingsUseCase = dependencies.saveReminderSortSettings
         self.startLiveActivityUseCase = dependencies.startReminderLiveActivity
         self.endLiveActivityUseCase = dependencies.endReminderLiveActivity
         startObservingChanges()
@@ -158,62 +167,190 @@ final class ReminderViewModel {
     }
 
     /// 본문에 보여줄 **미완료** 항목. selection 종류에 따라 필터되고 정렬된다.
-    /// - `.list(id)`: 그 리스트의 미완료. **시간 지정 없는 항목**(`dueDate == nil`
-    ///   또는 `includesTime == false`)이 위, 그 아래는 dueDate 오름차순.
-    /// - `.systemFilter(.today)`: 오늘 자정 이전 마감(overdue 포함) 미완료, dueDate asc.
-    /// - `.systemFilter(.scheduled)`: 마감일이 있는 모든 미완료, dueDate asc.
-    /// - `.systemFilter(.all)`: 모든 미완료, dueDate asc(nil 뒤).
+    /// - `.list(id)`: 그 리스트의 미완료. 스코프(`list:<id>`)의 정렬 설정 적용(기본 수동·생성순 시드).
+    /// - `.systemFilter(.today)`: 오늘 자정 이전 마감(overdue 포함) 미완료. `today` 스코프 정렬 설정 적용.
+    /// - `.systemFilter(.scheduled)`: 마감일이 있는 모든 미완료, **생성순**(고정).
+    /// - `.systemFilter(.all)`: 모든 미완료, **생성순**(고정) — 미리 알림 앱과 동일.
     var visibleReminders: [Reminder] {
         let incomplete = allReminders.filter { !$0.isCompleted }
         switch selection {
         case .list(let id):
-            return incomplete
-                .filter { $0.listID == id }
-                .sorted(by: untimedFirstThenAscending)
+            let items = incomplete.filter { $0.listID == id }
+            return sortedBySettings(items, scope: Self.listScopeKey(id))
         case .systemFilter(.today):
             // 오늘 자정(다음날 0시) 이전 마감이면 모두 포함 — overdue + 오늘 마감.
             let tomorrowMidnight = Calendar.current.startOfDay(for: Date())
                 .addingTimeInterval(24 * 60 * 60)
-            return incomplete
-                .filter { guard let due = $0.dueDate else { return false }
-                          return due < tomorrowMidnight }
-                .sorted(by: dueDateAscendingNilLast)
+            let items = incomplete.filter { guard let due = $0.dueDate else { return false }
+                                            return due < tomorrowMidnight }
+            return sortedBySettings(items, scope: Self.todayScopeKey)
         case .systemFilter(.scheduled):
             return incomplete
                 .filter { $0.dueDate != nil }
-                .sorted(by: dueDateAscendingNilLast)
+                .sorted(by: creationDateAscendingNilLast)
         case .systemFilter(.all):
-            return incomplete.sorted(by: dueDateAscendingNilLast)
+            return incomplete.sorted(by: creationDateAscendingNilLast)
         case .none:
             return []
         }
     }
 
-    /// 시간 지정 없는 항목(시각 미설정 또는 마감 없음)을 위로, 시간 지정 항목은
-    /// 그 아래 dueDate 오름차순.
-    private func untimedFirstThenAscending(_ lhs: Reminder, _ rhs: Reminder) -> Bool {
-        let lhsTimed = lhs.dueDate != nil && lhs.includesTime
-        let rhsTimed = rhs.dueDate != nil && rhs.includesTime
-        if lhsTimed != rhsTimed { return !lhsTimed }     // 시간 없음 먼저
-        if !lhsTimed { return false }                    // 둘 다 시간 없음 — 원순 보존
-        return (lhs.dueDate ?? .distantFuture) < (rhs.dueDate ?? .distantFuture)
+    // MARK: - 섹션별 정렬 설정 (오늘·개별 리스트)
+
+    /// 오늘 섹션의 정렬 스코프 키.
+    static let todayScopeKey = "today"
+    /// 개별 리스트 섹션의 정렬 스코프 키.
+    static func listScopeKey(_ listID: String) -> String { "list:\(listID)" }
+
+    /// 현재 selection의 정렬 스코프 키 — 오늘·개별 리스트에서만 존재.
+    /// 전체·예정·미선택은 nil(정렬 메뉴·드래그 비활성).
+    var currentSortScopeKey: String? {
+        switch selection {
+        case .systemFilter(.today): return Self.todayScopeKey
+        case .list(let id): return Self.listScopeKey(id)
+        default: return nil
+        }
     }
 
-    /// dueDate 오름차순. nil은 `distantFuture`로 취급해 맨 뒤로.
-    private func dueDateAscendingNilLast(_ lhs: Reminder, _ rhs: Reminder) -> Bool {
-        (lhs.dueDate ?? .distantFuture) < (rhs.dueDate ?? .distantFuture)
+    /// 정렬 메뉴를 노출할지 — 오늘·개별 리스트에서만.
+    var canSort: Bool { currentSortScopeKey != nil }
+
+    /// 현재 스코프의 정렬 기준+방향. 스코프가 없거나 미적재면 `.default`.
+    var currentSortPreference: ReminderSortPreference {
+        guard let key = currentSortScopeKey else { return .default }
+        return (sortSettingsByScope[key] ?? .default).preference
+    }
+
+    /// 정렬 기준을 바꾼다(방향은 유지). 전체·예정에선 무시.
+    func selectSortField(_ field: ReminderSortField) async {
+        await updateCurrentSortPreference { $0.field = field }
+    }
+
+    /// 정렬 방향을 바꾼다. 전체·예정에선 무시.
+    func selectSortDirection(_ direction: ReminderSortDirection) async {
+        await updateCurrentSortPreference { $0.direction = direction }
+    }
+
+    /// 드래그 재배열 — 현재 보이는 순서를 기준으로 이동을 적용한 뒤, 정렬 기준을 '수동'으로
+    /// 전환하고 그 순서를 저장한다. 어떤 정렬 상태에서 끌어도 드롭하는 순간 수동이 된다.
+    /// 전체·예정(스코프 없음)에선 무시.
+    func moveReminders(fromOffsets source: IndexSet, toOffset destination: Int) async {
+        guard let key = currentSortScopeKey else { return }
+        let ids = Self.movingElements(visibleReminders.map(\.id), fromOffsets: source, toOffset: destination)
+        var settings = sortSettingsByScope[key] ?? .default
+        settings.preference.field = .manual
+        settings.manualOrder = ids
+        sortSettingsByScope[key] = settings
+        await saveSortSettingsUseCase(settings, scope: key)
+    }
+
+    /// SwiftUI `RangeReplaceableCollection.move(fromOffsets:toOffset:)`와 같은 의미를
+    /// Foundation만으로 구현한다(ViewModel은 SwiftUI를 import하지 않으므로).
+    /// `destination`은 원본 기준 삽입 위치 — 제거된 앞쪽 항목 수만큼 보정한다.
+    static func movingElements<T>(_ array: [T], fromOffsets source: IndexSet, toOffset destination: Int) -> [T] {
+        let moving = source.map { array[$0] }
+        var result = array
+        for index in source.sorted(by: >) { result.remove(at: index) }
+        let removedBefore = source.filter { $0 < destination }.count
+        result.insert(contentsOf: moving, at: destination - removedBefore)
+        return result
+    }
+
+    /// 현재 스코프 설정의 preference를 변형해 캐시 갱신 + 영속 저장.
+    private func updateCurrentSortPreference(
+        _ mutate: (inout ReminderSortPreference) -> Void
+    ) async {
+        guard let key = currentSortScopeKey else { return }
+        var settings = sortSettingsByScope[key] ?? .default
+        mutate(&settings.preference)
+        sortSettingsByScope[key] = settings
+        await saveSortSettingsUseCase(settings, scope: key)
+    }
+
+    /// 현재 스코프의 정렬 설정을 fetch해 캐시에 채운다(이미 있으면 건너뜀).
+    private func loadSortSettingsForCurrentScope() async {
+        guard let key = currentSortScopeKey, sortSettingsByScope[key] == nil else { return }
+        sortSettingsByScope[key] = await fetchSortSettingsUseCase(scope: key)
+    }
+
+    /// 선택 변경 직후 백그라운드로 그 스코프 설정을 적재한다 — 동기 select/selectFilter용.
+    private func loadSortSettingsInBackground() {
+        guard let key = currentSortScopeKey, sortSettingsByScope[key] == nil else { return }
+        Task { await loadSortSettingsForCurrentScope() }
+    }
+
+    /// 스코프 설정에 따라 정렬한다.
+    private func sortedBySettings(_ reminders: [Reminder], scope key: String) -> [Reminder] {
+        let settings = sortSettingsByScope[key] ?? .default
+        return applySort(reminders, preference: settings.preference, manualOrder: settings.manualOrder)
+    }
+
+    /// 정렬 기준·방향·수동순서를 적용한다.
+    private func applySort(
+        _ reminders: [Reminder],
+        preference: ReminderSortPreference,
+        manualOrder: [String]
+    ) -> [Reminder] {
+        switch preference.field {
+        case .manual:
+            return manualSorted(reminders, order: manualOrder)
+        case .dueDate:
+            let asc = preference.direction == .ascending
+            return reminders.sorted { compareOptionalDate($0.dueDate, $1.dueDate, ascending: asc) }
+        case .creationDate:
+            let asc = preference.direction == .ascending
+            return reminders.sorted { compareOptionalDate($0.creationDate, $1.creationDate, ascending: asc) }
+        case .title:
+            return reminders.sorted { lhs, rhs in
+                let order = lhs.title.localizedCaseInsensitiveCompare(rhs.title)
+                return preference.direction == .ascending
+                    ? order == .orderedAscending
+                    : order == .orderedDescending
+            }
+        }
+    }
+
+    /// 수동 순서 정렬 — `order`에 있는 ID 순으로. 목록에 없는(새) 항목은 맨 뒤,
+    /// 그들끼리는 생성일 오래된 순(시드). `order`가 비면 전체가 생성일 시드 순.
+    private func manualSorted(_ reminders: [Reminder], order: [String]) -> [Reminder] {
+        let rank = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($1, $0) })
+        return reminders.sorted { lhs, rhs in
+            switch (rank[lhs.id], rank[rhs.id]) {
+            case let (l?, r?): return l < r
+            case (_?, nil): return true
+            case (nil, _?): return false
+            case (nil, nil): return compareOptionalDate(lhs.creationDate, rhs.creationDate, ascending: true)
+            }
+        }
+    }
+
+    /// 옵셔널 날짜 비교 — nil은 방향과 무관하게 항상 맨 뒤로.
+    private func compareOptionalDate(_ a: Date?, _ b: Date?, ascending: Bool) -> Bool {
+        switch (a, b) {
+        case let (x?, y?): return ascending ? x < y : x > y
+        case (_?, nil): return true   // 값 있는 쪽이 앞
+        case (nil, _?): return false
+        case (nil, nil): return false
+        }
+    }
+
+    /// 생성순(추가한 순서) 오름차순 — 먼저 추가한 항목이 위, 나중에 추가한 항목이 아래.
+    /// 미리 알림 앱의 전체·예정 기본 정렬과 동일. nil은 `distantFuture`로 취급해 맨 뒤로
+    /// (생성일 미상은 가장 나중에 추가된 것으로 본다).
+    private func creationDateAscendingNilLast(_ lhs: Reminder, _ rhs: Reminder) -> Bool {
+        (lhs.creationDate ?? .distantFuture) < (rhs.creationDate ?? .distantFuture)
     }
 
     /// `.all` 모드에서 본문에 그릴 (리스트, 미완료, 완료) 묶음.
-    /// 리스트 표시 순서는 `lists`와 동일하고, 미완료는 시간 지정 없는 항목이 위
-    /// 그 아래 dueDate 오름차순. 완료 항목은 EventKit 원본 순서(다른 모드의
-    /// `completedReminders`와 동일 처리) — `showsCompleted` OFF면 빈 배열.
+    /// 리스트 표시 순서는 `lists`와 동일하고, 미완료는 **생성순**(추가한 순서) — 미리 알림
+    /// 앱 "전체"와 동일. 완료 항목은 EventKit 원본 순서(다른 모드의 `completedReminders`와
+    /// 동일 처리) — `showsCompleted` OFF면 빈 배열.
     /// 빈 리스트도 포함한다(섹션 헤더는 보여야 하므로).
     var allModeSections: [(list: ReminderList, active: [Reminder], completed: [Reminder])] {
         lists.map { list in
             let active = allReminders
                 .filter { $0.listID == list.id && !$0.isCompleted }
-                .sorted(by: untimedFirstThenAscending)
+                .sorted(by: creationDateAscendingNilLast)
             let completed = showsCompleted
                 ? allReminders.filter { $0.listID == list.id && $0.isCompleted }
                 : []
@@ -256,6 +393,8 @@ final class ReminderViewModel {
             if needsResetToFirstList, let first = lists.first {
                 selection = .list(first.id)
             }
+            // 현재 스코프(오늘·개별 리스트)의 정렬 설정을 적재 — 진입 시 저장된 정렬 복원.
+            await loadSortSettingsForCurrentScope()
             // 외부(미리 알림 앱) 변경 등으로 데이터가 바뀌면 떠 있는 LA도 따라 갱신.
             await refreshLiveActivityIfActive()
         } catch {
@@ -275,11 +414,13 @@ final class ReminderViewModel {
 
     func select(_ list: ReminderList) {
         selection = .list(list.id)
+        loadSortSettingsInBackground()
     }
 
     /// 시스템 필터(오늘/예정/전체)로 전환한다. 사용자 리스트 selection은 해제된다.
     func selectFilter(_ filter: SystemFilter) {
         selection = .systemFilter(filter)
+        loadSortSettingsInBackground()
     }
 
     func toggle(_ reminder: Reminder) async {

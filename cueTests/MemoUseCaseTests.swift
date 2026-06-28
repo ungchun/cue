@@ -39,12 +39,13 @@ struct MemoUseCaseTests {
         let service = RecordingMemoLiveActivity()
 
         try await StartMemoLiveActivityUseCase(service: service)(
-            Memo(text: "  나 오늘 할 수 있다  ", colorHex: "#0A84FF")
+            Memo(text: "  나 오늘 할 수 있다  ", colorHex: "#0A84FF", textColorHex: "#FFCC00")
         )
 
         let call = try #require(await service.startMemoCalls.first)
         #expect(call.text == "나 오늘 할 수 있다")
         #expect(call.colorHex == "#0A84FF")
+        #expect(call.textColorHex == "#FFCC00")
     }
 
     @Test func startMemoCapsLongTextAtMaxLength() async throws {
@@ -81,12 +82,25 @@ struct MemoUseCaseTests {
 
     @Test func saveThenFetchRoundTrips() async {
         let repo = InMemoryMemoRepository()
-        let memo = Memo(text: "기억할 것", colorHex: "#34C759")
+        let memo = Memo(text: "기억할 것", colorHex: "#34C759", textColorHex: "#FFCC00")
 
         await SaveMemoUseCase(repository: repo)(memo)
         let loaded = await FetchMemoUseCase(repository: repo)()
 
         #expect(loaded == memo)
+    }
+
+    // MARK: - 전방 호환 디코딩
+
+    /// `textColorHex` 키가 없는 옛 JSON도 디코딩되어 흰색으로 채워진다 — 기존 저장본 보존.
+    @Test func decodesLegacyMemoWithoutTextColor() throws {
+        let legacy = Data(##"{"text":"옛 메모","colorHex":"#123456"}"##.utf8)
+
+        let memo = try JSONDecoder().decode(Memo.self, from: legacy)
+
+        #expect(memo.text == "옛 메모")
+        #expect(memo.colorHex == "#123456")
+        #expect(memo.textColorHex == "#FFFFFF")
     }
 }
 
@@ -95,15 +109,15 @@ struct MemoUseCaseTests {
 private actor RecordingMemoLiveActivity: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startMemoCalls: [(text: String, colorHex: String)] = []
+    private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []
     private(set) var endMemoCount = 0
 
     func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int) async throws {}
     func endReminder() async {}
     func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
     func endSchedule() async {}
-    func startMemo(text: String, colorHex: String) async throws {
-        startMemoCalls.append((text, colorHex))
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
+        startMemoCalls.append((text, colorHex, textColorHex))
     }
     func endMemo() async {
         endMemoCount += 1

@@ -56,8 +56,8 @@ struct FocusView: View {
             FocusSessionsListSheet(viewModel: viewModel)
         }
         .onChange(of: viewModel.phase) { _, _ in
-            // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. 진행 중일 때만.
-            guard viewModel.isActive else { return }
+            // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. 진행 중 + 설정에서 햅틱 켰을 때만.
+            guard viewModel.isActive, viewModel.hapticEnabled else { return }
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
         .onChange(of: scenePhase) { _, newPhase in

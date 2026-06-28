@@ -18,11 +18,13 @@ struct ReminderViewModelTests {
         access: RemindersAccess = .granted,
         lists: [ReminderList] = [],
         reminders: [Reminder] = [],
+        sortSettings: [String: ReminderSortSettings] = [:],
         liveActivityService: any LiveActivityService = DisabledLiveActivityService()
     ) -> Dependencies {
         let remindersRepository = InMemoryRemindersRepository(
             access: access, lists: lists, reminders: reminders
         )
+        let reminderSortRepository = InMemoryReminderSortRepository(storage: sortSettings)
         let itemRepository = InMemoryItemRepository()
         let eventsRepository = InMemoryEventsRepository(access: .granted)
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
@@ -41,6 +43,8 @@ struct ReminderViewModelTests {
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
+            fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
+            saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
@@ -56,19 +60,21 @@ struct ReminderViewModelTests {
             saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
-            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
+            fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
+            saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
         )
     }
 
     private func reminder(
         id: String, title: String = "할 일",
         isCompleted: Bool = false, dueDate: Date? = nil,
-        includesTime: Bool = false, listID: String
+        includesTime: Bool = false, creationDate: Date? = nil, listID: String
     ) -> Reminder {
         Reminder(
             id: id, title: title, isCompleted: isCompleted,
             notes: nil, dueDate: dueDate, includesTime: includesTime,
-            listID: listID
+            creationDate: creationDate, listID: listID
         )
     }
 
@@ -90,6 +96,7 @@ struct ReminderViewModelTests {
         // makeDependencies는 repo를 내부 생성 — 외부 변경 시뮬레이션을 위해 직접 조립.
         // 같은 repo 인스턴스가 ViewModel의 fetch와 변경 emit 양쪽에 쓰이도록.
         let repo = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let sortRepo = InMemoryReminderSortRepository()
         let itemRepo = InMemoryItemRepository()
         let eventsRepo = InMemoryEventsRepository(access: .granted)
         let focusRepo = InMemoryFocusSessionsRepository()
@@ -108,6 +115,8 @@ struct ReminderViewModelTests {
             updateReminderList: UpdateReminderListUseCase(repository: repo),
             deleteReminderList: DeleteReminderListUseCase(repository: repo),
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: repo),
+            fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: sortRepo),
+            saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: sortRepo),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepo),
             fetchEvents: FetchEventsUseCase(repository: eventsRepo),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepo),
@@ -294,22 +303,68 @@ struct ReminderViewModelTests {
         #expect(added?.listID == "A")
     }
 
-    /// 시스템 필터 visibleReminders는 마감일 오름차순 — 빠른 마감 먼저, 마감 없음 뒤.
-    @Test func visibleRemindersSortedByDueDateAscending() async {
+    /// 전체(.all) visibleReminders는 생성순(추가한 순서) — 먼저 추가한 게 위, 나중에 추가한 게 아래.
+    /// 마감일 순서와 무관하다(미리 알림 앱 "전체"와 동일).
+    @Test func allFilterSortsByCreationOrder() async {
         let now = Date()
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA],
             reminders: [
-                reminder(id: "late", dueDate: now.addingTimeInterval(7200), listID: "A"),
-                reminder(id: "early", dueDate: now.addingTimeInterval(3600), listID: "A"),
-                reminder(id: "nodue", listID: "A"),
+                // 입력 순서를 일부러 섞고, 마감일도 생성순과 어긋나게 둔다.
+                reminder(id: "second", dueDate: now.addingTimeInterval(3600),
+                         creationDate: now.addingTimeInterval(20), listID: "A"),
+                reminder(id: "first", dueDate: now.addingTimeInterval(7200),
+                         creationDate: now.addingTimeInterval(10), listID: "A"),
+                reminder(id: "third", creationDate: now.addingTimeInterval(30), listID: "A"),
             ]
         ))
         await viewModel.onAppear()
 
         viewModel.selectFilter(.all)
 
-        #expect(viewModel.visibleReminders.map(\.id) == ["early", "late", "nodue"])
+        #expect(viewModel.visibleReminders.map(\.id) == ["first", "second", "third"])
+    }
+
+    /// 예정(.scheduled) visibleReminders도 생성순 — 마감일이 빠르든 늦든 추가한 순서대로.
+    @Test func scheduledFilterSortsByCreationOrder() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "due-soon", dueDate: now.addingTimeInterval(3600),
+                         creationDate: now.addingTimeInterval(20), listID: "A"),
+                reminder(id: "due-later", dueDate: now.addingTimeInterval(7200),
+                         creationDate: now.addingTimeInterval(10), listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.scheduled)
+
+        // 생성순: due-later가 먼저 추가됐으니 위.
+        #expect(viewModel.visibleReminders.map(\.id) == ["due-later", "due-soon"])
+    }
+
+    /// 전체(.all) 화면 렌더링 경로인 allModeSections도 각 섹션을 생성순으로 정렬한다.
+    /// 생성순과 "시간 없는 항목 먼저"가 상충하도록 데이터를 짜서, 진짜 생성순인지 가린다.
+    @Test func allModeSectionsSortActiveByCreationOrder() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                // older: 먼저 추가됐지만 시간 지정 항목 — 구식 정렬이면 아래로 갔을 것.
+                reminder(id: "older", dueDate: now.addingTimeInterval(3600), includesTime: true,
+                         creationDate: now.addingTimeInterval(10), listID: "A"),
+                // newer: 나중에 추가됐지만 시간 없음 — 구식 정렬이면 위로 갔을 것.
+                reminder(id: "newer", creationDate: now.addingTimeInterval(20), listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        let sections = viewModel.allModeSections
+
+        // 생성순: older가 먼저 추가됐으니 위 — 시간 지정 여부와 무관.
+        #expect(sections[0].active.map(\.id) == ["older", "newer"])
     }
 
     /// `.all` 모드 섹션 그루핑 — lists 순서 보존, 각 섹션은 그 리스트의 미완료만.
@@ -385,31 +440,139 @@ struct ReminderViewModelTests {
         #expect(sections[1].active.isEmpty)
     }
 
-    /// 일반 리스트 selection은 **시간 지정 없는 항목**(`includesTime=false`나 마감 없음)이 위,
-    /// 그 아래는 시간 지정 항목들이 마감일 오름차순.
-    @Test func listSelectionPutsUntimedFirstThenTimedAscending() async {
+    // MARK: - 섹션별 정렬 설정 (오늘·개별 리스트)
+
+    /// 개별 리스트의 기본 정렬은 수동 — 저장된 수동 순서가 없으면 생성일 오래된 순으로 시드.
+    @Test func listDefaultSortIsManualSeededByCreationOrder() async {
         let now = Date()
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA],
             reminders: [
-                // 시간 지정 항목 (includesTime=true)
-                reminder(id: "late", dueDate: now.addingTimeInterval(7200), includesTime: true, listID: "A"),
-                reminder(id: "early", dueDate: now.addingTimeInterval(3600), includesTime: true, listID: "A"),
-                // 시간 지정 없는 항목들 (종일, 또는 마감 없음)
-                reminder(id: "allday", dueDate: now, includesTime: false, listID: "A"),
+                reminder(id: "b", creationDate: now.addingTimeInterval(20), listID: "A"),
+                reminder(id: "a", creationDate: now.addingTimeInterval(10), listID: "A"),
+                reminder(id: "c", creationDate: now.addingTimeInterval(30), listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()  // .list("A") 자동 selection.
+
+        #expect(viewModel.visibleReminders.map(\.id) == ["a", "b", "c"])
+        #expect(viewModel.currentSortPreference == .default)
+        #expect(viewModel.canSort)
+    }
+
+    /// 저장돼 있던 정렬 설정(마감일·이른 순)을 스코프 진입 시 읽어 적용한다. nil 마감은 맨 뒤.
+    @Test func listAppliesPersistedDueDateAscending() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "late", dueDate: now.addingTimeInterval(7200), listID: "A"),
+                reminder(id: "early", dueDate: now.addingTimeInterval(3600), listID: "A"),
                 reminder(id: "nodue", listID: "A"),
+            ],
+            sortSettings: [
+                "list:A": ReminderSortSettings(
+                    preference: .init(field: .dueDate, direction: .ascending),
+                    manualOrder: []
+                )
             ]
         ))
         await viewModel.onAppear()
-        // .list("A")가 자동 selection.
 
-        let ids = viewModel.visibleReminders.map(\.id)
-        let head = Set(ids.prefix(2))
-        let tail = Array(ids.suffix(2))
-        // 시간 지정 없는 두 항목이 앞에 (순서는 보존된 EventKit 입력 순서라 검사 X).
-        #expect(head == ["allday", "nodue"])
-        // 시간 지정 항목들은 시간순.
-        #expect(tail == ["early", "late"])
+        #expect(viewModel.visibleReminders.map(\.id) == ["early", "late", "nodue"])
+    }
+
+    /// 정렬 기준=생성일·방향=최신 순을 고르면 최신 항목이 위로. 설정도 갱신된다.
+    @Test func selectingCreationDateDescendingShowsNewestFirst() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "old", creationDate: now.addingTimeInterval(10), listID: "A"),
+                reminder(id: "new", creationDate: now.addingTimeInterval(20), listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.selectSortField(.creationDate)
+        await viewModel.selectSortDirection(.descending)
+
+        #expect(viewModel.visibleReminders.map(\.id) == ["new", "old"])
+        #expect(viewModel.currentSortPreference.field == .creationDate)
+        #expect(viewModel.currentSortPreference.direction == .descending)
+    }
+
+    /// 제목 정렬(가나다 오름차순) — 로케일 비교로 한글 가나다 순.
+    @Test func titleAscendingSortsByLocalizedTitle() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "2", title: "바나나", listID: "A"),
+                reminder(id: "1", title: "가지", listID: "A"),
+                reminder(id: "3", title: "사과", listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.selectSortField(.title)
+
+        #expect(viewModel.visibleReminders.map(\.id) == ["1", "2", "3"])
+    }
+
+    /// 드래그(재배열)하면 정렬 기준이 '수동'으로 바뀌고 그 순서가 저장된다.
+    @Test func draggingSwitchesToManualAndAppliesNewOrder() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "a", creationDate: now.addingTimeInterval(10), listID: "A"),
+                reminder(id: "b", creationDate: now.addingTimeInterval(20), listID: "A"),
+                reminder(id: "c", creationDate: now.addingTimeInterval(30), listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+        // 기본 수동·생성 시드 → [a, b, c]. c(인덱스 2)를 맨 위로 끌어올린다.
+
+        await viewModel.moveReminders(fromOffsets: IndexSet(integer: 2), toOffset: 0)
+
+        #expect(viewModel.visibleReminders.map(\.id) == ["c", "a", "b"])
+        #expect(viewModel.currentSortPreference.field == .manual)
+    }
+
+    /// 마감일 정렬 중이라도 드래그하면 '수동'으로 전환되고 끌어놓은 순서가 유지된다.
+    @Test func draggingWhileDueDateSortedConvertsToManual() async {
+        let now = Date()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "early", dueDate: now.addingTimeInterval(3600), listID: "A"),
+                reminder(id: "late", dueDate: now.addingTimeInterval(7200), listID: "A"),
+            ],
+            sortSettings: [
+                "list:A": ReminderSortSettings(
+                    preference: .init(field: .dueDate, direction: .ascending), manualOrder: []
+                )
+            ]
+        ))
+        await viewModel.onAppear()
+        // 마감일 오름차순 → [early, late]. late(인덱스 1)를 맨 위로.
+
+        await viewModel.moveReminders(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+
+        #expect(viewModel.currentSortPreference.field == .manual)
+        #expect(viewModel.visibleReminders.map(\.id) == ["late", "early"])
+    }
+
+    /// 전체·예정에는 정렬 메뉴가 없다(canSort=false) — 이 두 모드는 고정 정렬.
+    @Test func systemFiltersAllAndScheduledCannotSort() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
+        await viewModel.onAppear()
+
+        viewModel.selectFilter(.all)
+        #expect(!viewModel.canSort)
+
+        viewModel.selectFilter(.scheduled)
+        #expect(!viewModel.canSort)
     }
 
     @Test func toggleFlipsCompletion() async {
@@ -617,7 +780,7 @@ private actor RecordingReminderLiveActivity: LiveActivityService {
     func endReminder() async {}
     func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
     func endSchedule() async {}
-    func startMemo(text: String, colorHex: String) async throws {}
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}
     func sync() async {}
 }

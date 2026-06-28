@@ -21,6 +21,9 @@ struct FocusAlarmPlan: Codable, Sendable {
     var totalCycles: Int
     var sessionTitle: String
     var colorHex: String?
+    /// 단계 종료 알림에 실제 소리를 낼지(설정 "집중 종료 소리"). 세션 시작 시 스냅샷으로 굳혀,
+    /// 메인 앱·위젯 인텐트가 같은 소리 정책으로 단계를 예약한다. 기본 무음(false).
+    var soundEnabled: Bool = false
 
     private static let key = "cue.focus.alarmPlan.v1"
 

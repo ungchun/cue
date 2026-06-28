@@ -26,6 +26,6 @@ struct StartMemoLiveActivityUseCase: Sendable {
             throw DomainError.validation("메모를 입력해 주세요.")
         }
         let capped = String(trimmed.prefix(Self.maxTextLength))
-        try await service.startMemo(text: capped, colorHex: memo.colorHex)
+        try await service.startMemo(text: capped, colorHex: memo.colorHex, textColorHex: memo.textColorHex)
     }
 }

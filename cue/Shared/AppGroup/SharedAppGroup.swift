@@ -23,4 +23,15 @@ enum SharedAppGroup {
     static var defaults: UserDefaults {
         UserDefaults(suiteName: identifier) ?? .standard
     }
+
+    /// 위젯(다른 프로세스)이 읽는 LA 설정/상태 미러 키. 위젯은 Domain 타입을 모르므로
+    /// rawValue 문자열·타임스탬프만 공유한다 — 메인 앱이 설정 저장·LA 게시 시 갱신.
+    enum Keys {
+        /// 메모 LA 카드 글자 크기(`MemoTextSize.rawValue`).
+        static let memoTextSize = "cue.la.memoTextSize.v1"
+        /// 진행 링 기준(`ProgressRingBasis.rawValue`).
+        static let ringBasis = "cue.la.ringBasis.v1"
+        /// 가장 최근 LA 게시 시각(`timeIntervalSince1970`) — `activity8h` 링의 8시간 기준점.
+        static let ringAnchor = "cue.la.ringAnchor.v1"
+    }
 }

@@ -26,6 +26,11 @@ struct Dependencies: Sendable {
     /// 신호가 올 때마다 reload. 매 화면 진입에 reload하던 동작을 대체한다.
     var observeRemindersChanges: ObserveRemindersChangesUseCase
 
+    /// 섹션(오늘·개별 리스트)별 정렬 설정 + 수동 순서 영속화. EventKit이 제공하지 않아
+    /// 앱이 로컬에 따로 보관 — 선택 변경/드래그 직후 save, 스코프 진입 시 fetch.
+    var fetchReminderSortSettings: FetchReminderSortSettingsUseCase
+    var saveReminderSortSettings: SaveReminderSortSettingsUseCase
+
     var requestEventsAccess: RequestEventsAccessUseCase
     var fetchEvents: FetchEventsUseCase
     /// 외부(캘린더 앱) 변경 신호 — events 측 대응. 위의 reminders 대응과 같은 패턴.
@@ -58,6 +63,13 @@ struct Dependencies: Sendable {
 
     /// 앱 시작 시 호출 — 시스템에 살아있는 Activity 인스턴스를 service가 재포착.
     var syncLiveActivities: SyncLiveActivitiesUseCase
+
+    // MARK: - 앱 전역 설정
+
+    /// 앱 전역 설정(화면 모드 등) 영속화 — 설정 탭 진입 시 fetch, 항목 변경 직후 save.
+    /// 각 기능 ViewModel도 자기 화면 진입 시 fetch로 관련 설정을 읽는다.
+    var fetchAppSettings: FetchAppSettingsUseCase
+    var saveAppSettings: SaveAppSettingsUseCase
 }
 
 extension EnvironmentValues {
@@ -122,6 +134,8 @@ extension Dependencies {
 
         // 프리뷰는 인메모리 — 실제 영속화 동작은 CompositionRoot의 UserDefaults 구현으로.
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
+        let reminderSortRepository = InMemoryReminderSortRepository()
+        let appSettingsRepository = InMemoryAppSettingsRepository()
         let memoRepository = InMemoryMemoRepository(memo: Memo(text: "나 오늘 할 수 있다", colorHex: "#FF3B30"))
 
         // 프리뷰는 no-op service — `isEnabled = false`라 start/update가 모두 즉시 return.
@@ -142,6 +156,8 @@ extension Dependencies {
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
+            fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
+            saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
@@ -157,7 +173,9 @@ extension Dependencies {
             saveMemo: SaveMemoUseCase(repository: memoRepository),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: liveActivityService),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: liveActivityService),
-            syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService)
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
+            fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
+            saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )
     }
 }

@@ -29,7 +29,7 @@ struct DisabledLiveActivityService: LiveActivityService {
 
     func endSchedule() async {}
 
-    func startMemo(text: String, colorHex: String) async throws {}
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
 
     func endMemo() async {}
 

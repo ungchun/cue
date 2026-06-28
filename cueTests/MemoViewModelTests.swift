@@ -36,6 +36,23 @@ struct MemoViewModelTests {
         #expect(viewModel.memo.colorHex == "#34C759")
     }
 
+    /// onAppear는 메모 글자 크기 설정을 읽어 VM에 반영한다 — View가 이 값으로 글꼴 크기를 정한다.
+    @Test func onAppearLoadsMemoTextSizeFromSettings() async {
+        var stored = AppSettings.default
+        stored.memoTextSize = .small
+        let repo = InMemoryMemoRepository(memo: .default)
+        var deps = Dependencies.preview
+        deps.fetchMemo = FetchMemoUseCase(repository: repo)
+        deps.fetchAppSettings = FetchAppSettingsUseCase(
+            repository: InMemoryAppSettingsRepository(storage: stored)
+        )
+        let viewModel = MemoViewModel(dependencies: deps)
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.textSize == .small)
+    }
+
     // MARK: - canStartLiveActivity (버튼 활성 기준)
 
     @Test func cannotStartWhenTextEmpty() {
@@ -139,15 +156,15 @@ struct MemoViewModelTests {
 private actor RecordingMemoLiveActivity: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startMemoCalls: [(text: String, colorHex: String)] = []
+    private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []
     private(set) var endMemoCount = 0
 
     func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int) async throws {}
     func endReminder() async {}
     func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
     func endSchedule() async {}
-    func startMemo(text: String, colorHex: String) async throws {
-        startMemoCalls.append((text, colorHex))
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
+        startMemoCalls.append((text, colorHex, textColorHex))
     }
     func endMemo() async {
         endMemoCount += 1

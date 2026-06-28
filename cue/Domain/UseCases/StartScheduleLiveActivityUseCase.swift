@@ -15,7 +15,6 @@ import Foundation
 struct StartScheduleLiveActivityUseCase: Sendable {
     let service: any LiveActivityService
 
-    static let maxDays = 5
     /// 하루에 싣는 최대 이벤트 수. 실제 표시량은 `SchedulePacker`가 160pt 높이로 자르므로,
     /// 이 값은 "한 날이 2열을 꽉 채울 만큼"만 넉넉히 두면 된다(높이가 진짜 한계가 되게).
     static let maxEventsPerDay = 10
@@ -61,7 +60,8 @@ struct StartScheduleLiveActivityUseCase: Sendable {
 
         var remaining = maxTotalEvents
         var days: [LiveScheduleDay] = []
-        for dayStart in grouped.keys.sorted().prefix(maxDays) {
+        // 일수 제한 없음 — 다가오는 날을 순서대로 담되, 총량(maxTotalEvents)·하루(maxEventsPerDay)로만 자른다.
+        for dayStart in grouped.keys.sorted() {
             if remaining <= 0 { break }
             let dayEvents = (grouped[dayStart] ?? [])
                 .sorted { $0.startDate < $1.startDate }   // 인앱(ScheduleViewModel)과 동일 — 순수 시작시간순

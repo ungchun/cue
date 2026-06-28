@@ -13,12 +13,15 @@ struct RootView: View {
     @State private var scheduleViewModel: ScheduleViewModel
     @State private var focusViewModel: FocusViewModel
     @State private var memoViewModel: MemoViewModel
+    /// 전역 설정의 단일 소유자 — 설정 탭이 편집하고, 여기서 화면 모드를 앱 전체에 적용한다.
+    @State private var settingsViewModel: SettingsViewModel
 
     init(dependencies: Dependencies) {
         _reminderViewModel = State(initialValue: ReminderViewModel(dependencies: dependencies))
         _scheduleViewModel = State(initialValue: ScheduleViewModel(dependencies: dependencies))
         _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies))
         _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies))
+        _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
     }
 
     var body: some View {
@@ -42,6 +45,15 @@ struct RootView: View {
                 onSelectFilter: { reminderViewModel.selectFilter($0) }
             )
         }
+        // 화면 모드(라이트/다크/시스템)를 앱 전체에 적용. `.system`이면 nil → 시스템 따름.
+        .preferredColorScheme(settingsViewModel.settings.colorScheme.colorScheme)
+        // 앱 시작 시 저장된 설정을 불러온다 — 화면 모드 반영 + 시작 탭으로 한 번 이동.
+        .task {
+            await settingsViewModel.onAppear()
+            if let startTab = AppTab(rawValue: settingsViewModel.settings.startTabID) {
+                selectedTab = startTab
+            }
+        }
     }
 
     /// 탭에 대응하는 화면을 만든다.
@@ -52,7 +64,7 @@ struct RootView: View {
         case .focus: FocusView(viewModel: focusViewModel)
         case .reminder: ReminderView(viewModel: reminderViewModel)
         case .schedule: ScheduleView(viewModel: scheduleViewModel)
-        case .settings: SettingsView()
+        case .settings: SettingsView(viewModel: settingsViewModel)
         }
     }
 }

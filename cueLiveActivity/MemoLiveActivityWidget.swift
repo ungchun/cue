@@ -19,8 +19,8 @@ import WidgetKit
 struct MemoLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: MemoLiveActivityAttributes.self) { context in
-            // 잠금화면 — 카드 배경을 사용자 색으로 칠하고 가운데 큰 흰 텍스트.
-            bigText(context.state.text, size: 44)
+            // 잠금화면 — 카드 배경을 사용자 색으로 칠하고 가운데 큰 텍스트(사용자 글자색).
+            bigText(context.state.text, size: 44 * memoSizeScale(), color: textColor(context.state.textColorHex))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.md)
@@ -46,7 +46,7 @@ struct MemoLiveActivityWidget: Widget {
                 // 메모 텍스트 — Reminder 위젯처럼 bottom 리전(full폭, 위 코너 아래)에 둔다.
                 // center에 큰 텍스트를 두면 위 코너(leading/trailing)와 겹쳐 가려진다.
                 DynamicIslandExpandedRegion(.bottom) {
-                    bigText(context.state.text, size: 24)
+                    bigText(context.state.text, size: 24 * memoSizeScale(), color: textColor(context.state.textColorHex))
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.horizontal, Spacing.sm)
                 }
@@ -67,10 +67,10 @@ struct MemoLiveActivityWidget: Widget {
     /// 카드를 채우는 큰 텍스트 — 흰색, 긴 문장은 축소·줄바꿈.
     /// 줄 정렬은 `.leading`(왼쪽부터) — 여러 줄일 때 들쭉날쭉하지 않고 단락처럼 채워진다.
     /// 블록 자체는 호출처 frame이 가운데 두므로, 한두 줄 짧은 메모는 가운데로 보인다.
-    private func bigText(_ text: String, size: CGFloat) -> some View {
+    private func bigText(_ text: String, size: CGFloat, color: Color) -> some View {
         Text(text)
             .font(.system(size: size, weight: .heavy, design: .rounded))
-            .foregroundStyle(.white)
+            .foregroundStyle(color)
             .multilineTextAlignment(.leading)
             .lineLimit(4)
             // 1줄 짧은 메모는 기본 크기 그대로, 여러 줄로 길어져도 0.5배까지만 줄어 너무
@@ -83,12 +83,25 @@ struct MemoLiveActivityWidget: Widget {
         Color(hex: hex) ?? .accentColor
     }
 
-    /// 오늘 자정까지 남은 시간(시 단위, 올림). DayProgressRing과 같은 자정 기준.
+    /// 카드 글자 색 — 사용자 지정 hex. 비었거나 파싱 실패면 흰색(기존 동작).
+    private func textColor(_ hex: String) -> Color {
+        Color(hex: hex) ?? .white
+    }
+
+    /// 남은 시간(시 단위, 올림) — DayProgressRing과 같은 기준(자정 또는 LA 8시간 수명)을 따른다.
     /// 렌더 시점 값이라 LA 콘텐츠 갱신 때 갱신된다(링은 timerInterval로 별도 자동 갱신).
     private func hoursLeftToday(_ now: Date = .now) -> Int {
-        let calendar = Calendar.current
-        let start = calendar.startOfDay(for: now)
-        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-        return max(0, Int(ceil(end.timeIntervalSince(now) / 3600)))
+        let range = DayProgressRing.range(now: now)
+        return max(0, Int(ceil(range.upperBound.timeIntervalSince(now) / 3600)))
+    }
+
+    /// 메모 글자 크기 배율 — 설정(App Group 미러 "small"/"medium"/"large")을 읽어 큰 텍스트를 줄인다.
+    /// 키가 없으면(첫 실행·미저장) 기본 `.large` = 1.0으로 현재 크기를 유지한다.
+    private func memoSizeScale() -> CGFloat {
+        switch SharedAppGroup.defaults.string(forKey: SharedAppGroup.Keys.memoTextSize) {
+        case "small": 0.7
+        case "medium": 0.85
+        default: 1.0
+        }
     }
 }

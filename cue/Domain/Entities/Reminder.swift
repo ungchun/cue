@@ -19,5 +19,8 @@ struct Reminder: Identifiable, Equatable, Sendable {
     var includesTime: Bool = false
     /// 반복 주기. nil이면 일회성 항목. EventKit `recurrenceRules`의 첫 규칙만 매핑한다.
     var recurrence: RecurrenceRule? = nil
+    /// 생성 시각(EventKit `creationDate`). 시스템 필터(전체·예정)의 "추가한 순서" 정렬 기준.
+    /// nil이면 정렬에서 맨 뒤로 보낸다(미리 알림 앱과 동일하게 가장 나중에 추가된 것 취급).
+    var creationDate: Date? = nil
     let listID: String
 }

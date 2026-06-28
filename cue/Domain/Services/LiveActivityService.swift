@@ -49,8 +49,9 @@ protocol LiveActivityService: Sendable {
     // MARK: - Memo
 
     /// 단일 메모를 큰 텍스트 카드로 라이브 액티비티에 게시. `text`는 use case가 빈 값 검증·
-    /// 길이 제한을 마친 값, `colorHex`는 카드 배경색. 이미 떠 있으면 구현이 부드럽게 update한다.
-    func startMemo(text: String, colorHex: String) async throws
+    /// 길이 제한을 마친 값, `colorHex`는 카드 배경색, `textColorHex`는 글자색.
+    /// 이미 떠 있으면 구현이 부드럽게 update한다.
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws
 
     /// 메모 라이브 액티비티 즉시 종료.
     func endMemo() async

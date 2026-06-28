@@ -116,15 +116,15 @@ enum FocusAlarmScheduling {
         let tint = plan.colorHex.flatMap { Color(hex: $0) } ?? .indigo
         let attributes = AlarmAttributes(presentation: presentation, metadata: metadata, tintColor: tint)
 
-        // 알람 소리 off — `sound`는 non-optional이고 `.none`이 없어, 번들의 무음 wav(silent.wav)를
-        // 커스텀 사운드로 지정해 사실상 소리를 끈다. (알림이 안 뜬 건 사운드가 아니라 자동전환이
-        // 원인이었고 그건 해결됨.)
+        // 소리 켜짐이면 시스템 기본 알람음, 꺼짐이면 번들의 무음 wav(silent.wav)를 커스텀 사운드로
+        // 지정해 사실상 음소거한다(`sound`는 non-optional이고 `.none`이 없음). 정책은 세션 시작 시
+        // `FocusAlarmPlan.soundEnabled`로 굳혀, 메인 앱·위젯 인텐트가 동일하게 예약한다.
         return AlarmManager.AlarmConfiguration.timer(
             duration: plan.duration(for: phase),
             attributes: attributes,
             stopIntent: FocusAlarmStopIntent(alarmID: id.uuidString),
             secondaryIntent: secondaryIntent,
-            sound: .named("silent.wav")
+            sound: plan.soundEnabled ? .default : .named("silent.wav")
         )
     }
 }

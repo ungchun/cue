@@ -19,6 +19,7 @@ struct ScheduleViewModelTests {
     ) -> Dependencies {
         let eventsRepository = InMemoryEventsRepository(access: access, events: events)
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
+        let reminderSortRepository = InMemoryReminderSortRepository()
         let itemRepository = InMemoryItemRepository()
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
         return Dependencies(
@@ -36,6 +37,8 @@ struct ScheduleViewModelTests {
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
+            fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
+            saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
@@ -51,7 +54,9 @@ struct ScheduleViewModelTests {
             saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
-            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
+            fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
+            saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
         )
     }
 

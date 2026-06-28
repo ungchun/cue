@@ -19,6 +19,8 @@ struct CompositionRoot {
         let eventsRepository = EventKitEventsRepository()
         let focusSessionsRepository = UserDefaultsFocusSessionsRepository()
         let memoRepository = UserDefaultsMemoRepository()
+        let reminderSortRepository = UserDefaultsReminderSortRepository()
+        let appSettingsRepository = UserDefaultsAppSettingsRepository()
         // 라이브 액티비티 service — @MainActor 격리. ActivityKit 호출은 모두 main actor에서.
         let liveActivityService: any LiveActivityService = ActivityKitLiveActivityService()
 
@@ -38,6 +40,8 @@ struct CompositionRoot {
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
+            fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
+            saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
@@ -53,7 +57,9 @@ struct CompositionRoot {
             saveMemo: SaveMemoUseCase(repository: memoRepository),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: liveActivityService),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: liveActivityService),
-            syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService)
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
+            fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
+            saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )
     }
 }

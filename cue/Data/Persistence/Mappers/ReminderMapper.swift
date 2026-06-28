@@ -40,6 +40,7 @@ enum ReminderMapper {
             dueDate: reminder.dueDateComponents?.date,
             includesTime: reminder.dueDateComponents?.hour != nil,
             recurrence: toRecurrence(reminder.recurrenceRules?.first),
+            creationDate: reminder.creationDate,
             listID: reminder.calendar.calendarIdentifier
         )
     }

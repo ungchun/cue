@@ -286,6 +286,28 @@ struct LiveActivityUseCaseTests {
         #expect(total <= StartScheduleLiveActivityUseCase.maxTotalEvents)
     }
 
+    /// 일수 제한(옛 maxDays=5)을 없앴다 — 총량 한도 안이면 5일을 넘는 날도 모두 싣는다.
+    @Test func startScheduleIncludesMoreThanFiveDaysUnderTotalCap() async throws {
+        let service = RecordingLiveActivityService()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: .now)
+        // 7일에 하루 1개씩 = 7개(< maxTotalEvents). 기준 now를 자정으로 둬 오늘 일정도 미래로 포함.
+        let events = (0..<7).map { dayOffset -> CalendarEvent in
+            let day = cal.date(byAdding: .day, value: dayOffset, to: today)!
+            return event(
+                id: "d\(dayOffset)", title: "일정",
+                start: day.addingTimeInterval(10 * 3600),
+                end: day.addingTimeInterval(11 * 3600),
+                colorHex: nil
+            )
+        }
+
+        try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: today)
+
+        let days = try #require(await service.startScheduleCalls.first).days
+        #expect(days.count == 7)
+    }
+
     @Test func startScheduleExcludesPastDaysEntirely() async throws {
         let service = RecordingLiveActivityService()
         let cal = Calendar.current
@@ -467,7 +489,7 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int)] = []
     private(set) var endScheduleCount = 0
 
-    private(set) var startMemoCalls: [(text: String, colorHex: String)] = []
+    private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []
     private(set) var endMemoCount = 0
 
     private(set) var syncCount = 0
@@ -493,8 +515,8 @@ private final actor RecordingLiveActivityService: LiveActivityService {
         endScheduleCount += 1
     }
 
-    func startMemo(text: String, colorHex: String) async throws {
-        startMemoCalls.append((text, colorHex))
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
+        startMemoCalls.append((text, colorHex, textColorHex))
     }
 
     func endMemo() async {

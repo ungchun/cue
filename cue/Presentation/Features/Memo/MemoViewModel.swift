@@ -21,9 +21,12 @@ final class MemoViewModel {
     private let saveMemoUseCase: SaveMemoUseCase
     private let startLiveActivityUseCase: StartMemoLiveActivityUseCase
     private let endLiveActivityUseCase: EndMemoLiveActivityUseCase
+    private let fetchAppSettings: FetchAppSettingsUseCase
 
     /// 현재 메모(텍스트 + 색). View는 바인딩으로 읽고, 변경은 `setText`/`setColor`로.
     private(set) var memo: Memo = .default
+    /// 메모 입력 글자 크기 — 설정에서 읽어 View가 글꼴에 반영한다. 기본 `.large`(현재 동작).
+    private(set) var textSize: MemoTextSize = .large
     /// 라이브 액티비티 활성 상태 — 동그라미 버튼 시각 상태 + 토글 분기.
     private(set) var liveActivityActive = false
     /// 라이브 액티비티 시작 실패 시 사용자에게 알릴 에러 — View가 alert로 표시.
@@ -34,6 +37,7 @@ final class MemoViewModel {
         self.saveMemoUseCase = dependencies.saveMemo
         self.startLiveActivityUseCase = dependencies.startMemoLiveActivity
         self.endLiveActivityUseCase = dependencies.endMemoLiveActivity
+        self.fetchAppSettings = dependencies.fetchAppSettings
     }
 
     /// 빈 텍스트(공백만 포함)면 라이브 액티비티를 시작할 수 없다 — 버튼 비활성 기준.
@@ -41,9 +45,10 @@ final class MemoViewModel {
         !memo.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// 화면이 나타날 때 — 저장된 메모를 불러온다.
+    /// 화면이 나타날 때 — 저장된 메모 + 글자 크기 설정을 불러온다.
     func onAppear() async {
         memo = await fetchMemoUseCase()
+        textSize = await fetchAppSettings().memoTextSize
     }
 
     /// 텍스트 변경 — 저장하고, LA가 떠 있으면 반영.

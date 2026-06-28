@@ -18,6 +18,23 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
         var text: String
         /// 카드 배경 색("#RRGGBB"). 파싱 실패 시 위젯이 시스템 accent로 폴백.
         var colorHex: String
+        /// 카드 글자(폰트) 색("#RRGGBB"). 파싱 실패 시 위젯이 흰색으로 폴백.
+        var textColorHex: String
+
+        init(text: String, colorHex: String, textColorHex: String = "#FFFFFF") {
+            self.text = text
+            self.colorHex = colorHex
+            self.textColorHex = textColorHex
+        }
+
+        /// 전방 호환 디코딩 — 앱 업데이트 전 게시된 활성 LA의 옛 상태에 `textColorHex`가
+        /// 없어도 재포착(sync) 시 흰색으로 채워 디코딩이 실패하지 않게 한다.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            text = try container.decode(String.self, forKey: .text)
+            colorHex = try container.decode(String.self, forKey: .colorHex)
+            textColorHex = try container.decodeIfPresent(String.self, forKey: .textColorHex) ?? "#FFFFFF"
+        }
     }
 
     let startedAt: Date

@@ -84,6 +84,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
 
         let attributes = ReminderLiveActivityAttributes(listTitle: listTitle)
+        stampRingAnchor()
         reminderActivity = try Activity.request(
             attributes: attributes,
             content: content,
@@ -122,6 +123,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             .min()
         let content = ActivityContent(state: state, staleDate: upcomingStart)
 
+        stampRingAnchor()
         scheduleActivity = try Activity.request(
             attributes: attributes,
             content: content,
@@ -137,10 +139,10 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     // MARK: - Memo
 
-    func startMemo(text: String, colorHex: String) async throws {
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
         guard await isEnabled else { return }
 
-        let state = MemoLiveActivityAttributes.ContentState(text: text, colorHex: colorHex)
+        let state = MemoLiveActivityAttributes.ContentState(text: text, colorHex: colorHex, textColorHex: textColorHex)
         // 시간 흐름과 무관 — staleDate 미지정. 사용자가 텍스트·색을 바꿀 때만 update.
         let content = ActivityContent(state: state, staleDate: nil)
 
@@ -151,6 +153,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
 
         let attributes = MemoLiveActivityAttributes(startedAt: .now)
+        stampRingAnchor()
         memoActivity = try Activity.request(
             attributes: attributes,
             content: content,
@@ -162,6 +165,14 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         guard let activity = memoActivity else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         memoActivity = nil
+    }
+
+    // MARK: - Ring anchor
+
+    /// LA 게시 시각을 App Group에 기록 — 위젯의 `activity8h` 진행 링이 8시간 기준점으로 읽는다.
+    /// 갱신(update)이 아닌 새 게시(`Activity.request`) 직전에만 호출해 기준점을 재설정한다.
+    private func stampRingAnchor() {
+        SharedAppGroup.defaults.set(Date.now.timeIntervalSince1970, forKey: SharedAppGroup.Keys.ringAnchor)
     }
 
     // MARK: - Sync
