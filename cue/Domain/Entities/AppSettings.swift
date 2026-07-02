@@ -19,13 +19,6 @@ enum MemoTextSize: String, Codable, Sendable, CaseIterable {
     case large
 }
 
-/// Dynamic Island 진행 링이 무엇을 기준으로 줄어들지.
-/// `.day24`는 오늘 자정까지(현재 동작), `.activity8h`는 LA가 게시된 뒤 ~8시간 수명을 센다.
-enum ProgressRingBasis: String, Codable, Sendable, CaseIterable {
-    case day24
-    case activity8h
-}
-
 /// 앱 전역 설정. 단일 인스턴스로 UserDefaults에 JSON 저장된다(스코프 없음 —
 /// 섹션·리스트별로 나뉘는 `ReminderSortSettings`와 달리 앱에 하나뿐).
 ///
@@ -40,24 +33,14 @@ struct AppSettings: Codable, Equatable, Sendable {
     var startTabID: String
     /// 집중 단계 종료 시 실제 알림 소리를 낼지. `false`면 무음(현재 기본 동작).
     var focusEndSound: Bool
-    /// 집중 단계 전환 시 인앱 햅틱(진동)을 줄지. 기본 켜짐.
-    var focusHaptic: Bool
-    /// 포그라운드에서 한 단계가 끝나면 알림 없이 자동으로 다음 단계로 넘어갈지. 기본 꺼짐
-    /// (현재 동작 — 종료 알림을 띄우고 사용자가 탭). 잠금/백그라운드는 항상 알림 탭이 필요하다.
-    var focusAutoAdvance: Bool
     /// 메모 텍스트 크기. 기본 `.large`(현재 largeTitle 동작 유지).
     var memoTextSize: MemoTextSize
-    /// Dynamic Island 진행 링 기준. 기본 `.day24`(현재 동작).
-    var progressRingBasis: ProgressRingBasis
 
     static let `default` = AppSettings(
         colorScheme: .system,
         startTabID: "reminder",
         focusEndSound: false,
-        focusHaptic: true,
-        focusAutoAdvance: false,
-        memoTextSize: .large,
-        progressRingBasis: .day24
+        memoTextSize: .large
     )
 }
 
@@ -73,13 +56,7 @@ extension AppSettings {
             ?? fallback.startTabID
         focusEndSound = try container.decodeIfPresent(Bool.self, forKey: .focusEndSound)
             ?? fallback.focusEndSound
-        focusHaptic = try container.decodeIfPresent(Bool.self, forKey: .focusHaptic)
-            ?? fallback.focusHaptic
-        focusAutoAdvance = try container.decodeIfPresent(Bool.self, forKey: .focusAutoAdvance)
-            ?? fallback.focusAutoAdvance
         memoTextSize = try container.decodeIfPresent(MemoTextSize.self, forKey: .memoTextSize)
             ?? fallback.memoTextSize
-        progressRingBasis = try container.decodeIfPresent(ProgressRingBasis.self, forKey: .progressRingBasis)
-            ?? fallback.progressRingBasis
     }
 }

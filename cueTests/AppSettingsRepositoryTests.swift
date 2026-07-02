@@ -45,7 +45,6 @@ struct AppSettingsRepositoryTests {
         #expect(settings.colorScheme == .dark)          // 있던 값 유지
         #expect(settings.startTabID == "reminder")      // 새 필드는 기본값
         #expect(settings.focusEndSound == false)
-        #expect(settings.focusHaptic == true)
     }
 
     /// 알 수 없는 값/깨진 데이터면 기본값으로 폴백한다(앱이 죽지 않는다).

@@ -28,13 +28,3 @@ extension MemoTextSize {
         }
     }
 }
-
-extension ProgressRingBasis {
-    /// 설정 Picker 레이블.
-    var label: String {
-        switch self {
-        case .day24: "오늘 하루"
-        case .activity8h: "라이브 액티비티(8시간)"
-        }
-    }
-}

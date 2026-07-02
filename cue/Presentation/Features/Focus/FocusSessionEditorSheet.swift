@@ -54,6 +54,8 @@ struct FocusSessionEditorSheet: View {
                 }
                 Section("반복") {
                     Toggle("반복", isOn: $settings.isRepeating)
+                        // 앱 전역 무채색 tint가 다크 모드에서 ON 트랙을 흰색으로 만든다 — 시스템 표준(초록)으로.
+                        .tint(.green)
                     if settings.isRepeating {
                         Stepper(value: $settings.cycleCount, in: 2...10) {
                             LabeledContent("사이클 수", value: "\(settings.cycleCount)회")

@@ -30,10 +30,9 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
     }
 
     /// 위젯(다른 프로세스)이 읽을 LA 관련 설정을 App Group에 미러링한다 — 위젯은 Domain 타입을
-    /// 모르므로 rawValue 문자열만 공유한다. (메모 LA 글자 크기·진행 링 기준)
+    /// 모르므로 rawValue 문자열만 공유한다. (메모 LA 글자 크기)
     private func mirrorToAppGroup(_ settings: AppSettings) {
         let group = SharedAppGroup.defaults
         group.set(settings.memoTextSize.rawValue, forKey: SharedAppGroup.Keys.memoTextSize)
-        group.set(settings.progressRingBasis.rawValue, forKey: SharedAppGroup.Keys.ringBasis)
     }
 }

@@ -58,20 +58,8 @@ final class SettingsViewModel {
         await update { $0.focusEndSound = enabled }
     }
 
-    func setFocusHaptic(_ enabled: Bool) async {
-        await update { $0.focusHaptic = enabled }
-    }
-
-    func setFocusAutoAdvance(_ enabled: Bool) async {
-        await update { $0.focusAutoAdvance = enabled }
-    }
-
     func setMemoTextSize(_ size: MemoTextSize) async {
         await update { $0.memoTextSize = size }
-    }
-
-    func setProgressRingBasis(_ basis: ProgressRingBasis) async {
-        await update { $0.progressRingBasis = basis }
     }
 
     /// 메모 LA 카드 배경 색을 바꾼다 — 최신 메모를 다시 읽어 색만 갈아끼우고 저장한다

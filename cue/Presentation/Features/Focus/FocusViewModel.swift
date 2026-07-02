@@ -41,13 +41,8 @@ final class FocusViewModel {
 
     // MARK: - 설정에서 읽는 토글 (onAppear에 동기화)
 
-    /// 단계 전환 시 인앱 햅틱을 줄지 — View가 읽어 `onChange` 햅틱을 게이트한다. 기본 켜짐.
-    private(set) var hapticEnabled = true
     /// 단계 종료 알림 소리를 낼지 — `start()`가 `FocusAlarmPlan`에 굳혀 보낸다. 기본 무음.
     private var soundEnabled = false
-    /// 포그라운드에서 단계 종료 시 알림 없이 자동으로 다음 단계로 넘어갈지. 기본 꺼짐(현재 동작 —
-    /// 종료 알림 탭 대기). 잠금/백그라운드는 AlarmKit 구조상 항상 알림 탭이 필요하다.
-    private(set) var autoAdvanceEnabled = false
 
     /// 현재 단계 종료 시각(running). 매초 `remaining = fireDate - now` 재계산의 기준.
     private var fireDate: Date?
@@ -55,6 +50,9 @@ final class FocusViewModel {
     private var frozenRemaining: TimeInterval = 0
     /// 현재 진행 중 알람 id — 일시정지/재개/종료 제어 대상.
     private var currentAlarmID: UUID?
+    /// 단계 전환 중(이전 알람 취소 ~ 새 알람 예약 완료) 표시. 이 창에서 `alarmUpdates`·
+    /// `adoptFromActivity`가 "알람/Activity 없음"을 보고 세션을 꺼버리는 race를 막는다.
+    private var isTransitioning = false
     private var updatesTask: Task<Void, Never>?
     private var displayTask: Task<Void, Never>?
 
@@ -85,9 +83,7 @@ final class FocusViewModel {
 
     func onAppear() async {
         let settings = await fetchAppSettings()
-        hapticEnabled = settings.focusHaptic
         soundEnabled = settings.focusEndSound
-        autoAdvanceEnabled = settings.focusAutoAdvance
         sessions = await fetchFocusSessions()
         await restoreSelection()
         adoptFromActivity()
@@ -126,6 +122,7 @@ final class FocusViewModel {
             soundEnabled: soundEnabled
         ).save()
 
+        isTransitioning = true
         beginPhase(.focus, cycle: 1, duration: settings.focusDuration, totalCycles: settings.totalCycles)
         startObserving()
         Task {
@@ -136,7 +133,11 @@ final class FocusViewModel {
                 clearActive()
                 return
             }
-            currentAlarmID = await FocusAlarmScheduling.schedule(phase: .focus, cycle: 1)
+            let scheduled = await FocusAlarmScheduling.schedule(phase: .focus, cycle: 1)
+            // 예약 완료 전에 사용자가 종료했으면 방금 만든 알람을 되돌린다(고아 알람 방지).
+            guard isActive else { FocusAlarmScheduling.cancelAll(); return }
+            currentAlarmID = scheduled
+            isTransitioning = false
         }
     }
 
@@ -169,8 +170,7 @@ final class FocusViewModel {
 
     // MARK: - 단계 진입/전환
 
-    /// 현재 단계 다음으로 — 없으면 종료. 인앱 상태를 즉시 바꾸고 새 알람을 예약한다.
-    /// 사용자 스킵과 (포그라운드) 단계 종료 자동 전환이 공유한다.
+    /// 현재 단계 다음으로 — 없으면 종료. 인앱 상태를 즉시 바꾸고 새 알람을 예약한다. 사용자 스킵이 쓴다.
     private func advance() {
         let plan = FocusAlarmPlan.load()
         let total = plan?.totalCycles ?? totalCycles
@@ -179,13 +179,19 @@ final class FocusViewModel {
             cycle: currentCycle,
             totalCycles: total
         )
+        // 취소~새 예약 사이에 alarmUpdates·refresh가 "없음"을 채택해 세션을 꺼버리지 않게 잠근다.
+        isTransitioning = true
         cancelAllFocusAlarms()
         guard let next else { stopSession(); return }
         let nextPhase: FocusPhase = next.phase == .focus ? .focus : .rest
         let duration = (next.phase == .focus ? plan?.focusDuration : plan?.restDuration) ?? phaseDuration
         beginPhase(nextPhase, cycle: next.cycle, duration: duration, totalCycles: total)
         Task {
-            currentAlarmID = await FocusAlarmScheduling.schedule(phase: next.phase, cycle: next.cycle)
+            let scheduled = await FocusAlarmScheduling.schedule(phase: next.phase, cycle: next.cycle)
+            // 예약 완료 전에 사용자가 종료했으면 방금 만든 알람을 되돌린다(고아 알람 방지).
+            guard isActive else { FocusAlarmScheduling.cancelAll(); return }
+            currentAlarmID = scheduled
+            isTransitioning = false
         }
     }
 
@@ -226,19 +232,35 @@ final class FocusViewModel {
     /// 현재 알람이 사라졌을 때(알림의 "다음 단계" 탭으로 새 단계가 잡혔거나 종료됨)만 인앱 상태를
     /// Activity에서 채택/정리한다. 일시정지/재개·스킵 같은 인앱 액션은 VM이 즉시 권위 반영한다.
     private func handle(_ alarms: [Alarm]) {
-        // currentAlarmID가 nil이면 예약 진행 중(시작 직후)이라 아무것도 하지 않는다 —
-        // 여기서 "알람 없음=종료"로 처리하면 시작하자마자 clearActive로 꺼지는 버그.
-        guard isActive, let id = currentAlarmID else { return }
-        if !alarms.contains(where: { $0.id == id }) {
-            // 현재 알람이 사라짐(알림에서 다음 단계로 넘어갔거나 종료) → 새 단계 채택 or 정리.
-            adoptFromActivity()
-            if !isActive { stopObserving() }
-        }
+        guard Self.shouldAdoptAfterAlarmChange(
+            isActive: isActive,
+            isTransitioning: isTransitioning,
+            currentAlarmID: currentAlarmID,
+            alarmIDs: alarms.map(\.id)
+        ) else { return }
+        // 현재 알람이 사라짐(알림에서 다음 단계로 넘어갔거나 종료) → 새 단계 채택 or 정리.
+        adoptFromActivity()
+        if !isActive { stopObserving() }
+    }
+
+    /// `handle(_:)`의 채택 게이트 — 알람 목록 변화가 "현재 알람 소멸"을 뜻할 때만 재채택한다.
+    /// - idle이거나 예약 진행 중(currentAlarmID nil)이면 무시 — "알람 없음=종료" 오판 방지.
+    /// - 전환 중(isTransitioning)이면 무시 — 취소~새 예약 사이 빈 목록을 종료로 오판하는 race 방지.
+    static func shouldAdoptAfterAlarmChange(
+        isActive: Bool,
+        isTransitioning: Bool,
+        currentAlarmID: UUID?,
+        alarmIDs: [UUID]
+    ) -> Bool {
+        guard isActive, !isTransitioning, let id = currentAlarmID else { return false }
+        return !alarmIDs.contains(id)
     }
 
     /// 포그라운드/재실행 시 살아있는 집중 알람을 Activity에서 채택(백그라운드 전환 반영). 이 시점의
     /// `Activity.content.state`는 신선하다(프로세스가 막 활성화됨).
     private func adoptFromActivity() {
+        // 전환 중엔 Activity가 잠깐 비어 있다 — 여기서 "없음=종료"를 채택하면 세션이 꺼진다.
+        guard !isTransitioning else { return }
         let activities = Activity<AlarmAttributes<FocusAlarmMetadata>>.activities
         guard let activity = activities.first, let meta = activity.attributes.metadata else {
             clearActive()
@@ -277,14 +299,7 @@ final class FocusViewModel {
             while !Task.isCancelled {
                 guard let self else { return }
                 if self.isActive, !self.isPaused, let fire = self.fireDate {
-                    let rem = max(0, fire.timeIntervalSinceNow)
-                    self.remaining = rem
-                    // 포그라운드 자동 전환 — 단계 종료 시각에 닿으면 알림 대기 없이 다음 단계로.
-                    // (잠금/백그라운드에선 displayTask가 돌지 않아 자연히 알림 탭 경로로 빠진다.)
-                    // advance()는 skip()과 동일 경로 — 다음 단계 예약 or 종료.
-                    if rem <= 0, self.autoAdvanceEnabled {
-                        self.advance()
-                    }
+                    self.remaining = max(0, fire.timeIntervalSinceNow)
                 }
                 try? await Task.sleep(for: .seconds(1))
             }
@@ -304,6 +319,7 @@ final class FocusViewModel {
         stopObserving()
         isActive = false
         isPaused = false
+        isTransitioning = false
         currentAlarmID = nil
         fireDate = nil
         remaining = 0

@@ -265,36 +265,45 @@ struct FocusViewModelTests {
         #expect(storedAfterDelete == nil)
     }
 
-    // MARK: - 설정 토글 로드
+    // MARK: - 알람 목록 변화 채택 게이트
 
-    /// 로드 전 햅틱 기본값은 켜짐(현재 동작 유지).
-    @Test func hapticEnabledDefaultsTrueBeforeLoad() {
-        let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps)
-        #expect(viewModel.hapticEnabled == true)
+    /// 진행 중 + 전환 아님 + 현재 알람이 목록에서 사라짐 → 재채택해야 한다
+    /// (잠금화면 "다음 단계" 탭·종료를 인앱에 반영하는 기존 경로).
+    @Test func adoptsWhenCurrentAlarmDisappearsOutsideTransition() {
+        let current = UUID()
+        let should = FocusViewModel.shouldAdoptAfterAlarmChange(
+            isActive: true, isTransitioning: false, currentAlarmID: current, alarmIDs: [UUID()]
+        )
+        #expect(should == true)
     }
 
-    /// onAppear는 집중 햅틱 설정을 읽어 VM에 반영한다 — View가 이 값으로 단계전환 햅틱을 게이트한다.
-    @Test func onAppearLoadsHapticToggleFromSettings() async {
-        var settings = AppSettings.default
-        settings.focusHaptic = false
-        let (deps, _) = makeDependencies(appSettings: settings)
-        let viewModel = FocusViewModel(dependencies: deps)
-
-        await viewModel.onAppear()
-
-        #expect(viewModel.hapticEnabled == false)
+    /// 단계 전환 중(이전 알람 취소 ~ 새 알람 예약 완료 사이)의 목록 변화는 무시 —
+    /// 이 창에서 재채택하면 Activity가 아직 없어 세션이 꺼져버리는 race가 버그의 원인.
+    @Test func ignoresAlarmChangeWhileTransitioning() {
+        let current = UUID()
+        let should = FocusViewModel.shouldAdoptAfterAlarmChange(
+            isActive: true, isTransitioning: true, currentAlarmID: current, alarmIDs: []
+        )
+        #expect(should == false)
     }
 
-    /// onAppear는 자동 다음 단계 설정을 읽어 VM에 반영한다 — 포그라운드 자동 전환의 게이트.
-    @Test func onAppearLoadsAutoAdvanceFromSettings() async {
-        var settings = AppSettings.default
-        settings.focusAutoAdvance = true
-        let (deps, _) = makeDependencies(appSettings: settings)
-        let viewModel = FocusViewModel(dependencies: deps)
+    /// 현재 알람이 목록에 그대로 있으면(일시정지·발화 등 상태 변화) 재채택하지 않는다.
+    @Test func ignoresAlarmChangeWhenCurrentAlarmStillPresent() {
+        let current = UUID()
+        let should = FocusViewModel.shouldAdoptAfterAlarmChange(
+            isActive: true, isTransitioning: false, currentAlarmID: current, alarmIDs: [current]
+        )
+        #expect(should == false)
+    }
 
-        await viewModel.onAppear()
-
-        #expect(viewModel.autoAdvanceEnabled == true)
+    /// 세션이 없거나(idle) 예약이 아직 안 끝났으면(currentAlarmID nil) 무시 —
+    /// 시작 직후 "알람 없음=종료" 오판으로 꺼지는 것을 막는 기존 가드 유지.
+    @Test func ignoresAlarmChangeWhenIdleOrScheduling() {
+        #expect(FocusViewModel.shouldAdoptAfterAlarmChange(
+            isActive: false, isTransitioning: false, currentAlarmID: UUID(), alarmIDs: []
+        ) == false)
+        #expect(FocusViewModel.shouldAdoptAfterAlarmChange(
+            isActive: true, isTransitioning: false, currentAlarmID: nil, alarmIDs: []
+        ) == false)
     }
 }

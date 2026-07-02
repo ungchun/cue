@@ -68,21 +68,18 @@ struct SettingsViewModelTests {
         #expect(reloaded.settings.startTabID == "memo")
     }
 
-    /// 집중 종료 소리·햅틱 토글이 영속화된다.
-    @Test func setFocusTogglesPersist() async {
+    /// 집중 종료 소리 토글이 영속화된다.
+    @Test func setFocusEndSoundPersists() async {
         let repository = InMemoryAppSettingsRepository()
         let viewModel = makeViewModel(repository: repository)
         await viewModel.onAppear()
 
         await viewModel.setFocusEndSound(true)
-        await viewModel.setFocusHaptic(false)
         #expect(viewModel.settings.focusEndSound == true)
-        #expect(viewModel.settings.focusHaptic == false)
 
         let reloaded = makeViewModel(repository: repository)
         await reloaded.onAppear()
         #expect(reloaded.settings.focusEndSound == true)
-        #expect(reloaded.settings.focusHaptic == false)
     }
 
     /// onAppear는 저장된 메모 색을 불러온다 — 설정 탭이 메모 LA 색의 편집면.
@@ -134,20 +131,16 @@ struct SettingsViewModelTests {
         #expect(saved.text == "기억")
     }
 
-    /// 메모 글자 크기·진행 링 기준·집중 자동 전환 토글이 영속화된다.
-    @Test func setMemoRingAndAutoAdvancePersist() async {
+    /// 메모 글자 크기가 영속화된다.
+    @Test func setMemoTextSizePersists() async {
         let repository = InMemoryAppSettingsRepository()
         let viewModel = makeViewModel(repository: repository)
         await viewModel.onAppear()
 
         await viewModel.setMemoTextSize(.small)
-        await viewModel.setProgressRingBasis(.activity8h)
-        await viewModel.setFocusAutoAdvance(true)
 
         let reloaded = makeViewModel(repository: repository)
         await reloaded.onAppear()
         #expect(reloaded.settings.memoTextSize == .small)
-        #expect(reloaded.settings.progressRingBasis == .activity8h)
-        #expect(reloaded.settings.focusAutoAdvance == true)
     }
 }

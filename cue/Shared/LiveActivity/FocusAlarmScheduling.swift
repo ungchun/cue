@@ -20,8 +20,8 @@ import SwiftUI
 /// 위젯 인텐트든 동일한 길이·타이틀·색으로 다음 단계를 예약할 수 있다.
 ///
 /// 알림(경계 도달) 화면의 secondary 버튼("휴식 시작" 등)에 `FocusAlarmAdvanceIntent`를 달아 잠금화면
-/// 에서 탭으로 다음 단계가 예약되게 한다(`secondaryButtonBehavior: .custom`). 포그라운드에선 앱이
-/// `alarmUpdates`를 보고 자동 전환한다 — 둘 다 같은 `schedule`로 수렴.
+/// 에서 탭으로 다음 단계가 예약되게 한다(`secondaryButtonBehavior: .custom`). 포그라운드의 앱은
+/// `alarmUpdates`로 이전 알람의 소멸을 감지해 새 단계를 채택한다 — 둘 다 같은 `schedule`로 수렴.
 enum FocusAlarmScheduling {
 
     /// 한 단계가 끝난 뒤 이어질 단계. nil이면 세션 종료(마지막 집중 후 휴식 없음).

@@ -57,20 +57,14 @@ struct SettingsView: View {
 
             Section {
                 Toggle("종료 소리", isOn: focusEndSoundBinding)
-                Toggle("진동(햅틱)", isOn: focusHapticBinding)
-                Toggle("자동으로 다음 단계 시작", isOn: focusAutoAdvanceBinding)
             } header: {
                 sectionHeader("집중")
-            } footer: {
-                sectionFooter("자동 전환은 앱을 켜둔 동안에만 동작합니다. 잠금화면·백그라운드에서는 종료 알림을 탭해야 다음 단계가 시작됩니다.")
             }
+            // 앱 전역 무채색 tint(.primary)가 다크 모드에서 토글 ON 트랙을 흰색으로 만들어
+            // 노브와 구분이 안 된다 — 토글만 시스템 표준(초록)으로 되돌린다.
+            .tint(.green)
 
             Section {
-                Picker("진행 링 기준", selection: progressRingBasisBinding) {
-                    ForEach(ProgressRingBasis.allCases, id: \.self) { basis in
-                        Text(basis.label).tag(basis)
-                    }
-                }
                 // 동작 미연결 placeholder(요청에 따라 UI만) — 추후 캘린더 함께 표시로 연결.
                 Picker("메모 표시", selection: $memoWithCalendarPlaceholder) {
                     Text("메모만").tag(false)
@@ -82,8 +76,6 @@ struct SettingsView: View {
                 }
             } header: {
                 sectionHeader("라이브")
-            } footer: {
-                sectionFooter("진행 링 기준은 Dynamic Island 링이 줄어드는 기준입니다.")
             }
 
             Section {
@@ -158,26 +150,6 @@ struct SettingsView: View {
         )
     }
 
-    private var focusHapticBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.focusHaptic },
-            set: { newValue in Task { await viewModel.setFocusHaptic(newValue) } }
-        )
-    }
-
-    private var focusAutoAdvanceBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.focusAutoAdvance },
-            set: { newValue in Task { await viewModel.setFocusAutoAdvance(newValue) } }
-        )
-    }
-
-    private var progressRingBasisBinding: Binding<ProgressRingBasis> {
-        Binding(
-            get: { viewModel.settings.progressRingBasis },
-            set: { newValue in Task { await viewModel.setProgressRingBasis(newValue) } }
-        )
-    }
 }
 
 #Preview {

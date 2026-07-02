@@ -255,6 +255,8 @@ struct ReminderDetailSheet: View {
 
             Toggle("", isOn: binding)
                 .labelsHidden()
+                // 앱 전역 무채색 tint가 다크 모드에서 ON 트랙을 흰색으로 만든다 — 시스템 표준(초록)으로.
+                .tint(.green)
         }
         // 셀 전체에 호버 느낌 — `listRowBackground`는 행 바닥 전체(좌우 끝까지) 채운다.
         // 단, 안 눌렸을 때는 `nil`을 넘겨야 시스템 그룹 박스 배경이 유지된다.

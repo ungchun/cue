@@ -29,9 +29,7 @@ enum SharedAppGroup {
     enum Keys {
         /// 메모 LA 카드 글자 크기(`MemoTextSize.rawValue`).
         static let memoTextSize = "cue.la.memoTextSize.v1"
-        /// 진행 링 기준(`ProgressRingBasis.rawValue`).
-        static let ringBasis = "cue.la.ringBasis.v1"
-        /// 가장 최근 LA 게시 시각(`timeIntervalSince1970`) — `activity8h` 링의 8시간 기준점.
+        /// 가장 최근 LA 게시 시각(`timeIntervalSince1970`) — 진행 링의 8시간 기준점.
         static let ringAnchor = "cue.la.ringAnchor.v1"
     }
 }

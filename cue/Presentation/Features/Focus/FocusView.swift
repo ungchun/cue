@@ -4,7 +4,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 /// 집중 탭의 메인 화면 — 원형 ring + 시간이 **항상** 떠 있고, 상단엔 선택된 세션의
 /// 타이틀(있을 때만), idle 상태엔 시작 버튼·running 상태엔 일시정지/스킵/종료 컨트롤.
@@ -54,11 +53,6 @@ struct FocusView: View {
         .task { await viewModel.onAppear() }
         .sheet(isPresented: $showingSessions) {
             FocusSessionsListSheet(viewModel: viewModel)
-        }
-        .onChange(of: viewModel.phase) { _, _ in
-            // 단계 전환(집중 ↔ 휴식)마다 success 햅틱. 진행 중 + 설정에서 햅틱 켰을 때만.
-            guard viewModel.isActive, viewModel.hapticEnabled else { return }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
