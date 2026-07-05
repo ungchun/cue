@@ -10,6 +10,7 @@
 //  overlay로 공중에 띄운다(공간 미점유, 흐릿하게). 현재 월은 그리드 뒤 고스트 워터마크.
 //
 
+import AppIntents
 import SwiftUI
 
 struct MonthCalendarView: View {
