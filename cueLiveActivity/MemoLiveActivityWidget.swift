@@ -20,8 +20,8 @@ struct MemoLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: MemoLiveActivityAttributes.self) { context in
             // 잠금화면 — 카드 배경을 사용자 색으로 칠하고 가운데 큰 텍스트(사용자 글자색).
-            bigText(context.state.text, size: 44 * memoSizeScale(), color: textColor(context.state.textColorHex))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 설정 "메모 + 캘린더"(App Group 미러)면 왼쪽 반을 월간 캘린더로 분할.
+            lockScreen(context.state)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.md)
                 .activityBackgroundTint(cardColor(context.state.colorHex))
@@ -62,6 +62,35 @@ struct MemoLiveActivityWidget: Widget {
                     .foregroundStyle(.tint)
             }
         }
+    }
+
+    /// 잠금화면 본문 — 캘린더 설정에 따라 텍스트 단독 또는 좌(캘린더)/우(텍스트) 분할.
+    /// 캘린더 색은 카드가 사용자 배경색이라 시스템 컬러 대신 사용자 글자색 계열을 주입한다.
+    @ViewBuilder
+    private func lockScreen(_ state: MemoLiveActivityAttributes.ContentState) -> some View {
+        let color = textColor(state.textColorHex)
+        if showsCalendar() {
+            HStack(alignment: .center, spacing: Spacing.md) {
+                MonthCalendarView(
+                    grid: MonthCalendarGrid(now: .now, monthOffset: state.calendarMonthOffset),
+                    intentTarget: ShiftCalendarMonthIntent.memoTarget,
+                    foreground: color,
+                    secondaryForeground: color.opacity(0.55)
+                )
+                .frame(maxWidth: .infinity)
+                // 반쪽에선 44가 과해 한 단계 줄인다(설정 배율은 그대로 곱해짐).
+                bigText(state.text, size: 32 * memoSizeScale(), color: color)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } else {
+            bigText(state.text, size: 44 * memoSizeScale(), color: color)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
+    private func showsCalendar() -> Bool {
+        SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar)
     }
 
     /// 카드를 채우는 큰 텍스트 — 흰색, 긴 문장은 축소·줄바꿈.

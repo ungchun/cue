@@ -63,4 +63,38 @@ struct SchedulePackerTests {
         #expect(Set(placed).count == placed.count)
         #expect(placed == (0..<40).map { "big-\($0)" }.prefix(placed.count).map { $0 })
     }
+
+    // MARK: - 단일 컬럼 (캘린더 함께 표시 시 오른쪽 반쪽)
+
+    /// 적은 이벤트는 헤더와 함께 그대로 들어간다.
+    @Test func singleColumnKeepsFewEventsWithHeader() {
+        let chunks = SchedulePacker.packSingleColumn([day(id: "d", label: "오늘", count: 1)])
+
+        #expect(chunks.count == 1)
+        #expect(chunks.first?.label == "오늘")
+        #expect(chunks.first?.events.count == 1)
+    }
+
+    /// 넘치는 이벤트는 한 컬럼 높이(columnMax)에서 잘린다 — 이어 그릴 두 번째 열이 없다.
+    @Test func singleColumnTruncatesOverflow() {
+        let chunks = SchedulePacker.packSingleColumn([day(id: "big", label: "오늘", count: 40)])
+
+        let placed = chunks.flatMap { $0.events.map(\.id) }
+        #expect(placed.count < 40)                     // 다 못 들어간다
+        #expect(placed == (0..<placed.count).map { "big-\($0)" })   // 순서 보존 prefix
+    }
+
+    /// 단일 컬럼은 2열 패킹의 왼쪽 열과 동일하다 — 같은 채움 규칙을 공유한다.
+    @Test func singleColumnMatchesLeftColumnOfTwoColumnPack() {
+        let days = [
+            day(id: "a", label: "오늘", count: 2),
+            day(id: "b", label: "내일", count: 3),
+            day(id: "c", label: "모레", count: 3),
+        ]
+
+        let single = SchedulePacker.packSingleColumn(days)
+        let (left, _) = SchedulePacker.pack(days)
+
+        #expect(single == left)
+    }
 }

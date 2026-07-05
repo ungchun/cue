@@ -14,8 +14,11 @@ import WidgetKit
 struct ScheduleLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ScheduleLiveActivityAttributes.self) { context in
-            ScheduleLockScreenView(days: context.state.days)
-                .padding(ScheduleMetrics.outerPadding)
+            ScheduleLockScreenView(
+                days: context.state.days,
+                calendarMonthOffset: context.state.calendarMonthOffset
+            )
+            .padding(ScheduleMetrics.outerPadding)
         } dynamicIsland: { context in
             DynamicIsland {
                 // 꾸욱 눌렀을 때 — 좌상단 월 · 우상단 "오늘 일정" 카운트 · 하단 이번 주 캘린더.
@@ -50,17 +53,34 @@ struct ScheduleLiveActivityWidget: Widget {
 }
 
 /// 잠금화면 본문 — day 묶음을 2열에 **실제 높이 기준**으로 채운다.
+/// 설정 "일정 + 캘린더"(App Group 미러)면 왼쪽 반을 월간 캘린더로, 일정은 오른쪽 1열로.
 private struct ScheduleLockScreenView: View {
     let days: [LiveScheduleDay]
+    let calendarMonthOffset: Int
+
+    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
+    private var showsCalendar: Bool {
+        SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+    }
 
     var body: some View {
-        let columns = SchedulePacker.pack(days)
         // 상단 정렬, 가운데 세로 디바이더는 항상 표시(왼쪽에만 일정이 있어도). 예정 일정이 없을 땐
         // 애초에 LA를 게시하지 않으므로(use case에서 skip) 빈 양쪽 케이스는 사실상 오지 않는다.
         HStack(alignment: .top, spacing: ScheduleMetrics.columnGap) {
-            column(columns.left)
-            Divider()
-            column(columns.right)
+            if showsCalendar {
+                MonthCalendarView(
+                    grid: MonthCalendarGrid(now: .now, monthOffset: calendarMonthOffset),
+                    intentTarget: ShiftCalendarMonthIntent.scheduleTarget
+                )
+                .frame(maxWidth: .infinity)
+                Divider()
+                column(SchedulePacker.packSingleColumn(days))
+            } else {
+                let columns = SchedulePacker.pack(days)
+                column(columns.left)
+                Divider()
+                column(columns.right)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .fixedSize(horizontal: false, vertical: true)

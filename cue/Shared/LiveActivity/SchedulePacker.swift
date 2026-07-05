@@ -19,7 +19,19 @@ enum SchedulePacker {
     /// 한 날이 한 열에 다 안 들어가면 거기까지 넣고, 다음 열에서 **이어** 그린다. 단 **헤더(날짜
     /// 라벨)는 그 날의 첫 청크에만** 표시한다 — 오른쪽 연속분은 헤더 없이 이벤트만(중복 방지).
     static func pack(_ days: [LiveScheduleDay]) -> (left: [DayChunk], right: [DayChunk]) {
-        var cols: [[DayChunk]] = [[], []]
+        let cols = pack(days, columnCount: 2)
+        return (cols[0], cols[1])
+    }
+
+    /// 캘린더 함께 표시 레이아웃의 오른쪽 반쪽용 — 한 컬럼 높이에 들어가는 만큼만(넘치면 버림).
+    /// 2열 패킹과 같은 채움 규칙을 공유하므로 결과는 `pack`의 왼쪽 열과 동일하다.
+    static func packSingleColumn(_ days: [LiveScheduleDay]) -> [DayChunk] {
+        pack(days, columnCount: 1)[0]
+    }
+
+    /// 공통 채움 루프 — `columnCount`개 열을 차례로 채운다.
+    private static func pack(_ days: [LiveScheduleDay], columnCount: Int) -> [[DayChunk]] {
+        var cols: [[DayChunk]] = Array(repeating: [], count: columnCount)
         var col = 0
         var used: CGFloat = 0
 
@@ -27,7 +39,7 @@ enum SchedulePacker {
             var index = 0
             var isFirstChunk = true
             while index < day.events.count {
-                if col >= 2 { break outer }
+                if col >= columnCount { break outer }
 
                 let showsHeader = isFirstChunk
                 var chunk: [LiveEventItem] = []
@@ -66,7 +78,7 @@ enum SchedulePacker {
                 }
             }
         }
-        return (cols[0], cols[1])
+        return cols
     }
 }
 
