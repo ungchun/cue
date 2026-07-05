@@ -31,12 +31,16 @@ struct MonthCalendarView: View {
             weekdayHeader
             ForEach(Array(grid.weeks.enumerated()), id: \.offset) { _, week in
                 weekRow(week)
+                    // 남는 세로 공간을 주 행들이 고르게 나눠 가져 하단 빈 여백을 없앤다
+                    // (카드 높이는 오른쪽 본문이 결정 — 캘린더가 그 높이에 맞춰 늘어난다).
+                    .frame(maxHeight: .infinity)
             }
         }
-        // 고스트 월 — 숫자 뒤(background)에 크게 깔아 공간을 차지하지 않는다.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // 고스트 월 — 숫자 뒤(background)에 깔아 공간을 차지하지 않는다.
         .background(alignment: .top) {
             Text(grid.monthLabel)
-                .font(.title2.weight(.bold))
+                .font(.callout.weight(.bold))
                 .foregroundStyle(foreground.opacity(0.15))
                 .allowsHitTesting(false)
         }
@@ -96,14 +100,15 @@ struct MonthCalendarView: View {
         return foreground
     }
 
-    /// 월 이동 셰브런 — 흐릿하게, overlay로 공간 미점유. 탭 영역은 패딩으로 확보.
+    /// 월 이동 셰브런 — 리퀴드 글래스 원형 칩, overlay로 공간 미점유. 탭 영역은 패딩으로 확보.
     private func chevron(_ systemName: String, delta: Int) -> some View {
         Button(intent: ShiftCalendarMonthIntent(targetRaw: intentTarget, delta: delta)) {
             Image(systemName: systemName)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(secondaryForeground.opacity(0.55))
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryForeground)
                 .padding(Spacing.xs)
-                .contentShape(Rectangle())
+                .glassEffect(.regular, in: .circle)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
     }
