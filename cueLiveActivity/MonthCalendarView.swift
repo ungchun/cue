@@ -107,7 +107,9 @@ struct MonthCalendarView: View {
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(secondaryForeground)
                 .padding(Spacing.xs)
-                .glassEffect(.regular, in: .circle)
+                // glassEffect는 LA 위젯에서 렌더되지 않아(아예 안 보임) 반투명 원형 칩으로 유리
+                // 느낌만 낸다 — 색 opacity 조합은 위젯에서 항상 렌더가 보장된다.
+                .background(Circle().fill(foreground.opacity(0.12)))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
