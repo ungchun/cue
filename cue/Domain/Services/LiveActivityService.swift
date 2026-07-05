@@ -61,4 +61,9 @@ protocol LiveActivityService: Sendable {
     /// 앱 시작 시 호출 — 시스템에 살아있는 Activity 인스턴스를 재포착해 내부 핸들 복원.
     /// 호출 결과는 service 내부 상태에 반영되며, 외부에 노출은 별도 query API로 한다(추후).
     func sync() async
+
+    /// 켜져 있는 LA를 현재 상태 그대로 다시 게시(update) — 위젯이 렌더 시점에 읽는
+    /// 설정(App Group 미러, 예: 캘린더 함께 표시)이 바뀐 직후 즉시 반영되게 한다.
+    /// 위젯은 App Group 변경을 스스로 감지하지 못하므로 재게시로 재렌더를 유도해야 한다.
+    func refreshLayout() async
 }

@@ -452,6 +452,15 @@ struct LiveActivityUseCaseTests {
         #expect(await service.syncCount == 1)
     }
 
+    /// 설정(캘린더 표시 등) 변경 직후 켜져 있는 LA를 다시 그리게 하는 위임 — 서비스로 그대로 전달.
+    @Test func refreshLayoutCallsServiceOnce() async {
+        let service = RecordingLiveActivityService()
+
+        await RefreshLiveActivityLayoutUseCase(service: service)()
+
+        #expect(await service.refreshLayoutCount == 1)
+    }
+
     // MARK: - Helpers
 
     private func reminder(id: String, title: String, listID: String = "list-1", isCompleted: Bool = false, dueDate: Date? = nil) -> Reminder {
@@ -493,6 +502,7 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     private(set) var endMemoCount = 0
 
     private(set) var syncCount = 0
+    private(set) var refreshLayoutCount = 0
 
     func startReminder(
         listTitle: String,
@@ -525,5 +535,9 @@ private final actor RecordingLiveActivityService: LiveActivityService {
 
     func sync() async {
         syncCount += 1
+    }
+
+    func refreshLayout() async {
+        refreshLayoutCount += 1
     }
 }

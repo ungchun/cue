@@ -169,4 +169,41 @@ struct SettingsViewModelTests {
         await reloaded.onAppear()
         #expect(reloaded.settings.scheduleShowsCalendar == true)
     }
+
+    /// 캘린더 표시 토글은 켜져 있는 LA를 즉시 다시 그리게 한다 — 저장(App Group 미러) 후
+    /// refreshLayout이 호출되어 위젯이 새 플래그를 렌더 시점에 읽는다.
+    @Test func calendarTogglesRefreshLiveActivityLayout() async {
+        let repository = InMemoryAppSettingsRepository()
+        let service = RefreshRecordingLiveActivityService()
+        var dependencies = Dependencies.preview
+        dependencies.fetchAppSettings = FetchAppSettingsUseCase(repository: repository)
+        dependencies.saveAppSettings = SaveAppSettingsUseCase(repository: repository)
+        dependencies.refreshLiveActivityLayout = RefreshLiveActivityLayoutUseCase(service: service)
+        let viewModel = SettingsViewModel(dependencies: dependencies)
+        await viewModel.onAppear()
+
+        await viewModel.setMemoShowsCalendar(true)
+        await viewModel.setScheduleShowsCalendar(true)
+
+        #expect(await service.refreshLayoutCount == 2)
+    }
+}
+
+// MARK: - refreshLayout 기록용 더블 — 나머지 호출은 무시한다.
+
+private final actor RefreshRecordingLiveActivityService: LiveActivityService {
+    var isEnabled: Bool { true }
+
+    private(set) var refreshLayoutCount = 0
+
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int) async throws {}
+    func endReminder() async {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
+    func endSchedule() async {}
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
+    func endMemo() async {}
+    func sync() async {}
+    func refreshLayout() async {
+        refreshLayoutCount += 1
+    }
 }

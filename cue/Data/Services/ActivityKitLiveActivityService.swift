@@ -183,4 +183,20 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
         memoActivity = Activity<MemoLiveActivityAttributes>.activities.first
     }
+
+    // MARK: - Refresh
+
+    func refreshLayout() async {
+        // 캘린더 함께 표시 설정의 대상인 메모·일정만 재게시하면 충분하다.
+        // 핸들이 유실됐을 수 있어(설정 화면이 sync보다 먼저 쓰이는 경우) 재포착 후 갱신.
+        memoActivity = Activity<MemoLiveActivityAttributes>.activities.first
+        scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
+
+        if let memo = memoActivity {
+            await memo.update(memo.content)
+        }
+        if let schedule = scheduleActivity {
+            await schedule.update(schedule.content)
+        }
+    }
 }

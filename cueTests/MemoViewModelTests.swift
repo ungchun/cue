@@ -172,4 +172,5 @@ private actor RecordingMemoLiveActivity: LiveActivityService {
         endMemoCount += 1
     }
     func sync() async {}
+    func refreshLayout() async {}
 }

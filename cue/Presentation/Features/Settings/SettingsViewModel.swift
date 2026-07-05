@@ -19,6 +19,7 @@ final class SettingsViewModel {
     private let saveAppSettings: SaveAppSettingsUseCase
     private let fetchMemoUseCase: FetchMemoUseCase
     private let saveMemoUseCase: SaveMemoUseCase
+    private let refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase
 
     /// 현재 설정. View는 읽기만 하고, 변경은 아래 `set...` 메서드로.
     private(set) var settings: AppSettings = .default
@@ -34,6 +35,7 @@ final class SettingsViewModel {
         self.saveAppSettings = dependencies.saveAppSettings
         self.fetchMemoUseCase = dependencies.fetchMemo
         self.saveMemoUseCase = dependencies.saveMemo
+        self.refreshLiveActivityLayout = dependencies.refreshLiveActivityLayout
     }
 
     /// 화면이 나타날 때 — 저장된 설정과 메모 색(배경·글자)을 불러온다.
@@ -62,12 +64,15 @@ final class SettingsViewModel {
         await update { $0.memoTextSize = size }
     }
 
+    /// 캘린더 표시 토글 — 저장(App Group 미러 포함) 후 켜져 있는 LA를 재게시해 즉시 반영한다.
     func setMemoShowsCalendar(_ value: Bool) async {
         await update { $0.memoShowsCalendar = value }
+        await refreshLiveActivityLayout()
     }
 
     func setScheduleShowsCalendar(_ value: Bool) async {
         await update { $0.scheduleShowsCalendar = value }
+        await refreshLiveActivityLayout()
     }
 
     /// 메모 LA 카드 배경 색을 바꾼다 — 최신 메모를 다시 읽어 색만 갈아끼우고 저장한다

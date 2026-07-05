@@ -786,4 +786,5 @@ private actor RecordingReminderLiveActivity: LiveActivityService {
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}
     func sync() async {}
+    func refreshLayout() async {}
 }
