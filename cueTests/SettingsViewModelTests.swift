@@ -143,4 +143,30 @@ struct SettingsViewModelTests {
         await reloaded.onAppear()
         #expect(reloaded.settings.memoTextSize == .small)
     }
+
+    /// 메모 캘린더 표시 플래그가 영속화된다.
+    @Test func setMemoShowsCalendarPersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setMemoShowsCalendar(true)
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        #expect(reloaded.settings.memoShowsCalendar == true)
+    }
+
+    /// 일정 캘린더 표시 플래그가 영속화된다.
+    @Test func setScheduleShowsCalendarPersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setScheduleShowsCalendar(true)
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        #expect(reloaded.settings.scheduleShowsCalendar == true)
+    }
 }

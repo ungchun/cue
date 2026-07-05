@@ -35,12 +35,18 @@ struct AppSettings: Codable, Equatable, Sendable {
     var focusEndSound: Bool
     /// 메모 텍스트 크기. 기본 `.large`(현재 largeTitle 동작 유지).
     var memoTextSize: MemoTextSize
+    /// 메모 잠금화면 LA에 월간 캘린더를 함께 표시할지. `false`면 메모만(현재 기본 동작).
+    var memoShowsCalendar: Bool
+    /// 일정 잠금화면 LA에 월간 캘린더를 함께 표시할지. `false`면 일정만(현재 기본 동작).
+    var scheduleShowsCalendar: Bool
 
     static let `default` = AppSettings(
         colorScheme: .system,
         startTabID: "reminder",
         focusEndSound: false,
-        memoTextSize: .large
+        memoTextSize: .large,
+        memoShowsCalendar: false,
+        scheduleShowsCalendar: false
     )
 }
 
@@ -58,5 +64,9 @@ extension AppSettings {
             ?? fallback.focusEndSound
         memoTextSize = try container.decodeIfPresent(MemoTextSize.self, forKey: .memoTextSize)
             ?? fallback.memoTextSize
+        memoShowsCalendar = try container.decodeIfPresent(Bool.self, forKey: .memoShowsCalendar)
+            ?? fallback.memoShowsCalendar
+        scheduleShowsCalendar = try container.decodeIfPresent(Bool.self, forKey: .scheduleShowsCalendar)
+            ?? fallback.scheduleShowsCalendar
     }
 }

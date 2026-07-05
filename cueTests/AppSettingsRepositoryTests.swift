@@ -45,6 +45,23 @@ struct AppSettingsRepositoryTests {
         #expect(settings.colorScheme == .dark)          // 있던 값 유지
         #expect(settings.startTabID == "reminder")      // 새 필드는 기본값
         #expect(settings.focusEndSound == false)
+        #expect(settings.memoShowsCalendar == false)    // 캘린더 표시 플래그도 기본 false
+        #expect(settings.scheduleShowsCalendar == false)
+    }
+
+    /// 캘린더 표시 플래그가 저장·복원 왕복에서 true로 보존된다.
+    @Test func userDefaultsRoundTripsCalendarFlags() async {
+        let defaults = UserDefaults(suiteName: "test.appSettings.\(UUID().uuidString)")!
+        let repo = UserDefaultsAppSettingsRepository(defaults: defaults)
+
+        var settings = AppSettings.default
+        settings.memoShowsCalendar = true
+        settings.scheduleShowsCalendar = true
+        await repo.save(settings)
+
+        let fetched = await repo.fetch()
+        #expect(fetched.memoShowsCalendar == true)
+        #expect(fetched.scheduleShowsCalendar == true)
     }
 
     /// 알 수 없는 값/깨진 데이터면 기본값으로 폴백한다(앱이 죽지 않는다).

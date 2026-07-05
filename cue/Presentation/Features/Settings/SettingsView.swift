@@ -11,12 +11,6 @@ struct SettingsView: View {
     let viewModel: SettingsViewModel
     @Environment(\.requestReview) private var requestReview
 
-    /// 라이브 액티비티 표시 내용 — 동작 미연결 placeholder(요청에 따라 UI만).
-    /// 추후 캘린더 함께 표시 게시 로직과 연결한다.
-    /// false = 본문만, true = 본문 + 캘린더.
-    @State private var memoWithCalendarPlaceholder = false
-    @State private var scheduleWithCalendarPlaceholder = false
-
     /// 메모 LA 카드 색 — ColorPicker 선택을 로컬 @State로 동기 보관한다.
     /// (async 저장 setter를 직접 binding하면 get이 stale 값을 돌려줘 선택이 즉시 풀리는
     /// 스냅백이 생긴다. 로컬 상태로 선택을 잡고, 변경은 onChange에서 영속 저장으로 흘려보낸다.)
@@ -65,12 +59,11 @@ struct SettingsView: View {
             .tint(.green)
 
             Section {
-                // 동작 미연결 placeholder(요청에 따라 UI만) — 추후 캘린더 함께 표시로 연결.
-                Picker("메모 표시", selection: $memoWithCalendarPlaceholder) {
+                Picker("메모 표시", selection: memoShowsCalendarBinding) {
                     Text("메모만").tag(false)
                     Text("메모 + 캘린더").tag(true)
                 }
-                Picker("일정 표시", selection: $scheduleWithCalendarPlaceholder) {
+                Picker("일정 표시", selection: scheduleShowsCalendarBinding) {
                     Text("일정만").tag(false)
                     Text("일정 + 캘린더").tag(true)
                 }
@@ -147,6 +140,20 @@ struct SettingsView: View {
         Binding(
             get: { viewModel.settings.focusEndSound },
             set: { newValue in Task { await viewModel.setFocusEndSound(newValue) } }
+        )
+    }
+
+    private var memoShowsCalendarBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.memoShowsCalendar },
+            set: { newValue in Task { await viewModel.setMemoShowsCalendar(newValue) } }
+        )
+    }
+
+    private var scheduleShowsCalendarBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.scheduleShowsCalendar },
+            set: { newValue in Task { await viewModel.setScheduleShowsCalendar(newValue) } }
         )
     }
 
