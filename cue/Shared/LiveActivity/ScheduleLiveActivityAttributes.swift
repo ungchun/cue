@@ -21,7 +21,22 @@ struct ScheduleLiveActivityAttributes: ActivityAttributes {
         /// 스트립 우상단 카운트용. 표시 truncation과 무관하게 정확하도록 앱에서 계산해 싣는다.
         /// 기본값 0 — 기존 ContentState 생성부 호환.
         var todayCount: Int = 0
+        /// 잠금화면 월간 캘린더의 표시 월 오프셋(이번 달 = 0, ±12 클램프) — 셰브런 탭
+        /// 인텐트가 갱신한다. 앱이 재게시하면 0으로 리셋(이번 달로 복귀).
+        var calendarMonthOffset: Int = 0
     }
 
     let startedAt: Date
+}
+
+extension ScheduleLiveActivityAttributes.ContentState {
+    /// 전방 호환 디코딩 — 앱 업데이트 전 게시된 활성 LA의 옛 상태에 `todayCount`·
+    /// `calendarMonthOffset`이 없어도 재포착(sync) 시 기본값으로 채워 디코딩이 실패하지 않게 한다.
+    /// (extension에 두어 본문의 memberwise init 합성을 유지 — AppSettings와 같은 방식.)
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        days = try container.decode([LiveScheduleDay].self, forKey: .days)
+        todayCount = try container.decodeIfPresent(Int.self, forKey: .todayCount) ?? 0
+        calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
+    }
 }

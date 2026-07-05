@@ -20,20 +20,25 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
         var colorHex: String
         /// 카드 글자(폰트) 색("#RRGGBB"). 파싱 실패 시 위젯이 흰색으로 폴백.
         var textColorHex: String
+        /// 잠금화면 월간 캘린더의 표시 월 오프셋(이번 달 = 0, ±12 클램프) — 셰브런 탭
+        /// 인텐트가 갱신한다. 앱이 재게시하면 0으로 리셋(이번 달로 복귀).
+        var calendarMonthOffset: Int
 
-        init(text: String, colorHex: String, textColorHex: String = "#FFFFFF") {
+        init(text: String, colorHex: String, textColorHex: String = "#FFFFFF", calendarMonthOffset: Int = 0) {
             self.text = text
             self.colorHex = colorHex
             self.textColorHex = textColorHex
+            self.calendarMonthOffset = calendarMonthOffset
         }
 
-        /// 전방 호환 디코딩 — 앱 업데이트 전 게시된 활성 LA의 옛 상태에 `textColorHex`가
-        /// 없어도 재포착(sync) 시 흰색으로 채워 디코딩이 실패하지 않게 한다.
+        /// 전방 호환 디코딩 — 앱 업데이트 전 게시된 활성 LA의 옛 상태에 `textColorHex`·
+        /// `calendarMonthOffset`이 없어도 재포착(sync) 시 기본값으로 채워 디코딩이 실패하지 않게 한다.
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             text = try container.decode(String.self, forKey: .text)
             colorHex = try container.decode(String.self, forKey: .colorHex)
             textColorHex = try container.decodeIfPresent(String.self, forKey: .textColorHex) ?? "#FFFFFF"
+            calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         }
     }
 

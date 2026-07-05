@@ -74,12 +74,15 @@
 				Shared/LiveActivity/LiveEventItem.swift,
 				Shared/LiveActivity/LiveReminderItem.swift,
 				Shared/LiveActivity/LiveScheduleDay.swift,
+				Shared/LiveActivity/KoreanHolidayCalculator.swift,
 				Shared/LiveActivity/MemoLiveActivityAttributes.swift,
+				Shared/LiveActivity/MonthCalendarGrid.swift,
 				Shared/LiveActivity/ReminderDynamicIsland.swift,
 				Shared/LiveActivity/ReminderLiveActivityAttributes.swift,
 				Shared/LiveActivity/ScheduleLiveActivityAttributes.swift,
 				Shared/LiveActivity/SchedulePacker.swift,
 				Shared/LiveActivity/ScheduleTimeText.swift,
+				Shared/LiveActivity/ShiftCalendarMonthIntent.swift,
 			);
 			target = 65D102F12FD032BD00081EB7 /* cueLiveActivityExtension */;
 		};
