@@ -68,17 +68,15 @@ struct SettingsView: View {
             .tint(.green)
 
             Section {
-                proGated {
-                    Picker("메모 표시", selection: memoShowsCalendarBinding) {
-                        Text("기본").tag(false)
-                        Text("캘린더 함께 표시").tag(true)
-                    }
+                // 메뉴는 열리게 두고, "캘린더 함께 표시"를 고르는 순간에만 Pro 게이트가
+                // 저장을 가로챈다(바인딩 setter에서 분기).
+                Picker("메모 표시", selection: memoShowsCalendarBinding) {
+                    Text("기본").tag(false)
+                    Text("캘린더 함께 표시").tag(true)
                 }
-                proGated {
-                    Picker("일정 표시", selection: scheduleShowsCalendarBinding) {
-                        Text("기본").tag(false)
-                        Text("캘린더 함께 표시").tag(true)
-                    }
+                Picker("일정 표시", selection: scheduleShowsCalendarBinding) {
+                    Text("기본").tag(false)
+                    Text("캘린더 함께 표시").tag(true)
                 }
             } header: {
                 sectionHeader("라이브")
@@ -170,17 +168,31 @@ struct SettingsView: View {
             }
     }
 
+    /// "캘린더 함께 표시"(true) 선택은 Pro 전용 — 무료면 저장하지 않고 Pro 토스트만.
+    /// getter가 계속 false를 돌려주므로 선택은 "기본"에 머문다. "기본"으로 되돌리기는 항상 허용.
     private var memoShowsCalendarBinding: Binding<Bool> {
         Binding(
             get: { viewModel.settings.memoShowsCalendar },
-            set: { newValue in Task { await viewModel.setMemoShowsCalendar(newValue) } }
+            set: { newValue in
+                guard isProUser || !newValue else {
+                    toastCenter.show("Pro", appMark: true)
+                    return
+                }
+                Task { await viewModel.setMemoShowsCalendar(newValue) }
+            }
         )
     }
 
     private var scheduleShowsCalendarBinding: Binding<Bool> {
         Binding(
             get: { viewModel.settings.scheduleShowsCalendar },
-            set: { newValue in Task { await viewModel.setScheduleShowsCalendar(newValue) } }
+            set: { newValue in
+                guard isProUser || !newValue else {
+                    toastCenter.show("Pro", appMark: true)
+                    return
+                }
+                Task { await viewModel.setScheduleShowsCalendar(newValue) }
+            }
         )
     }
 
