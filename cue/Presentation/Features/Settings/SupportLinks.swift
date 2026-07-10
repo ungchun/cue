@@ -28,13 +28,10 @@ enum SupportLinks {
     }
 }
 
-/// 앱 버전·빌드 번호 표시 문자열.
+/// 앱 버전 표시 문자열.
 enum AppVersionInfo {
-    /// "1.0.0 (1)" 형태. Info.plist에서 읽는다.
+    /// "1.0.0" 형태(빌드 번호 없이). Info.plist에서 읽는다.
     static var display: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "—"
-        let build = info?["CFBundleVersion"] as? String ?? "—"
-        return "\(version) (\(build))"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
 }
