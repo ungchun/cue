@@ -74,8 +74,7 @@ private struct ScheduleLockScreenView: View {
                 )
                 .frame(maxWidth: .infinity)
                 Divider()
-                // 캘린더 모드는 1열 — 남는 세로 공간을 이벤트 행들이 나눠 가져 하단까지 채운다.
-                column(SchedulePacker.packSingleColumn(days), fillsHeight: true)
+                column(SchedulePacker.packSingleColumn(days))
             } else {
                 let columns = SchedulePacker.pack(days)
                 column(columns.left)
@@ -90,11 +89,10 @@ private struct ScheduleLockScreenView: View {
     }
 
     @ViewBuilder
-    private func column(_ chunks: [DayChunk], fillsHeight: Bool = false) -> some View {
+    private func column(_ chunks: [DayChunk]) -> some View {
         VStack(alignment: .leading, spacing: ScheduleMetrics.dayGap) {
             ForEach(chunks) { chunk in
-                ScheduleDayView(chunk: chunk, fillsHeight: fillsHeight)
-                    .frame(maxHeight: fillsHeight ? .infinity : nil, alignment: .top)
+                ScheduleDayView(chunk: chunk)
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -102,10 +100,8 @@ private struct ScheduleLockScreenView: View {
 }
 
 /// 한 열의 한 묶음 — (있으면) 날짜 헤더 + 이벤트들. 연속 묶음은 헤더 없이 이벤트만.
-/// `fillsHeight`면 이벤트 행들이 남는 세로 공간을 고르게 나눠 컬럼 하단까지 채운다.
 private struct ScheduleDayView: View {
     let chunk: DayChunk
-    var fillsHeight: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: ScheduleMetrics.rowGap) {
@@ -117,7 +113,6 @@ private struct ScheduleDayView: View {
             }
             ForEach(chunk.events) { event in
                 ScheduleEventRow(event: event)
-                    .frame(maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
             }
         }
     }
