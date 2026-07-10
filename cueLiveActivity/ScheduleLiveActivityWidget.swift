@@ -83,6 +83,8 @@ private struct ScheduleLockScreenView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        // 캘린더 모드에선 일정이 적어도 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다.
+        .frame(minHeight: showsCalendar ? ScheduleMetrics.columnMax : nil, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
     }
 

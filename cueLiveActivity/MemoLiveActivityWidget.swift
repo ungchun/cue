@@ -21,9 +21,10 @@ struct MemoLiveActivityWidget: Widget {
         ActivityConfiguration(for: MemoLiveActivityAttributes.self) { context in
             // 잠금화면 — 카드 배경을 사용자 색으로 칠하고 가운데 큰 텍스트(사용자 글자색).
             // 설정 "메모 + 캘린더"(App Group 미러)면 왼쪽 반을 월간 캘린더로 분할.
+            // 캘린더 모드는 패딩을 줄여 캘린더가 최대 크기로 그려지게 한다.
             lockScreen(context.state)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.md)
+                .padding(.horizontal, showsCalendar() ? Spacing.md : Spacing.lg)
+                .padding(.vertical, showsCalendar() ? Spacing.sm : Spacing.md)
                 .activityBackgroundTint(cardColor(context.state.colorHex))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in

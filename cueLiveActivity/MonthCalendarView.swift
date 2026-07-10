@@ -78,7 +78,7 @@ struct MonthCalendarView: View {
         if let day {
             // 오늘 표시 — WeekCalendarStrip과 같은 밑줄 바(숫자 정중앙 아래).
             Text("\(day)")
-                .font(.caption2.weight(grid.isToday(day: day) ? .bold : .regular))
+                .font(.footnote.weight(grid.isToday(day: day) ? .bold : .regular))
                 .monospacedDigit()
                 .foregroundStyle(dayColor(day, column: column))
                 .overlay(alignment: .bottom) {
@@ -88,7 +88,7 @@ struct MonthCalendarView: View {
                         .offset(y: Spacing.xxs)
                 }
         } else {
-            Text(" ").font(.caption2)   // 빈 칸도 같은 높이 유지.
+            Text(" ").font(.footnote)   // 빈 칸도 같은 높이 유지.
         }
     }
 
