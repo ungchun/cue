@@ -15,8 +15,10 @@ import SwiftUI
 final class ToastCenter {
     /// 현재 토스트가 떠 있는지 — 오버레이가 이 값으로 슬라이드 인/아웃한다.
     private(set) var isPresented = false
-    /// 캡슐 안 라벨 — "라이브"(새로 켬) / "새로고침"(재시작).
+    /// 캡슐 안 라벨 — "라이브"(새로 켬) / "새로고침"(재시작) / "Pro"(유료 전용 안내).
     private(set) var message = "라이브"
+    /// 앞쪽 마크를 펄스 점 대신 앱 아이콘 형상 마크로 그릴지 — Pro 안내 토스트용.
+    private(set) var usesAppMark = false
 
     /// 자동 해제 타이머 — 새 토스트가 뜨면 이전 타이머를 취소하고 다시 건다(연속 호출 안전).
     private var dismissTask: Task<Void, Never>?
@@ -30,8 +32,10 @@ final class ToastCenter {
 
     /// 토스트를 띄운다 — 메모·일정·할일의 "켜기"가 라이브 액티비티를 켜거나(새로 시작)
     /// 다시 눌러 재시작했을 때 호출. `message`로 "라이브"/"새로고침"을 구분해 넘긴다.
-    func show(_ message: String) {
+    /// `appMark`가 true면 앞쪽 점 대신 앱 아이콘 형상 마크를 그린다(Pro 안내).
+    func show(_ message: String, appMark: Bool = false) {
         self.message = message
+        usesAppMark = appMark
         isPresented = true
         scheduleAutoDismiss()
     }

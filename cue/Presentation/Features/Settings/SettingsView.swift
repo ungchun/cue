@@ -165,7 +165,7 @@ struct SettingsView: View {
                 if !isProUser {
                     Color.clear
                         .contentShape(Rectangle())
-                        .onTapGesture { toastCenter.show("Pro") }
+                        .onTapGesture { toastCenter.show("Pro", appMark: true) }
                 }
             }
     }
