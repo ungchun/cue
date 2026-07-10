@@ -60,12 +60,12 @@ struct SettingsView: View {
 
             Section {
                 Picker("메모 표시", selection: memoShowsCalendarBinding) {
-                    Text("메모만").tag(false)
-                    Text("메모 + 캘린더").tag(true)
+                    Text("기본").tag(false)
+                    Text("캘린더 함께 표시").tag(true)
                 }
                 Picker("일정 표시", selection: scheduleShowsCalendarBinding) {
-                    Text("일정만").tag(false)
-                    Text("일정 + 캘린더").tag(true)
+                    Text("기본").tag(false)
+                    Text("캘린더 함께 표시").tag(true)
                 }
             } header: {
                 sectionHeader("라이브")
