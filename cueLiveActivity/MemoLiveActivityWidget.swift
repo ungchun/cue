@@ -52,15 +52,13 @@ struct MemoLiveActivityWidget: Widget {
                         .padding(.horizontal, Spacing.sm)
                 }
             } compactLeading: {
-                // 일정·할일과 동일 — 동그라미 점.
-                Image(systemName: "circle.fill")
-                    .foregroundStyle(.tint)
+                // 일정·할일과 동일 — 앱 아이콘 마크.
+                AppIconMarkView()
             } compactTrailing: {
                 // 일정·할일과 동일 — 오늘(자정까지) 잔여를 나타내는 원형 링.
                 DayProgressRing()
             } minimal: {
-                Image(systemName: "circle.fill")
-                    .foregroundStyle(.tint)
+                AppIconMarkView()
             }
         }
     }

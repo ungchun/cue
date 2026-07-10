@@ -38,13 +38,11 @@ struct ReminderLiveActivityWidget: Widget {
                     WeekCalendarStrip(now: .now)
                 }
             } compactLeading: {
-                Image(systemName: "circle.fill")
-                    .foregroundStyle(.tint)
+                AppIconMarkView()
             } compactTrailing: {
                 DayProgressRing()
             } minimal: {
-                Image(systemName: "circle.fill")
-                    .foregroundStyle(.tint)
+                AppIconMarkView()
             }
         }
     }
