@@ -10,6 +10,11 @@ import SwiftUI
 struct SettingsView: View {
     let viewModel: SettingsViewModel
     @Environment(\.requestReview) private var requestReview
+    @Environment(\.toastCenter) private var toastCenter
+
+    /// 유료(Pro) 전용 설정 게이트 — 결제 도입 전이라 전원 무료 취급(항상 차단 + "Pro" 토스트).
+    /// TODO: 결제/구독 도입 시 실제 엔타이틀먼트 확인으로 교체.
+    private let isProUser = false
 
     /// 메모 LA 카드 색 — ColorPicker 선택을 로컬 @State로 동기 보관한다.
     /// (async 저장 setter를 직접 binding하면 get이 stale 값을 돌려줘 선택이 즉시 풀리는
@@ -43,8 +48,12 @@ struct SettingsView: View {
                         Text(size.label).tag(size)
                     }
                 }
-                ColorPicker("라이브 배경 색", selection: $memoBackgroundColor, supportsOpacity: false)
-                ColorPicker("라이브 폰트 색", selection: $memoFontColor, supportsOpacity: false)
+                proGated {
+                    ColorPicker("라이브 배경 색", selection: $memoBackgroundColor, supportsOpacity: false)
+                }
+                proGated {
+                    ColorPicker("라이브 폰트 색", selection: $memoFontColor, supportsOpacity: false)
+                }
             } header: {
                 sectionHeader("메모")
             }
@@ -59,13 +68,17 @@ struct SettingsView: View {
             .tint(.green)
 
             Section {
-                Picker("메모 표시", selection: memoShowsCalendarBinding) {
-                    Text("기본").tag(false)
-                    Text("캘린더 함께 표시").tag(true)
+                proGated {
+                    Picker("메모 표시", selection: memoShowsCalendarBinding) {
+                        Text("기본").tag(false)
+                        Text("캘린더 함께 표시").tag(true)
+                    }
                 }
-                Picker("일정 표시", selection: scheduleShowsCalendarBinding) {
-                    Text("기본").tag(false)
-                    Text("캘린더 함께 표시").tag(true)
+                proGated {
+                    Picker("일정 표시", selection: scheduleShowsCalendarBinding) {
+                        Text("기본").tag(false)
+                        Text("캘린더 함께 표시").tag(true)
+                    }
                 }
             } header: {
                 sectionHeader("라이브")
@@ -141,6 +154,20 @@ struct SettingsView: View {
             get: { viewModel.settings.focusEndSound },
             set: { newValue in Task { await viewModel.setFocusEndSound(newValue) } }
         )
+    }
+
+    /// Pro 전용 행 게이트 — 무료 사용자는 컨트롤 조작을 가로채 "Pro" 토스트만 띄운다.
+    /// 잠금 표시 없이 평소처럼 보이되, 탭이 컨트롤에 닿기 전에 오버레이가 가로챈다.
+    @ViewBuilder
+    private func proGated(@ViewBuilder _ content: () -> some View) -> some View {
+        content()
+            .overlay {
+                if !isProUser {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { toastCenter.show("Pro") }
+                }
+            }
     }
 
     private var memoShowsCalendarBinding: Binding<Bool> {
