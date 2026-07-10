@@ -54,8 +54,23 @@ struct SettingsView: View {
                 proGated {
                     ColorPicker("라이브 폰트 색", selection: $memoFontColor, supportsOpacity: false)
                 }
+                // 메뉴는 열리게 두고, "캘린더 함께 표시"를 고르는 순간에만 Pro 게이트가
+                // 저장을 가로챈다(바인딩 setter에서 분기).
+                Picker("레이아웃", selection: memoShowsCalendarBinding) {
+                    Text("기본").tag(false)
+                    Text("캘린더 함께 표시").tag(true)
+                }
             } header: {
                 sectionHeader("메모")
+            }
+
+            Section {
+                Picker("레이아웃", selection: scheduleShowsCalendarBinding) {
+                    Text("기본").tag(false)
+                    Text("캘린더 함께 표시").tag(true)
+                }
+            } header: {
+                sectionHeader("일정")
             }
 
             Section {
@@ -66,21 +81,6 @@ struct SettingsView: View {
             // 앱 전역 무채색 tint(.primary)가 다크 모드에서 토글 ON 트랙을 흰색으로 만들어
             // 노브와 구분이 안 된다 — 토글만 시스템 표준(초록)으로 되돌린다.
             .tint(.green)
-
-            Section {
-                // 메뉴는 열리게 두고, "캘린더 함께 표시"를 고르는 순간에만 Pro 게이트가
-                // 저장을 가로챈다(바인딩 setter에서 분기).
-                Picker("메모 표시", selection: memoShowsCalendarBinding) {
-                    Text("기본").tag(false)
-                    Text("캘린더 함께 표시").tag(true)
-                }
-                Picker("일정 표시", selection: scheduleShowsCalendarBinding) {
-                    Text("기본").tag(false)
-                    Text("캘린더 함께 표시").tag(true)
-                }
-            } header: {
-                sectionHeader("라이브")
-            }
 
             Section {
                 Button("리뷰 남기기") {
