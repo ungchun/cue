@@ -245,6 +245,8 @@ struct SettingsView: View {
     @ViewBuilder
     private func premiumGated(@ViewBuilder _ content: () -> some View) -> some View {
         content()
+            // 컨트롤 자체를 비활성화해 확실히 막고(스와치 탭 포함), 탭은 오버레이가 받아 토스트만.
+            .disabled(!isPremiumUser)
             .overlay {
                 if !isPremiumUser {
                     Color.clear

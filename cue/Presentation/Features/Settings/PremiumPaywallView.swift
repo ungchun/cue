@@ -70,7 +70,7 @@ struct PremiumPaywallView: View {
             featureRow(
                 icon: "infinity",
                 title: "무제한 라이브",
-                detail: "횟수 제한 없이 언제든 켜고 새로고침"
+                detail: "하루 2회 제한 없이 켜고 새로고침"
             )
             featureRow(
                 icon: "clock.arrow.2.circlepath",
@@ -86,6 +86,16 @@ struct PremiumPaywallView: View {
                 icon: "paintpalette",
                 title: "라이브 커스텀",
                 detail: "배경·글자 색을 내 취향대로"
+            )
+            featureRow(
+                icon: "timer",
+                title: "집중 세션 무제한",
+                detail: "뽀모도로 세션을 원하는 만큼"
+            )
+            featureRow(
+                icon: "plus.circle",
+                title: "계속 추가될 기능",
+                detail: "프리미엄 기능은 계속 늘어나요"
             )
         }
         .padding(.vertical, Spacing.sm)
