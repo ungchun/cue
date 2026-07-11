@@ -18,6 +18,7 @@ struct FocusSessionEditorSheet: View {
     @Bindable var viewModel: FocusViewModel
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.toastCenter) private var toastCenter
 
     /// 폼 입력값 — 시트가 떠 있는 동안 임시로 들고 있다가 저장 시 ViewModel에 반영.
     @State private var title: String = ""
@@ -259,7 +260,10 @@ struct FocusSessionEditorSheet: View {
         guard !name.isEmpty else { return }
         switch mode {
         case .create:
-            viewModel.addSession(title: name, settings: settings, colorHex: colorHex)
+            // 무료 한도 초과면 추가되지 않는다 — Premium 안내 토스트.
+            if viewModel.addSession(title: name, settings: settings, colorHex: colorHex) == nil {
+                toastCenter.show("Premium")
+            }
         case .edit(let session):
             viewModel.updateSession(id: session.id, title: name, settings: settings, colorHex: colorHex)
         }

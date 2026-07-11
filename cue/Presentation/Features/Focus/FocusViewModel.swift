@@ -62,7 +62,13 @@ final class FocusViewModel {
     private let saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
 
-    init(dependencies: Dependencies) {
+    /// 무료 사용자의 세션 프리셋 한도 — Premium이면 무제한.
+    /// TODO: 결제 도입 시 실제 엔타이틀먼트로 교체(SettingsView.isPremiumUser와 통일).
+    static let freeSessionLimit = 1
+    private let isPremiumUser: Bool
+
+    init(dependencies: Dependencies, isPremiumUser: Bool = false) {
+        self.isPremiumUser = isPremiumUser
         self.fetchFocusSessions = dependencies.fetchFocusSessions
         self.saveFocusSessions = dependencies.saveFocusSessions
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
@@ -329,8 +335,10 @@ final class FocusViewModel {
 
     // MARK: - 세션 프리셋 CRUD
 
+    /// 무료 한도(1개)를 넘는 추가는 `nil` — 호출처(에디터 시트)가 Premium 토스트를 띄운다.
     @discardableResult
-    func addSession(title: String, settings: FocusSettings, colorHex: String) -> FocusSession {
+    func addSession(title: String, settings: FocusSettings, colorHex: String) -> FocusSession? {
+        guard isPremiumUser || sessions.count < Self.freeSessionLimit else { return nil }
         let new = FocusSession(id: UUID(), title: title, settings: settings, colorHex: colorHex)
         sessions.append(new)
         persist()
