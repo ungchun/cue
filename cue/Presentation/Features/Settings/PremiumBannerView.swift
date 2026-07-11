@@ -43,35 +43,33 @@ struct PremiumBannerView: View {
         .buttonStyle(.plain)
     }
 
-    /// 라이브 펄스 파동 — 토스트의 라이브 점과 같은 문법을 크게. 가운데 점에서 링이
-    /// 계속 번져 나간다(TimelineView 시간 기반, 위치 애니메이션 없음). "라이브가 계속
-    /// 살아있다"는 Premium의 핵심 가치를 장식이 직접 말한다.
+    /// 물결 에코( ( ( ( )가 퍼지는 파동 — 중심을 배너 오른쪽 밖에 두고, 두툼한 초승달
+    /// 밴드(굵은 스트로크 원)가 안에서 밖으로 계속 번져 나간다. 정적인 ((( 무늬에
+    /// 라이브 펄스의 시간 위상만 입힌 것(TimelineView, 위치 애니메이션 없음).
     private var pulseWaves: some View {
-        let size: CGFloat = 56
-        return ZStack {
-            TimelineView(.animation) { context in
-                let elapsed = context.date.timeIntervalSinceReferenceDate
-                ZStack {
-                    // 링 3개가 위상차를 두고 번진다 — 항상 파동이 이어져 보이게.
-                    ForEach(0..<3, id: \.self) { index in
-                        let phase = ((elapsed / Self.pulsePeriod) + Double(index) / 3)
-                            .truncatingRemainder(dividingBy: 1)
-                        Circle()
-                            .stroke(Color(.systemBackground), lineWidth: 1.5)
-                            .scaleEffect(1 + 2.6 * phase)
-                            .opacity((1 - phase) * 0.45)
-                    }
+        let base: CGFloat = 90
+        return TimelineView(.animation) { context in
+            let elapsed = context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                // 밴드 4장이 위상차를 두고 확장 — 항상 ((( 겹이 유지된 채 퍼져 보인다.
+                ForEach(0..<4, id: \.self) { index in
+                    let phase = ((elapsed / Self.pulsePeriod) + Double(index) / 4)
+                        .truncatingRemainder(dividingBy: 1)
+                    Circle()
+                        .stroke(Color(.systemBackground), lineWidth: 12)
+                        .frame(width: base, height: base)
+                        .scaleEffect(0.4 + 2.4 * phase)
+                        .opacity((1 - phase) * 0.28)
                 }
             }
-            Circle().fill(Color(.systemBackground).opacity(0.9))
-                .frame(width: size * 0.22, height: size * 0.22)
         }
-        .frame(width: size, height: size)
-        .padding(.trailing, Spacing.xl)
+        .frame(width: base, height: base)
+        // 파동 중심을 오른쪽 모서리 밖으로 — 왼쪽 호( ( ( ()만 배너 안에 보인다.
+        .offset(x: base * 0.55)
     }
 
-    /// 펄스 한 사이클(초) — 토스트(1.6s)보다 느긋하게 번진다.
-    private static let pulsePeriod: Double = 2.4
+    /// 파동 한 사이클(초) — 느긋하게 번진다.
+    private static let pulsePeriod: Double = 3.2
 }
 
 #Preview {
