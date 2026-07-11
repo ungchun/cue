@@ -158,10 +158,9 @@ struct SettingsView: View {
         .sheet(isPresented: $shows24HourSheet) {
             Live24HourGuideView()
         }
-        // Premium 페이월 — 내용은 추후 채운다(현재 빈 시트).
+        // Premium 페이월 — 가치 → 플랜 → CTA. 결제 연결은 추후.
         .sheet(isPresented: $showsPremiumSheet) {
-            Color.clear
-                .presentationDetents([.large])
+            PremiumPaywallView()
         }
     }
 
