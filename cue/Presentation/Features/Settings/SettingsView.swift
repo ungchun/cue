@@ -64,14 +64,33 @@ struct SettingsView: View {
                 // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Premium 게이트도 추후 복원.
                 Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
                     .tint(.green)
-                // 대상 선택 — 행 하나로 통합, 탭하면 상세 페이지(항목 토글 + 할일 범위).
-                // 중첩 메뉴의 펼침 점프를 피한 iOS 설정 표준 패턴.
-                NavigationLink {
-                    LiveAlwaysOnItemsView(viewModel: viewModel)
-                } label: {
-                    LabeledContent("항목") {
-                        Text(liveKindsSummary)
+                // 대상 선택 — 평면 메뉴 한 번에 열림. 서브메뉴 펼침이 없어서 메뉴 재배치
+                // 점프(iOS가 서브메뉴 확장 시 메뉴를 위로 밀어 올리는 동작)가 원천적으로 없다.
+                // 길어지면 메뉴가 내부 스크롤(시스템 표준).
+                LabeledContent("항목") {
+                    Menu {
+                        Toggle("메모", isOn: liveAlwaysOnMemoBinding)
+                        Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
+                        Section("할일") {
+                            Picker("할일", selection: reminderScopeMenuBinding) {
+                                Text("사용 안 함").tag("off")
+                                Text("오늘").tag("today")
+                                Text("예정").tag("scheduled")
+                                Text("전체").tag("all")
+                                ForEach(viewModel.reminderLists, id: \.id) { list in
+                                    Text(list.title).tag(list.id)
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: Spacing.xs) {
+                            Text(liveKindsSummary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.footnote.weight(.medium))
+                        }
+                        .foregroundStyle(.secondary)
                     }
+                    .menuOrder(.fixed)
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
                 Button("24시간 사용하기") {
@@ -173,6 +192,41 @@ struct SettingsView: View {
 
 
 
+
+    private var liveAlwaysOnMemoBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnMemo },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnMemo(newValue) } }
+        )
+    }
+
+    private var liveAlwaysOnScheduleBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnSchedule },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnSchedule(newValue) } }
+        )
+    }
+
+    /// 할일 단일 선택 — "off"는 할일 항목 끔, 나머지는 켬 + 범위 지정.
+    private var reminderScopeMenuBinding: Binding<String> {
+        Binding(
+            get: {
+                viewModel.settings.liveAlwaysOnReminder
+                    ? viewModel.settings.liveAlwaysOnReminderScopeID
+                    : "off"
+            },
+            set: { newValue in
+                Task {
+                    if newValue == "off" {
+                        await viewModel.setLiveAlwaysOnReminder(false)
+                    } else {
+                        await viewModel.setLiveAlwaysOnReminder(true)
+                        await viewModel.setLiveAlwaysOnReminderScopeID(newValue)
+                    }
+                }
+            }
+        )
+    }
 
     /// 섹션 헤더 — 기본보다 작은 글자.
     private func sectionHeader(_ title: String) -> some View {
