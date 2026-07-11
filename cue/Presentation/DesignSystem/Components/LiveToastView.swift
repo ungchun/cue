@@ -12,7 +12,7 @@ import SwiftUI
 /// 아니라 `.primary`(라이트=검정 / 다크=하양 적응). 표시·상단 슬라이드·자동 해제는
 /// `ToastCenter` + `liveToastOverlay`가 맡고, 이 뷰는 모양만 그린다.
 struct LiveToastView: View {
-    /// 캡슐 안 라벨 — 새로 켜면 "라이브", 다시 눌러 재시작하면 "새로고침", 유료 안내는 "Plus".
+    /// 캡슐 안 라벨 — 새로 켜면 "라이브", 다시 눌러 재시작하면 "새로고침", 유료 안내는 "Premium".
     let text: String
 
     var body: some View {
@@ -59,7 +59,7 @@ struct LiveToastView: View {
     VStack(spacing: 20) {
         LiveToastView(text: "라이브")
         LiveToastView(text: "새로고침")
-        LiveToastView(text: "Plus")
+        LiveToastView(text: "Premium")
     }
     .padding()
 }

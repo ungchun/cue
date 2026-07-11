@@ -12,9 +12,9 @@ struct SettingsView: View {
     @Environment(\.requestReview) private var requestReview
     @Environment(\.toastCenter) private var toastCenter
 
-    /// 유료(Plus) 전용 설정 게이트 — 결제 도입 전이라 전원 무료 취급(항상 차단 + "Plus" 토스트).
+    /// 유료(Premium) 전용 설정 게이트 — 결제 도입 전이라 전원 무료 취급(항상 차단 + "Premium" 토스트).
     /// TODO: 결제/구독 도입 시 실제 엔타이틀먼트 확인으로 교체.
-    private let isPlusUser = false
+    private let isPremiumUser = false
 
     /// 메모 LA 카드 색 — ColorPicker 선택을 로컬 @State로 동기 보관한다.
     /// (async 저장 setter를 직접 binding하면 get이 stale 값을 돌려줘 선택이 즉시 풀리는
@@ -47,7 +47,7 @@ struct SettingsView: View {
             }
 
             Section {
-                // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Plus 게이트도 추후 복원.
+                // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Premium 게이트도 추후 복원.
                 Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
                     .tint(.green)
                 // 대상 선택 — 행 하나, 메뉴에서 다중 체크(메뉴 안 Toggle은 체크마크로 렌더).
@@ -82,13 +82,13 @@ struct SettingsView: View {
                         Text(size.label).tag(size)
                     }
                 }
-                plusGated {
+                premiumGated {
                     ColorPicker("라이브 배경 색", selection: $memoBackgroundColor, supportsOpacity: false)
                 }
-                plusGated {
+                premiumGated {
                     ColorPicker("라이브 폰트 색", selection: $memoFontColor, supportsOpacity: false)
                 }
-                // 켜기는 Plus 전용 — 바인딩 setter가 가로채 Plus 토스트만 띄운다(끄기는 항상 허용).
+                // 켜기는 Premium 전용 — 바인딩 setter가 가로채 Premium 토스트만 띄운다(끄기는 항상 허용).
                 Toggle("캘린더 함께 보기", isOn: memoShowsCalendarBinding)
                     .tint(.green)
             } header: {
@@ -220,16 +220,16 @@ struct SettingsView: View {
         )
     }
 
-    /// Plus 전용 행 게이트 — 무료 사용자는 컨트롤 조작을 가로채 "Plus" 토스트만 띄운다.
+    /// Premium 전용 행 게이트 — 무료 사용자는 컨트롤 조작을 가로채 "Premium" 토스트만 띄운다.
     /// 잠금 표시 없이 평소처럼 보이되, 탭이 컨트롤에 닿기 전에 오버레이가 가로챈다.
     @ViewBuilder
-    private func plusGated(@ViewBuilder _ content: () -> some View) -> some View {
+    private func premiumGated(@ViewBuilder _ content: () -> some View) -> some View {
         content()
             .overlay {
-                if !isPlusUser {
+                if !isPremiumUser {
                     Color.clear
                         .contentShape(Rectangle())
-                        .onTapGesture { toastCenter.show("Plus") }
+                        .onTapGesture { toastCenter.show("Premium") }
                 }
             }
     }
@@ -241,14 +241,14 @@ struct SettingsView: View {
         )
     }
 
-    /// "캘린더 함께 표시"(true) 선택은 Plus 전용 — 무료면 저장하지 않고 Plus 토스트만.
+    /// "캘린더 함께 표시"(true) 선택은 Premium 전용 — 무료면 저장하지 않고 Premium 토스트만.
     /// getter가 계속 false를 돌려주므로 선택은 "기본"에 머문다. "기본"으로 되돌리기는 항상 허용.
     private var memoShowsCalendarBinding: Binding<Bool> {
         Binding(
             get: { viewModel.settings.memoShowsCalendar },
             set: { newValue in
-                guard isPlusUser || !newValue else {
-                    toastCenter.show("Plus")
+                guard isPremiumUser || !newValue else {
+                    toastCenter.show("Premium")
                     return
                 }
                 Task { await viewModel.setMemoShowsCalendar(newValue) }
@@ -260,8 +260,8 @@ struct SettingsView: View {
         Binding(
             get: { viewModel.settings.scheduleShowsCalendar },
             set: { newValue in
-                guard isPlusUser || !newValue else {
-                    toastCenter.show("Plus")
+                guard isPremiumUser || !newValue else {
+                    toastCenter.show("Premium")
                     return
                 }
                 Task { await viewModel.setScheduleShowsCalendar(newValue) }
