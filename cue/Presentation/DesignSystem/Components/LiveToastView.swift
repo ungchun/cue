@@ -14,7 +14,7 @@ import SwiftUI
 struct LiveToastView: View {
     /// 캡슐 안 라벨 — 새로 켜면 "라이브", 다시 눌러 재시작하면 "새로고침".
     let text: String
-    /// true면 앞쪽 점 대신 앱 아이콘 형상 마크(원 + 오른쪽 물결 겹)를 그린다 — Pro 안내용.
+    /// true면 앞쪽 점 대신 앱 아이콘 형상 마크(원 + 오른쪽 물결 겹)를 그린다 — Cue+ 안내용.
     var showsAppMark = false
 
     var body: some View {
@@ -80,7 +80,7 @@ struct LiveToastView: View {
     VStack(spacing: 20) {
         LiveToastView(text: "라이브")
         LiveToastView(text: "새로고침")
-        LiveToastView(text: "Pro", showsAppMark: true)
+        LiveToastView(text: "Cue+", showsAppMark: true)
     }
     .padding()
 }
