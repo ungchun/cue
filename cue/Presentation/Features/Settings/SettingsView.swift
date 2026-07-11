@@ -50,16 +50,21 @@ struct SettingsView: View {
                 // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Pro 게이트도 추후 복원.
                 Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
                     .tint(.green)
-                // 점진적 노출 — 마스터 on일 때만 대상 선택(메모/할일/일정)이 펼쳐진다.
-                if viewModel.settings.liveAlwaysOn {
-                    Group {
-                        Toggle("메모", isOn: liveAlwaysOnMemoBinding)
-                        Toggle("할일", isOn: liveAlwaysOnReminderBinding)
-                        Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
+                // 대상 선택(메모/할일/일정) — 체크마크 리스트(알람 '반복' 스타일).
+                // 항상 보이되 마스터 off면 비활성화(회색)로 선택만 막는다.
+                Group {
+                    liveKindRow("메모", isOn: viewModel.settings.liveAlwaysOnMemo) {
+                        Task { await viewModel.setLiveAlwaysOnMemo(!viewModel.settings.liveAlwaysOnMemo) }
                     }
-                    .tint(.green)
-                    .padding(.leading, Spacing.md)
+                    liveKindRow("할일", isOn: viewModel.settings.liveAlwaysOnReminder) {
+                        Task { await viewModel.setLiveAlwaysOnReminder(!viewModel.settings.liveAlwaysOnReminder) }
+                    }
+                    liveKindRow("일정", isOn: viewModel.settings.liveAlwaysOnSchedule) {
+                        Task { await viewModel.setLiveAlwaysOnSchedule(!viewModel.settings.liveAlwaysOnSchedule) }
+                    }
                 }
+                .disabled(!viewModel.settings.liveAlwaysOn)
+                .padding(.leading, Spacing.md)
                 Button("24시간 사용하기") {
                     shows24HourSheet = true
                 }
@@ -138,6 +143,22 @@ struct SettingsView: View {
     }
 
 
+    /// 항상 표시 대상 한 줄 — 행 전체 탭으로 체크 토글(다중선택 표준 패턴).
+    private func liveKindRow(_ title: String, isOn: Bool, toggle: @escaping () -> Void) -> some View {
+        Button(action: toggle) {
+            HStack {
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+                if isOn {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
+    }
+
     /// 섹션 헤더 — 기본보다 작은 글자.
     private func sectionHeader(_ title: String) -> some View {
         Text(title).font(.body.weight(.medium))
@@ -199,27 +220,6 @@ struct SettingsView: View {
         Binding(
             get: { viewModel.settings.liveAlwaysOn },
             set: { newValue in Task { await viewModel.setLiveAlwaysOn(newValue) } }
-        )
-    }
-
-    private var liveAlwaysOnMemoBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnMemo },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnMemo(newValue) } }
-        )
-    }
-
-    private var liveAlwaysOnReminderBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnReminder },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminder(newValue) } }
-        )
-    }
-
-    private var liveAlwaysOnScheduleBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnSchedule },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnSchedule(newValue) } }
         )
     }
 
