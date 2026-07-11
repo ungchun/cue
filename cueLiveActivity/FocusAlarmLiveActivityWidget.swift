@@ -41,6 +41,9 @@ struct FocusAlarmLiveActivityWidget: Widget {
                     timeGroup(context, tint: tint, timeSize: 44)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .lineLimit(1)
+                        // 카메라 옆 폭이 부족하면 리전을 통째로 카메라 아래(전체 폭)로 내려
+                        // 폰트 축소·말줄임 없이 온전한 시간을 그린다.
+                        .dynamicIsland(verticalPlacement: .belowIfTooWide)
                 }
             } compactLeading: {
                 compactRing(context.state, color: tint)
@@ -113,8 +116,6 @@ struct FocusAlarmLiveActivityWidget: Widget {
         Text(verbatim: "00:00")
             .font(font)
             .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
             .hidden()
             .overlay(alignment: .trailing) {
                 countdown(state)
@@ -122,8 +123,6 @@ struct FocusAlarmLiveActivityWidget: Widget {
                     .monospacedDigit()
                     .foregroundStyle(tint)
                     .multilineTextAlignment(.trailing)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
             }
             .clipped()
     }
