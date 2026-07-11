@@ -274,9 +274,7 @@ struct ReminderView: View {
         switch viewModel.access {
         case .notDetermined:
             ProgressView()
-        case .unlimited where viewModel.liveActivityActive:
-                    toastCenter.show(wasActive ? "새로고침" : "라이브")
-                case .denied:
+        case .denied:
             deniedView
         case .granted:
             reminderList
