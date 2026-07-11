@@ -63,13 +63,10 @@ struct PremiumPaywallView: View {
         ZStack(alignment: .topLeading) {
             ForEach(0..<7, id: \.self) { index in
                 let diameter = 180 + CGFloat(index) * 120
-                // 진원지 근처 3개는 진하게(신호 발신점), 바깥은 급격히 옅어져 여운만 남긴다.
-                let opacities: [Double] = [0.34, 0.26, 0.18, 0.08, 0.06, 0.05, 0.04]
+                // 면 채움 — 링이 겹칠수록 진원지가 진해진다(배너의 겹 문법).
+                let opacities: [Double] = [0.10, 0.05, 0.04, 0.03, 0.025, 0.02, 0.015]
                 Circle()
-                    .strokeBorder(
-                        Color.primary.opacity(opacities[index]),
-                        lineWidth: 3
-                    )
+                    .fill(Color.primary.opacity(opacities[index]))
                     .frame(width: diameter, height: diameter)
                     .offset(x: -diameter / 2 - 40, y: -diameter / 2 - 20)
                     .scaleEffect(
