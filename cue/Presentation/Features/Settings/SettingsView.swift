@@ -71,7 +71,8 @@ struct SettingsView: View {
                     Menu {
                         Toggle("메모", isOn: liveAlwaysOnMemoBinding)
                         // 할일은 서브메뉴 — 끄기/범위 선택을 단일 선택으로 통합.
-                        Menu("할일") {
+                        // 범위가 하나라도 선택돼 있으면(=항목 켜짐) 부모 라벨에도 체크 표시.
+                        Menu {
                             Picker("할일", selection: reminderScopeMenuBinding) {
                                 Text("사용 안 함").tag("off")
                                 Divider()
@@ -81,6 +82,12 @@ struct SettingsView: View {
                                 ForEach(viewModel.reminderLists, id: \.id) { list in
                                     Text(list.title).tag(list.id)
                                 }
+                            }
+                        } label: {
+                            if viewModel.settings.liveAlwaysOnReminder {
+                                Label("할일", systemImage: "checkmark")
+                            } else {
+                                Text("할일")
                             }
                         }
                         Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
