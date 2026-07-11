@@ -2,7 +2,7 @@
 //  PremiumPaywallView.swift
 //  cue / Presentation
 //
-//  Cue Premium 페이월 시트 — 가치(기능) → 가격(플랜) → 행동(CTA) 순서.
+//  Cue Premium 페이월 시트 — 가격(플랜) → 가치(기능) → 행동(CTA) 순서.
 //  히어로는 설정 배너와 같은 물결 에코를 재사용해 배너→페이월이 한 브랜드 문법으로 이어진다.
 //  결제(StoreKit) 연결은 추후 — 지금은 UI + 플랜 선택 상태까지. 가격은 placeholder.
 //
@@ -26,8 +26,8 @@ struct PremiumPaywallView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     hero
-                    features
                     plans
+                    features
                 }
                 .padding(Spacing.md)
             }
