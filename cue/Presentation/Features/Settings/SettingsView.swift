@@ -136,10 +136,9 @@ struct SettingsView: View {
         .onChange(of: memoFontColor) { _, newValue in
             Task { await viewModel.setMemoTextColor(newValue.hexString) }
         }
-        // "24시간 사용하기" — 내용은 추후 채운다(현재 빈 시트).
+        // "24시간 사용하기" — 단축어 자동화로 LA 8시간 종료를 우회하는 가이드.
         .sheet(isPresented: $shows24HourSheet) {
-            Color.clear
-                .presentationDetents([.medium, .large])
+            Live24HourGuideView()
         }
     }
 
