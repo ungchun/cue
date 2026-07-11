@@ -61,6 +61,8 @@ struct ReminderViewModelTests {
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
+            refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
         )
@@ -90,6 +92,35 @@ struct ReminderViewModelTests {
         #expect(viewModel.access == .granted)
         #expect(viewModel.lists == [listA])
         #expect(viewModel.allReminders.count == 1)
+    }
+
+    /// 항상 표시 자동 게시 — 권한이 있으면 현재 선택 스냅샷으로 LA를 시작한다(쿼터 미소비).
+    @Test func alwaysOnStartsReminderLiveActivity() async throws {
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [reminder(id: "1", listID: "A")],
+            liveActivityService: service
+        ))
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == true)
+        #expect(await service.startReminderCalls.count == 1)
+    }
+
+    /// 권한이 거부돼 있으면 자동 게시하지 않는다.
+    @Test func alwaysOnSkipsWhenAccessDenied() async {
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            access: .denied,
+            liveActivityService: service
+        ))
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == false)
+        #expect(await service.startReminderCalls.isEmpty)
     }
 
     @Test func externalChangeReloadsRemindersAfterFirstLoad() async throws {
@@ -132,7 +163,11 @@ struct ReminderViewModelTests {
             saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
-            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService())
+            syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
+            refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
+            fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
+            saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
         )
         let viewModel = ReminderViewModel(dependencies: deps)
         await viewModel.onAppear()

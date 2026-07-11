@@ -130,6 +130,24 @@ final class ReminderViewModel {
         return verdict
     }
 
+    /// 항상 표시 자동 게시 — 권한이 있으면 데이터를 적재하고 현재 선택 스냅샷으로 LA 시작.
+    /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 건너뛴다.
+    func startAlwaysOnLiveActivity() async {
+        guard !liveActivityActive else { return }
+        await onAppear()
+        guard access == .granted else { return }
+        do {
+            try await startLiveActivityUseCase(
+                listTitle: currentSelectionTitle,
+                reminders: visibleReminders,
+                listColors: listColorsByID
+            )
+            liveActivityActive = true
+        } catch {
+            // 자동 경로 — 조용히 무시.
+        }
+    }
+
     deinit {
         observeTask?.cancel()
     }

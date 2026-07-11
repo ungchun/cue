@@ -90,6 +90,21 @@ final class MemoViewModel {
         return verdict
     }
 
+    /// 항상 표시 자동 게시 — 앱 시작·포그라운드 복귀·설정 켬에서 호출.
+    /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다(항상 표시는 Premium 전용 기능).
+    /// 이 실행에서 이미 켜져 있으면 건너뛴다(복귀마다 재시작 방지). 빈 메모도 건너뛴다.
+    func startAlwaysOnLiveActivity() async {
+        guard !liveActivityActive else { return }
+        memo = await fetchMemoUseCase()
+        guard canStartLiveActivity else { return }
+        do {
+            try await startLiveActivityUseCase(memo)
+            liveActivityActive = true
+        } catch {
+            // 자동 경로 — 사용자 흐름을 방해하지 않도록 조용히 무시.
+        }
+    }
+
     /// LA가 떠 있을 때 변경을 반영 — 텍스트가 비면(use case가 throw) 종료한다.
     private func refreshLiveActivityIfActive() async {
         guard liveActivityActive else { return }

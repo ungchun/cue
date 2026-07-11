@@ -8,6 +8,7 @@ import SwiftUI
 /// 앱의 첫 화면. 시스템(Apple) 탭바에 5탭(메모·일정·할일·집중·설정)을 한 캡슐로 두고,
 /// 우하단에 메시지 버튼을 플로팅(FAB)으로 띄운다. 탭바·칩바·스크롤 축소 등 네이티브 동작 유지.
 struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: AppTab = .reminder
     @State private var reminderViewModel: ReminderViewModel
     @State private var scheduleViewModel: ScheduleViewModel
@@ -55,13 +56,40 @@ struct RootView: View {
         .environment(\.toastCenter, toastCenter)
         // 화면 모드(라이트/다크/시스템)를 앱 전체에 적용. `.system`이면 nil → 시스템 따름.
         .preferredColorScheme(settingsViewModel.settings.colorScheme.colorScheme)
-        // 앱 시작 시 저장된 설정을 불러온다 — 화면 모드 반영 + 시작 탭으로 한 번 이동.
+        // 앱 시작 시 저장된 설정을 불러온다 — 화면 모드 반영 + 시작 탭으로 한 번 이동 + 항상 표시 게시.
         .task {
             await settingsViewModel.onAppear()
             if let startTab = AppTab(rawValue: settingsViewModel.settings.startTabID) {
                 selectedTab = startTab
             }
+            await startAlwaysOnActivities(settingsViewModel.settings)
         }
+        // 포그라운드 복귀 — 시스템이 8시간 후 LA를 종료했을 수 있어 다시 게시한다
+        // (VM이 이 실행에서 켠 상태면 각자 건너뛴다 — 중복 게시 없음).
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await startAlwaysOnActivities(settingsViewModel.settings) }
+        }
+        // 설정에서 항상 표시(또는 항목)를 켜는 순간 즉시 게시 — 꺼짐 방향은 건드리지 않는다
+        // (사용자가 수동으로 띄운 LA를 죽이지 않기 위해).
+        .onChange(of: settingsViewModel.settings) { old, new in
+            let newlyOn = { (kind: KeyPath<AppSettings, Bool>) -> Bool in
+                new.liveAlwaysOn && new[keyPath: kind] && !(old.liveAlwaysOn && old[keyPath: kind])
+            }
+            Task {
+                if newlyOn(\.liveAlwaysOnMemo) { await memoViewModel.startAlwaysOnLiveActivity() }
+                if newlyOn(\.liveAlwaysOnReminder) { await reminderViewModel.startAlwaysOnLiveActivity() }
+                if newlyOn(\.liveAlwaysOnSchedule) { await scheduleViewModel.startAlwaysOnLiveActivity() }
+            }
+        }
+    }
+
+    /// 항상 표시 설정에 따라 선택된 항목의 LA를 자동 게시한다 — 각 VM이 중복·권한·빈 데이터를 거른다.
+    private func startAlwaysOnActivities(_ settings: AppSettings) async {
+        guard settings.liveAlwaysOn else { return }
+        if settings.liveAlwaysOnMemo { await memoViewModel.startAlwaysOnLiveActivity() }
+        if settings.liveAlwaysOnReminder { await reminderViewModel.startAlwaysOnLiveActivity() }
+        if settings.liveAlwaysOnSchedule { await scheduleViewModel.startAlwaysOnLiveActivity() }
     }
 
     /// 탭에 대응하는 화면을 만든다.

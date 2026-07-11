@@ -55,6 +55,8 @@ struct ScheduleViewModelTests {
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
+            refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
         )

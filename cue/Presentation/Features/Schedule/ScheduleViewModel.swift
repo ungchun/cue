@@ -142,6 +142,19 @@ final class ScheduleViewModel {
         return verdict
     }
 
+    /// 항상 표시 자동 게시 — 권한이 있으면 일정을 적재하고 LA 시작(다가오는 일정 없으면 use case가 skip).
+    /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 건너뛴다.
+    func startAlwaysOnLiveActivity() async {
+        guard !liveActivityActive else { return }
+        await onAppear()
+        guard access == .granted else { return }
+        do {
+            liveActivityActive = try await startLiveActivityUseCase(events: eventsByDay.flatMap(\.events))
+        } catch {
+            // 자동 경로 — 조용히 무시.
+        }
+    }
+
     /// 시트의 저장·취소 콜백에서 호출 — 시트를 닫는다.
     func dismissNewEvent() {
         showingNewEvent = false

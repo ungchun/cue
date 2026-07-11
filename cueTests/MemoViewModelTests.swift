@@ -116,6 +116,42 @@ struct MemoViewModelTests {
         #expect(await service.startMemoCalls.isEmpty)
     }
 
+    // MARK: - 항상 표시 자동 게시
+
+    /// 항상 표시 자동 게시는 사용자 탭이 아니므로 쿼터를 소비하지 않는다 — 한도 소진 상태여도 게시.
+    @Test func alwaysOnStartsWithoutConsumingQuota() async {
+        let (viewModel, _, service) = makeViewModel(
+            memo: Memo(text: "메모", colorHex: "#FF3B30"),
+            quotaRepository: quotaRepository(used: 2)
+        )
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == true)
+        #expect(await service.startMemoCalls.count == 1)
+    }
+
+    /// 빈 메모는 자동 게시 대상이 아니다.
+    @Test func alwaysOnSkipsWhenTextEmpty() async {
+        let (viewModel, _, service) = makeViewModel(memo: .init(text: "   ", colorHex: "#FF3B30"))
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == false)
+        #expect(await service.startMemoCalls.isEmpty)
+    }
+
+    /// 이미 활성(이 실행에서 켜짐)이면 중복 게시하지 않는다 — 포그라운드 복귀마다 재시작 방지.
+    @Test func alwaysOnSkipsWhenAlreadyActive() async {
+        let (viewModel, _, service) = makeViewModel(memo: Memo(text: "메모", colorHex: "#FF3B30"))
+        await viewModel.onAppear()
+        await viewModel.toggleLiveActivity()
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(await service.startMemoCalls.count == 1)
+    }
+
     /// 하루 한도 안이면 소비하고 잔여를 돌려준다 — 뷰가 "1/2" 토스트를 띄우는 근거.
     @Test func toggleConsumesQuotaAndReturnsRemaining() async {
         let (viewModel, _, service) = makeViewModel(memo: Memo(text: "메모", colorHex: "#FF3B30"))
