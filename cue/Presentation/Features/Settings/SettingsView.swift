@@ -31,6 +31,15 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            // Cue Premium 배너 — 설정 타이틀 바로 아래. 페이월은 추후(지금은 Premium 토스트).
+            Section {
+                PremiumBannerView {
+                    toastCenter.show("Premium")
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
+
             Section {
                 Picker("화면 모드", selection: colorSchemeBinding) {
                     ForEach(AppColorScheme.allCases, id: \.self) { scheme in
