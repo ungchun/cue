@@ -63,9 +63,11 @@ struct PremiumPaywallView: View {
         ZStack(alignment: .topLeading) {
             ForEach(0..<7, id: \.self) { index in
                 let diameter = 180 + CGFloat(index) * 120
+                // 진원지 근처 3개는 진하게(신호 발신점), 바깥은 급격히 옅어져 여운만 남긴다.
+                let opacities: [Double] = [0.34, 0.26, 0.18, 0.08, 0.06, 0.05, 0.04]
                 Circle()
                     .strokeBorder(
-                        Color.primary.opacity(0.16 - Double(index) * 0.018),
+                        Color.primary.opacity(opacities[index]),
                         lineWidth: 3
                     )
                     .frame(width: diameter, height: diameter)
