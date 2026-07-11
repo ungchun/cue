@@ -35,7 +35,7 @@ struct PremiumBannerView: View {
             .background {
                 ZStack(alignment: .trailing) {
                     Rectangle().fill(.primary)
-                    ripples
+                    iconDisc
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: Spacing.xxl, style: .continuous))
@@ -43,18 +43,20 @@ struct PremiumBannerView: View {
         .buttonStyle(.plain)
     }
 
-    /// 아이콘의 물결 겹 확대 — 같은 크기의 원을 오른쪽으로 조금씩 밀며 겹쳐,
-    /// 겹칠수록 밝아지는 초승달 밴드( ) ) ) )를 만든다. 배너 오른쪽 밖으로 잘려 나간다.
-    private var ripples: some View {
-        let size: CGFloat = 190
+    /// 앱 아이콘 원판 — 물결 겹(왼쪽 진함 → 오른쪽 밝은 밴드)을 코드로 그려
+    /// 배너 우측 모서리에 반쯤 걸쳐 잘리게 얹는다(오브젝트가 얹힌 느낌).
+    private var iconDisc: some View {
+        let size: CGFloat = 150
         return ZStack {
-            ForEach(0..<6, id: \.self) { index in
-                Circle()
-                    .fill(Color(.systemBackground).opacity(0.10))
-                    .frame(width: size, height: size)
-                    .offset(x: size * 0.38 + CGFloat(index) * size * 0.11)
-            }
+            Circle().fill(Color(.systemBackground).opacity(0.16))
+            Circle().fill(Color(.systemBackground).opacity(0.26)).offset(x: -size * 0.14)
+            Circle().fill(Color(.systemBackground).opacity(0.38)).offset(x: -size * 0.28)
+            Circle().fill(Color(.systemBackground).opacity(0.52)).offset(x: -size * 0.42)
         }
+        .clipShape(Circle())
+        .frame(width: size, height: size)
+        // 오른쪽으로 반쯤 밀어 배너 밖으로 잘리게.
+        .offset(x: size * 0.33)
     }
 }
 
