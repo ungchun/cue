@@ -50,21 +50,22 @@ struct SettingsView: View {
                 // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Pro 게이트도 추후 복원.
                 Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
                     .tint(.green)
-                // 대상 선택(메모/할일/일정) — 체크마크 리스트(알람 '반복' 스타일).
-                // 항상 보이되 마스터 off면 비활성화(회색)로 선택만 막는다.
-                Group {
-                    liveKindRow("메모", isOn: viewModel.settings.liveAlwaysOnMemo) {
-                        Task { await viewModel.setLiveAlwaysOnMemo(!viewModel.settings.liveAlwaysOnMemo) }
-                    }
-                    liveKindRow("할일", isOn: viewModel.settings.liveAlwaysOnReminder) {
-                        Task { await viewModel.setLiveAlwaysOnReminder(!viewModel.settings.liveAlwaysOnReminder) }
-                    }
-                    liveKindRow("일정", isOn: viewModel.settings.liveAlwaysOnSchedule) {
-                        Task { await viewModel.setLiveAlwaysOnSchedule(!viewModel.settings.liveAlwaysOnSchedule) }
+                // 대상 선택 — 행 하나, 메뉴에서 다중 체크(메뉴 안 Toggle은 체크마크로 렌더).
+                // 마스터 off면 비활성화(회색)로 선택만 막는다.
+                Menu {
+                    Toggle("메모", isOn: liveAlwaysOnMemoBinding)
+                    Toggle("할일", isOn: liveAlwaysOnReminderBinding)
+                    Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
+                } label: {
+                    HStack {
+                        Text("표시 대상")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(liveKindsSummary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
-                .padding(.leading, Spacing.md)
                 Button("24시간 사용하기") {
                     shows24HourSheet = true
                 }
@@ -143,20 +144,36 @@ struct SettingsView: View {
     }
 
 
-    /// 항상 표시 대상 한 줄 — 행 전체 탭으로 체크 토글(다중선택 표준 패턴).
-    private func liveKindRow(_ title: String, isOn: Bool, toggle: @escaping () -> Void) -> some View {
-        Button(action: toggle) {
-            HStack {
-                Text(title)
-                    .foregroundStyle(.primary)
-                Spacer()
-                if isOn {
-                    Image(systemName: "checkmark")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(.tint)
-                }
-            }
-        }
+    /// 표시 대상 요약 — 선택된 종류를 행 우측에 보여준다("메모, 일정" / "전체").
+    private var liveKindsSummary: String {
+        let selected = [
+            viewModel.settings.liveAlwaysOnMemo ? "메모" : nil,
+            viewModel.settings.liveAlwaysOnReminder ? "할일" : nil,
+            viewModel.settings.liveAlwaysOnSchedule ? "일정" : nil,
+        ].compactMap(\.self)
+        if selected.count == 3 { return "전체" }
+        return selected.joined(separator: ", ")
+    }
+
+    private var liveAlwaysOnMemoBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnMemo },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnMemo(newValue) } }
+        )
+    }
+
+    private var liveAlwaysOnReminderBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnReminder },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminder(newValue) } }
+        )
+    }
+
+    private var liveAlwaysOnScheduleBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnSchedule },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnSchedule(newValue) } }
+        )
     }
 
     /// 섹션 헤더 — 기본보다 작은 글자.
