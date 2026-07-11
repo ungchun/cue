@@ -47,12 +47,19 @@ struct Live24HourGuideView: View {
     }
 
     /// 단축어 앱 랜딩 — 탭하면 바로 단축어 앱이 열린다(자동화 탭으로 이동해 설정).
+    /// 앞의 아이콘은 실제 단축어 앱 아이콘 에셋.
     private var shortcutsButton: some View {
         Button {
             openURL(URL(string: "shortcuts://")!)
         } label: {
-            Label("단축어 열기", systemImage: "arrow.up.forward.app")
-                .font(.body.weight(.semibold))
+            HStack(spacing: Spacing.sm) {
+                Image("ShortcutsAppIcon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: Spacing.lg, height: Spacing.lg)
+                Text("단축어 열기")
+                    .font(.body.weight(.semibold))
+            }
         }
         .buttonStyle(.borderedProminent)
         .tint(.primary)
