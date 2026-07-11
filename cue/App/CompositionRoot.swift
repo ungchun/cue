@@ -59,7 +59,7 @@ struct CompositionRoot {
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: liveActivityService),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: liveActivityService),
-            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: UserDefaultsLiveActivationQuotaRepository()),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: UserDefaultsLiveActivationQuotaRepository(), isPremium: PremiumAccess.isPremium),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )

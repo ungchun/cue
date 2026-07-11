@@ -12,9 +12,9 @@ struct SettingsView: View {
     @Environment(\.requestReview) private var requestReview
     @Environment(\.toastCenter) private var toastCenter
 
-    /// 유료(Premium) 전용 설정 게이트 — 결제 도입 전이라 전원 무료 취급(항상 차단 + "Premium" 토스트).
-    /// TODO: 결제/구독 도입 시 실제 엔타이틀먼트 확인으로 교체.
-    private let isPremiumUser = false
+    /// 유료(Premium) 전용 설정 게이트 — 전역 스위치를 따른다(현재 전 기능 개방).
+    /// TODO: 결제/구독 도입 시 PremiumAccess를 실제 엔타이틀먼트로 교체.
+    private let isPremiumUser = PremiumAccess.isPremium
 
     /// 메모 LA 카드 색 — ColorPicker 선택을 로컬 @State로 동기 보관한다.
     /// (async 저장 setter를 직접 binding하면 get이 stale 값을 돌려줘 선택이 즉시 풀리는

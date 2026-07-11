@@ -116,8 +116,11 @@ struct ScheduleView: View {
                 .font(.largeTitle.bold())
             Spacer()
             FloatingMessageButton {
+                let wasActive = viewModel.liveActivityActive
                 let verdict = await viewModel.toggleLiveActivity()
                 switch verdict {
+                case .unlimited where viewModel.liveActivityActive:
+                    toastCenter.show(wasActive ? "새로고침" : "라이브")
                 case .denied:
                     toastCenter.show("Premium")
                 case .allowed(let remaining) where viewModel.liveActivityActive:

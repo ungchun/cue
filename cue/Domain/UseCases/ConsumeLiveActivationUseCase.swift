@@ -9,14 +9,17 @@ import Foundation
 ///
 /// 날짜가 바뀌면 사용량을 리셋하고, 한도 안이면 소비 후 잔여 횟수를 돌려준다.
 /// 호출처(ViewModel)는 `.denied`면 LA를 시작하지 않고 Premium 안내로 분기한다.
-/// Premium 사용자는 이 use case를 아예 거치지 않는 게 계약(결제 도입 시 호출처에서 분기).
+/// Premium(`isPremium`)이면 소비 없이 `.unlimited` — 조립(CompositionRoot)에서 주입한다.
 struct ConsumeLiveActivationUseCase: Sendable {
     let repository: any LiveActivationQuotaRepository
+    /// Premium이면 한도를 소비하지 않고 `.unlimited`를 돌려준다(기존 라이브/새로고침 토스트 유지).
+    var isPremium: Bool = false
 
     /// 하루 허용 횟수 — 켜기와 새로고침을 구분하지 않는다.
     static let dailyLimit = 2
 
     func callAsFunction(now: Date = .now, calendar: Calendar = .current) async -> LiveActivationVerdict {
+        guard !isPremium else { return .unlimited }
         let key = Self.dayKey(for: now, calendar: calendar)
         var quota = await repository.fetch()
         if quota.dayKey != key {

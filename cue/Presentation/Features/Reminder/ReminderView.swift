@@ -274,7 +274,9 @@ struct ReminderView: View {
         switch viewModel.access {
         case .notDetermined:
             ProgressView()
-        case .denied:
+        case .unlimited where viewModel.liveActivityActive:
+                    toastCenter.show(wasActive ? "새로고침" : "라이브")
+                case .denied:
             deniedView
         case .granted:
             reminderList
@@ -464,8 +466,11 @@ struct ReminderView: View {
                 .foregroundStyle(currentTitleColor)
             Spacer()
             FloatingMessageButton {
+                let wasActive = viewModel.liveActivityActive
                 let verdict = await viewModel.toggleLiveActivity(listTitle: currentTitle)
                 switch verdict {
+                case .unlimited where viewModel.liveActivityActive:
+                    toastCenter.show(wasActive ? "새로고침" : "라이브")
                 case .denied:
                     toastCenter.show("Premium")
                 case .allowed(let remaining) where viewModel.liveActivityActive:

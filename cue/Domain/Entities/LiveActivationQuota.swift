@@ -19,4 +19,6 @@ struct LiveActivationQuota: Codable, Equatable, Sendable {
 enum LiveActivationVerdict: Equatable, Sendable {
     case allowed(remaining: Int)
     case denied
+    /// Premium — 한도 없음. 뷰는 기존 라이브/새로고침 토스트를 유지한다.
+    case unlimited
 }

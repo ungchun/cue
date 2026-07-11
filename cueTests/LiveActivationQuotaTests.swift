@@ -52,6 +52,17 @@ struct LiveActivationQuotaTests {
         #expect(await consume(now: date(2026, 7, 11, hour: 23), calendar: calendar) == .denied)
     }
 
+    /// Premium이면 소비 없이 무제한 — 사용량도 늘지 않는다.
+    @Test func premiumBypassesQuota() async {
+        let repository = InMemoryLiveActivationQuotaRepository()
+        let consume = ConsumeLiveActivationUseCase(repository: repository, isPremium: true)
+        let now = date(2026, 7, 11)
+
+        #expect(await consume(now: now, calendar: calendar) == .unlimited)
+        #expect(await consume(now: now, calendar: calendar) == .unlimited)
+        #expect(await repository.fetch() == .empty)   // 저장소 미변경
+    }
+
     /// UserDefaults 저장소 — 앱 재시작(새 인스턴스)에도 사용량이 이어진다.
     @Test func userDefaultsPersistsAcrossInstances() async {
         let defaults = UserDefaults(suiteName: "test.liveQuota.\(UUID().uuidString)")!

@@ -21,7 +21,7 @@ struct RootView: View {
     init(dependencies: Dependencies) {
         _reminderViewModel = State(initialValue: ReminderViewModel(dependencies: dependencies))
         _scheduleViewModel = State(initialValue: ScheduleViewModel(dependencies: dependencies))
-        _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies))
+        _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, isPremiumUser: PremiumAccess.isPremium))
         _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies))
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
     }
