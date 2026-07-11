@@ -70,7 +70,19 @@ struct SettingsView: View {
                 LabeledContent("항목") {
                     Menu {
                         Toggle("메모", isOn: liveAlwaysOnMemoBinding)
-                        Toggle("할일", isOn: liveAlwaysOnReminderBinding)
+                        // 할일은 서브메뉴 — 끄기/범위 선택을 단일 선택으로 통합.
+                        Menu("할일") {
+                            Picker("할일", selection: reminderScopeMenuBinding) {
+                                Text("사용 안 함").tag("off")
+                                Divider()
+                                Text("오늘").tag("today")
+                                Text("예정").tag("scheduled")
+                                Text("전체").tag("all")
+                                ForEach(viewModel.reminderLists, id: \.id) { list in
+                                    Text(list.title).tag(list.id)
+                                }
+                            }
+                        }
                         Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
                     } label: {
                         HStack(spacing: Spacing.xs) {
@@ -82,16 +94,6 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
-                // 할일 범위 — 항상 표시 할일 LA가 어떤 섹션 스냅샷을 쓸지(오늘/예정/전체/리스트).
-                Picker("할일 범위", selection: reminderScopeBinding) {
-                    Text("오늘").tag("today")
-                    Text("예정").tag("scheduled")
-                    Text("전체").tag("all")
-                    ForEach(viewModel.reminderLists, id: \.id) { list in
-                        Text(list.title).tag(list.id)
-                    }
-                }
-                .disabled(!viewModel.settings.liveAlwaysOn || !viewModel.settings.liveAlwaysOnReminder)
                 Button("24시간 사용하기") {
                     shows24HourSheet = true
                 }
@@ -175,35 +177,55 @@ struct SettingsView: View {
     }
 
 
-    /// 표시 대상 요약 — 선택된 종류를 행 우측에 보여준다("메모, 일정" / "전체").
+    /// 표시 대상 요약 — 선택된 종류를 행 우측에 보여준다("메모, 할일(오늘)" / "전체").
     private var liveKindsSummary: String {
+        let settings = viewModel.settings
+        let reminderLabel = "할일" + (reminderScopeLabel.map { "(\($0))" } ?? "")
         let selected = [
-            viewModel.settings.liveAlwaysOnMemo ? "메모" : nil,
-            viewModel.settings.liveAlwaysOnReminder ? "할일" : nil,
-            viewModel.settings.liveAlwaysOnSchedule ? "일정" : nil,
+            settings.liveAlwaysOnMemo ? "메모" : nil,
+            settings.liveAlwaysOnReminder ? reminderLabel : nil,
+            settings.liveAlwaysOnSchedule ? "일정" : nil,
         ].compactMap(\.self)
-        if selected.count == 3 { return "전체" }
+        // 셋 다 켜져 있고 할일이 기본(전체) 범위면 간단히 "전체".
+        if selected.count == 3, settings.liveAlwaysOnReminderScopeID == "all" { return "전체" }
         return selected.joined(separator: ", ")
+    }
+
+    /// 할일 범위의 표시 라벨 — 전체(기본)는 생략, 오늘/예정/리스트명만 병기.
+    private var reminderScopeLabel: String? {
+        switch viewModel.settings.liveAlwaysOnReminderScopeID {
+        case "all": return nil
+        case "today": return "오늘"
+        case "scheduled": return "예정"
+        case let id: return viewModel.reminderLists.first(where: { $0.id == id })?.title
+        }
+    }
+
+    /// 할일 서브메뉴 단일 선택 — "off"는 할일 항목 끔, 나머지는 켬 + 범위 지정.
+    private var reminderScopeMenuBinding: Binding<String> {
+        Binding(
+            get: {
+                viewModel.settings.liveAlwaysOnReminder
+                    ? viewModel.settings.liveAlwaysOnReminderScopeID
+                    : "off"
+            },
+            set: { newValue in
+                Task {
+                    if newValue == "off" {
+                        await viewModel.setLiveAlwaysOnReminder(false)
+                    } else {
+                        await viewModel.setLiveAlwaysOnReminder(true)
+                        await viewModel.setLiveAlwaysOnReminderScopeID(newValue)
+                    }
+                }
+            }
+        )
     }
 
     private var liveAlwaysOnMemoBinding: Binding<Bool> {
         Binding(
             get: { viewModel.settings.liveAlwaysOnMemo },
             set: { newValue in Task { await viewModel.setLiveAlwaysOnMemo(newValue) } }
-        )
-    }
-
-    private var liveAlwaysOnReminderBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnReminder },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminder(newValue) } }
-        )
-    }
-
-    private var reminderScopeBinding: Binding<String> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnReminderScopeID },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminderScopeID(newValue) } }
         )
     }
 
