@@ -116,10 +116,15 @@ struct ScheduleView: View {
                 .font(.largeTitle.bold())
             Spacer()
             FloatingMessageButton {
-                let wasActive = viewModel.liveActivityActive
-                await viewModel.toggleLiveActivity()
-                if viewModel.liveActivityActive {
-                    toastCenter.show(wasActive ? "새로고침" : "라이브")
+                let verdict = await viewModel.toggleLiveActivity()
+                switch verdict {
+                case .denied:
+                    toastCenter.show("Premium")
+                case .allowed(let remaining) where viewModel.liveActivityActive:
+                    // 무료 한도 잔여 표기 — "1/2" → "0/2".
+                    toastCenter.show("\(remaining)/\(ConsumeLiveActivationUseCase.dailyLimit)")
+                default:
+                    break
                 }
             }
         }

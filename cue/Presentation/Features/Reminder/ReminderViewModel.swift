@@ -25,6 +25,7 @@ final class ReminderViewModel {
     private let saveSortSettingsUseCase: SaveReminderSortSettingsUseCase
     private let startLiveActivityUseCase: StartReminderLiveActivityUseCase
     private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
+    private let consumeLiveActivation: ConsumeLiveActivationUseCase
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
@@ -79,6 +80,7 @@ final class ReminderViewModel {
         self.saveSortSettingsUseCase = dependencies.saveReminderSortSettings
         self.startLiveActivityUseCase = dependencies.startReminderLiveActivity
         self.endLiveActivityUseCase = dependencies.endReminderLiveActivity
+        self.consumeLiveActivation = dependencies.consumeLiveActivation
         startObservingChanges()
     }
 
@@ -104,7 +106,11 @@ final class ReminderViewModel {
     /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
     /// 활성이면 즉시 종료. 아니면 현재 selection 제목 + visible reminders 스냅샷으로 시작.
     /// cap(6) + remaining 계산은 `StartReminderLiveActivityUseCase`에서.
-    func toggleLiveActivity(listTitle: String) async {
+    /// 무료 하루 한도를 먼저 소비 — `.denied`면 기존 LA를 건드리지 않는다(뷰가 Premium 토스트).
+    @discardableResult
+    func toggleLiveActivity(listTitle: String) async -> LiveActivationVerdict? {
+        let verdict = await consumeLiveActivation()
+        guard case .allowed = verdict else { return verdict }
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
@@ -119,7 +125,9 @@ final class ReminderViewModel {
             liveActivityActive = true
         } catch {
             errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+            return nil
         }
+        return verdict
     }
 
     deinit {

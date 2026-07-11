@@ -23,6 +23,7 @@ final class ScheduleViewModel {
     private let observeChangesUseCase: ObserveEventsChangesUseCase
     private let startLiveActivityUseCase: StartScheduleLiveActivityUseCase
     private let endLiveActivityUseCase: EndScheduleLiveActivityUseCase
+    private let consumeLiveActivation: ConsumeLiveActivationUseCase
     /// 첫 진입 시 가져올 일수. 사용자 결정: 1달, 과거 미포함.
     private static let initialDays = 30
     /// 바닥 도달 시 추가로 가져올 일수. 사용자 결정: 2주.
@@ -62,6 +63,7 @@ final class ScheduleViewModel {
         self.observeChangesUseCase = dependencies.observeEventsChanges
         self.startLiveActivityUseCase = dependencies.startScheduleLiveActivity
         self.endLiveActivityUseCase = dependencies.endScheduleLiveActivity
+        self.consumeLiveActivation = dependencies.consumeLiveActivation
         self.now = now
         startObservingChanges()
     }
@@ -120,7 +122,11 @@ final class ScheduleViewModel {
     /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
     /// 활성이면 종료. 아니면 `eventsByDay`의 모든 이벤트를 use case로 보내 게시한다 — 다가오는
     /// 일정이 없으면 use case가 `false`를 반환해 LA를 띄우지 않는다(날짜 그룹·라벨·캡은 use case가 처리).
-    func toggleLiveActivity() async {
+    /// 무료 하루 한도를 먼저 소비 — `.denied`면 기존 LA를 건드리지 않는다(뷰가 Premium 토스트).
+    @discardableResult
+    func toggleLiveActivity() async -> LiveActivationVerdict? {
+        let verdict = await consumeLiveActivation()
+        guard case .allowed = verdict else { return verdict }
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
@@ -131,7 +137,9 @@ final class ScheduleViewModel {
             if !liveActivityActive { await endLiveActivityUseCase() }
         } catch {
             errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+            return nil
         }
+        return verdict
     }
 
     /// 시트의 저장·취소 콜백에서 호출 — 시트를 닫는다.

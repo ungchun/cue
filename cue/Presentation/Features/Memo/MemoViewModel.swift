@@ -22,6 +22,7 @@ final class MemoViewModel {
     private let startLiveActivityUseCase: StartMemoLiveActivityUseCase
     private let endLiveActivityUseCase: EndMemoLiveActivityUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
+    private let consumeLiveActivation: ConsumeLiveActivationUseCase
 
     /// 현재 메모(텍스트 + 색). View는 바인딩으로 읽고, 변경은 `setText`/`setColor`로.
     private(set) var memo: Memo = .default
@@ -38,6 +39,7 @@ final class MemoViewModel {
         self.startLiveActivityUseCase = dependencies.startMemoLiveActivity
         self.endLiveActivityUseCase = dependencies.endMemoLiveActivity
         self.fetchAppSettings = dependencies.fetchAppSettings
+        self.consumeLiveActivation = dependencies.consumeLiveActivation
     }
 
     /// 빈 텍스트(공백만 포함)면 라이브 액티비티를 시작할 수 없다 — 버튼 비활성 기준.
@@ -67,8 +69,13 @@ final class MemoViewModel {
 
     /// 켜기 버튼 액션 — 꺼져 있으면 켜고, **떠 있으면 끄고 다시 켠다(새로고침)**. 더는 단순
     /// 종료하지 않는다. 빈 텍스트면 버튼이 비활성이라 평상시 이 경로로 오지 않는다(마지막 방어선).
-    func toggleLiveActivity() async {
-        guard canStartLiveActivity else { return }
+    /// 무료 하루 한도(켜기·새로고침 공통)를 먼저 소비한다 — `.denied`면 기존 LA를 건드리지
+    /// 않고 그대로 반환(뷰가 Premium 토스트), `.allowed`면 잔여 횟수 반환(뷰가 "1/2" 토스트).
+    @discardableResult
+    func toggleLiveActivity() async -> LiveActivationVerdict? {
+        guard canStartLiveActivity else { return nil }
+        let verdict = await consumeLiveActivation()
+        guard case .allowed = verdict else { return verdict }
         if liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false
@@ -78,7 +85,9 @@ final class MemoViewModel {
             liveActivityActive = true
         } catch {
             errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+            return nil
         }
+        return verdict
     }
 
     /// LA가 떠 있을 때 변경을 반영 — 텍스트가 비면(use case가 throw) 종료한다.

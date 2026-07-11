@@ -67,6 +67,9 @@ struct Dependencies: Sendable {
     /// 설정 변경 직후 호출 — 켜져 있는 LA를 재게시해 렌더 시점 설정(캘린더 표시)을 즉시 반영.
     var refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase
 
+    /// 무료 사용자의 라이브 활성화(켜기·새로고침) 하루 한도 소비 — 켜기 버튼에서 호출.
+    var consumeLiveActivation: ConsumeLiveActivationUseCase
+
     // MARK: - 앱 전역 설정
 
     /// 앱 전역 설정(화면 모드 등) 영속화 — 설정 탭 진입 시 fetch, 항목 변경 직후 save.
@@ -178,6 +181,7 @@ extension Dependencies {
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: liveActivityService),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: liveActivityService),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )

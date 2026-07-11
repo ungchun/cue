@@ -56,7 +56,7 @@ struct PremiumPaywallView: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("Cue Premium")
                 .font(.largeTitle.weight(.bold))
-            Text("당신의 시간에, 큐 사인")
+            Text("잊지 않게, 흔들리지 않게")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }

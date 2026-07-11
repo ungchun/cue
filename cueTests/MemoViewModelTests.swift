@@ -13,7 +13,8 @@ struct MemoViewModelTests {
     /// `.preview` 의존성을 복제해 메모 관련 use case만 테스트용으로 교체한다 — 전체 조립을
     /// 반복하지 않고 메모 경로만 격리해 검증.
     private func makeViewModel(
-        memo: Memo = .default
+        memo: Memo = .default,
+        quotaRepository: InMemoryLiveActivationQuotaRepository = InMemoryLiveActivationQuotaRepository()
     ) -> (MemoViewModel, InMemoryMemoRepository, RecordingMemoLiveActivity) {
         let repo = InMemoryMemoRepository(memo: memo)
         let service = RecordingMemoLiveActivity()
@@ -22,7 +23,15 @@ struct MemoViewModelTests {
         deps.saveMemo = SaveMemoUseCase(repository: repo)
         deps.startMemoLiveActivity = StartMemoLiveActivityUseCase(service: service)
         deps.endMemoLiveActivity = EndMemoLiveActivityUseCase(service: service)
+        deps.consumeLiveActivation = ConsumeLiveActivationUseCase(repository: quotaRepository)
         return (MemoViewModel(dependencies: deps), repo, service)
+    }
+
+    /// 오늘 사용량이 이미 `used`인 쿼터 저장소.
+    private func quotaRepository(used: Int) -> InMemoryLiveActivationQuotaRepository {
+        InMemoryLiveActivationQuotaRepository(
+            storage: LiveActivationQuota(dayKey: ConsumeLiveActivationUseCase.dayKey(for: .now), used: used)
+        )
     }
 
     // MARK: - 로드
@@ -105,6 +114,34 @@ struct MemoViewModelTests {
 
         #expect(viewModel.liveActivityActive == false)
         #expect(await service.startMemoCalls.isEmpty)
+    }
+
+    /// 하루 한도 안이면 소비하고 잔여를 돌려준다 — 뷰가 "1/2" 토스트를 띄우는 근거.
+    @Test func toggleConsumesQuotaAndReturnsRemaining() async {
+        let (viewModel, _, service) = makeViewModel(memo: Memo(text: "메모", colorHex: "#FF3B30"))
+        await viewModel.onAppear()
+
+        let verdict = await viewModel.toggleLiveActivity()
+
+        #expect(verdict == .allowed(remaining: 1))
+        #expect(viewModel.liveActivityActive == true)
+        #expect(await service.startMemoCalls.count == 1)
+    }
+
+    /// 오늘 한도(2회)를 다 썼으면 거부 — LA를 시작하지 않고, 떠 있던 LA도 건드리지 않는다.
+    @Test func toggleDeniedWhenQuotaExhausted() async {
+        let (viewModel, _, service) = makeViewModel(
+            memo: Memo(text: "메모", colorHex: "#FF3B30"),
+            quotaRepository: quotaRepository(used: 2)
+        )
+        await viewModel.onAppear()
+
+        let verdict = await viewModel.toggleLiveActivity()
+
+        #expect(verdict == .denied)
+        #expect(viewModel.liveActivityActive == false)
+        #expect(await service.startMemoCalls.isEmpty)
+        #expect(await service.endMemoCount == 0)   // 기존 LA를 죽이지 않는다
     }
 
     // MARK: - 저장

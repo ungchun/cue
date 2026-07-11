@@ -20,7 +20,7 @@ struct PremiumBannerView: View {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Cue Premium")
                         .font(.title.weight(.bold))
-                    Text("라이브를 항상, 나답게")
+                    Text("잊지 않게, 흔들리지 않게")
                         .font(.footnote)
                         .opacity(0.75)
                 }
