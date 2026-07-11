@@ -170,6 +170,56 @@ struct SettingsViewModelTests {
         #expect(reloaded.settings.scheduleShowsCalendar == true)
     }
 
+    /// 라이브 항상 표시 마스터 토글이 영속화된다.
+    @Test func setLiveAlwaysOnPersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setLiveAlwaysOn(true)
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        #expect(reloaded.settings.liveAlwaysOn == true)
+        // 하위 종류 기본값은 셋 다 on.
+        #expect(reloaded.settings.liveAlwaysOnMemo == true)
+        #expect(reloaded.settings.liveAlwaysOnReminder == true)
+        #expect(reloaded.settings.liveAlwaysOnSchedule == true)
+    }
+
+    /// 하위 종류를 마지막 하나까지 끄면 마스터도 함께 꺼진다(빈 활성 상태 방지).
+    @Test func turningOffLastKindTurnsMasterOff() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+        await viewModel.setLiveAlwaysOn(true)
+
+        await viewModel.setLiveAlwaysOnMemo(false)
+        await viewModel.setLiveAlwaysOnReminder(false)
+        #expect(viewModel.settings.liveAlwaysOn == true)   // 아직 일정이 남음
+
+        await viewModel.setLiveAlwaysOnSchedule(false)
+        #expect(viewModel.settings.liveAlwaysOn == false)  // 셋 다 꺼짐 → 마스터 off
+    }
+
+    /// 셋 다 꺼진 채 접힌 뒤 마스터를 다시 켜면 하위가 셋 다 on으로 리셋된다
+    /// (켜자마자 다시 접히는 불능 상태 방지).
+    @Test func reenablingMasterResetsKindsOn() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+        await viewModel.setLiveAlwaysOn(true)
+        await viewModel.setLiveAlwaysOnMemo(false)
+        await viewModel.setLiveAlwaysOnReminder(false)
+        await viewModel.setLiveAlwaysOnSchedule(false)
+
+        await viewModel.setLiveAlwaysOn(true)
+
+        #expect(viewModel.settings.liveAlwaysOnMemo == true)
+        #expect(viewModel.settings.liveAlwaysOnReminder == true)
+        #expect(viewModel.settings.liveAlwaysOnSchedule == true)
+    }
+
     /// 캘린더 표시 토글은 켜져 있는 LA를 즉시 다시 그리게 한다 — 저장(App Group 미러) 후
     /// refreshLayout이 호출되어 위젯이 새 플래그를 렌더 시점에 읽는다.
     @Test func calendarTogglesRefreshLiveActivityLayout() async {

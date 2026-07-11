@@ -64,6 +64,47 @@ final class SettingsViewModel {
         await update { $0.memoTextSize = size }
     }
 
+    /// 라이브 항상 표시 마스터 — 다시 켤 때 하위가 전부 꺼진 불능 상태면 셋 다 on으로 리셋한다
+    /// (켜자마자 다시 접히는 상태 방지).
+    func setLiveAlwaysOn(_ value: Bool) async {
+        await update {
+            $0.liveAlwaysOn = value
+            if value, !$0.liveAlwaysOnMemo, !$0.liveAlwaysOnReminder, !$0.liveAlwaysOnSchedule {
+                $0.liveAlwaysOnMemo = true
+                $0.liveAlwaysOnReminder = true
+                $0.liveAlwaysOnSchedule = true
+            }
+        }
+    }
+
+    /// 항상 표시 대상 — 마지막 하나까지 끄면 마스터도 함께 끈다(빈 활성 상태 방지).
+    func setLiveAlwaysOnMemo(_ value: Bool) async {
+        await update {
+            $0.liveAlwaysOnMemo = value
+            Self.collapseMasterIfAllKindsOff(&$0)
+        }
+    }
+
+    func setLiveAlwaysOnReminder(_ value: Bool) async {
+        await update {
+            $0.liveAlwaysOnReminder = value
+            Self.collapseMasterIfAllKindsOff(&$0)
+        }
+    }
+
+    func setLiveAlwaysOnSchedule(_ value: Bool) async {
+        await update {
+            $0.liveAlwaysOnSchedule = value
+            Self.collapseMasterIfAllKindsOff(&$0)
+        }
+    }
+
+    private static func collapseMasterIfAllKindsOff(_ settings: inout AppSettings) {
+        if !settings.liveAlwaysOnMemo, !settings.liveAlwaysOnReminder, !settings.liveAlwaysOnSchedule {
+            settings.liveAlwaysOn = false
+        }
+    }
+
     /// 캘린더 표시 토글 — 저장(App Group 미러 포함) 후 켜져 있는 LA를 재게시해 즉시 반영한다.
     func setMemoShowsCalendar(_ value: Bool) async {
         await update { $0.memoShowsCalendar = value }

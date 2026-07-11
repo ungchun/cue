@@ -47,6 +47,10 @@ struct AppSettingsRepositoryTests {
         #expect(settings.focusEndSound == false)
         #expect(settings.memoShowsCalendar == false)    // 캘린더 표시 플래그도 기본 false
         #expect(settings.scheduleShowsCalendar == false)
+        #expect(settings.liveAlwaysOn == false)         // 항상 표시 기본 off
+        #expect(settings.liveAlwaysOnMemo == true)      // 하위 종류 기본 on
+        #expect(settings.liveAlwaysOnReminder == true)
+        #expect(settings.liveAlwaysOnSchedule == true)
     }
 
     /// 캘린더 표시 플래그가 저장·복원 왕복에서 true로 보존된다.

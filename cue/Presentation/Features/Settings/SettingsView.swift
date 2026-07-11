@@ -25,9 +25,6 @@ struct SettingsView: View {
     /// "24시간 사용하기" 시트 표시 — 내용은 추후 채운다(현재 빈 시트).
     @State private var shows24HourSheet = false
 
-    /// "라이브 항상 표시" placeholder — 동작 미연결. 확인용으로 토글 자체는 켜지게 둔다.
-    /// TODO: 실제 설정 필드 연결 + Pro 게이트 복원.
-    @State private var liveAlwaysOnPlaceholder = false
 
     /// 시작 탭 선택지 — 설정 탭 자신은 제외(설정 화면으로 앱을 켜는 건 의미가 없음).
     private static let startTabOptions = AppTab.allCases.filter { $0 != .settings }
@@ -50,9 +47,19 @@ struct SettingsView: View {
             }
 
             Section {
-                // 동작 미연결 placeholder — 항상 표시 로직은 추후. 확인용으로 켜짐 허용(Pro 게이트는 추후 복원).
-                Toggle("라이브 항상 표시", isOn: $liveAlwaysOnPlaceholder)
+                // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Pro 게이트도 추후 복원.
+                Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
                     .tint(.green)
+                // 점진적 노출 — 마스터 on일 때만 대상 선택(메모/할일/일정)이 펼쳐진다.
+                if viewModel.settings.liveAlwaysOn {
+                    Group {
+                        Toggle("메모", isOn: liveAlwaysOnMemoBinding)
+                        Toggle("할일", isOn: liveAlwaysOnReminderBinding)
+                        Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
+                    }
+                    .tint(.green)
+                    .padding(.leading, Spacing.md)
+                }
                 Button("24시간 사용하기") {
                     shows24HourSheet = true
                 }
@@ -186,6 +193,34 @@ struct SettingsView: View {
                         .onTapGesture { toastCenter.show("Pro", appMark: true) }
                 }
             }
+    }
+
+    private var liveAlwaysOnBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOn },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOn(newValue) } }
+        )
+    }
+
+    private var liveAlwaysOnMemoBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnMemo },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnMemo(newValue) } }
+        )
+    }
+
+    private var liveAlwaysOnReminderBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnReminder },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminder(newValue) } }
+        )
+    }
+
+    private var liveAlwaysOnScheduleBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnSchedule },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnSchedule(newValue) } }
+        )
     }
 
     /// "캘린더 함께 표시"(true) 선택은 Pro 전용 — 무료면 저장하지 않고 Pro 토스트만.

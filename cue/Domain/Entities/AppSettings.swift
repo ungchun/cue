@@ -39,6 +39,12 @@ struct AppSettings: Codable, Equatable, Sendable {
     var memoShowsCalendar: Bool
     /// 일정 잠금화면 LA에 월간 캘린더를 함께 표시할지. `false`면 일정만(현재 기본 동작).
     var scheduleShowsCalendar: Bool
+    /// 라이브 액티비티 항상 표시(마스터). `false`면 현재처럼 수동 토글로만 게시.
+    var liveAlwaysOn: Bool
+    /// 항상 표시 대상 — 메모/할일/일정. 마스터 on일 때만 의미. 기본 셋 다 on.
+    var liveAlwaysOnMemo: Bool
+    var liveAlwaysOnReminder: Bool
+    var liveAlwaysOnSchedule: Bool
 
     static let `default` = AppSettings(
         colorScheme: .system,
@@ -46,7 +52,11 @@ struct AppSettings: Codable, Equatable, Sendable {
         focusEndSound: false,
         memoTextSize: .large,
         memoShowsCalendar: false,
-        scheduleShowsCalendar: false
+        scheduleShowsCalendar: false,
+        liveAlwaysOn: false,
+        liveAlwaysOnMemo: true,
+        liveAlwaysOnReminder: true,
+        liveAlwaysOnSchedule: true
     )
 }
 
@@ -68,5 +78,13 @@ extension AppSettings {
             ?? fallback.memoShowsCalendar
         scheduleShowsCalendar = try container.decodeIfPresent(Bool.self, forKey: .scheduleShowsCalendar)
             ?? fallback.scheduleShowsCalendar
+        liveAlwaysOn = try container.decodeIfPresent(Bool.self, forKey: .liveAlwaysOn)
+            ?? fallback.liveAlwaysOn
+        liveAlwaysOnMemo = try container.decodeIfPresent(Bool.self, forKey: .liveAlwaysOnMemo)
+            ?? fallback.liveAlwaysOnMemo
+        liveAlwaysOnReminder = try container.decodeIfPresent(Bool.self, forKey: .liveAlwaysOnReminder)
+            ?? fallback.liveAlwaysOnReminder
+        liveAlwaysOnSchedule = try container.decodeIfPresent(Bool.self, forKey: .liveAlwaysOnSchedule)
+            ?? fallback.liveAlwaysOnSchedule
     }
 }
