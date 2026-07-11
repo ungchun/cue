@@ -37,17 +37,15 @@ struct FocusAlarmLiveActivityWidget: Widget {
                     buttonGroup(context.state, tint: tint)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                DynamicIslandExpandedRegion(.trailing) {
-                    // DI는 단계 라벨 없이 시간만 — 폭이 부족하면 카메라 아래(전체 폭)로
-                    // 내려가 가운데 정렬로, 폰트 축소·말줄임 없이 온전히 그린다.
+                DynamicIslandExpandedRegion(.center) {
+                    // DI는 단계 라벨 없이 시간만 — center 리전(카메라 아래 중앙)에 두어
+                    // 아일랜드 전체 기준 가운데 정렬. 전체 폭이라 축소·말줄임 없음.
                     liveCountdown(
                         context.state,
                         font: .system(size: 44, weight: .regular, design: .rounded),
                         tint: tint
                     )
-                    .frame(maxWidth: .infinity, alignment: .center)
                     .lineLimit(1)
-                    .dynamicIsland(verticalPlacement: .belowIfTooWide)
                 }
             } compactLeading: {
                 compactRing(context.state, color: tint)
