@@ -83,6 +83,8 @@ struct SettingsView: View {
                                 Text(list.title).tag(list.id)
                             }
                         }
+                        // 메뉴 안 Picker는 기본이 인라인 전개 — 접히는 서브메뉴("할일 ▸")로 강제.
+                        .pickerStyle(.menu)
                         Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
                     } label: {
                         HStack(spacing: Spacing.xs) {
