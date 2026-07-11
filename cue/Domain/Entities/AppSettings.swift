@@ -45,6 +45,9 @@ struct AppSettings: Codable, Equatable, Sendable {
     var liveAlwaysOnMemo: Bool
     var liveAlwaysOnReminder: Bool
     var liveAlwaysOnSchedule: Bool
+    /// 항상 표시 할일 LA의 범위 — "today"/"scheduled"/"all" 또는 사용자 리스트 id.
+    /// Domain은 Presentation의 필터 타입을 모르므로 문자열로 보관(startTabID 전례). 기본 전체.
+    var liveAlwaysOnReminderScopeID: String
 
     static let `default` = AppSettings(
         colorScheme: .system,
@@ -56,7 +59,8 @@ struct AppSettings: Codable, Equatable, Sendable {
         liveAlwaysOn: false,
         liveAlwaysOnMemo: true,
         liveAlwaysOnReminder: true,
-        liveAlwaysOnSchedule: true
+        liveAlwaysOnSchedule: true,
+        liveAlwaysOnReminderScopeID: "all"
     )
 }
 
@@ -86,5 +90,7 @@ extension AppSettings {
             ?? fallback.liveAlwaysOnReminder
         liveAlwaysOnSchedule = try container.decodeIfPresent(Bool.self, forKey: .liveAlwaysOnSchedule)
             ?? fallback.liveAlwaysOnSchedule
+        liveAlwaysOnReminderScopeID = try container.decodeIfPresent(String.self, forKey: .liveAlwaysOnReminderScopeID)
+            ?? fallback.liveAlwaysOnReminderScopeID
     }
 }

@@ -220,6 +220,19 @@ struct SettingsViewModelTests {
         #expect(viewModel.settings.liveAlwaysOnSchedule == true)
     }
 
+    /// 항상 표시 할일 범위가 영속화된다.
+    @Test func setLiveAlwaysOnReminderScopePersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setLiveAlwaysOnReminderScopeID("today")
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        #expect(reloaded.settings.liveAlwaysOnReminderScopeID == "today")
+    }
+
     /// 캘린더 표시 토글은 켜져 있는 LA를 즉시 다시 그리게 한다 — 저장(App Group 미러) 후
     /// refreshLayout이 호출되어 위젯이 새 플래그를 렌더 시점에 읽는다.
     @Test func calendarTogglesRefreshLiveActivityLayout() async {

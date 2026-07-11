@@ -19,7 +19,8 @@ struct ReminderViewModelTests {
         lists: [ReminderList] = [],
         reminders: [Reminder] = [],
         sortSettings: [String: ReminderSortSettings] = [:],
-        liveActivityService: any LiveActivityService = DisabledLiveActivityService()
+        liveActivityService: any LiveActivityService = DisabledLiveActivityService(),
+        appSettings: AppSettings = .default
     ) -> Dependencies {
         let remindersRepository = InMemoryRemindersRepository(
             access: access, lists: lists, reminders: reminders
@@ -63,8 +64,8 @@ struct ReminderViewModelTests {
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
-            fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
-            saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
+            fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings)),
+            saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings))
         )
     }
 
@@ -107,6 +108,27 @@ struct ReminderViewModelTests {
 
         #expect(viewModel.liveActivityActive == true)
         #expect(await service.startReminderCalls.count == 1)
+    }
+
+    /// 설정의 할일 범위가 "today"면 오늘 마감 항목만 스냅샷에 담는다.
+    @Test func alwaysOnUsesConfiguredScope() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "due-today", dueDate: Date(), listID: "A"),
+                reminder(id: "no-due", listID: "A"),
+            ],
+            liveActivityService: service,
+            appSettings: settings
+        ))
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        let call = try #require(await service.startReminderCalls.first)
+        #expect(call.items.map(\.id) == ["due-today"])
     }
 
     /// 권한이 거부돼 있으면 자동 게시하지 않는다.

@@ -82,6 +82,16 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
+                // 할일 범위 — 항상 표시 할일 LA가 어떤 섹션 스냅샷을 쓸지(오늘/예정/전체/리스트).
+                Picker("할일 범위", selection: reminderScopeBinding) {
+                    Text("오늘").tag("today")
+                    Text("예정").tag("scheduled")
+                    Text("전체").tag("all")
+                    ForEach(viewModel.reminderLists, id: \.id) { list in
+                        Text(list.title).tag(list.id)
+                    }
+                }
+                .disabled(!viewModel.settings.liveAlwaysOn || !viewModel.settings.liveAlwaysOnReminder)
                 Button("24시간 사용하기") {
                     shows24HourSheet = true
                 }
@@ -187,6 +197,13 @@ struct SettingsView: View {
         Binding(
             get: { viewModel.settings.liveAlwaysOnReminder },
             set: { newValue in Task { await viewModel.setLiveAlwaysOnReminder(newValue) } }
+        )
+    }
+
+    private var reminderScopeBinding: Binding<String> {
+        Binding(
+            get: { viewModel.settings.liveAlwaysOnReminderScopeID },
+            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminderScopeID(newValue) } }
         )
     }
 

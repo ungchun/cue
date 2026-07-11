@@ -76,9 +76,12 @@ struct RootView: View {
             let newlyOn = { (kind: KeyPath<AppSettings, Bool>) -> Bool in
                 new.liveAlwaysOn && new[keyPath: kind] && !(old.liveAlwaysOn && old[keyPath: kind])
             }
+            let scopeChanged = new.liveAlwaysOn && new.liveAlwaysOnReminder
+                && old.liveAlwaysOnReminderScopeID != new.liveAlwaysOnReminderScopeID
             Task {
                 if newlyOn(\.liveAlwaysOnMemo) { await memoViewModel.startAlwaysOnLiveActivity() }
                 if newlyOn(\.liveAlwaysOnReminder) { await reminderViewModel.startAlwaysOnLiveActivity() }
+                else if scopeChanged { await reminderViewModel.startAlwaysOnLiveActivity(force: true) }
                 if newlyOn(\.liveAlwaysOnSchedule) { await scheduleViewModel.startAlwaysOnLiveActivity() }
             }
         }

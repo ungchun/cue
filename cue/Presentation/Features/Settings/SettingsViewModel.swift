@@ -20,6 +20,7 @@ final class SettingsViewModel {
     private let fetchMemoUseCase: FetchMemoUseCase
     private let saveMemoUseCase: SaveMemoUseCase
     private let refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase
+    private let fetchReminderLists: FetchReminderListsUseCase
 
     /// 현재 설정. View는 읽기만 하고, 변경은 아래 `set...` 메서드로.
     private(set) var settings: AppSettings = .default
@@ -29,6 +30,8 @@ final class SettingsViewModel {
     private(set) var memoColorHex: String = Memo.default.colorHex
     /// 메모 라이브 액티비티 카드 글자(폰트) 색(hex). 출처는 `Memo.textColorHex`.
     private(set) var memoTextColorHex: String = Memo.default.textColorHex
+    /// 항상 표시 할일 범위 선택지용 사용자 리스트 — 권한 없으면 빈 배열(시스템 필터만 노출).
+    private(set) var reminderLists: [ReminderList] = []
 
     init(dependencies: Dependencies) {
         self.fetchAppSettings = dependencies.fetchAppSettings
@@ -36,6 +39,7 @@ final class SettingsViewModel {
         self.fetchMemoUseCase = dependencies.fetchMemo
         self.saveMemoUseCase = dependencies.saveMemo
         self.refreshLiveActivityLayout = dependencies.refreshLiveActivityLayout
+        self.fetchReminderLists = dependencies.fetchReminderLists
     }
 
     /// 화면이 나타날 때 — 저장된 설정과 메모 색(배경·글자)을 불러온다.
@@ -44,6 +48,7 @@ final class SettingsViewModel {
         let memo = await fetchMemoUseCase()
         memoColorHex = memo.colorHex
         memoTextColorHex = memo.textColorHex
+        reminderLists = (try? await fetchReminderLists()) ?? []
     }
 
     // MARK: - 변경 (메모리 즉시 반영 + 영속 저장)
@@ -97,6 +102,11 @@ final class SettingsViewModel {
             $0.liveAlwaysOnSchedule = value
             Self.collapseMasterIfAllKindsOff(&$0)
         }
+    }
+
+    /// 항상 표시 할일 LA의 범위("today"/"scheduled"/"all"/리스트 id).
+    func setLiveAlwaysOnReminderScopeID(_ id: String) async {
+        await update { $0.liveAlwaysOnReminderScopeID = id }
     }
 
     private static func collapseMasterIfAllKindsOff(_ settings: inout AppSettings) {

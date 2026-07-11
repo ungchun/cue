@@ -26,6 +26,7 @@ final class ReminderViewModel {
     private let startLiveActivityUseCase: StartReminderLiveActivityUseCase
     private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
+    private let fetchAppSettings: FetchAppSettingsUseCase
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
@@ -81,6 +82,7 @@ final class ReminderViewModel {
         self.startLiveActivityUseCase = dependencies.startReminderLiveActivity
         self.endLiveActivityUseCase = dependencies.endReminderLiveActivity
         self.consumeLiveActivation = dependencies.consumeLiveActivation
+        self.fetchAppSettings = dependencies.fetchAppSettings
         startObservingChanges()
     }
 
@@ -130,20 +132,35 @@ final class ReminderViewModel {
         return verdict
     }
 
-    /// 항상 표시 자동 게시 — 권한이 있으면 데이터를 적재하고 **전체 필터 스냅샷**으로 LA 시작
-    /// (사용자의 현재 선택과 무관 — 자동 게시는 항상 전체 미완료 기준, 마감 가까운 순).
+    /// 항상 표시 자동 게시 — 권한이 있으면 데이터를 적재하고 **설정의 할일 범위**
+    /// (오늘/예정/전체/사용자 리스트) 스냅샷으로 LA 시작. 사용자의 현재 선택과는 무관하다.
     /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 건너뛴다.
-    func startAlwaysOnLiveActivity() async {
-        guard !liveActivityActive else { return }
+    /// `force`면 이미 활성이어도 다시 게시한다 — 설정에서 범위를 바꾼 직후 반영용.
+    func startAlwaysOnLiveActivity(force: Bool = false) async {
+        guard force || !liveActivityActive else { return }
         await onAppear()
         guard access == .granted else { return }
-        let allIncomplete = allReminders
-            .filter { !$0.isCompleted }
-            .sorted { compareOptionalDate($0.dueDate, $1.dueDate, ascending: true) }
+
+        let scopeID = await fetchAppSettings().liveAlwaysOnReminderScopeID
+        let scope: ReminderSelection
+        switch scopeID {
+        case "today": scope = .systemFilter(.today)
+        case "scheduled": scope = .systemFilter(.scheduled)
+        case "all": scope = .systemFilter(.all)
+        default:
+            // 사용자 리스트 id — 삭제됐으면 전체로 폴백.
+            scope = lists.contains(where: { $0.id == scopeID }) ? .list(scopeID) : .systemFilter(.all)
+        }
+        let title: String
+        switch scope {
+        case .list(let id): title = lists.first(where: { $0.id == id })?.title ?? SystemFilter.all.title
+        case .systemFilter(let filter): title = filter.title
+        }
+
         do {
             try await startLiveActivityUseCase(
-                listTitle: SystemFilter.all.title,
-                reminders: allIncomplete,
+                listTitle: title,
+                reminders: snapshot(for: scope),
                 listColors: listColorsByID
             )
             liveActivityActive = true
@@ -203,6 +220,11 @@ final class ReminderViewModel {
     /// - `.systemFilter(.all)`: 모든 미완료, **마감일 오름차순**(가까운 순, 마감 없음 맨 뒤).
     ///   화면은 `allModeSections`로 따로 그리므로 이 목록은 LA 스냅샷 전용이다.
     var visibleReminders: [Reminder] {
+        snapshot(for: selection)
+    }
+
+    /// 주어진 선택 기준의 LA 스냅샷 — 화면(visibleReminders)과 항상 표시 자동 게시가 공유한다.
+    private func snapshot(for selection: ReminderSelection?) -> [Reminder] {
         let incomplete = allReminders.filter { !$0.isCompleted }
         switch selection {
         case .list(let id):

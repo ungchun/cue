@@ -51,6 +51,7 @@ struct AppSettingsRepositoryTests {
         #expect(settings.liveAlwaysOnMemo == true)      // 하위 종류 기본 on
         #expect(settings.liveAlwaysOnReminder == true)
         #expect(settings.liveAlwaysOnSchedule == true)
+        #expect(settings.liveAlwaysOnReminderScopeID == "all")   // 할일 범위 기본 전체
     }
 
     /// 캘린더 표시 플래그가 저장·복원 왕복에서 true로 보존된다.
