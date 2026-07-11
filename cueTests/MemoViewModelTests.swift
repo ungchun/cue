@@ -14,7 +14,8 @@ struct MemoViewModelTests {
     /// 반복하지 않고 메모 경로만 격리해 검증.
     private func makeViewModel(
         memo: Memo = .default,
-        quotaRepository: InMemoryLiveActivationQuotaRepository = InMemoryLiveActivationQuotaRepository()
+        quotaRepository: InMemoryLiveActivationQuotaRepository = InMemoryLiveActivationQuotaRepository(),
+        isPremium: Bool = false
     ) -> (MemoViewModel, InMemoryMemoRepository, RecordingMemoLiveActivity) {
         let repo = InMemoryMemoRepository(memo: memo)
         let service = RecordingMemoLiveActivity()
@@ -23,7 +24,7 @@ struct MemoViewModelTests {
         deps.saveMemo = SaveMemoUseCase(repository: repo)
         deps.startMemoLiveActivity = StartMemoLiveActivityUseCase(service: service)
         deps.endMemoLiveActivity = EndMemoLiveActivityUseCase(service: service)
-        deps.consumeLiveActivation = ConsumeLiveActivationUseCase(repository: quotaRepository)
+        deps.consumeLiveActivation = ConsumeLiveActivationUseCase(repository: quotaRepository, isPremium: isPremium)
         return (MemoViewModel(dependencies: deps), repo, service)
     }
 
@@ -160,6 +161,22 @@ struct MemoViewModelTests {
         let verdict = await viewModel.toggleLiveActivity()
 
         #expect(verdict == .allowed(remaining: 1))
+        #expect(viewModel.liveActivityActive == true)
+        #expect(await service.startMemoCalls.count == 1)
+    }
+
+    /// Premium(무제한)이면 쿼터 소비 없이 그대로 LA를 켠다 — `.unlimited`도 시작 경로를 통과해야 한다.
+    /// (설정 "라이브 항상 표시"와 무관하게 켜기 버튼은 동작해야 한다.)
+    @Test func togglePremiumUserStartsLiveActivity() async {
+        let (viewModel, _, service) = makeViewModel(
+            memo: Memo(text: "메모", colorHex: "#FF3B30"),
+            isPremium: true
+        )
+        await viewModel.onAppear()
+
+        let verdict = await viewModel.toggleLiveActivity()
+
+        #expect(verdict == .unlimited)
         #expect(viewModel.liveActivityActive == true)
         #expect(await service.startMemoCalls.count == 1)
     }

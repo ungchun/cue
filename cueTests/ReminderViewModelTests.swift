@@ -20,7 +20,8 @@ struct ReminderViewModelTests {
         reminders: [Reminder] = [],
         sortSettings: [String: ReminderSortSettings] = [:],
         liveActivityService: any LiveActivityService = DisabledLiveActivityService(),
-        appSettings: AppSettings = .default
+        appSettings: AppSettings = .default,
+        isPremium: Bool = false
     ) -> Dependencies {
         let remindersRepository = InMemoryRemindersRepository(
             access: access, lists: lists, reminders: reminders
@@ -63,7 +64,7 @@ struct ReminderViewModelTests {
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
-            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository(), isPremium: isPremium),
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings)),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings))
         )
@@ -106,6 +107,24 @@ struct ReminderViewModelTests {
 
         await viewModel.startAlwaysOnLiveActivity()
 
+        #expect(viewModel.liveActivityActive == true)
+        #expect(await service.startReminderCalls.count == 1)
+    }
+
+    /// Premium(무제한)이면 켜기 버튼이 `.unlimited`로 그대로 LA를 켠다 — 설정 "라이브 항상 표시"와 무관.
+    @Test func togglePremiumUserStartsReminderLiveActivity() async {
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [reminder(id: "1", listID: "A")],
+            liveActivityService: service,
+            isPremium: true
+        ))
+        await viewModel.onAppear()
+
+        let verdict = await viewModel.toggleLiveActivity(listTitle: "회사")
+
+        #expect(verdict == .unlimited)
         #expect(viewModel.liveActivityActive == true)
         #expect(await service.startReminderCalls.count == 1)
     }

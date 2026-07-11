@@ -15,7 +15,8 @@ struct ScheduleViewModelTests {
     /// 채워둔다.
     private func makeDependencies(
         access: EventsAccess = .granted,
-        events: [CalendarEvent] = []
+        events: [CalendarEvent] = [],
+        isPremium: Bool = false
     ) -> Dependencies {
         let eventsRepository = InMemoryEventsRepository(access: access, events: events)
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
@@ -56,7 +57,7 @@ struct ScheduleViewModelTests {
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
-            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository(), isPremium: isPremium),
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
         )
@@ -129,6 +130,23 @@ struct ScheduleViewModelTests {
 
         #expect(viewModel.eventsByDay.count == 1)
         #expect(viewModel.eventsByDay.first?.events.map(\.id) == ["1"])
+    }
+
+    /// Premium(무제한)이면 켜기 버튼이 `.unlimited`로 그대로 LA를 켠다 — 설정 "라이브 항상 표시"와 무관.
+    /// 시간대 의존을 피하려 오늘 종일 이벤트를 쓴다(use case가 실제 `.now` 기준으로 필터해도 포함).
+    @Test func togglePremiumUserStartsScheduleLiveActivity() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let allDay = event(id: "allday", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let viewModel = ScheduleViewModel(
+            dependencies: makeDependencies(events: [allDay], isPremium: true),
+            now: { today }
+        )
+        await viewModel.onAppear()
+
+        let verdict = await viewModel.toggleLiveActivity()
+
+        #expect(verdict == .unlimited)
+        #expect(viewModel.liveActivityActive == true)
     }
 
     @Test func eventsByDayGroupsByCalendarDay() async {

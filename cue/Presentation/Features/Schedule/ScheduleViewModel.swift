@@ -126,7 +126,8 @@ final class ScheduleViewModel {
     @discardableResult
     func toggleLiveActivity() async -> LiveActivationVerdict? {
         let verdict = await consumeLiveActivation()
-        guard case .allowed = verdict else { return verdict }
+        // .allowed(무료 한도 내)·.unlimited(Premium) 모두 켠다 — .denied(한도 초과)만 막는다.
+        if case .denied = verdict { return verdict }
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
