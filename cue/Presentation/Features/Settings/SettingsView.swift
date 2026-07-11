@@ -51,22 +51,20 @@ struct SettingsView: View {
                 Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
                     .tint(.green)
                 // 대상 선택 — 행 하나, 메뉴에서 다중 체크(메뉴 안 Toggle은 체크마크로 렌더).
-                // 마스터 off면 비활성화(회색)로 선택만 막는다.
-                Menu {
-                    Toggle("메모", isOn: liveAlwaysOnMemoBinding)
-                    Toggle("할일", isOn: liveAlwaysOnReminderBinding)
-                    Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
-                } label: {
-                    // 시스템 Picker 메뉴 행과 같은 생김새 — 좌측 라벨, 우측 값 + 상하 셰브런.
-                    HStack {
-                        Text("항목")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text(liveKindsSummary)
-                            .foregroundStyle(.secondary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(.secondary)
+                // 라벨은 행에 남고 메뉴 앵커는 우측 값 부분만 — 시스템 Picker 행과 동일하게
+                // 팝업이 오른쪽 값 위에 뜬다. 마스터 off면 비활성화(회색)로 선택만 막는다.
+                LabeledContent("항목") {
+                    Menu {
+                        Toggle("메모", isOn: liveAlwaysOnMemoBinding)
+                        Toggle("할일", isOn: liveAlwaysOnReminderBinding)
+                        Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
+                    } label: {
+                        HStack(spacing: Spacing.xs) {
+                            Text(liveKindsSummary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.footnote.weight(.medium))
+                        }
+                        .foregroundStyle(.secondary)
                     }
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
