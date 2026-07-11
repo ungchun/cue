@@ -20,6 +20,8 @@ struct PremiumPaywallView: View {
     }
 
     @State private var selectedPlan: Plan = .yearly
+    @State private var echoAppeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: Spacing.zero) {
@@ -33,6 +35,7 @@ struct PremiumPaywallView: View {
             }
             footer
         }
+        .background(alignment: .topLeading) { echo }
         .overlay(alignment: .topTrailing) {
             Button {
                 dismiss()
@@ -47,6 +50,40 @@ struct PremiumPaywallView: View {
             .padding(Spacing.md)
         }
         .presentationDetents([.large])
+    }
+
+    // MARK: - 에코 장식
+
+    /// 히어로 뒤 방사 에코 — 타이틀 좌상단 밖을 진원지로 동심원이 퍼진다.
+    /// 배너의 물결 겹 문법을 "신호가 퍼지는" 방사형으로 확대한 순수 장식.
+    /// 등장 시 한 번만 확산 페이드인, Reduce Motion이면 정적 표시.
+    private var echo: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(0..<7, id: \.self) { index in
+                let diameter = 180 + CGFloat(index) * 120
+                Circle()
+                    .strokeBorder(
+                        Color.primary.opacity(0.09 - Double(index) * 0.011),
+                        lineWidth: 1.5
+                    )
+                    .frame(width: diameter, height: diameter)
+                    .offset(x: -diameter / 2 - 40, y: -diameter / 2 - 20)
+                    .scaleEffect(
+                        echoAppeared || reduceMotion ? 1 : 0.85,
+                        anchor: .topLeading
+                    )
+                    .opacity(echoAppeared || reduceMotion ? 1 : 0)
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            : .easeOut(duration: 0.7).delay(Double(index) * 0.06),
+                        value: echoAppeared
+                    )
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onAppear { echoAppeared = true }
     }
 
     // MARK: - 히어로
