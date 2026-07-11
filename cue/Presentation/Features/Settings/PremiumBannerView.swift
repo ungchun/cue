@@ -48,7 +48,7 @@ struct PremiumBannerView: View {
     private var ripples: some View {
         let size: CGFloat = 190
         return ZStack {
-            ForEach(0..<6, id: \.self) { index in
+            ForEach(0..<7, id: \.self) { index in
                 Circle()
                     .fill(Color(.systemBackground).opacity(0.10))
                     .frame(width: size, height: size)
