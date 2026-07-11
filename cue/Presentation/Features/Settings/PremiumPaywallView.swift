@@ -122,7 +122,7 @@ struct PremiumPaywallView: View {
         VStack(spacing: Spacing.sm) {
             planCard(.monthly, title: "월간", price: "₩2,900", unit: "/ 월", badge: nil)
             planCard(.yearly, title: "연간", price: "₩19,000", unit: "/ 년", badge: "45% 절약")
-            planCard(.lifetime, title: "평생", price: "₩49,000", unit: "한 번 결제", badge: nil)
+            planCard(.lifetime, title: "평생", price: "₩44,000", unit: "한 번 결제", badge: nil)
         }
     }
 
