@@ -65,8 +65,8 @@ struct PremiumPaywallView: View {
                 let diameter = 180 + CGFloat(index) * 120
                 Circle()
                     .strokeBorder(
-                        Color.primary.opacity(0.09 - Double(index) * 0.011),
-                        lineWidth: 1.5
+                        Color.primary.opacity(0.16 - Double(index) * 0.018),
+                        lineWidth: 3
                     )
                     .frame(width: diameter, height: diameter)
                     .offset(x: -diameter / 2 - 40, y: -diameter / 2 - 20)
