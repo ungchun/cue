@@ -12,18 +12,12 @@ import SwiftUI
 /// 아니라 `.primary`(라이트=검정 / 다크=하양 적응). 표시·상단 슬라이드·자동 해제는
 /// `ToastCenter` + `liveToastOverlay`가 맡고, 이 뷰는 모양만 그린다.
 struct LiveToastView: View {
-    /// 캡슐 안 라벨 — 새로 켜면 "라이브", 다시 눌러 재시작하면 "새로고침".
+    /// 캡슐 안 라벨 — 새로 켜면 "라이브", 다시 눌러 재시작하면 "새로고침", 유료 안내는 "Premium".
     let text: String
-    /// true면 앞쪽 점 대신 앱 아이콘 형상 마크(원 + 오른쪽 물결 겹)를 그린다 — Cue On 안내용.
-    var showsAppMark = false
 
     var body: some View {
         HStack(spacing: Spacing.smd) {
-            if showsAppMark {
-                appMark
-            } else {
-                liveDot
-            }
+            liveDot
             Text(text)
                 .font(.headline.weight(.bold))
                 .foregroundStyle(.primary)
@@ -59,28 +53,13 @@ struct LiveToastView: View {
 
     /// 펄스 한 사이클(초) — 점 가장자리에서 시작해 이 시간 동안 퍼지며 사라진다.
     private static let pulsePeriod: Double = 1.6
-
-    /// 앱 아이콘 형상 마크 — 아이콘(진한 원 + 오른쪽으로 밝아지는 물결 겹)을 단순화해,
-    /// 같은 크기의 원 4장을 왼쪽으로 조금씩 밀며 겹치고 원형으로 잘라낸 초승달 레이어로 그린다.
-    /// 색은 `.primary` 불투명도 단계라 라이트/다크 모두 적응한다.
-    private var appMark: some View {
-        let size = Spacing.md
-        return ZStack {
-            Circle().fill(.primary.opacity(0.2))
-            Circle().fill(.primary.opacity(0.45)).offset(x: -size * 0.14)
-            Circle().fill(.primary.opacity(0.7)).offset(x: -size * 0.28)
-            Circle().fill(.primary).offset(x: -size * 0.42)
-        }
-        .clipShape(Circle())
-        .frame(width: size, height: size)
-    }
 }
 
 #Preview {
     VStack(spacing: 20) {
         LiveToastView(text: "라이브")
         LiveToastView(text: "새로고침")
-        LiveToastView(text: "Cue On", showsAppMark: true)
+        LiveToastView(text: "Premium")
     }
     .padding()
 }

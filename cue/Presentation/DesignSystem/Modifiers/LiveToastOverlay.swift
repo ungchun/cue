@@ -14,7 +14,7 @@ private struct LiveToastOverlay: ViewModifier {
     func body(content: Content) -> some View {
         content.overlay(alignment: .top) {
             if center.isPresented {
-                LiveToastView(text: center.message, showsAppMark: center.usesAppMark)
+                LiveToastView(text: center.message)
                     .padding(.top, Spacing.sm)
                     // 상단에서 내려오고(올라가고) 페이드.
                     .transition(.move(edge: .top).combined(with: .opacity))
