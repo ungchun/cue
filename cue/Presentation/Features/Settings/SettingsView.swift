@@ -25,6 +25,10 @@ struct SettingsView: View {
     /// "24시간 사용하기" 시트 표시 — 내용은 추후 채운다(현재 빈 시트).
     @State private var shows24HourSheet = false
 
+    /// "라이브 항상 표시" placeholder — 동작 미연결. 확인용으로 토글 자체는 켜지게 둔다.
+    /// TODO: 실제 설정 필드 연결 + Pro 게이트 복원.
+    @State private var liveAlwaysOnPlaceholder = false
+
     /// 시작 탭 선택지 — 설정 탭 자신은 제외(설정 화면으로 앱을 켜는 건 의미가 없음).
     private static let startTabOptions = AppTab.allCases.filter { $0 != .settings }
 
@@ -46,8 +50,8 @@ struct SettingsView: View {
             }
 
             Section {
-                // 동작 미연결 placeholder — 항상 표시 로직은 추후. 켜기는 Pro 전용(토스트만).
-                Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
+                // 동작 미연결 placeholder — 항상 표시 로직은 추후. 확인용으로 켜짐 허용(Pro 게이트는 추후 복원).
+                Toggle("라이브 항상 표시", isOn: $liveAlwaysOnPlaceholder)
                     .tint(.green)
                 Button("24시간 사용하기") {
                     shows24HourSheet = true
@@ -126,16 +130,6 @@ struct SettingsView: View {
         }
     }
 
-    /// "라이브 항상 표시" — 동작 미연결 placeholder. 켜기는 Pro 전용이라 무료에선 항상 off,
-    /// 켜려는 순간 Pro 토스트만 띄운다(추후 실제 설정 필드·항상 표시 로직과 연결).
-    private var liveAlwaysOnBinding: Binding<Bool> {
-        Binding(
-            get: { false },
-            set: { newValue in
-                if newValue { toastCenter.show("Pro", appMark: true) }
-            }
-        )
-    }
 
     /// 섹션 헤더 — 기본보다 작은 글자.
     private func sectionHeader(_ title: String) -> some View {
