@@ -25,16 +25,19 @@ struct SettingsView: View {
     /// "24시간 사용하기" 시트 표시 — 내용은 추후 채운다(현재 빈 시트).
     @State private var shows24HourSheet = false
 
+    /// Premium 배너 탭 시 페이월 시트 — 내용은 추후 채운다(현재 빈 시트).
+    @State private var showsPremiumSheet = false
+
 
     /// 시작 탭 선택지 — 설정 탭 자신은 제외(설정 화면으로 앱을 켜는 건 의미가 없음).
     private static let startTabOptions = AppTab.allCases.filter { $0 != .settings }
 
     var body: some View {
         List {
-            // Cue Premium 배너 — 설정 타이틀 바로 아래. 페이월은 추후(지금은 Premium 토스트).
+            // Cue Premium 배너 — 설정 타이틀 바로 아래. 탭하면 페이월 시트(내용 추후).
             Section {
                 PremiumBannerView {
-                    toastCenter.show("Premium")
+                    showsPremiumSheet = true
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -154,6 +157,11 @@ struct SettingsView: View {
         // "24시간 사용하기" — 단축어 자동화로 LA 8시간 종료를 우회하는 가이드.
         .sheet(isPresented: $shows24HourSheet) {
             Live24HourGuideView()
+        }
+        // Premium 페이월 — 내용은 추후 채운다(현재 빈 시트).
+        .sheet(isPresented: $showsPremiumSheet) {
+            Color.clear
+                .presentationDetents([.large])
         }
     }
 
