@@ -57,11 +57,15 @@ struct SettingsView: View {
                     Toggle("할일", isOn: liveAlwaysOnReminderBinding)
                     Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
                 } label: {
+                    // 시스템 Picker 메뉴 행과 같은 생김새 — 좌측 라벨, 우측 값 + 상하 셰브런.
                     HStack {
                         Text("항목")
                             .foregroundStyle(.primary)
                         Spacer()
                         Text(liveKindsSummary)
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.footnote.weight(.medium))
                             .foregroundStyle(.secondary)
                     }
                 }
