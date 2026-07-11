@@ -64,38 +64,16 @@ struct SettingsView: View {
                 // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Premium 게이트도 추후 복원.
                 Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
                     .tint(.green)
-                // 대상 선택 — 행 하나, 메뉴에서 다중 체크(메뉴 안 Toggle은 체크마크로 렌더).
-                // 라벨은 행에 남고 메뉴 앵커는 우측 값 부분만 — 시스템 Picker 행과 동일하게
-                // 팝업이 오른쪽 값 위에 뜬다. 마스터 off면 비활성화(회색)로 선택만 막는다.
-                LabeledContent("항목") {
-                    Menu {
-                        Toggle("메모", isOn: liveAlwaysOnMemoBinding)
-                        Toggle("할일", isOn: liveAlwaysOnReminderBinding)
-                        Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
-                    } label: {
-                        HStack(spacing: Spacing.xs) {
-                            Text(liveKindsSummary)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.footnote.weight(.medium))
-                        }
-                        .foregroundStyle(.secondary)
+                // 대상 선택 — 행 하나로 통합, 탭하면 상세 페이지(항목 토글 + 할일 범위).
+                // 중첩 메뉴의 펼침 점프를 피한 iOS 설정 표준 패턴.
+                NavigationLink {
+                    LiveAlwaysOnItemsView(viewModel: viewModel)
+                } label: {
+                    LabeledContent("항목") {
+                        Text(liveKindsSummary)
                     }
-                    .menuOrder(.fixed)
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
-                // 할일 범위 — 할일 항목이 켜져 있을 때만 등장(점진 노출). 시스템 Picker 행이라
-                // 메뉴 중첩 없이 펼침이 매끄럽다.
-                if viewModel.settings.liveAlwaysOnReminder {
-                    Picker("할일 범위", selection: reminderScopeBinding) {
-                        Text("오늘").tag("today")
-                        Text("예정").tag("scheduled")
-                        Text("전체").tag("all")
-                        ForEach(viewModel.reminderLists, id: \.id) { list in
-                            Text(list.title).tag(list.id)
-                        }
-                    }
-                    .disabled(!viewModel.settings.liveAlwaysOn)
-                }
                 Button("24시간 사용하기") {
                     shows24HourSheet = true
                 }
@@ -192,33 +170,9 @@ struct SettingsView: View {
         return selected.joined(separator: ", ")
     }
 
-    private var liveAlwaysOnReminderBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnReminder },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminder(newValue) } }
-        )
-    }
 
-    private var reminderScopeBinding: Binding<String> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnReminderScopeID },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnReminderScopeID(newValue) } }
-        )
-    }
 
-    private var liveAlwaysOnMemoBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnMemo },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnMemo(newValue) } }
-        )
-    }
 
-    private var liveAlwaysOnScheduleBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.settings.liveAlwaysOnSchedule },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOnSchedule(newValue) } }
-        )
-    }
 
     /// 섹션 헤더 — 기본보다 작은 글자.
     private func sectionHeader(_ title: String) -> some View {
