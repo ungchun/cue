@@ -38,12 +38,16 @@ struct FocusAlarmLiveActivityWidget: Widget {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    timeGroup(context, tint: tint, timeSize: 44)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .lineLimit(1)
-                        // 카메라 옆 폭이 부족하면 리전을 통째로 카메라 아래(전체 폭)로 내려
-                        // 폰트 축소·말줄임 없이 온전한 시간을 그린다.
-                        .dynamicIsland(verticalPlacement: .belowIfTooWide)
+                    // DI는 단계 라벨 없이 시간만 — 폭이 부족하면 카메라 아래(전체 폭)로
+                    // 내려가 가운데 정렬로, 폰트 축소·말줄임 없이 온전히 그린다.
+                    liveCountdown(
+                        context.state,
+                        font: .system(size: 44, weight: .regular, design: .rounded),
+                        tint: tint
+                    )
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .lineLimit(1)
+                    .dynamicIsland(verticalPlacement: .belowIfTooWide)
                 }
             } compactLeading: {
                 compactRing(context.state, color: tint)
