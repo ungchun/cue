@@ -175,6 +175,20 @@ struct PremiumPaywallView: View {
 
     private var footer: some View {
         VStack(spacing: Spacing.sm) {
+            Button("구독 복원") {}
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .buttonStyle(.plain)
+                .padding(.bottom, Spacing.sm)
+
+            HStack(spacing: Spacing.md) {
+                Button("이용약관") {}
+                Button("개인정보처리방침") {}
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .buttonStyle(.plain)
+
             Button {
                 // TODO: StoreKit 결제 연결.
             } label: {
@@ -190,15 +204,6 @@ struct PremiumPaywallView: View {
             Text("자동 갱신 · 언제든 취소 가능")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-
-            HStack(spacing: Spacing.md) {
-                Button("복원") {}
-                Button("이용약관") {}
-                Button("개인정보처리방침") {}
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)
