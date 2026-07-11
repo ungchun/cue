@@ -54,21 +54,16 @@ struct SettingsView: View {
                 proGated {
                     ColorPicker("라이브 폰트 색", selection: $memoFontColor, supportsOpacity: false)
                 }
-                // 메뉴는 열리게 두고, "캘린더 함께 표시"를 고르는 순간에만 Pro 게이트가
-                // 저장을 가로챈다(바인딩 setter에서 분기).
-                Picker("레이아웃", selection: memoShowsCalendarBinding) {
-                    Text("기본").tag(false)
-                    Text("캘린더 함께 표시").tag(true)
-                }
+                // 켜기는 Pro 전용 — 바인딩 setter가 가로채 Pro 토스트만 띄운다(끄기는 항상 허용).
+                Toggle("캘린더 함께 보기", isOn: memoShowsCalendarBinding)
+                    .tint(.green)
             } header: {
                 sectionHeader("메모")
             }
 
             Section {
-                Picker("레이아웃", selection: scheduleShowsCalendarBinding) {
-                    Text("기본").tag(false)
-                    Text("캘린더 함께 표시").tag(true)
-                }
+                Toggle("캘린더 함께 보기", isOn: scheduleShowsCalendarBinding)
+                    .tint(.green)
             } header: {
                 sectionHeader("일정")
             }
