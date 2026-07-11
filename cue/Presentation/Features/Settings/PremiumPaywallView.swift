@@ -21,6 +21,7 @@ struct PremiumPaywallView: View {
 
     @State private var selectedPlan: Plan = .yearly
     @State private var echoAppeared = false
+    @State private var echoPulsing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -56,7 +57,8 @@ struct PremiumPaywallView: View {
 
     /// 히어로 뒤 방사 에코 — 타이틀 좌상단 밖을 진원지로 동심원이 퍼진다.
     /// 배너의 물결 겹 문법을 "신호가 퍼지는" 방사형으로 확대한 순수 장식.
-    /// 등장 시 한 번만 확산 페이드인, Reduce Motion이면 정적 표시.
+    /// 등장 시 한 번 확산 페이드인 후, 링마다 시차를 둔 느린 숨쉬기 루프로
+    /// 물결이 은은하게 전파되는 느낌을 유지한다. Reduce Motion이면 정적 표시.
     private var echo: some View {
         ZStack(alignment: .topLeading) {
             ForEach(0..<7, id: \.self) { index in
@@ -68,6 +70,18 @@ struct PremiumPaywallView: View {
                     )
                     .frame(width: diameter, height: diameter)
                     .offset(x: -diameter / 2 - 40, y: -diameter / 2 - 20)
+                    .scaleEffect(
+                        echoPulsing && !reduceMotion ? 1.05 : 1,
+                        anchor: .topLeading
+                    )
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            : .easeInOut(duration: 4)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.35),
+                        value: echoPulsing
+                    )
                     .scaleEffect(
                         echoAppeared || reduceMotion ? 1 : 0.85,
                         anchor: .topLeading
@@ -83,7 +97,10 @@ struct PremiumPaywallView: View {
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .onAppear { echoAppeared = true }
+        .onAppear {
+            echoAppeared = true
+            echoPulsing = true
+        }
     }
 
     // MARK: - 히어로
