@@ -190,6 +190,7 @@ struct PremiumPaywallView: View {
             Text("자동 갱신 · 언제든 취소 가능")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .padding(.top, Spacing.xs)
 
             HStack(spacing: Spacing.md) {
                 Button("복원") {}
