@@ -35,7 +35,7 @@ struct PremiumBannerView: View {
             .background {
                 ZStack(alignment: .trailing) {
                     Rectangle().fill(.primary)
-                    iconDisc
+                    pulseWaves
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: Spacing.xxl, style: .continuous))
@@ -43,21 +43,35 @@ struct PremiumBannerView: View {
         .buttonStyle(.plain)
     }
 
-    /// 앱 아이콘 원판 — 물결 겹(왼쪽 진함 → 오른쪽 밝은 밴드)을 코드로 그려
-    /// 배너 우측 모서리에 반쯤 걸쳐 잘리게 얹는다(오브젝트가 얹힌 느낌).
-    private var iconDisc: some View {
-        let size: CGFloat = 150
+    /// 라이브 펄스 파동 — 토스트의 라이브 점과 같은 문법을 크게. 가운데 점에서 링이
+    /// 계속 번져 나간다(TimelineView 시간 기반, 위치 애니메이션 없음). "라이브가 계속
+    /// 살아있다"는 Premium의 핵심 가치를 장식이 직접 말한다.
+    private var pulseWaves: some View {
+        let size: CGFloat = 56
         return ZStack {
-            Circle().fill(Color(.systemBackground).opacity(0.16))
-            Circle().fill(Color(.systemBackground).opacity(0.26)).offset(x: -size * 0.14)
-            Circle().fill(Color(.systemBackground).opacity(0.38)).offset(x: -size * 0.28)
-            Circle().fill(Color(.systemBackground).opacity(0.52)).offset(x: -size * 0.42)
+            TimelineView(.animation) { context in
+                let elapsed = context.date.timeIntervalSinceReferenceDate
+                ZStack {
+                    // 링 3개가 위상차를 두고 번진다 — 항상 파동이 이어져 보이게.
+                    ForEach(0..<3, id: \.self) { index in
+                        let phase = ((elapsed / Self.pulsePeriod) + Double(index) / 3)
+                            .truncatingRemainder(dividingBy: 1)
+                        Circle()
+                            .stroke(Color(.systemBackground), lineWidth: 1.5)
+                            .scaleEffect(1 + 2.6 * phase)
+                            .opacity((1 - phase) * 0.45)
+                    }
+                }
+            }
+            Circle().fill(Color(.systemBackground).opacity(0.9))
+                .frame(width: size * 0.22, height: size * 0.22)
         }
-        .clipShape(Circle())
         .frame(width: size, height: size)
-        // 오른쪽으로 반쯤 밀어 배너 밖으로 잘리게.
-        .offset(x: size * 0.33)
+        .padding(.trailing, Spacing.xl)
     }
+
+    /// 펄스 한 사이클(초) — 토스트(1.6s)보다 느긋하게 번진다.
+    private static let pulsePeriod: Double = 2.4
 }
 
 #Preview {
