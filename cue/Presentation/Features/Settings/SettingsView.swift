@@ -177,28 +177,17 @@ struct SettingsView: View {
     }
 
 
-    /// 표시 대상 요약 — 선택된 종류를 행 우측에 보여준다("메모, 할일(오늘)" / "전체").
+    /// 표시 대상 요약 — 선택된 종류를 행 우측에 보여준다("메모, 할일" / 셋 다면 "전체").
+    /// 할일 범위는 병기하지 않는다(서브메뉴 값으로 확인).
     private var liveKindsSummary: String {
         let settings = viewModel.settings
-        let reminderLabel = "할일" + (reminderScopeLabel.map { "(\($0))" } ?? "")
         let selected = [
             settings.liveAlwaysOnMemo ? "메모" : nil,
-            settings.liveAlwaysOnReminder ? reminderLabel : nil,
+            settings.liveAlwaysOnReminder ? "할일" : nil,
             settings.liveAlwaysOnSchedule ? "일정" : nil,
         ].compactMap(\.self)
-        // 셋 다 켜져 있고 할일이 기본(전체) 범위면 간단히 "전체".
-        if selected.count == 3, settings.liveAlwaysOnReminderScopeID == "all" { return "전체" }
+        if selected.count == 3 { return "전체" }
         return selected.joined(separator: ", ")
-    }
-
-    /// 할일 범위의 표시 라벨 — 전체(기본)는 생략, 오늘/예정/리스트명만 병기.
-    private var reminderScopeLabel: String? {
-        switch viewModel.settings.liveAlwaysOnReminderScopeID {
-        case "all": return nil
-        case "today": return "오늘"
-        case "scheduled": return "예정"
-        case let id: return viewModel.reminderLists.first(where: { $0.id == id })?.title
-        }
     }
 
     /// 할일 서브메뉴 단일 선택 — "off"는 할일 항목 끔, 나머지는 켬 + 범위 지정.
