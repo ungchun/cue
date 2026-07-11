@@ -56,10 +56,11 @@ struct Live24HourGuideView: View {
                 Image("ShortcutsAppIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: Spacing.lg, height: Spacing.lg)
+                    .frame(width: Spacing.xl, height: Spacing.xl)
                 Text("단축어 열기")
                     .font(.body.weight(.semibold))
             }
+            .padding(.vertical, Spacing.sm)
         }
         .buttonStyle(.borderedProminent)
         .tint(.primary)
