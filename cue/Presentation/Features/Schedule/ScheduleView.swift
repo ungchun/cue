@@ -122,7 +122,7 @@ struct ScheduleView: View {
                     toastCenter.show("Premium")
                 case .allowed(let remaining) where viewModel.liveActivityActive:
                     // 무료 한도 잔여 표기 — "1/2" → "0/2".
-                    toastCenter.show("\(remaining)/\(ConsumeLiveActivationUseCase.dailyLimit)")
+                    toastCenter.show("\(remaining) / \(ConsumeLiveActivationUseCase.dailyLimit)")
                 default:
                     break
                 }
