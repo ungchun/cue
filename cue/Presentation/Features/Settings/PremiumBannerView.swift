@@ -19,9 +19,9 @@ struct PremiumBannerView: View {
             HStack(spacing: Spacing.smd) {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Cue Premium")
-                        .font(.title2.weight(.bold))
+                        .font(.title.weight(.bold))
                     Text("라이브를 항상, 나답게")
-                        .font(.subheadline)
+                        .font(.footnote)
                         .opacity(0.75)
                 }
                 Spacer()
@@ -36,7 +36,7 @@ struct PremiumBannerView: View {
                     ripples
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: Spacing.lg, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Spacing.xl, style: .continuous))
         }
         .buttonStyle(.plain)
     }

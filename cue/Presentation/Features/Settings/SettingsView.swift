@@ -133,6 +133,8 @@ struct SettingsView: View {
             .tint(.primary)
         }
         .listSectionSpacing(28)
+        // 타이틀↔배너 간격을 배너↔일반 섹션 간격(28)과 동일하게 — 배너 위아래가 같은 리듬.
+        .contentMargins(.top, 28, for: .scrollContent)
         .navigationTitle("설정")
         .task {
             await viewModel.onAppear()
