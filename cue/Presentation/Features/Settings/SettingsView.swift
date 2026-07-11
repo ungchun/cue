@@ -58,7 +58,7 @@ struct SettingsView: View {
                     Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
                 } label: {
                     HStack {
-                        Text("표시 대상")
+                        Text("항목")
                             .foregroundStyle(.primary)
                         Spacer()
                         Text(liveKindsSummary)
