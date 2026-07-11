@@ -56,7 +56,7 @@ struct PremiumBannerView: View {
                     let phase = ((elapsed / Self.pulsePeriod) + Double(index) / 4)
                         .truncatingRemainder(dividingBy: 1)
                     Circle()
-                        .stroke(Color(.systemBackground), lineWidth: 12)
+                        .stroke(Color(.systemBackground), lineWidth: 5)
                         .frame(width: base, height: base)
                         .scaleEffect(0.4 + 2.4 * phase)
                         .opacity((1 - phase) * 0.28)
