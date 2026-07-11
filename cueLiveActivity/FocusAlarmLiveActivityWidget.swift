@@ -113,6 +113,8 @@ struct FocusAlarmLiveActivityWidget: Widget {
         Text(verbatim: "00:00")
             .font(font)
             .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
             .hidden()
             .overlay(alignment: .trailing) {
                 countdown(state)
@@ -120,6 +122,8 @@ struct FocusAlarmLiveActivityWidget: Widget {
                     .monospacedDigit()
                     .foregroundStyle(tint)
                     .multilineTextAlignment(.trailing)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
             .clipped()
     }
