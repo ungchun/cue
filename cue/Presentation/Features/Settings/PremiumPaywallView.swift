@@ -180,6 +180,7 @@ struct PremiumPaywallView: View {
             } label: {
                 Text("Premium 시작하기")
                     .font(.headline.weight(.bold))
+                    .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.md)
             }
