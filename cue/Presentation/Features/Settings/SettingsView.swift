@@ -22,6 +22,9 @@ struct SettingsView: View {
     @State private var memoBackgroundColor: Color = .accentColor
     @State private var memoFontColor: Color = .white
 
+    /// "24시간 사용하기" 시트 표시 — 내용은 추후 채운다(현재 빈 시트).
+    @State private var shows24HourSheet = false
+
     /// 시작 탭 선택지 — 설정 탭 자신은 제외(설정 화면으로 앱을 켜는 건 의미가 없음).
     private static let startTabOptions = AppTab.allCases.filter { $0 != .settings }
 
@@ -40,6 +43,18 @@ struct SettingsView: View {
                 }
             } header: {
                 sectionHeader("일반")
+            }
+
+            Section {
+                // 동작 미연결 placeholder — 항상 표시 로직은 추후. 켜기는 Pro 전용(토스트만).
+                Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
+                    .tint(.green)
+                Button("24시간 사용하기") {
+                    shows24HourSheet = true
+                }
+                .foregroundStyle(.primary)
+            } header: {
+                sectionHeader("라이브")
             }
 
             Section {
@@ -104,6 +119,22 @@ struct SettingsView: View {
         .onChange(of: memoFontColor) { _, newValue in
             Task { await viewModel.setMemoTextColor(newValue.hexString) }
         }
+        // "24시간 사용하기" — 내용은 추후 채운다(현재 빈 시트).
+        .sheet(isPresented: $shows24HourSheet) {
+            Color.clear
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    /// "라이브 항상 표시" — 동작 미연결 placeholder. 켜기는 Pro 전용이라 무료에선 항상 off,
+    /// 켜려는 순간 Pro 토스트만 띄운다(추후 실제 설정 필드·항상 표시 로직과 연결).
+    private var liveAlwaysOnBinding: Binding<Bool> {
+        Binding(
+            get: { false },
+            set: { newValue in
+                if newValue { toastCenter.show("Pro", appMark: true) }
+            }
+        )
     }
 
     /// 섹션 헤더 — 기본보다 작은 글자.
