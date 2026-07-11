@@ -28,7 +28,7 @@ struct PremiumBannerView: View {
             }
             .foregroundStyle(Color(.systemBackground))
             .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.lg)
+            .padding(.vertical, Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 ZStack(alignment: .trailing) {
@@ -36,7 +36,7 @@ struct PremiumBannerView: View {
                     ripples
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: Spacing.xl, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Spacing.xxl, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -44,13 +44,13 @@ struct PremiumBannerView: View {
     /// 아이콘의 물결 겹 확대 — 같은 크기의 원을 오른쪽으로 조금씩 밀며 겹쳐,
     /// 겹칠수록 밝아지는 초승달 밴드( ) ) ) )를 만든다. 배너 오른쪽 밖으로 잘려 나간다.
     private var ripples: some View {
-        let size: CGFloat = 140
+        let size: CGFloat = 190
         return ZStack {
-            ForEach(0..<4, id: \.self) { index in
+            ForEach(0..<6, id: \.self) { index in
                 Circle()
-                    .fill(Color(.systemBackground).opacity(0.11))
+                    .fill(Color(.systemBackground).opacity(0.10))
                     .frame(width: size, height: size)
-                    .offset(x: size * 0.42 + CGFloat(index) * size * 0.13)
+                    .offset(x: size * 0.38 + CGFloat(index) * size * 0.11)
             }
         }
     }
