@@ -17,21 +17,18 @@ struct PremiumBannerView: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Spacing.smd) {
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Cue Premium")
-                        .font(.headline.weight(.bold))
+                        .font(.title2.weight(.bold))
                     Text("라이브를 항상, 나답게")
-                        .font(.caption)
+                        .font(.subheadline)
                         .opacity(0.75)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .opacity(0.6)
             }
             .foregroundStyle(Color(.systemBackground))
             .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.md)
+            .padding(.vertical, Spacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 ZStack(alignment: .trailing) {
