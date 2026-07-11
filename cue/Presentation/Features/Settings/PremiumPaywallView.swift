@@ -61,10 +61,10 @@ struct PremiumPaywallView: View {
     /// 물결이 은은하게 전파되는 느낌을 유지한다. Reduce Motion이면 정적 표시.
     private var echo: some View {
         ZStack(alignment: .topLeading) {
-            ForEach(0..<7, id: \.self) { index in
+            ForEach(0..<8, id: \.self) { index in
                 let diameter = 180 + CGFloat(index) * 120
                 // 면 채움 — 링이 겹칠수록 진원지가 진해진다(배너의 겹 문법).
-                let opacities: [Double] = [0.10, 0.05, 0.04, 0.03, 0.025, 0.02, 0.015]
+                let opacities: [Double] = [0.10, 0.05, 0.04, 0.03, 0.025, 0.02, 0.015, 0.012]
                 Circle()
                     .fill(Color.primary.opacity(opacities[index]))
                     .frame(width: diameter, height: diameter)
