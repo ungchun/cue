@@ -70,21 +70,26 @@ struct SettingsView: View {
                 LabeledContent("항목") {
                     Menu {
                         Toggle("메모", isOn: liveAlwaysOnMemoBinding)
-                        // 할일은 Picker 서브메뉴 — 시스템이 "할일 ▸ 현재값"으로 렌더해
-                        // 다른 항목과 정렬이 같고, 켜짐 상태는 값(오늘/전체…)으로 드러난다.
-                        // (서브메뉴 부모에 체크 컬럼 체크를 다는 건 iOS 메뉴가 지원하지 않음.)
-                        Picker("할일", selection: reminderScopeMenuBinding) {
-                            Text("사용 안 함").tag("off")
-                            Divider()
-                            Text("오늘").tag("today")
-                            Text("예정").tag("scheduled")
-                            Text("전체").tag("all")
-                            ForEach(viewModel.reminderLists, id: \.id) { list in
-                                Text(list.title).tag(list.id)
+                        // 할일 서브메뉴 — 기본 범위 4개만 바로 노출하고, 사용자 리스트는
+                        // 2차 서브메뉴("리스트 ▸")로 접는다. 리스트가 많아도 서브메뉴가
+                        // 짧아 펼침 애니메이션이 튀지 않는다.
+                        Menu("할일") {
+                            Picker("할일", selection: reminderScopeMenuBinding) {
+                                Text("사용 안 함").tag("off")
+                                Divider()
+                                Text("오늘").tag("today")
+                                Text("예정").tag("scheduled")
+                                Text("전체").tag("all")
+                            }
+                            if !viewModel.reminderLists.isEmpty {
+                                Picker("리스트", selection: reminderScopeMenuBinding) {
+                                    ForEach(viewModel.reminderLists, id: \.id) { list in
+                                        Text(list.title).tag(list.id)
+                                    }
+                                }
+                                .pickerStyle(.menu)
                             }
                         }
-                        // 메뉴 안 Picker는 기본이 인라인 전개 — 접히는 서브메뉴("할일 ▸")로 강제.
-                        .pickerStyle(.menu)
                         Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
                     } label: {
                         HStack(spacing: Spacing.xs) {
@@ -94,6 +99,7 @@ struct SettingsView: View {
                         }
                         .foregroundStyle(.secondary)
                     }
+                    .menuOrder(.fixed)
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
                 Button("24시간 사용하기") {
