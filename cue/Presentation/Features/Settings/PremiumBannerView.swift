@@ -30,6 +30,8 @@ struct PremiumBannerView: View {
             .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
+            // 버튼 자체는 큼직하게 — 내부 패딩과 별개로 최소 높이를 보장한다.
+            .frame(minHeight: 104)
             .background {
                 ZStack(alignment: .trailing) {
                     Rectangle().fill(.primary)
