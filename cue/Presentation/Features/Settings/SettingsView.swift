@@ -39,8 +39,8 @@ struct SettingsView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
-            // 배너 아래 간격은 전역(28)보다 좁게.
-            .listSectionSpacing(Spacing.lg)
+            // 배너 아래 간격은 전역(28)보다 좁게 — 리스트 간격 값이라 28처럼 리터럴(20).
+            .listSectionSpacing(20)
 
             Section {
                 Picker("화면 모드", selection: colorSchemeBinding) {
@@ -135,8 +135,8 @@ struct SettingsView: View {
             .tint(.primary)
         }
         .listSectionSpacing(28)
-        // 타이틀↔배너 간격 — 배너 아래 간격(md)과 같은 리듬으로 좁게.
-        .contentMargins(.top, Spacing.lg, for: .scrollContent)
+        // 타이틀↔배너 간격 — 배너 아래 간격과 같은 20.
+        .contentMargins(.top, 20, for: .scrollContent)
         .navigationTitle("설정")
         .task {
             await viewModel.onAppear()
