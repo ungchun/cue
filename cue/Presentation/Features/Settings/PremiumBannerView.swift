@@ -35,7 +35,7 @@ struct PremiumBannerView: View {
             .background {
                 ZStack(alignment: .trailing) {
                     Rectangle().fill(.primary)
-                    pulseWaves
+                    ripples
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: Spacing.xxl, style: .continuous))
@@ -43,33 +43,19 @@ struct PremiumBannerView: View {
         .buttonStyle(.plain)
     }
 
-    /// 물결 에코( ( ( ( )가 퍼지는 파동 — 중심을 배너 오른쪽 밖에 두고, 두툼한 초승달
-    /// 밴드(굵은 스트로크 원)가 안에서 밖으로 계속 번져 나간다. 정적인 ((( 무늬에
-    /// 라이브 펄스의 시간 위상만 입힌 것(TimelineView, 위치 애니메이션 없음).
-    private var pulseWaves: some View {
-        let base: CGFloat = 90
-        return TimelineView(.animation) { context in
-            let elapsed = context.date.timeIntervalSinceReferenceDate
-            ZStack {
-                // 밴드 4장이 위상차를 두고 확장 — 항상 ((( 겹이 유지된 채 퍼져 보인다.
-                ForEach(0..<4, id: \.self) { index in
-                    let phase = ((elapsed / Self.pulsePeriod) + Double(index) / 4)
-                        .truncatingRemainder(dividingBy: 1)
-                    Circle()
-                        .stroke(Color(.systemBackground), lineWidth: 5)
-                        .frame(width: base, height: base)
-                        .scaleEffect(0.4 + 2.4 * phase)
-                        .opacity((1 - phase) * 0.28)
-                }
+    /// 아이콘의 물결 겹 확대 — 같은 크기의 원을 오른쪽으로 조금씩 밀며 겹쳐,
+    /// 겹칠수록 밝아지는 초승달 밴드( ) ) ) )를 만든다. 배너 오른쪽 밖으로 잘려 나간다.
+    private var ripples: some View {
+        let size: CGFloat = 190
+        return ZStack {
+            ForEach(0..<6, id: \.self) { index in
+                Circle()
+                    .fill(Color(.systemBackground).opacity(0.10))
+                    .frame(width: size, height: size)
+                    .offset(x: size * 0.38 + CGFloat(index) * size * 0.11)
             }
         }
-        .frame(width: base, height: base)
-        // 파동 중심을 오른쪽 모서리 밖으로 — 왼쪽 호( ( ( ()만 배너 안에 보인다.
-        .offset(x: base * 0.55)
     }
-
-    /// 파동 한 사이클(초) — 느긋하게 번진다.
-    private static let pulsePeriod: Double = 3.2
 }
 
 #Preview {
