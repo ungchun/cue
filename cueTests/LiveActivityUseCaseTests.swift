@@ -243,7 +243,10 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: now)
 
         let days = try #require(await service.startScheduleCalls.first).days
-        #expect(days.map(\.label) == ["오늘", "내일", "모레"])
+        // 로케일 무관 검증 — 코드·테스트가 같은 키를 해석하므로 어느 언어에서든 일치.
+        #expect(days.map(\.label) == [
+            String(localized: "Today"), String(localized: "Tomorrow"), String(localized: "In 2 days"),
+        ])
         #expect(days.map { $0.events.map(\.id) } == [["t1"], ["m1"], ["mo1"]])
         #expect(days.first?.events.first?.calendarColorHex == "#FF0000")
     }
@@ -257,8 +260,9 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: .now)
 
         let label = try #require(await service.startScheduleCalls.first?.days.first?.label)
-        // 3일 뒤는 오늘/내일/모레가 아니라 날짜 형식("4/10 (수)" 류).
-        #expect(!["오늘", "내일", "모레"].contains(label))
+        // 3일 뒤는 오늘/내일/모레가 아니라 날짜 형식("4/10 (수)" 류) — 로케일 무관.
+        let relative = [String(localized: "Today"), String(localized: "Tomorrow"), String(localized: "In 2 days")]
+        #expect(!relative.contains(label))
         #expect(label.contains("/"))
     }
 
@@ -326,7 +330,7 @@ struct LiveActivityUseCaseTests {
         #expect(!ids.contains("yall"))    // 어제 종일 제외
         #expect(!ids.contains("ymulti"))  // 어제 시작 멀티데이 제외
         #expect(ids.contains("t"))        // 오늘 예정 표시
-        #expect(days.first?.label == "오늘")
+        #expect(days.first?.label == String(localized: "Today"))
     }
 
     @Test func startScheduleSkipsWhenNoUpcomingEvents() async throws {
@@ -405,10 +409,10 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: [multi], now: now)
 
         let days = try #require(await service.startScheduleCalls.first).days
-        #expect(days.first?.label == "오늘")                 // 지난 날짜 헤더 아니라 오늘로
+        #expect(days.first?.label == String(localized: "Today"))                 // 지난 날짜 헤더 아니라 오늘로
         let item = try #require(days.first?.events.first)
         #expect(item.id == "multi")
-        #expect(item.timeText == "진행 중")
+        #expect(item.timeText == String(localized: "In progress"))
     }
 
     @Test func startScheduleMultiDayEndingTodayShowsArrowEndTime() async throws {

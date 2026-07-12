@@ -53,14 +53,17 @@ struct MonthCalendarGrid: Sendable {
         self.month = displayed.month ?? 0
 
         self.firstWeekday = calendar.firstWeekday
-        self.monthLabel = Self.monthFormatter.string(from: firstOfMonth)
+        // 포매터 로케일은 전달된 calendar를 따른다 — 실앱은 Calendar.current(기기 로케일),
+        // 테스트는 calendar.locale을 고정해 결정론적으로 검증한다.
+        let monthFormatter = Self.monthFormatter(calendar.locale)
+        self.monthLabel = monthFormatter.string(from: firstOfMonth)
         let prevMonth = calendar.date(byAdding: .month, value: -1, to: firstOfMonth) ?? firstOfMonth
         let nextMonth = calendar.date(byAdding: .month, value: 1, to: firstOfMonth) ?? firstOfMonth
-        self.previousMonthLabel = Self.monthFormatter.string(from: prevMonth)
-        self.nextMonthLabel = Self.monthFormatter.string(from: nextMonth)
+        self.previousMonthLabel = monthFormatter.string(from: prevMonth)
+        self.nextMonthLabel = monthFormatter.string(from: nextMonth)
 
         // 요일 헤더 — 시스템 심볼(0=일요일)을 firstWeekday 시작으로 회전.
-        let symbols = Self.symbolFormatter.veryShortWeekdaySymbols ?? []
+        let symbols = Self.symbolFormatter(calendar.locale).veryShortWeekdaySymbols ?? []
         self.weekdaySymbols = (0..<7).map { column in
             let index = ((calendar.firstWeekday - 1) + column) % 7
             return symbols.indices.contains(index) ? symbols[index] : ""
@@ -101,16 +104,18 @@ struct MonthCalendarGrid: Sendable {
         return stride(from: 0, to: cells.count, by: 7).map { Array(cells[$0..<$0 + 7]) }
     }
 
-    private static let monthFormatter: DateFormatter = {
+    /// 월 라벨 포매터 — 로케일별 월 이름(ko "10월" / en "October").
+    private static func monthFormatter(_ locale: Locale?) -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = .current
-        formatter.setLocalizedDateFormatFromTemplate("MMMM")   // ko "10월" / en "October"
+        formatter.locale = locale ?? .current
+        formatter.setLocalizedDateFormatFromTemplate("MMMM")
         return formatter
-    }()
+    }
 
-    private static let symbolFormatter: DateFormatter = {
+    /// veryShortWeekdaySymbols 포매터 — 로케일별 요일(ko: 일월화… / en: S M T…).
+    private static func symbolFormatter(_ locale: Locale?) -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = .current   // veryShortWeekdaySymbols — 기기 로케일(ko:일월화… / en:S M T…)
+        formatter.locale = locale ?? .current
         return formatter
-    }()
+    }
 }

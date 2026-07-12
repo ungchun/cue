@@ -9,11 +9,13 @@ import Testing
 
 struct MonthCalendarGridTests {
 
-    /// 결정적 그리드용 — 명시적 firstWeekday를 가진 그레고리력. timezone은 formatter와
-    /// 어긋나 월 라벨이 밀리지 않게 current(기본)로 둔다.
+    /// 결정적 그리드용 — 명시적 firstWeekday를 가진 그레고리력. 로케일을 ko_KR로 고정해
+    /// 월 라벨("10월")·요일 심볼("일"/"토") assert가 실행 기기 언어와 무관하게 결정론적이 되게 한다
+    /// (MonthCalendarGrid 포매터는 전달된 calendar.locale을 따른다).
     private func calendar(firstWeekday: Int) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.firstWeekday = firstWeekday
+        calendar.locale = Locale(identifier: "ko_KR")
         return calendar
     }
 

@@ -21,11 +21,12 @@ struct EventRowTimeTextTests {
         )
     }
 
-    @Test func allDayShowsHaruJongil() {
+    @Test func allDayShowsAllDayLabel() {
         let day = cal.startOfDay(for: Date())
         let e = event(start: day, end: day.addingTimeInterval(86_400), isAllDay: true)
 
-        #expect(EventRow.timeText(for: e, in: day) == "하루 종일")
+        // 로케일 무관 검증 — 코드·테스트가 같은 키를 해석하므로 어느 언어에서든 일치.
+        #expect(EventRow.timeText(for: e, in: day) == String(localized: "All day"))
     }
 
     @Test func singleDayTimedShowsStartEndRange() {
@@ -60,7 +61,7 @@ struct EventRowTimeTextTests {
         let day20 = cal.date(byAdding: .day, value: 4, to: day16)!
         let e = event(start: day16.addingTimeInterval(6 * 3600), end: day20.addingTimeInterval(8 * 3600))
 
-        #expect(EventRow.timeText(for: e, in: day18) == "진행 중")
+        #expect(EventRow.timeText(for: e, in: day18) == String(localized: "In progress"))
     }
 
     @Test func multiDayEndDaySectionShowsLeadingArrowWithEndTime() {
