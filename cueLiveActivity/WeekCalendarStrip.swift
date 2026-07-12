@@ -78,7 +78,7 @@ struct WeekCalendarStrip: View {
 
     private static let symbolFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")   // veryShortWeekdaySymbols = 일월화수목금토
+        formatter.locale = .current   // veryShortWeekdaySymbols — 기기 로케일(ko:일월화… / en:S M T…)
         return formatter
     }()
 }
