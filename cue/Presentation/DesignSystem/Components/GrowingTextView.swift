@@ -127,11 +127,11 @@ private struct Representable: UIViewRepresentable {
         let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
         let lineHeight = (uiView.font ?? font).lineHeight
 
-        // 가운데 정렬(.center)이라도 2줄을 넘으면 좌측 정렬로 — "왼쪽부터 채우는" 형태.
-        // 변경됐을 때만 set해 layout 루프를 피한다.
+        // 가운데 정렬(.center)이라도 2줄을 넘으면 자연 정렬로 — "글 시작 쪽부터 채우는" 형태.
+        // .natural이라 RTL(아랍어 등)에선 오른쪽부터 채운다. 변경됐을 때만 set해 layout 루프를 피한다.
         if textAlignment == .center, lineHeight > 0 {
             let lines = Int((fitting.height / lineHeight).rounded())
-            let desired: NSTextAlignment = lines > 2 ? .left : .center
+            let desired: NSTextAlignment = lines > 2 ? .natural : .center
             if uiView.textAlignment != desired { uiView.textAlignment = desired }
         }
 
