@@ -25,11 +25,11 @@ struct Live24HourGuideView: View {
                 }
                 .padding(Spacing.md)
             }
-            .navigationTitle("24시간 사용하기")
+            .navigationTitle("Use 24 Hours")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("닫기") { dismiss() }
+                    Button("Done") { dismiss() }
                 }
             }
         }
@@ -41,7 +41,7 @@ struct Live24HourGuideView: View {
             Image(systemName: "clock.arrow.2.circlepath")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text("단축어 앱의 ‘자동화’를 이용하면 라이브를 중단 없이 사용할 수 있어요.")
+            Text("Use the Shortcuts app’s ‘Automation’ to keep your Live running without interruption.")
                 .font(.headline)
         }
     }
@@ -57,7 +57,7 @@ struct Live24HourGuideView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: Spacing.lg, height: Spacing.lg)
-                Text("단축어 열기")
+                Text("Open Shortcuts")
                     .font(.body.weight(.semibold))
             }
         }
@@ -67,14 +67,14 @@ struct Live24HourGuideView: View {
 
     private var steps: some View {
         VStack(alignment: .leading, spacing: Spacing.smd) {
-            stepRow(1, "단축어 앱의 ‘자동화’ 탭으로 이동하여 새로운 자동화를 생성합니다.")
-            stepRow(2, "‘특정 시간’에서 ‘매일’, ‘즉시 실행’을 선택합니다.")
-            stepRow(3, "목록에서 Cue의 ‘라이브 새로고침’을 선택합니다.")
-            stepRow(4, "같은 과정을 두 번 더 반복하여 8시간 간격으로 실행되는 3개의 자동화를 만듭니다. 예) 00:00, 08:00, 16:00")
+            stepRow(1, "Go to the ‘Automation’ tab in the Shortcuts app and create a new automation.")
+            stepRow(2, "Under ‘Time of Day’, choose ‘Daily’ and ‘Run Immediately’.")
+            stepRow(3, "Select Cue’s ‘Refresh Live’ from the list.")
+            stepRow(4, "Repeat twice more to create three automations running 8 hours apart. e.g. 00:00, 08:00, 16:00")
         }
     }
 
-    private func stepRow(_ number: Int, _ text: String) -> some View {
+    private func stepRow(_ number: Int, _ text: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
             Text("\(number).")
                 .font(.body.weight(.semibold))
@@ -87,12 +87,12 @@ struct Live24HourGuideView: View {
     private var footnotes: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Label {
-                Text("라이브 액티비티는 시스템 정책상 8시간이 지나면 자동으로 종료됩니다 — 자동화가 8시간마다 다시 켜줍니다.")
+                Text("Live Activities are automatically ended by the system after 8 hours — the automation turns them back on every 8 hours.")
             } icon: {
                 Image(systemName: "info.circle")
             }
             Label {
-                Text("다른 자동화와 실행 시각이 겹치면 동시에 실행되지 않을 수 있어요. 시간을 분리해 설정하세요. 예) 00:01, 08:01, 16:01")
+                Text("If run times overlap with other automations, they may not run at the same time. Space them apart. e.g. 00:01, 08:01, 16:01")
             } icon: {
                 Image(systemName: "exclamationmark.triangle")
             }

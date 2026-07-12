@@ -19,13 +19,13 @@ enum AppTab: String, CaseIterable, Identifiable {
     var id: Self { self }
 
     /// 탭 레이블에 표시할 이름.
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .memo: "메모"
-        case .schedule: "일정"
-        case .reminder: "할일"
-        case .focus: "집중"
-        case .settings: "설정"
+        case .memo: "Memo"
+        case .schedule: "Schedule"
+        case .reminder: "Tasks"
+        case .focus: "Focus"
+        case .settings: "Settings"
         }
     }
 

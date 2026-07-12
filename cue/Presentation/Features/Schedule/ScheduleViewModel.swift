@@ -137,7 +137,7 @@ final class ScheduleViewModel {
             liveActivityActive = try await startLiveActivityUseCase(events: eventsByDay.flatMap(\.events))
             if !liveActivityActive { await endLiveActivityUseCase() }
         } catch {
-            errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+            errorMessage = String(localized: "Couldn't start Live Activity.")
             return nil
         }
         return verdict

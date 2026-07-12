@@ -18,13 +18,13 @@ struct ItemListView: View {
         List {
             Section {
                 HStack(spacing: Spacing.sm) {
-                    TextField("새 항목", text: $newItemTitle)
-                    Button("추가", action: addItem)
+                    TextField("New item", text: $newItemTitle)
+                    Button("Add", action: addItem)
                         .disabled(isTitleEmpty)
                 }
             }
 
-            Section("항목 \(viewModel.items.count)개") {
+            Section("\(viewModel.items.count) items") {
                 ForEach(viewModel.items) { item in
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text(item.title).font(.headline)
@@ -48,8 +48,8 @@ struct ItemListView: View {
         .task {
             await viewModel.load()
         }
-        .alert("오류", isPresented: errorBinding) {
-            Button("확인", role: .cancel) {}
+        .alert("Error", isPresented: errorBinding) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "")
         }

@@ -73,8 +73,8 @@ struct ReminderView: View {
                 }
             }
             .task { await viewModel.onAppear() }
-            .alert("오류", isPresented: errorBinding) {
-                Button("확인", role: .cancel) {}
+            .alert("Error", isPresented: errorBinding) {
+                Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
@@ -117,16 +117,16 @@ struct ReminderView: View {
             }
             // 목록 삭제 확인 — 안에 있는 모든 미리알림도 EventKit이 함께 제거한다.
             .alert(
-                "'\(viewModel.selectedList?.title ?? "")' 삭제",
+                "Delete '\(viewModel.selectedList?.title ?? "")'",
                 isPresented: $showingDeleteListConfirmation
             ) {
-                Button("취소", role: .cancel) {}
-                Button("삭제", role: .destructive) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
                     guard let listID = viewModel.selectedListID else { return }
                     Task { await viewModel.deleteList(listID: listID) }
                 }
             } message: {
-                Text("이 목록과 안에 있는 모든 미리알림이 삭제됩니다.")
+                Text("This list and all reminders in it will be deleted.")
             }
     }
 
@@ -139,7 +139,9 @@ struct ReminderView: View {
                 openURL(url)
             }
         } label: {
-            Text("미리 알림")
+            Text("Reminders")
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
     }
 
@@ -158,7 +160,7 @@ struct ReminderView: View {
                     viewModel.showsCompleted.toggle()
                 } label: {
                     Label(
-                        viewModel.showsCompleted ? "완료된 항목 숨기기" : "완료된 항목 보기",
+                        viewModel.showsCompleted ? "Hide Completed" : "Show Completed",
                         systemImage: viewModel.showsCompleted ? "eye.slash" : "eye"
                     )
                 }
@@ -168,12 +170,12 @@ struct ReminderView: View {
                 Button {
                     showingNewListSheet = true
                 } label: {
-                    Label("새로운 목록", systemImage: "plus")
+                    Label("New List", systemImage: "plus")
                 }
                 Button {
                     showingListInfoSheet = true
                 } label: {
-                    Label("목록 정보 보기", systemImage: "info.circle")
+                    Label("Show List Info", systemImage: "info.circle")
                 }
             }
 
@@ -183,7 +185,7 @@ struct ReminderView: View {
                     Button(role: .destructive) {
                         showingDeleteListConfirmation = true
                     } label: {
-                        Label("목록 삭제", systemImage: "trash")
+                        Label("Delete List", systemImage: "trash")
                     }
                     // 앱 전체 .tint(.primary) 때문에 아이콘이 무채색이 되므로, 이 행만 빨강으로
                     // 되돌려 쓰레기통 아이콘을 destructive 텍스트와 같은 색으로 맞춘다.
@@ -199,16 +201,16 @@ struct ReminderView: View {
     /// 방향(기준별 라벨)을 inline Picker로. Picker(.inline)가 라디오 체크마크를 자동으로 그린다.
     private var sortMenu: some View {
         Menu {
-            Picker("정렬 기준", selection: sortFieldBinding) {
-                Text("수동").tag(ReminderSortField.manual)
-                Text("마감일").tag(ReminderSortField.dueDate)
-                Text("생성일").tag(ReminderSortField.creationDate)
-                Text("제목").tag(ReminderSortField.title)
+            Picker("Sort By", selection: sortFieldBinding) {
+                Text("Manual").tag(ReminderSortField.manual)
+                Text("Due Date").tag(ReminderSortField.dueDate)
+                Text("Creation Date").tag(ReminderSortField.creationDate)
+                Text("Title").tag(ReminderSortField.title)
             }
             .pickerStyle(.inline)
 
             if viewModel.currentSortPreference.field != .manual {
-                Picker("정렬 방향", selection: sortDirectionBinding) {
+                Picker("Sort Order", selection: sortDirectionBinding) {
                     Text(ascendingLabel).tag(ReminderSortDirection.ascending)
                     Text(descendingLabel).tag(ReminderSortDirection.descending)
                 }
@@ -218,18 +220,18 @@ struct ReminderView: View {
             // Menu 라벨에 Label(제목+아이콘) 다음으로 형제 Text를 두면, 그 Text가 메뉴 행의
             // 회색 서브타이틀로 렌더된다 — 현재 선택된 정렬 기준 표시(이미지의 미리 알림 앱과 동일).
             // (Label의 title 빌더 안에 두 Text를 넣는 방식은 서브타이틀로 안 잡혀 형제 구조로 둔다.)
-            Label("다음으로 정렬", systemImage: "arrow.up.arrow.down")
+            Label("Sort By", systemImage: "arrow.up.arrow.down")
             Text(currentSortFieldLabel)
         }
     }
 
     /// 현재 선택된 정렬 기준의 한국어 라벨 — "다음으로 정렬" 서브타이틀에 표시.
-    private var currentSortFieldLabel: String {
+    private var currentSortFieldLabel: LocalizedStringKey {
         switch viewModel.currentSortPreference.field {
-        case .manual: return "수동"
-        case .dueDate: return "마감일"
-        case .creationDate: return "생성일"
-        case .title: return "제목"
+        case .manual: return "Manual"
+        case .dueDate: return "Due Date"
+        case .creationDate: return "Creation Date"
+        case .title: return "Title"
         }
     }
 
@@ -250,22 +252,22 @@ struct ReminderView: View {
     }
 
     /// 오름차순 방향 라벨 — 정렬 기준별로 문구가 다르다(이미지의 미리 알림 앱과 동일).
-    private var ascendingLabel: String {
+    private var ascendingLabel: LocalizedStringKey {
         switch viewModel.currentSortPreference.field {
-        case .dueDate: return "이른 항목 순으로"
-        case .creationDate: return "오래된 항목 순"
-        case .title: return "가나다 순"
-        case .manual: return "오름차순"
+        case .dueDate: return "Earliest First"
+        case .creationDate: return "Oldest First"
+        case .title: return "A to Z"
+        case .manual: return "Ascending"
         }
     }
 
     /// 내림차순 방향 라벨.
-    private var descendingLabel: String {
+    private var descendingLabel: LocalizedStringKey {
         switch viewModel.currentSortPreference.field {
-        case .dueDate: return "늦은 항목 순으로"
-        case .creationDate: return "최신 항목 순"
-        case .title: return "역순"
-        case .manual: return "내림차순"
+        case .dueDate: return "Latest First"
+        case .creationDate: return "Newest First"
+        case .title: return "Z to A"
+        case .manual: return "Descending"
         }
     }
 
@@ -283,9 +285,9 @@ struct ReminderView: View {
 
     private var deniedView: some View {
         ContentUnavailableView {
-            Label("미리 알림 접근 필요", systemImage: "lock")
+            Label("Reminders Access Needed", systemImage: "lock")
         } actions: {
-            Button("설정 열기") {
+            Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
@@ -369,7 +371,7 @@ struct ReminderView: View {
                             Button(role: .destructive) {
                                 Task { await viewModel.delete(reminder) }
                             } label: {
-                                Label("삭제", systemImage: "trash")
+                                Label("Delete", systemImage: "trash")
                             }
                         }
                 }
@@ -442,7 +444,7 @@ struct ReminderView: View {
                         await viewModel.delete(reminder)
                     }
                 } label: {
-                    Label("삭제", systemImage: "trash")
+                    Label("Delete", systemImage: "trash")
                 }
             }
     }
@@ -468,7 +470,7 @@ struct ReminderView: View {
                 let verdict = await viewModel.toggleLiveActivity(listTitle: currentTitle)
                 switch verdict {
                 case .unlimited where viewModel.liveActivityActive:
-                    toastCenter.show(wasActive ? "새로고침" : "라이브")
+                    toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
                 case .denied:
                     toastCenter.show("Premium")
                 case .allowed(let remaining) where viewModel.liveActivityActive:
@@ -537,7 +539,7 @@ struct ReminderView: View {
             .frame(height: 1)
             .listRowSeparator(.hidden)
         HStack(alignment: .lastTextBaseline) {
-            Text("완료됨")
+            Text("Completed")
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(.secondary)
             Spacer()
@@ -555,7 +557,7 @@ struct ReminderView: View {
                     Button(role: .destructive) {
                         Task { await viewModel.delete(reminder) }
                     } label: {
-                        Label("삭제", systemImage: "trash")
+                        Label("Delete", systemImage: "trash")
                     }
                 }
         }
@@ -642,7 +644,7 @@ struct ReminderView: View {
                     GrowingTextView(
                         text: $editingMemo,
                         isFocused: $editMemoFocused,
-                        placeholder: "메모 추가",
+                        placeholder: String(localized: "Add Note"),
                         font: .preferredFont(forTextStyle: .callout),
                         textColor: .secondaryLabel,
                         submitOnReturn: true
@@ -717,23 +719,21 @@ struct ReminderView: View {
 
     /// 반복 규칙 한국어 라벨. interval=1이면 매일/매주/매월/매년,
     /// 아니면 "N일/주/개월/년 마다".
-    private func recurrenceLabel(_ rule: RecurrenceRule) -> String {
+    private func recurrenceLabel(_ rule: RecurrenceRule) -> LocalizedStringKey {
         if rule.interval == 1 {
             switch rule.frequency {
-            case .daily: return "매일"
-            case .weekly: return "매주"
-            case .monthly: return "매월"
-            case .yearly: return "매년"
+            case .daily: return "Daily"
+            case .weekly: return "Weekly"
+            case .monthly: return "Monthly"
+            case .yearly: return "Yearly"
             }
         }
-        let unit: String
         switch rule.frequency {
-        case .daily: unit = "일"
-        case .weekly: unit = "주"
-        case .monthly: unit = "개월"
-        case .yearly: unit = "년"
+        case .daily: return "Every \(rule.interval) days"
+        case .weekly: return "Every \(rule.interval) weeks"
+        case .monthly: return "Every \(rule.interval) months"
+        case .yearly: return "Every \(rule.interval) years"
         }
-        return "\(rule.interval)\(unit)마다"
     }
 
     /// 인라인 편집 row 식별용 field.
@@ -826,7 +826,7 @@ struct ReminderView: View {
                 GrowingTextView(
                     text: $newMemo,
                     isFocused: $newMemoFocused,
-                    placeholder: "메모 추가",
+                    placeholder: String(localized: "Add Note"),
                     font: .preferredFont(forTextStyle: .callout),
                     textColor: .secondaryLabel,
                     submitOnReturn: true
@@ -1115,14 +1115,14 @@ struct ReminderView: View {
     /// 기기 로케일과 무관하게 한국어로 보이도록 ko_KR을 명시한다.
     private func dueDateText(_ date: Date) -> String {
         let calendar = Calendar.current
-        let koLocale = Locale(identifier: "ko_KR")
+        let koLocale = Locale.autoupdatingCurrent
         let time = date.formatted(
             Date.FormatStyle(date: .omitted, time: .shortened, locale: koLocale)
         )
         if calendar.isDateInToday(date) {
-            return "오늘 \(time)"
+            return String(localized: "Today \(time)")
         } else if calendar.isDateInTomorrow(date) {
-            return "내일 \(time)"
+            return String(localized: "Tomorrow \(time)")
         } else {
             return date.formatted(
                 Date.FormatStyle(date: .numeric, time: .shortened, locale: koLocale)

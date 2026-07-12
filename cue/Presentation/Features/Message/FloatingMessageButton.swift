@@ -40,7 +40,9 @@ struct FloatingMessageButton: View {
                     // 텍스트(title3)보다 한 단계 큰 아이콘 — 버튼에서 화살표가 또렷하게.
                     .font(.title2.weight(.bold))
                     .symbolEffect(.pulse, value: tapCount)
-                Text("켜기")
+                Text("On")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .font(.title3.weight(.bold))
             // 쿨다운·비활성이면 글자·아이콘을 secondary 톤으로 — disabled 느낌.
@@ -63,7 +65,7 @@ struct FloatingMessageButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isCoolingDown)
-        .accessibilityLabel("라이브 메시지 켜기")
+        .accessibilityLabel("Turn on live message")
     }
 
     /// 켜짐(on-air)을 알리는 번짐 — 버튼과 똑같은 캡슐을 버튼 가장자리(scale 1)에서 시작해

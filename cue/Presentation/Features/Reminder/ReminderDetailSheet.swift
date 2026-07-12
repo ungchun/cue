@@ -58,7 +58,7 @@ struct ReminderDetailSheet: View {
     }
 
     /// DatePicker·서브타이틀의 오전/오후·요일을 일관되게 한국어로 표시하기 위해 고정한다.
-    private let koLocale = Locale(identifier: "ko_KR")
+    private let koLocale = Locale.autoupdatingCurrent
 
     /// 생성·수정 양쪽을 한 init으로 다룬다 — 수정은 기존 값을 넣고, 생성은 기본값을 쓴다.
     init(
@@ -98,18 +98,18 @@ struct ReminderDetailSheet: View {
                 Section {
                     // 시트 안엔 leading 아이콘이 없어 axis: .vertical TextField 정렬 이슈가 없음.
                     // Enter는 줄바꿈으로 두고, commit은 툴바 ✓ 버튼으로 명시.
-                    TextField("제목", text: $title, axis: .vertical)
+                    TextField("Title", text: $title, axis: .vertical)
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(.primary)
-                    TextField("메모", text: $memo, axis: .vertical)
+                    TextField("Note", text: $memo, axis: .vertical)
                         .font(.body)
                         .foregroundStyle(.primary)
                 }
 
-                Section("날짜 및 시간") {
+                Section("Date & Time") {
                     toggleRow(
                         kind: .date,
-                        label: "날짜",
+                        label: "Date",
                         systemImage: "calendar",
                         isOn: hasDate,
                         subtitle: hasDate ? dateSubtitle : nil,
@@ -126,7 +126,7 @@ struct ReminderDetailSheet: View {
 
                     toggleRow(
                         kind: .time,
-                        label: "시간",
+                        label: "Time",
                         systemImage: "clock",
                         isOn: hasTime,
                         subtitle: hasTime ? timeSubtitle : nil,
@@ -144,7 +144,7 @@ struct ReminderDetailSheet: View {
                     }
                 }
             }
-            .navigationTitle("세부사항")
+            .navigationTitle("Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -157,7 +157,7 @@ struct ReminderDetailSheet: View {
                             dismiss()
                         }
                     } label: {
-                        Label("닫기", systemImage: "xmark")
+                        Label("Close", systemImage: "xmark")
                             .labelStyle(.iconOnly)
                     }
                     // X 버튼을 anchor 삼는 popover. iPhone(compact width)에선 기본이 sheet라
@@ -174,7 +174,7 @@ struct ReminderDetailSheet: View {
                     Button {
                         complete()
                     } label: {
-                        Label("저장", systemImage: "checkmark")
+                        Label("Save", systemImage: "checkmark")
                             .labelStyle(.iconOnly)
                             .foregroundStyle(.white)
                     }
@@ -191,7 +191,7 @@ struct ReminderDetailSheet: View {
     /// iOS 시스템 알림 크기 — 제목 `.headline`, 버튼 iOS 26 `.glass` capsule + 빨간 텍스트 명시.
     private var discardPopover: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("이 변경 사항을 폐기\n하겠습니까?")
+            Text("Discard Changes?")
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
@@ -203,7 +203,7 @@ struct ReminderDetailSheet: View {
             } label: {
                 // 회색 system fill capsule + 빨간 destructive 텍스트 — iOS native alert와 동일.
                 // `.glass` style은 fill이 너무 투명해 직접 background로 명시.
-                Text("변경 사항 폐기")
+                Text("Discard Changes")
                     .font(.body.weight(.medium))
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity)
@@ -221,7 +221,7 @@ struct ReminderDetailSheet: View {
     /// 토글이 켜진 상태에서 라벨 영역을 탭하면 해당 피커의 펼침이 토글된다.
     private func toggleRow(
         kind: PickerKind,
-        label: String,
+        label: LocalizedStringKey,
         systemImage: String,
         isOn: Bool,
         subtitle: String?,
@@ -315,8 +315,8 @@ struct ReminderDetailSheet: View {
     /// "오늘" / "내일" / "5월 24일" — 마감일 행 서브타이틀.
     private var dateSubtitle: String {
         let calendar = Calendar.current
-        if calendar.isDateInToday(dueDate) { return "오늘" }
-        if calendar.isDateInTomorrow(dueDate) { return "내일" }
+        if calendar.isDateInToday(dueDate) { return String(localized: "Today") }
+        if calendar.isDateInTomorrow(dueDate) { return String(localized: "Tomorrow") }
         return dueDate.formatted(.dateTime.month().day().locale(koLocale))
     }
 

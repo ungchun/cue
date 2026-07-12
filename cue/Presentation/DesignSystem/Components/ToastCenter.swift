@@ -16,7 +16,7 @@ final class ToastCenter {
     /// 현재 토스트가 떠 있는지 — 오버레이가 이 값으로 슬라이드 인/아웃한다.
     private(set) var isPresented = false
     /// 캡슐 안 라벨 — "라이브"(새로 켬) / "새로고침"(재시작) / "Premium"(유료 전용 안내).
-    private(set) var message = "라이브"
+    private(set) var message = String(localized: "Live")
 
     /// 자동 해제 타이머 — 새 토스트가 뜨면 이전 타이머를 취소하고 다시 건다(연속 호출 안전).
     private var dismissTask: Task<Void, Never>?

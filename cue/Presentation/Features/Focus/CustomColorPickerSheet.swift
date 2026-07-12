@@ -38,7 +38,7 @@ struct CustomColorPickerSheet: View {
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.top, Spacing.md)
-            .navigationTitle("색상")
+            .navigationTitle("Color")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -47,7 +47,7 @@ struct CustomColorPickerSheet: View {
                     } label: {
                         Image(systemName: "xmark")
                     }
-                    .accessibilityLabel("닫기")
+                    .accessibilityLabel("Close")
                 }
             }
         }
@@ -71,19 +71,21 @@ struct CustomColorPickerSheet: View {
     /// 색조·채도·명도 슬라이더 3종 묶음.
     private var slidersGroup: some View {
         VStack(spacing: Spacing.md) {
-            sliderRow(label: "색조", value: $hue)
-            sliderRow(label: "채도", value: $saturation)
-            sliderRow(label: "명도", value: $brightness)
+            sliderRow(label: "Hue", value: $hue)
+            sliderRow(label: "Saturation", value: $saturation)
+            sliderRow(label: "Brightness", value: $brightness)
         }
     }
 
     /// 라벨 + 슬라이더 한 줄. 라벨 폭은 한글 두 글자가 들어가도록 xxl(48)로 고정.
     /// 슬라이더 tint를 currentColor로 두어 라이브 시각 피드백.
-    private func sliderRow(label: String, value: Binding<Double>) -> some View {
+    private func sliderRow(label: LocalizedStringKey, value: Binding<Double>) -> some View {
         HStack(spacing: Spacing.md) {
             Text(label)
                 .font(.callout)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .frame(width: Spacing.xxl, alignment: .leading)
             Slider(value: value, in: 0...1)
                 .tint(currentColor)

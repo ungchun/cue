@@ -18,9 +18,9 @@ extension AppRoute {
         switch self {
         case .itemDetail(let itemID):
             // TODO: 실제 상세 Feature 화면으로 교체.
-            Text("Item 상세\n\(itemID.uuidString)")
+            Text("Item Detail\n\(itemID.uuidString)")
                 .multilineTextAlignment(.center)
-                .navigationTitle("상세")
+                .navigationTitle("Detail")
         }
     }
 }

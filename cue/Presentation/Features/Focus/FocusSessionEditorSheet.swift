@@ -40,26 +40,26 @@ struct FocusSessionEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("이름") {
-                    TextField("세션 이름", text: $title)
+                Section("Name") {
+                    TextField("Session name", text: $title)
                         .focused($focusedField, equals: .title)
                 }
-                Section("색상") {
+                Section("Color") {
                     paletteRow
                 }
-                Section("시간") {
-                    minuteRow(label: "집중 시간", minutes: focusMinutesBinding, field: .focus)
+                Section("Duration") {
+                    minuteRow(label: "Focus time", minutes: focusMinutesBinding, field: .focus)
                     if settings.isRepeating {
-                        minuteRow(label: "휴식 시간", minutes: restMinutesBinding, field: .rest)
+                        minuteRow(label: "Break time", minutes: restMinutesBinding, field: .rest)
                     }
                 }
-                Section("반복") {
-                    Toggle("반복", isOn: $settings.isRepeating)
+                Section("Repeat") {
+                    Toggle("Repeat", isOn: $settings.isRepeating)
                         // 앱 전역 무채색 tint가 다크 모드에서 ON 트랙을 흰색으로 만든다 — 시스템 표준(초록)으로.
                         .tint(.green)
                     if settings.isRepeating {
                         Stepper(value: $settings.cycleCount, in: 2...10) {
-                            LabeledContent("사이클 수", value: "\(settings.cycleCount)회")
+                            LabeledContent("Cycles", value: "\(settings.cycleCount)")
                         }
                     }
                 }
@@ -68,14 +68,14 @@ struct FocusSessionEditorSheet: View {
                     deleteSection(for: session)
                 }
             }
-            .navigationTitle(isEditing ? "세션 수정" : "새 세션")
+            .navigationTitle(isEditing ? "Edit Session" : "New Session")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("취소") { dismiss() }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(isEditing ? "저장" : "추가") {
+                    Button(isEditing ? "Save" : "Add") {
                         save()
                         dismiss()
                     }
@@ -171,7 +171,7 @@ struct FocusSessionEditorSheet: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        .accessibilityLabel("커스텀 색상")
+        .accessibilityLabel("Custom color")
         .accessibilityAddTraits(isCustomActive ? [.isSelected] : [])
     }
 
@@ -190,7 +190,7 @@ struct FocusSessionEditorSheet: View {
                 viewModel.deleteSession(id: session.id)
                 dismiss()
             } label: {
-                Text("세션 삭제")
+                Text("Delete Session")
                     .frame(maxWidth: .infinity)
             }
         }
@@ -235,7 +235,7 @@ struct FocusSessionEditorSheet: View {
 
     /// "집중 시간 [____] 분 [- +]" 한 줄. TextField로 직접 입력하거나 Stepper -/+로 ±1.
     /// 두 컨트롤이 같은 binding을 공유해 양쪽 어디로 바꿔도 즉시 동기화된다.
-    private func minuteRow(label: String, minutes: Binding<Int>, field: Field) -> some View {
+    private func minuteRow(label: LocalizedStringKey, minutes: Binding<Int>, field: Field) -> some View {
         HStack {
             Text(label)
             Spacer()
@@ -245,7 +245,7 @@ struct FocusSessionEditorSheet: View {
                 .focused($focusedField, equals: field)
                 // "59"(2자리)가 넉넉히 들어가는 폭. xl(32)로는 좁고 xxl(48)이 자연스러움.
                 .frame(width: Spacing.xxl)
-            Text("분")
+            Text("min")
                 .foregroundStyle(.secondary)
             Stepper("", value: minutes, in: 1...59)
                 .labelsHidden()
@@ -278,7 +278,7 @@ struct FocusSessionEditorSheet: View {
     /// 단일 프리셋 — 화면용 SwiftUI Color와 저장용 hex 쌍.
     private struct ColorPreset {
         /// 접근성 라벨 — VoiceOver가 읽는 색 이름.
-        let name: String
+        let name: LocalizedStringKey
         /// 팔레트 swatch에 그려질 Color (Apple 시스템 컬러).
         let displayColor: Color
         /// 저장될 hex 문자열. 같은 색의 시스템 RGB 값과 일치시켜 두 표현이 어긋나지 않게 한다.
@@ -290,15 +290,15 @@ struct FocusSessionEditorSheet: View {
     /// hex는 각 시스템 컬러의 라이트 모드 sRGB 값과 일치시켜 행 캡슐·메인 화면이 같은
     /// 톤으로 보이도록 한다.
     private static let palette: [ColorPreset] = [
-        ColorPreset(name: "빨강", displayColor: .red, hex: "#FF3B30"),
-        ColorPreset(name: "주황", displayColor: .orange, hex: "#FF9500"),
-        ColorPreset(name: "초록", displayColor: .green, hex: "#34C759"),
-        ColorPreset(name: "민트", displayColor: .mint, hex: "#00C7BE"),
-        ColorPreset(name: "파랑", displayColor: .blue, hex: "#007AFF"),
-        ColorPreset(name: "인디고", displayColor: .indigo, hex: "#5856D6"),
-        ColorPreset(name: "보라", displayColor: .purple, hex: "#AF52DE"),
-        ColorPreset(name: "분홍", displayColor: .pink, hex: "#FF2D55"),
-        ColorPreset(name: "회색", displayColor: .gray, hex: "#8E8E93"),
+        ColorPreset(name: "Red", displayColor: .red, hex: "#FF3B30"),
+        ColorPreset(name: "Orange", displayColor: .orange, hex: "#FF9500"),
+        ColorPreset(name: "Green", displayColor: .green, hex: "#34C759"),
+        ColorPreset(name: "Mint", displayColor: .mint, hex: "#00C7BE"),
+        ColorPreset(name: "Blue", displayColor: .blue, hex: "#007AFF"),
+        ColorPreset(name: "Indigo", displayColor: .indigo, hex: "#5856D6"),
+        ColorPreset(name: "Purple", displayColor: .purple, hex: "#AF52DE"),
+        ColorPreset(name: "Pink", displayColor: .pink, hex: "#FF2D55"),
+        ColorPreset(name: "Gray", displayColor: .gray, hex: "#8E8E93"),
     ]
 }
 

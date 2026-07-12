@@ -45,7 +45,7 @@ struct FocusView: View {
                 } label: {
                     Image(systemName: "slider.horizontal.3")
                 }
-                .accessibilityLabel("세션")
+                .accessibilityLabel("Session")
                 // 세션 진행 중엔 목록을 잠근다 — 다른 세션으로 갈아타려면 먼저 종료해야 한다.
                 .disabled(viewModel.isActive)
             }
@@ -148,7 +148,7 @@ struct FocusView: View {
     @ViewBuilder
     private var phaseLabelInRing: some View {
         if viewModel.isActive {
-            Text(viewModel.phase == .focus ? "집중" : "휴식")
+            Text(viewModel.phase == .focus ? "Focus" : "Break")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -169,19 +169,19 @@ struct FocusView: View {
     private var controlRow: some View {
         if viewModel.isActive {
             HStack(spacing: Spacing.xl) {
-                controlButton(systemImage: "forward.end.fill", label: "스킵") {
+                controlButton(systemImage: "forward.end.fill", label: "Skip") {
                     viewModel.skip()
                 }
                 if viewModel.isPaused {
-                    controlButton(systemImage: "play.fill", label: "재개", tint: sessionColor) {
+                    controlButton(systemImage: "play.fill", label: "Resume", tint: sessionColor) {
                         viewModel.resume()
                     }
                 } else {
-                    controlButton(systemImage: "pause.fill", label: "일시정지", tint: sessionColor) {
+                    controlButton(systemImage: "pause.fill", label: "Pause", tint: sessionColor) {
                         viewModel.pause()
                     }
                 }
-                controlButton(systemImage: "xmark", label: "종료", tint: .secondary) {
+                controlButton(systemImage: "xmark", label: "End", tint: .secondary) {
                     viewModel.stopSession()
                 }
             }
@@ -206,20 +206,22 @@ struct FocusView: View {
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(color.opacity(fillOpacity)))
                     .foregroundStyle(color)
-                Text("시작")
+                Text("Start")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("시작")
+        .accessibilityLabel("Start")
     }
 
     /// 컨트롤 단일 버튼 — 원형 배경 + 아이콘 + `.secondary` 라벨. tint 기본 `.primary`
     /// 무채색. 재개 버튼처럼 강조가 필요한 경우 `tint: sessionColor`로 호출.
     private func controlButton(
         systemImage: String,
-        label: String,
+        label: LocalizedStringKey,
         tint: Color = .primary,
         action: @escaping () -> Void
     ) -> some View {
@@ -236,6 +238,8 @@ struct FocusView: View {
                 Text(label)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
         .buttonStyle(.plain)

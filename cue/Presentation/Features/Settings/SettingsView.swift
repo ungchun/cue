@@ -46,37 +46,37 @@ struct SettingsView: View {
             .listSectionSpacing(20)
 
             Section {
-                Picker("화면 모드", selection: colorSchemeBinding) {
+                Picker("Display Mode", selection: colorSchemeBinding) {
                     ForEach(AppColorScheme.allCases, id: \.self) { scheme in
                         Text(scheme.label).tag(scheme)
                     }
                 }
-                Picker("시작 탭", selection: startTabBinding) {
+                Picker("Start Tab", selection: startTabBinding) {
                     ForEach(Self.startTabOptions) { tab in
                         Text(tab.title).tag(tab.rawValue)
                     }
                 }
             } header: {
-                sectionHeader("일반")
+                sectionHeader("General")
             }
 
             Section {
                 // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Premium 게이트도 추후 복원.
-                Toggle("라이브 항상 표시", isOn: liveAlwaysOnBinding)
+                Toggle("Always Show Live", isOn: liveAlwaysOnBinding)
                     .tint(.green)
                 // 대상 선택 — 평면 메뉴 한 번에 열림. 서브메뉴 펼침이 없어서 메뉴 재배치
                 // 점프(iOS가 서브메뉴 확장 시 메뉴를 위로 밀어 올리는 동작)가 원천적으로 없다.
                 // 길어지면 메뉴가 내부 스크롤(시스템 표준).
-                LabeledContent("항목") {
+                LabeledContent("Items") {
                     Menu {
-                        Toggle("메모", isOn: liveAlwaysOnMemoBinding)
-                        Toggle("일정", isOn: liveAlwaysOnScheduleBinding)
-                        Section("할일") {
-                            Picker("할일", selection: reminderScopeMenuBinding) {
-                                Text("사용 안 함").tag("off")
-                                Text("오늘").tag("today")
-                                Text("예정").tag("scheduled")
-                                Text("전체").tag("all")
+                        Toggle("Memo", isOn: liveAlwaysOnMemoBinding)
+                        Toggle("Schedule", isOn: liveAlwaysOnScheduleBinding)
+                        Section("Tasks") {
+                            Picker("Tasks", selection: reminderScopeMenuBinding) {
+                                Text("Off").tag("off")
+                                Text("Today").tag("today")
+                                Text("Scheduled").tag("scheduled")
+                                Text("All").tag("all")
                                 ForEach(viewModel.reminderLists, id: \.id) { list in
                                     Text(list.title).tag(list.id)
                                 }
@@ -93,57 +93,57 @@ struct SettingsView: View {
                     .menuOrder(.fixed)
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
-                Button("24시간 사용하기") {
+                Button("Use 24 Hours") {
                     shows24HourSheet = true
                 }
                 .foregroundStyle(.primary)
             } header: {
-                sectionHeader("라이브")
+                sectionHeader("Live")
             }
 
             Section {
-                Picker("글자 크기", selection: memoTextSizeBinding) {
+                Picker("Text Size", selection: memoTextSizeBinding) {
                     ForEach(MemoTextSize.allCases, id: \.self) { size in
                         Text(size.label).tag(size)
                     }
                 }
                 premiumGated {
-                    ColorPicker("라이브 배경 색", selection: $memoBackgroundColor, supportsOpacity: false)
+                    ColorPicker("Live Background Color", selection: $memoBackgroundColor, supportsOpacity: false)
                 }
                 premiumGated {
-                    ColorPicker("라이브 폰트 색", selection: $memoFontColor, supportsOpacity: false)
+                    ColorPicker("Live Font Color", selection: $memoFontColor, supportsOpacity: false)
                 }
                 // 켜기는 Premium 전용 — 바인딩 setter가 가로채 Premium 토스트만 띄운다(끄기는 항상 허용).
-                Toggle("캘린더 함께 보기", isOn: memoShowsCalendarBinding)
+                Toggle("Show Calendar", isOn: memoShowsCalendarBinding)
                     .tint(.green)
             } header: {
-                sectionHeader("메모")
+                sectionHeader("Memo")
             }
 
             Section {
-                Toggle("캘린더 함께 보기", isOn: scheduleShowsCalendarBinding)
+                Toggle("Show Calendar", isOn: scheduleShowsCalendarBinding)
                     .tint(.green)
             } header: {
-                sectionHeader("일정")
+                sectionHeader("Schedule")
             }
 
             Section {
-                Toggle("종료 소리", isOn: focusEndSoundBinding)
+                Toggle("End Sound", isOn: focusEndSoundBinding)
             } header: {
-                sectionHeader("집중")
+                sectionHeader("Focus")
             }
             // 앱 전역 무채색 tint(.primary)가 다크 모드에서 토글 ON 트랙을 흰색으로 만들어
             // 노브와 구분이 안 된다 — 토글만 시스템 표준(초록)으로 되돌린다.
             .tint(.green)
 
             Section {
-                Button("리뷰 남기기") {
+                Button("Leave a Review") {
                     requestReview()
                 }
-                Link("피드백 보내기", destination: SupportLinks.feedbackMailtoURL)
-                LabeledContent("버전", value: AppVersionInfo.display)
+                Link("Send Feedback", destination: SupportLinks.feedbackMailtoURL)
+                LabeledContent("Version", value: AppVersionInfo.display)
             } header: {
-                sectionHeader("지원")
+                sectionHeader("Support")
             }
             // 지원 섹션의 버튼·링크 색(틴트) 제거 — 단색 텍스트로.
             .tint(.primary)
@@ -151,7 +151,7 @@ struct SettingsView: View {
         .listSectionSpacing(28)
         // 타이틀↔배너 간격 — 배너 아래 간격과 같은 20.
         .contentMargins(.top, 20, for: .scrollContent)
-        .navigationTitle("설정")
+        .navigationTitle("Settings")
         .task {
             await viewModel.onAppear()
             // 저장된 hex로 ColorPicker 초기 선택을 잡는다(폴백은 위젯과 동일: 배경 accent / 글자 white).
@@ -181,11 +181,11 @@ struct SettingsView: View {
     private var liveKindsSummary: String {
         let settings = viewModel.settings
         let selected = [
-            settings.liveAlwaysOnMemo ? "메모" : nil,
-            settings.liveAlwaysOnReminder ? "할일" : nil,
-            settings.liveAlwaysOnSchedule ? "일정" : nil,
+            settings.liveAlwaysOnMemo ? String(localized: "Memo") : nil,
+            settings.liveAlwaysOnReminder ? String(localized: "Tasks") : nil,
+            settings.liveAlwaysOnSchedule ? String(localized: "Schedule") : nil,
         ].compactMap(\.self)
-        if selected.count == 3 { return "전체" }
+        if selected.count == 3 { return String(localized: "All") }
         return selected.joined(separator: ", ")
     }
 
@@ -229,12 +229,12 @@ struct SettingsView: View {
     }
 
     /// 섹션 헤더 — 기본보다 작은 글자.
-    private func sectionHeader(_ title: String) -> some View {
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
         Text(title).font(.body.weight(.medium))
     }
 
     /// 섹션 풋터 설명 — 기본보다 작은 글자.
-    private func sectionFooter(_ text: String) -> some View {
+    private func sectionFooter(_ text: LocalizedStringKey) -> some View {
         Text(text).font(.caption2)
     }
 

@@ -23,7 +23,7 @@ enum SupportLinks {
         var components = URLComponents()
         components.scheme = "mailto"
         components.path = feedbackEmail
-        components.queryItems = [URLQueryItem(name: "subject", value: "cue 피드백")]
+        components.queryItems = [URLQueryItem(name: "subject", value: String(localized: "cue Feedback"))]
         return components.url!
     }
 }

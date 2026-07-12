@@ -109,7 +109,7 @@ struct PremiumPaywallView: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("Cue Premium")
                 .font(.largeTitle.weight(.bold))
-            Text("잊지 않게, 흔들리지 않게")
+            Text("Never forget, never waver")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -122,39 +122,39 @@ struct PremiumPaywallView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             featureRow(
                 icon: "infinity",
-                title: "무제한 라이브",
-                detail: "하루 2회 제한 없이 켜고 새로고침"
+                title: "Unlimited Live",
+                detail: "Turn on and refresh without the 2-per-day limit"
             )
             featureRow(
                 icon: "clock.arrow.2.circlepath",
-                title: "라이브 항상 표시",
-                detail: "하루 종일 꺼지지 않는 라이브"
+                title: "Always Show Live",
+                detail: "A Live that stays on all day"
             )
             featureRow(
                 icon: "calendar",
-                title: "캘린더 함께 보기",
-                detail: "메모·일정 옆에 월간 캘린더"
+                title: "Show Calendar",
+                detail: "A monthly calendar beside your memos and schedule"
             )
             featureRow(
                 icon: "paintpalette",
-                title: "라이브 커스텀",
-                detail: "배경·글자 색을 내 취향대로"
+                title: "Customize Live",
+                detail: "Background and text colors your way"
             )
             featureRow(
                 icon: "timer",
-                title: "집중 세션 무제한",
-                detail: "뽀모도로 세션을 원하는 만큼"
+                title: "Unlimited Focus Sessions",
+                detail: "As many Pomodoro sessions as you want"
             )
             featureRow(
                 icon: "plus.circle",
-                title: "계속 추가될 기능",
-                detail: "프리미엄 기능은 계속 늘어나요"
+                title: "More Features Coming",
+                detail: "Premium features keep growing"
             )
         }
         .padding(.vertical, Spacing.sm)
     }
 
-    private func featureRow(icon: String, title: String, detail: String) -> some View {
+    private func featureRow(icon: String, title: LocalizedStringKey, detail: LocalizedStringKey) -> some View {
         HStack(alignment: .center, spacing: Spacing.smd) {
             Image(systemName: icon)
                 .font(.body.weight(.semibold))
@@ -173,20 +173,22 @@ struct PremiumPaywallView: View {
 
     private var plans: some View {
         VStack(spacing: Spacing.sm) {
-            planCard(.monthly, title: "월간", price: "₩2,900", unit: "/ 월", badge: nil)
-            planCard(.yearly, title: "연간", price: "₩19,000", unit: "/ 년", badge: "45% 절약")
-            planCard(.lifetime, title: "평생", price: "₩44,000", unit: "한 번 결제", badge: nil)
+            planCard(.monthly, title: "Monthly", price: "₩2,900", unit: "/ mo", badge: nil)
+            planCard(.yearly, title: "Yearly", price: "₩19,000", unit: "/ yr", badge: "Save 45%")
+            planCard(.lifetime, title: "Lifetime", price: "₩44,000", unit: "one-time", badge: nil)
         }
     }
 
     /// 플랜 라디오 카드 — 선택 시 테두리 강조. 가격은 StoreKit 연결 전 placeholder.
-    private func planCard(_ plan: Plan, title: String, price: String, unit: String, badge: String?) -> some View {
+    private func planCard(_ plan: Plan, title: LocalizedStringKey, price: String, unit: LocalizedStringKey, badge: LocalizedStringKey?) -> some View {
         Button {
             selectedPlan = plan
         } label: {
             HStack {
                 Text(title)
                     .font(.body.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Spacer()
                 Text(price)
                     .font(.body.weight(.bold))
@@ -213,6 +215,7 @@ struct PremiumPaywallView: View {
                 if let badge {
                     Text(badge)
                         .font(.caption2.weight(.bold))
+                        .lineLimit(1)
                         .foregroundStyle(Color(.systemBackground))
                         .padding(.horizontal, Spacing.sm)
                         .padding(.vertical, Spacing.xxs)
@@ -231,28 +234,32 @@ struct PremiumPaywallView: View {
             Button {
                 // TODO: StoreKit 결제 연결.
             } label: {
-                Text("Premium 시작하기")
+                Text("Start Premium")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .padding(.vertical, Spacing.md)
             }
             .buttonStyle(.borderedProminent)
             .tint(.primary)
 
-            Text("자동 갱신 · 언제든 취소 가능")
+            Text("Auto-renews · Cancel anytime")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .padding(.top, Spacing.xs)
 
             HStack(spacing: Spacing.md) {
-                Button("복원") {}
-                Button("이용약관") {}
-                Button("개인정보처리방침") {}
+                Button("Restore") {}
+                Button("Terms of Use") {}
+                Button("Privacy Policy") {}
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
             .buttonStyle(.plain)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)

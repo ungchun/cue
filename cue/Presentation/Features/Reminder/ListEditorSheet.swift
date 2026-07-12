@@ -90,10 +90,11 @@ struct ListEditorSheet: View {
     }
 
     /// 모드별 navigation title. 새 목록 / 목록 정보.
-    private var navigationTitle: String {
+    /// `LocalizedStringKey`로 반환 — `String`이면 `.navigationTitle`이 verbatim 오버로드를 타 지역화가 안 됨.
+    private var navigationTitle: LocalizedStringKey {
         switch mode {
-        case .new: "새로운 목록"
-        case .edit: "목록 정보"
+        case .new: "New List"
+        case .edit: "List Info"
         }
     }
 
@@ -111,7 +112,7 @@ struct ListEditorSheet: View {
             }
             .frame(maxWidth: .infinity)
 
-            TextField("목록 이름", text: $title)
+            TextField("List Name", text: $title)
                 .font(.title3.weight(.semibold))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(displayColor)
@@ -166,7 +167,7 @@ struct ListEditorSheet: View {
                     dismiss()
                 }
             } label: {
-                Label("닫기", systemImage: "xmark")
+                Label("Close", systemImage: "xmark")
                     .labelStyle(.iconOnly)
             }
             .popover(isPresented: $showingDiscardConfirmation) {
@@ -182,7 +183,7 @@ struct ListEditorSheet: View {
                 onSave(trimmed, selectedPalette?.hex ?? customHex)
                 dismiss()
             } label: {
-                Label("저장", systemImage: "checkmark")
+                Label("Save", systemImage: "checkmark")
                     .labelStyle(.iconOnly)
                     .foregroundStyle(.white)
             }
@@ -193,7 +194,7 @@ struct ListEditorSheet: View {
 
     private var discardPopover: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("이 변경 사항을 폐기\n하겠습니까?")
+            Text("Discard Changes?")
                 .font(.headline)
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
@@ -202,7 +203,7 @@ struct ListEditorSheet: View {
                 showingDiscardConfirmation = false
                 dismiss()
             } label: {
-                Text("변경 사항 폐기")
+                Text("Discard Changes")
                     .font(.body.weight(.medium))
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity)

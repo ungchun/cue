@@ -31,7 +31,7 @@ struct MemoView: View {
                     GrowingTextView(
                         text: textBinding,
                         isFocused: $inputFocused,
-                        placeholder: "무엇을 기억할까요?",
+                        placeholder: String(localized: "What to remember?"),
                         font: memoFont,
                         textColor: .label,
                         textAlignment: .center,
@@ -58,7 +58,7 @@ struct MemoView: View {
                         let verdict = await viewModel.toggleLiveActivity()
                         switch verdict {
                         case .unlimited where viewModel.liveActivityActive:
-                            toastCenter.show(wasActive ? "새로고침" : "라이브")
+                            toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
                         case .denied:
                             toastCenter.show("Premium")
                         case .allowed(let remaining) where viewModel.liveActivityActive:
@@ -106,7 +106,7 @@ struct MemoView: View {
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
-        .accessibilityLabel("지우기")
+        .accessibilityLabel("Clear")
     }
 
     /// 텍스트 바인딩 — 변경 시 ViewModel을 통해 저장 + (LA 활성 시) 반영.

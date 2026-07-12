@@ -127,7 +127,7 @@ final class ReminderViewModel {
             )
             liveActivityActive = true
         } catch {
-            errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+            errorMessage = String(localized: "Couldn't start Live Activity.")
             return nil
         }
         return verdict
@@ -498,7 +498,7 @@ final class ReminderViewModel {
         toListID: String? = nil
     ) async {
         guard let listID = toListID ?? resolveTargetListID() else {
-            errorMessage = "먼저 리스트를 선택해 주세요."
+            errorMessage = String(localized: "Select a list first.")
             return
         }
         do {

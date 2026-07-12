@@ -24,9 +24,9 @@ enum SystemFilter: String, CaseIterable, Equatable, Sendable {
     /// 화면 상단 large title에 그대로 쓰는 라벨.
     var title: String {
         switch self {
-        case .today: "오늘"
-        case .scheduled: "예정"
-        case .all: "전체"
+        case .today: String(localized: "Today")
+        case .scheduled: String(localized: "Scheduled")
+        case .all: String(localized: "All")
         }
     }
 }

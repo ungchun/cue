@@ -17,12 +17,12 @@ extension AppColorScheme {
         }
     }
 
-    /// 설정 화면 Picker에 표시할 한글 레이블.
-    var label: String {
+    /// 설정 화면 Picker에 표시할 레이블.
+    var label: LocalizedStringKey {
         switch self {
-        case .system: "시스템"
-        case .light: "라이트"
-        case .dark: "다크"
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
         }
     }
 }

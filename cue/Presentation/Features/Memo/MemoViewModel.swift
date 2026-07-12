@@ -85,7 +85,7 @@ final class MemoViewModel {
             try await startLiveActivityUseCase(memo)
             liveActivityActive = true
         } catch {
-            errorMessage = "라이브 액티비티를 시작할 수 없습니다."
+            errorMessage = String(localized: "Couldn't start Live Activity.")
             return nil
         }
         return verdict

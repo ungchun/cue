@@ -10,11 +10,11 @@ import UIKit
 
 extension MemoTextSize {
     /// 설정 Picker 레이블.
-    var label: String {
+    var label: LocalizedStringKey {
         switch self {
-        case .small: "작게"
-        case .medium: "보통"
-        case .large: "크게"
+        case .small: "Small"
+        case .medium: "Medium"
+        case .large: "Large"
         }
     }
 

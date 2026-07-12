@@ -62,7 +62,7 @@ struct ScheduleView: View {
             showsInlineTitle = newValue
         }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle(showsInlineTitle ? "타임라인" : "")
+        .navigationTitle(showsInlineTitle ? "Timeline" : "")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 openCalendarAppButton
@@ -73,7 +73,7 @@ struct ScheduleView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
-                .accessibilityLabel("새 일정")
+                .accessibilityLabel("New event")
             }
         }
         .task {
@@ -93,8 +93,8 @@ struct ScheduleView: View {
                 onCompletion: { viewModel.dismissEdit() }
             )
         }
-        .alert("오류", isPresented: errorBinding) {
-            Button("확인", role: .cancel) {}
+        .alert("Error", isPresented: errorBinding) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
@@ -112,7 +112,7 @@ struct ScheduleView: View {
     /// 메시지 버튼으로 이동.)
     private var timelineTitleRow: some View {
         HStack(alignment: .center) {
-            Text("타임라인")
+            Text("Timeline")
                 .font(.largeTitle.bold())
             Spacer()
             FloatingMessageButton {
@@ -120,7 +120,7 @@ struct ScheduleView: View {
                 let verdict = await viewModel.toggleLiveActivity()
                 switch verdict {
                 case .unlimited where viewModel.liveActivityActive:
-                    toastCenter.show(wasActive ? "새로고침" : "라이브")
+                    toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
                 case .denied:
                     toastCenter.show("Premium")
                 case .allowed(let remaining) where viewModel.liveActivityActive:
@@ -145,7 +145,7 @@ struct ScheduleView: View {
                 openURL(url)
             }
         } label: {
-            Text("캘린더")
+            Text("Calendar")
         }
     }
 
@@ -177,9 +177,9 @@ struct ScheduleView: View {
     /// 깔고, ReminderView와 동일한 패턴으로 "설정 열기" 액션 버튼을 둔다.
     private var deniedPlaceholder: some View {
         ContentUnavailableView {
-            Label("캘린더 접근이 필요해요", systemImage: "calendar.badge.exclamationmark")
+            Label("Calendar access needed", systemImage: "calendar.badge.exclamationmark")
         } actions: {
-            Button("설정 열기") {
+            Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
@@ -192,7 +192,7 @@ struct ScheduleView: View {
     /// 권한은 있는데 향후 30일 동안 이벤트가 한 건도 없을 때.
     private var emptyTimelinePlaceholder: some View {
         ContentUnavailableView(
-            "일정이 비어있어요",
+            "No events yet",
             systemImage: "calendar"
         )
     }

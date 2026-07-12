@@ -27,7 +27,7 @@ struct FocusSessionsListSheet: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle("세션")
+            .navigationTitle("Sessions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -36,7 +36,7 @@ struct FocusSessionsListSheet: View {
                     } label: {
                         Image(systemName: "xmark")
                     }
-                    .accessibilityLabel("닫기")
+                    .accessibilityLabel("Close")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -44,7 +44,7 @@ struct FocusSessionsListSheet: View {
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .accessibilityLabel("세션 추가")
+                    .accessibilityLabel("Add session")
                 }
             }
             .overlay { emptyOverlay }
@@ -78,7 +78,7 @@ struct FocusSessionsListSheet: View {
                 dismiss()
             }
 
-            Button("수정") {
+            Button("Edit") {
                 editingSession = session
             }
             .font(.callout)
@@ -92,7 +92,7 @@ struct FocusSessionsListSheet: View {
             Button(role: .destructive) {
                 viewModel.deleteSession(id: session.id)
             } label: {
-                Label("삭제", systemImage: "trash")
+                Label("Delete", systemImage: "trash")
             }
         }
     }
@@ -115,7 +115,7 @@ struct FocusSessionsListSheet: View {
     private var emptyOverlay: some View {
         if viewModel.sessions.isEmpty {
             ContentUnavailableView(
-                "저장된 세션이 없어요",
+                "No saved sessions",
                 systemImage: "timer"
             )
         }

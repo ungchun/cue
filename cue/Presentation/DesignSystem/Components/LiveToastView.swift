@@ -30,7 +30,7 @@ struct LiveToastView: View {
         .clipShape(.capsule)
         .shadow(color: .primary.opacity(0.22), radius: Spacing.sm, y: Spacing.xs)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("라이브 켜짐")
+        .accessibilityLabel("Live on")
     }
 
     /// 앞쪽 원형 점 — 채워진 작은 원에서 바깥으로 번지는 펄스 링. 위치 이동에 흔들리지 않도록
