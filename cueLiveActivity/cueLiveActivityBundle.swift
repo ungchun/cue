@@ -11,10 +11,8 @@ import SwiftUI
 @main
 struct cueLiveActivityBundle: WidgetBundle {
     var body: some Widget {
-        cueLiveActivity()
-        cueLiveActivityControl()
-        // default `cueLiveActivityLiveActivity`는 placeholder라 cue 3종 LA로 대체.
-        // 집중 LA는 AlarmKit이 구동(FocusAlarmLiveActivityWidget) — 옛 FocusLiveActivityWidget는 제거.
+        // cue 실제 LA만 등록 — Xcode 템플릿 위젯(cueLiveActivity·Control·placeholder LA)은 제거했다.
+        // 집중 LA는 AlarmKit이 구동(FocusAlarmLiveActivityWidget).
         ReminderLiveActivityWidget()
         ScheduleLiveActivityWidget()
         FocusAlarmLiveActivityWidget()

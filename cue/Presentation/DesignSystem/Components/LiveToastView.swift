@@ -57,8 +57,8 @@ struct LiveToastView: View {
 
 #Preview {
     VStack(spacing: 20) {
-        LiveToastView(text: "라이브")
-        LiveToastView(text: "새로고침")
+        LiveToastView(text: "Live")
+        LiveToastView(text: "Refreshed")
         LiveToastView(text: "Premium")
     }
     .padding()
