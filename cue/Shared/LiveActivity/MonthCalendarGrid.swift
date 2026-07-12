@@ -103,8 +103,8 @@ struct MonthCalendarGrid: Sendable {
 
     private static let monthFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "M월"   // "10월"
+        formatter.locale = .current
+        formatter.setLocalizedDateFormatFromTemplate("MMMM")   // ko "10월" / en "October"
         return formatter
     }()
 

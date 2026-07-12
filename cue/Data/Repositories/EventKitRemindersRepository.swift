@@ -130,7 +130,7 @@ actor EventKitRemindersRepository: RemindersRepository {
         // 합의된 정책: iCloud 우선, 없으면 사용자의 기본 미리알림 리스트 source로 fallback,
         // 그것도 없으면 reminders를 지원하는 첫 source.
         guard let source = pickListSource() else {
-            throw DomainError.validation("리스트를 만들 수 있는 저장소가 없습니다.")
+            throw DomainError.validation(String(localized: "No available source to create a list."))
         }
         calendar.source = source
         try store.saveCalendar(calendar, commit: true)

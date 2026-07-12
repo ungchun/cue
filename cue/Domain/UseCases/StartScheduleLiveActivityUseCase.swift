@@ -83,16 +83,17 @@ struct StartScheduleLiveActivityUseCase: Sendable {
         let today = calendar.startOfDay(for: now)
         let offset = calendar.dateComponents([.day], from: today, to: dayStart).day ?? 0
         switch offset {
-        case 0: return "오늘"
-        case 1: return "내일"
-        case 2: return "모레"
+        case 0: return String(localized: "Today")
+        case 1: return String(localized: "Tomorrow")
+        case 2: return String(localized: "In 2 days")
         default: return dateLabelFormatter.string(from: dayStart)
         }
     }
 
+    /// `"M/d (요일)"` — 숫자 날짜는 컴팩트하게 유지하되 요일·로케일은 기기 설정을 따른다.
     private static let dateLabelFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.locale = .current
         formatter.dateFormat = "M/d (E)"
         return formatter
     }()

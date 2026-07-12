@@ -71,8 +71,8 @@ struct WeekCalendarStrip: View {
 
     private static let monthFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "M월"   // "6월"
+        formatter.locale = .current
+        formatter.setLocalizedDateFormatFromTemplate("MMMM")   // ko "6월" / en "June"
         return formatter
     }()
 

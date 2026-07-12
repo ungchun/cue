@@ -283,11 +283,11 @@ struct ScheduleView: View {
         }
     }
 
-    /// 섹션 헤더 — "5월 31일 토요일" 형식. ko_KR 고정.
+    /// 섹션 헤더 — "5월 31일 토요일" 형식. 기기 로케일을 따른다.
     private static let dayHeaderFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "M월 d일 EEEE"
+        formatter.locale = .current
+        formatter.setLocalizedDateFormatFromTemplate("EEEEMMMMd")
         return formatter
     }()
 

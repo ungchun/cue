@@ -19,7 +19,7 @@ enum ScheduleTimeText {
         groupDate: Date,
         calendar: Calendar = .current
     ) -> String {
-        if isAllDay { return "하루 종일" }
+        if isAllDay { return String(localized: "All day") }
         let startDay = calendar.startOfDay(for: start)
         let endDay = calendar.startOfDay(for: end)
         guard startDay != endDay else {
@@ -27,13 +27,14 @@ enum ScheduleTimeText {
         }
         if groupDate == startDay { return "\(formatter.string(from: start)) →" }
         if groupDate == endDay { return "→ \(formatter.string(from: end))" }
-        return "진행 중"
+        return String(localized: "In progress")
     }
 
+    /// 시각 표기 — 기기 로케일의 12/24시간·오전오후 규칙을 따른다(`j` = locale hour).
     private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = "a h:mm"
+        formatter.locale = .current
+        formatter.setLocalizedDateFormatFromTemplate("jmm")
         return formatter
     }()
 }

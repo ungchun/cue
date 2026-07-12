@@ -106,8 +106,8 @@ private struct ScheduleDayView: View {
             if let label = chunk.label {
                 Text(label)
                     .font(.caption.weight(.semibold))
-                    // "오늘"만 강조, 그 외 날짜는 옅게.
-                    .foregroundStyle(label == "오늘" ? Color.primary : Color.secondary)
+                    // 오늘만 강조, 그 외 날짜는 옅게. 앱이 심은 라벨과 같은 로케일 키로 비교.
+                    .foregroundStyle(label == String(localized: "Today") ? Color.primary : Color.secondary)
             }
             ForEach(chunk.events) { event in
                 ScheduleEventRow(event: event)
