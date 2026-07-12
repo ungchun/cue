@@ -517,11 +517,11 @@ final class ReminderViewModel {
 
     /// 새 미리알림이 어느 리스트로 저장될지 결정한다.
     /// - 사용자 리스트가 selection이면 그 리스트로.
-    /// - 시스템 필터 selection(오늘/예정/전체)이면 이름이 "미리 알림"인 리스트 우선,
-    ///   없으면 `lists.first`로 fallback.
+    /// - 시스템 필터 selection(오늘/예정/전체)이면 기본 목록(isDefault) 우선,
+    ///   없으면 `lists.first`로 fallback. (기본 목록 이름은 로케일에 따라 다르므로 플래그로 판별.)
     private func resolveTargetListID() -> String? {
         if let selectedListID { return selectedListID }
-        if let named = lists.first(where: { $0.title == "미리 알림" }) { return named.id }
+        if let defaultList = lists.first(where: { $0.isDefault }) { return defaultList.id }
         return lists.first?.id
     }
 

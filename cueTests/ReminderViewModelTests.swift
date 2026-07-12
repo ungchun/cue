@@ -335,9 +335,10 @@ struct ReminderViewModelTests {
         #expect(viewModel.visibleReminders.map(\.id).sorted() == ["1", "2"])
     }
 
-    /// 시스템 필터에서 add() — 이름이 "미리 알림"인 리스트가 있으면 거기로 저장.
-    @Test func addInSystemFilterUsesNamedDefaultList() async {
-        let defaultList = ReminderList(id: "DEF", title: "미리 알림", colorHex: nil)
+    /// 시스템 필터에서 add() — isDefault인 리스트가 있으면 거기로 저장(로케일 무관 —
+    /// 기본 목록 이름은 기기 언어에 따라 "미리 알림"/"Reminders" 등으로 달라지므로 플래그로 판별).
+    @Test func addInSystemFilterUsesDefaultList() async {
+        let defaultList = ReminderList(id: "DEF", title: "Reminders", colorHex: nil, isDefault: true)
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA, defaultList]
         ))
@@ -365,7 +366,7 @@ struct ReminderViewModelTests {
         #expect(added?.listID == "B")
     }
 
-    /// 시스템 필터에서 add() — "미리 알림" 이름 매칭이 없으면 `lists.first`로 fallback.
+    /// 시스템 필터에서 add() — isDefault 리스트가 없으면 `lists.first`로 fallback.
     @Test func addInSystemFilterFallsBackToFirstList() async {
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA, listB]

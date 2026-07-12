@@ -8,4 +8,7 @@ struct ReminderList: Identifiable, Equatable, Sendable {
     let id: String
     var title: String
     var colorHex: String?
+    /// EventKit 기본 미리알림 목록 여부 — 기본 목록 이름은 기기 언어에 따라 달라지므로
+    /// 이름 대신 이 플래그로 판별한다(로케일 무관).
+    var isDefault: Bool = false
 }

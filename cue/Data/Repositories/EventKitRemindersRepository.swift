@@ -32,7 +32,8 @@ actor EventKitRemindersRepository: RemindersRepository {
     }
 
     func fetchLists() async throws -> [ReminderList] {
-        store.calendars(for: .reminder).map(ReminderMapper.toList)
+        let defaultListID = store.defaultCalendarForNewReminders()?.calendarIdentifier
+        return store.calendars(for: .reminder).map { ReminderMapper.toList($0, defaultListID: defaultListID) }
     }
 
     func fetchReminders() async throws -> [Reminder] {
