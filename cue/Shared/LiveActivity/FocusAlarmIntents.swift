@@ -18,10 +18,10 @@ import Foundation
 
 /// 알림(경계 도달)의 secondary 버튼 — **탭 체이닝**. 다음 단계 알람을 예약한다.
 struct FocusAlarmAdvanceIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "다음 단계 시작"
+    static let title: LocalizedStringResource = "Start Next Phase"
 
-    @Parameter(title: "다음 단계") var nextPhaseRaw: String
-    @Parameter(title: "사이클") var nextCycle: Int
+    @Parameter(title: "Next Phase") var nextPhaseRaw: String
+    @Parameter(title: "Cycle") var nextCycle: Int
 
     init() {}
 
@@ -40,7 +40,7 @@ struct FocusAlarmAdvanceIntent: LiveActivityIntent {
 
 /// 카운트다운 LA의 일시정지 버튼 — 위젯이 `Button(intent:)`로 렌더, `alarmID`로 AlarmManager 제어.
 struct FocusAlarmPauseIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "일시정지"
+    static let title: LocalizedStringResource = "Pause"
     @Parameter(title: "alarmID") var alarmID: String
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }
@@ -52,7 +52,7 @@ struct FocusAlarmPauseIntent: LiveActivityIntent {
 
 /// 일시정지 LA의 재개 버튼.
 struct FocusAlarmResumeIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "재개"
+    static let title: LocalizedStringResource = "Resume"
     @Parameter(title: "alarmID") var alarmID: String
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }
@@ -64,7 +64,7 @@ struct FocusAlarmResumeIntent: LiveActivityIntent {
 
 /// 정지 버튼 — 이 알람을 취소한다(세션 종료). 다음 단계를 잇지 않는다.
 struct FocusAlarmStopIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "종료"
+    static let title: LocalizedStringResource = "End"
     @Parameter(title: "alarmID") var alarmID: String
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }

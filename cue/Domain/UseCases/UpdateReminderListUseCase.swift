@@ -16,7 +16,7 @@ struct UpdateReminderListUseCase: Sendable {
     func callAsFunction(listID: String, title: String, colorHex: String?) async throws {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            throw DomainError.validation("목록 이름을 입력해 주세요.")
+            throw DomainError.validation(String(localized: "Please enter a list name."))
         }
         try await repository.updateList(listID: listID, title: trimmed, colorHex: colorHex)
     }

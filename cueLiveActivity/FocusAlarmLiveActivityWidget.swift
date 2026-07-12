@@ -193,10 +193,10 @@ struct FocusAlarmLiveActivityWidget: Widget {
         switch state.mode {
         case .countdown:
             iconButton("pause.fill", bg: tint, fg: .white, size: 56, iconFont: .title,
-                       intent: FocusAlarmPauseIntent(alarmID: id), label: "일시정지")
+                       intent: FocusAlarmPauseIntent(alarmID: id), label: "Pause")
         case .paused:
             iconButton("play.fill", bg: tint, fg: .white, size: 56, iconFont: .title,
-                       intent: FocusAlarmResumeIntent(alarmID: id), label: "재개")
+                       intent: FocusAlarmResumeIntent(alarmID: id), label: "Resume")
         case .alert:
             Color.clear.frame(width: 56, height: 56)
         @unknown default:
@@ -208,7 +208,7 @@ struct FocusAlarmLiveActivityWidget: Widget {
     /// 재생 버튼과 **동일(56)** — 시스템 타이머 LA처럼 좌측 두 버튼이 같은 크기로 나란히.
     private func stopButton(_ state: AlarmPresentationState) -> some View {
         iconButton("xmark", bg: Color.secondary.opacity(0.3), fg: .white, size: 56, iconFont: .title,
-                   intent: FocusAlarmStopIntent(alarmID: state.alarmID.uuidString), label: "종료")
+                   intent: FocusAlarmStopIntent(alarmID: state.alarmID.uuidString), label: "End")
     }
 
     private func iconButton<I: AppIntent>(
@@ -218,7 +218,7 @@ struct FocusAlarmLiveActivityWidget: Widget {
         size: CGFloat,
         iconFont: Font,
         intent: I,
-        label: String
+        label: LocalizedStringKey
     ) -> some View {
         Button(intent: intent) {
             Image(systemName: image)
@@ -234,9 +234,9 @@ struct FocusAlarmLiveActivityWidget: Widget {
     // MARK: - Helpers
 
     /// 우측 시간 앞에 붙는 단계 라벨 — "타이머" 대신 상태에 따라 "집중"/"휴식".
-    private func phaseLabel(_ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>) -> String {
+    private func phaseLabel(_ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>) -> LocalizedStringKey {
         guard let meta = context.attributes.metadata else { return "" }
-        return meta.phase == .focus ? "집중" : "휴식"
+        return meta.phase == .focus ? "Focus" : "Break"
     }
 
     private func format(_ seconds: TimeInterval) -> String {

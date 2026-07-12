@@ -38,7 +38,7 @@ struct MemoLiveActivityWidget: Widget {
                 }
                 // 우상단 — 오늘(자정까지) "N시간 남음".
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("\(hoursLeftToday())시간 남음")
+                    Text("\(hoursLeftToday()) hours left")
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)

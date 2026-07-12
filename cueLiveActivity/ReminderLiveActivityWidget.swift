@@ -28,7 +28,7 @@ struct ReminderLiveActivityWidget: Widget {
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     // trailing은 같은 토큰도 leading보다 크게 렌더 — 한 단계 작은 caption2로 맞춤.
-                    Text("할일 \(context.state.todayCount)")
+                    Text("Tasks \(context.state.todayCount)")
                         .font(.caption2.weight(.semibold))
                         .monospacedDigit()
                         .foregroundStyle(.secondary)

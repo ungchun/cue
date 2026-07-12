@@ -36,8 +36,23 @@ enum FocusAlarmScheduling {
         }
     }
 
-    static func label(_ phase: FocusAlarmMetadata.Phase) -> String {
-        phase == .focus ? "집중" : "휴식"
+    /// 단계 이름. `LocalizedStringResource`로 반환 — 런타임 문자열 조합으로 키를 만들면
+    /// 카탈로그 매칭이 안 되므로, 단계별 정적 키(`"Focus"`/`"Break"`)로 지역화한다.
+    static func label(_ phase: FocusAlarmMetadata.Phase) -> LocalizedStringResource {
+        phase == .focus ? "Focus" : "Break"
+    }
+
+    /// 단계별 정적 지역화 키 — `"\(label) 일시정지"` 같은 런타임 조합 대신 명시 키를 쓴다.
+    private static func pausedTitle(_ phase: FocusAlarmMetadata.Phase) -> LocalizedStringResource {
+        phase == .focus ? "Focus Paused" : "Break Paused"
+    }
+
+    private static func startTitle(_ phase: FocusAlarmMetadata.Phase) -> LocalizedStringResource {
+        phase == .focus ? "Start Focus" : "Start Break"
+    }
+
+    private static func completeTitle(_ phase: FocusAlarmMetadata.Phase) -> LocalizedStringResource {
+        phase == .focus ? "Focus Complete" : "Break Complete"
     }
 
     /// 현재 플랜으로 한 단계 알람을 예약하고 alarmID를 반환. 플랜이 없으면 nil.
@@ -75,12 +90,12 @@ enum FocusAlarmScheduling {
         let next = nextStep(after: phase, cycle: cycle, totalCycles: plan.totalCycles)
 
         let countdown = AlarmPresentation.Countdown(
-            title: LocalizedStringResource(stringLiteral: label(phase)),
-            pauseButton: AlarmButton(text: "일시정지", textColor: .white, systemImageName: "pause.fill")
+            title: label(phase),
+            pauseButton: AlarmButton(text: "Pause", textColor: .white, systemImageName: "pause.fill")
         )
         let paused = AlarmPresentation.Paused(
-            title: LocalizedStringResource(stringLiteral: "\(label(phase)) 일시정지"),
-            resumeButton: AlarmButton(text: "재개", textColor: .white, systemImageName: "play.fill")
+            title: pausedTitle(phase),
+            resumeButton: AlarmButton(text: "Resume", textColor: .white, systemImageName: "play.fill")
         )
 
         // 다음 단계가 있으면 알림에 "다음 단계 시작" secondary 버튼 + 체이닝 인텐트.
@@ -88,7 +103,7 @@ enum FocusAlarmScheduling {
         let secondaryIntent: (any LiveActivityIntent)?
         if let next {
             secondaryButton = AlarmButton(
-                text: LocalizedStringResource(stringLiteral: "\(label(next.phase)) 시작"),
+                text: startTitle(next.phase),
                 textColor: .white,
                 systemImageName: "arrow.right"
             )
@@ -100,7 +115,7 @@ enum FocusAlarmScheduling {
         // 26.1 init(stopButton 없음) — 시스템이 종료(배너에선 탭 X, 전체화면에선 slide-to-stop)를
         // 그린다. deprecated stopButton init은 26.1에서 알림 표시를 깨뜨려 되돌림.
         let alert = AlarmPresentation.Alert(
-            title: LocalizedStringResource(stringLiteral: "\(label(phase)) 완료"),
+            title: completeTitle(phase),
             secondaryButton: secondaryButton,
             secondaryButtonBehavior: secondaryButton == nil ? nil : .custom
         )

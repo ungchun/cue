@@ -21,7 +21,7 @@ import Foundation
 /// 대상 LA를 raw 문자열로 구분한다(AppEnum 보일러플레이트 대신 — FocusAlarmAdvanceIntent의
 /// `nextPhaseRaw` 전례). 메모·일정 LA가 동시에 떠 있어도 탭한 쪽만 움직인다.
 struct ShiftCalendarMonthIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "캘린더 월 이동"
+    static let title: LocalizedStringResource = "Shift Calendar Month"
 
     /// 어느 LA의 캘린더인지 — `memoTarget` 또는 `scheduleTarget`.
     @Parameter(title: "target") var targetRaw: String

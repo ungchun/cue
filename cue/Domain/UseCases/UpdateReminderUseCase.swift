@@ -22,7 +22,7 @@ struct UpdateReminderUseCase: Sendable {
     ) async throws {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            throw DomainError.validation("제목을 입력해 주세요.")
+            throw DomainError.validation(String(localized: "Please enter a title."))
         }
         try await repository.updateReminder(
             reminderID: reminderID,

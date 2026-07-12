@@ -23,7 +23,7 @@ struct StartMemoLiveActivityUseCase: Sendable {
     func callAsFunction(_ memo: Memo) async throws {
         let trimmed = memo.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            throw DomainError.validation("메모를 입력해 주세요.")
+            throw DomainError.validation(String(localized: "Please enter a memo."))
         }
         let capped = String(trimmed.prefix(Self.maxTextLength))
         try await service.startMemo(text: capped, colorHex: memo.colorHex, textColorHex: memo.textColorHex)
