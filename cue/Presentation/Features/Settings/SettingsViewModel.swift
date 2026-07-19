@@ -21,6 +21,7 @@ final class SettingsViewModel {
     private let saveMemoUseCase: SaveMemoUseCase
     private let refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase
     private let fetchReminderLists: FetchReminderListsUseCase
+    private let fetchCalendars: FetchCalendarsUseCase
 
     /// 현재 설정. View는 읽기만 하고, 변경은 아래 `set...` 메서드로.
     private(set) var settings: AppSettings = .default
@@ -32,6 +33,8 @@ final class SettingsViewModel {
     private(set) var memoTextColorHex: String = Memo.default.textColorHex
     /// 항상 표시 할일 범위 선택지용 사용자 리스트 — 권한 없으면 빈 배열(시스템 필터만 노출).
     private(set) var reminderLists: [ReminderList] = []
+    /// "볼 캘린더 선택" 체크리스트용 캘린더 목록 — 권한 없으면 빈 배열.
+    private(set) var eventCalendars: [EventCalendar] = []
 
     init(dependencies: Dependencies) {
         self.fetchAppSettings = dependencies.fetchAppSettings
@@ -40,6 +43,7 @@ final class SettingsViewModel {
         self.saveMemoUseCase = dependencies.saveMemo
         self.refreshLiveActivityLayout = dependencies.refreshLiveActivityLayout
         self.fetchReminderLists = dependencies.fetchReminderLists
+        self.fetchCalendars = dependencies.fetchCalendars
     }
 
     /// 화면이 나타날 때 — 저장된 설정과 메모 색(배경·글자)을 불러온다.
@@ -49,6 +53,7 @@ final class SettingsViewModel {
         memoColorHex = memo.colorHex
         memoTextColorHex = memo.textColorHex
         reminderLists = (try? await fetchReminderLists()) ?? []
+        eventCalendars = (try? await fetchCalendars()) ?? []
     }
 
     // MARK: - 변경 (메모리 즉시 반영 + 영속 저장)
@@ -113,6 +118,25 @@ final class SettingsViewModel {
         if !settings.liveAlwaysOnMemo, !settings.liveAlwaysOnReminder, !settings.liveAlwaysOnSchedule {
             settings.liveAlwaysOn = false
         }
+    }
+
+    /// 할일 탭에 진입했을 때 처음 보여줄 범위("today"/"scheduled"/"all"/리스트 id).
+    func setTasksDefaultScopeID(_ id: String) async {
+        await update { $0.tasksDefaultScopeID = id }
+    }
+
+    /// 일정 탭에서 이 캘린더를 보일지(true) 숨길지(false) 설정한다.
+    /// 숨김 집합에 넣고 빼는 방식 — 새 캘린더는 목록에 없으므로 기본 표시된다.
+    func setCalendarVisible(_ id: String, _ visible: Bool) async {
+        await update {
+            if visible { $0.hiddenCalendarIDs.remove(id) }
+            else { $0.hiddenCalendarIDs.insert(id) }
+        }
+    }
+
+    /// 모든 캘린더를 다시 표시 — 숨김 집합을 비운다.
+    func showAllCalendars() async {
+        await update { $0.hiddenCalendarIDs.removeAll() }
     }
 
     /// 캘린더 표시 토글 — 저장(App Group 미러 포함) 후 켜져 있는 LA를 재게시해 즉시 반영한다.

@@ -18,7 +18,17 @@ enum EventMapper {
             isAllDay: event.isAllDay,
             calendarColorHex: hex(from: event.calendar.cgColor),
             // 구독 캘린더(공휴일 등)는 allowsContentModifications == false.
-            isReadOnly: !event.calendar.allowsContentModifications
+            isReadOnly: !event.calendar.allowsContentModifications,
+            calendarID: event.calendar.calendarIdentifier
+        )
+    }
+
+    /// `EKCalendar` → 도메인 `EventCalendar`. "볼 캘린더 선택" 목록용.
+    static func toCalendar(_ calendar: EKCalendar) -> EventCalendar {
+        EventCalendar(
+            id: calendar.calendarIdentifier,
+            title: calendar.title,
+            colorHex: hex(from: calendar.cgColor)
         )
     }
 

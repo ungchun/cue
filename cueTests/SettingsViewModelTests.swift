@@ -82,6 +82,62 @@ struct SettingsViewModelTests {
         #expect(reloaded.settings.focusEndSound == true)
     }
 
+    /// 할일 탭 기본 화면 스코프 변경이 영속화된다.
+    @Test func setTasksDefaultScopePersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setTasksDefaultScopeID("today")
+        #expect(viewModel.settings.tasksDefaultScopeID == "today")
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        #expect(reloaded.settings.tasksDefaultScopeID == "today")
+    }
+
+    /// 캘린더 숨김 토글이 hiddenCalendarIDs에 반영되고 영속화된다.
+    @Test func setCalendarHiddenPersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setCalendarVisible("work", false)   // 숨김
+        #expect(viewModel.settings.hiddenCalendarIDs == ["work"])
+
+        await viewModel.setCalendarVisible("work", true)    // 다시 표시
+        #expect(viewModel.settings.hiddenCalendarIDs.isEmpty)
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        await reloaded.setCalendarVisible("home", false)
+        #expect(reloaded.settings.hiddenCalendarIDs == ["home"])
+    }
+
+    /// "모두 표시"는 숨긴 캘린더 집합을 비운다.
+    @Test func showAllCalendarsClearsHidden() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+        await viewModel.setCalendarVisible("a", false)
+        await viewModel.setCalendarVisible("b", false)
+        #expect(viewModel.settings.hiddenCalendarIDs == ["a", "b"])
+
+        await viewModel.showAllCalendars()
+
+        #expect(viewModel.settings.hiddenCalendarIDs.isEmpty)
+    }
+
+    /// onAppear는 사용자 캘린더 목록을 불러온다(설정 체크리스트용).
+    @Test func onAppearLoadsCalendars() async {
+        // .preview 의존성의 InMemoryEventsRepository는 캘린더 3개를 시드한다.
+        let viewModel = SettingsViewModel(dependencies: .preview)
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventCalendars.count == 3)
+    }
+
     /// onAppear는 저장된 메모 색을 불러온다 — 설정 탭이 메모 LA 색의 편집면.
     @Test func onAppearLoadsMemoColor() async {
         let memoRepo = InMemoryMemoRepository(memo: Memo(text: "x", colorHex: "#FF3B30"))
@@ -259,9 +315,9 @@ private final actor RefreshRecordingLiveActivityService: LiveActivityService {
 
     private(set) var refreshLayoutCount = 0
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int) async throws {}
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
     func endReminder() async {}
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
     func endSchedule() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}

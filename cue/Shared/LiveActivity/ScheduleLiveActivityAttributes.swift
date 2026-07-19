@@ -24,6 +24,9 @@ struct ScheduleLiveActivityAttributes: ActivityAttributes {
         /// 잠금화면 월간 캘린더의 표시 월 오프셋(이번 달 = 0, ±12 클램프) — 셰브런 탭
         /// 인텐트가 갱신한다. 앱이 재게시하면 0으로 리셋(이번 달로 복귀).
         var calendarMonthOffset: Int = 0
+        /// Dynamic Island 주간 스트립의 날짜별 일정 점(오늘 제외) — 각 날 이벤트 색.
+        /// 기본값 빈 배열 — 기존 ContentState 생성부/전방 디코딩 호환.
+        var weekEventDots: [LiveDayEventDots] = []
     }
 
     let startedAt: Date
@@ -38,5 +41,6 @@ extension ScheduleLiveActivityAttributes.ContentState {
         days = try container.decode([LiveScheduleDay].self, forKey: .days)
         todayCount = try container.decodeIfPresent(Int.self, forKey: .todayCount) ?? 0
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
+        weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
     }
 }

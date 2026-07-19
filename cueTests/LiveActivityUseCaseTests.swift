@@ -161,6 +161,46 @@ struct LiveActivityUseCaseTests {
         #expect(StartScheduleLiveActivityUseCase.todayEventCount(events, now: now) == 3)
     }
 
+    /// 일정 LA 발행 시 이번 주(오늘 제외) 캘린더 이벤트가 주간 스트립 점으로 실린다.
+    @Test func startScheduleCarriesWeekEventDots() async throws {
+        let service = RecordingLiveActivityService()
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: .now)
+        let now = todayStart.addingTimeInterval(6 * 3600)
+        // 오늘 일정(발행 트리거) + 내일 일정(스트립 점 대상, 같은 주라고 가정).
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: todayStart)!
+        let events = [
+            event(id: "today", title: "오늘", start: now.addingTimeInterval(3600), end: now.addingTimeInterval(7200), colorHex: "#FF0000"),
+            event(id: "tmr", title: "내일", start: tomorrow.addingTimeInterval(3600), end: tomorrow.addingTimeInterval(7200), colorHex: "#00FF00"),
+        ]
+
+        try await StartScheduleLiveActivityUseCase(service: service)(events: events, weekEvents: events, now: now)
+
+        let dots = try #require(await service.startScheduleCalls.first?.weekEventDots)
+        // 오늘은 제외되고, 내일 점만(초록) 실린다. (내일이 이번 주 안일 때.)
+        #expect(dots.allSatisfy { !cal.isDate($0.dayStart, inSameDayAs: now) })
+    }
+
+    /// 할일 LA도 같은 주간 스트립을 그리므로 캘린더 이벤트 점을 함께 싣는다.
+    @Test func startReminderCarriesWeekEventDots() async throws {
+        let service = RecordingLiveActivityService()
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: .now)
+        let now = todayStart.addingTimeInterval(6 * 3600)
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: todayStart)!
+        let weekEvents = [
+            event(id: "tmr", title: "내일", start: tomorrow.addingTimeInterval(3600), end: tomorrow.addingTimeInterval(7200), colorHex: "#00FF00"),
+        ]
+
+        try await StartReminderLiveActivityUseCase(service: service)(
+            listTitle: "오늘", reminders: [reminder(id: "a", title: "할일")],
+            listColors: [:], weekEvents: weekEvents, now: now
+        )
+
+        let dots = try #require(await service.startReminderCalls.first?.weekEventDots)
+        #expect(dots.allSatisfy { !cal.isDate($0.dayStart, inSameDayAs: now) })
+    }
+
     @Test func startScheduleCarriesTodayCount() async throws {
         let service = RecordingLiveActivityService()
         let cal = Calendar.current
@@ -496,10 +536,10 @@ struct LiveActivityUseCaseTests {
 private final actor RecordingLiveActivityService: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int)] = []
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots])] = []
     private(set) var endReminderCount = 0
 
-    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int)] = []
+    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots])] = []
     private(set) var endScheduleCount = 0
 
     private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []
@@ -512,17 +552,18 @@ private final actor RecordingLiveActivityService: LiveActivityService {
         listTitle: String,
         items: [LiveReminderItem],
         remaining: Int,
-        todayCount: Int
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots]
     ) async throws {
-        startReminderCalls.append((listTitle, items, remaining, todayCount))
+        startReminderCalls.append((listTitle, items, remaining, todayCount, weekEventDots))
     }
 
     func endReminder() async {
         endReminderCount += 1
     }
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {
-        startScheduleCalls.append((days, todayCount))
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {
+        startScheduleCalls.append((days, todayCount, weekEventDots))
     }
 
     func endSchedule() async {

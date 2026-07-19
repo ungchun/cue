@@ -33,6 +33,8 @@ struct Dependencies: Sendable {
 
     var requestEventsAccess: RequestEventsAccessUseCase
     var fetchEvents: FetchEventsUseCase
+    /// 사용자 캘린더 목록 — 설정 "볼 캘린더 선택" 체크리스트가 읽는다.
+    var fetchCalendars: FetchCalendarsUseCase
     /// 외부(캘린더 앱) 변경 신호 — events 측 대응. 위의 reminders 대응과 같은 패턴.
     var observeEventsChanges: ObserveEventsChangesUseCase
 
@@ -69,6 +71,9 @@ struct Dependencies: Sendable {
 
     /// 무료 사용자의 라이브 활성화(켜기·새로고침) 하루 한도 소비 — 켜기 버튼에서 호출.
     var consumeLiveActivation: ConsumeLiveActivationUseCase
+
+    /// 앱 시작 시 호출 — 원격 최소 버전과 비교해 강제 업데이트 블로커 표시 여부 판정.
+    var checkForcedUpdate: CheckForcedUpdateUseCase
 
     // MARK: - 앱 전역 설정
 
@@ -116,6 +121,11 @@ extension Dependencies {
                     isAllDay: false, calendarColorHex: "#FF3B30",
                     isReadOnly: false
                 ),
+            ],
+            calendars: [
+                EventCalendar(id: "cal-personal", title: "개인", colorHex: "#0A84FF"),
+                EventCalendar(id: "cal-work", title: "회사", colorHex: "#34C759"),
+                EventCalendar(id: "cal-holidays", title: "대한민국 공휴일", colorHex: "#FF3B30"),
             ]
         )
 
@@ -166,6 +176,7 @@ extension Dependencies {
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
@@ -182,6 +193,7 @@ extension Dependencies {
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: liveActivityService),
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
+            checkForcedUpdate: CheckForcedUpdateUseCase(service: DisabledAppUpdatePolicyService()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )

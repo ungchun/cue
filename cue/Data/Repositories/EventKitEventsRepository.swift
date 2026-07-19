@@ -43,6 +43,11 @@ actor EventKitEventsRepository: EventsRepository {
         return store.events(matching: predicate).map(EventMapper.toEvent)
     }
 
+    /// 이벤트를 담을 수 있는 모든 캘린더를 도메인 타입으로 돌려준다 — 설정 체크리스트용.
+    func fetchCalendars() async throws -> [EventCalendar] {
+        store.calendars(for: .event).map(EventMapper.toCalendar)
+    }
+
     /// `EKEventStoreChanged`는 미리알림·캘린더 변경 모두에 발송되는 공통 노티 — events 측은
     /// 그 중 캘린더 변경에 대응한다. 구독자 측에서 stream을 종료해도 안에서 만든 Task가
     /// 자동 cancel되도록 `onTermination`에 연결.

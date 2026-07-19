@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6502F8E0300B6BFC005D2A64 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6502F8DF300B6BFC005D2A64 /* FirebaseAnalytics */; };
+		6502F8E2300B6BFC005D2A64 /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 6502F8E1300B6BFC005D2A64 /* FirebaseRemoteConfig */; };
 		65D102F52FD032BD00081EB7 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65D102F42FD032BD00081EB7 /* WidgetKit.framework */; };
 		65D102F72FD032BE00081EB7 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65D102F62FD032BD00081EB7 /* SwiftUI.framework */; };
 		65D103082FD032C000081EB7 /* cueLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 65D102F22FD032BD00081EB7 /* cueLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -72,6 +74,7 @@
 				Shared/LiveActivity/FocusAlarmPlan.swift,
 				Shared/LiveActivity/FocusAlarmScheduling.swift,
 				Shared/LiveActivity/KoreanHolidayCalculator.swift,
+				Shared/LiveActivity/LiveDayEventDots.swift,
 				Shared/LiveActivity/LiveEventItem.swift,
 				Shared/LiveActivity/LiveReminderItem.swift,
 				Shared/LiveActivity/LiveScheduleDay.swift,
@@ -117,6 +120,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6502F8E0300B6BFC005D2A64 /* FirebaseAnalytics in Frameworks */,
+				6502F8E2300B6BFC005D2A64 /* FirebaseRemoteConfig in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,6 +197,8 @@
 			);
 			name = cue;
 			packageProductDependencies = (
+				6502F8DF300B6BFC005D2A64 /* FirebaseAnalytics */,
+				6502F8E1300B6BFC005D2A64 /* FirebaseRemoteConfig */,
 			);
 			productName = cue;
 			productReference = 6579AF542FBDEB7700393459 /* cue.app */;
@@ -289,6 +296,9 @@
 			);
 			mainGroup = 6579AF4B2FBDEB7600393459;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6502F8DE300B6BFC005D2A64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6579AF552FBDEB7700393459 /* Products */;
 			projectDirPath = "";
@@ -738,6 +748,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6502F8DE300B6BFC005D2A64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.16.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6502F8DF300B6BFC005D2A64 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6502F8DE300B6BFC005D2A64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		6502F8E1300B6BFC005D2A64 /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6502F8DE300B6BFC005D2A64 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 6579AF4C2FBDEB7600393459 /* Project object */;
 }

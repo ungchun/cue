@@ -23,9 +23,26 @@ struct ReminderViewModelTests {
         appSettings: AppSettings = .default,
         isPremium: Bool = false
     ) -> Dependencies {
-        let remindersRepository = InMemoryRemindersRepository(
-            access: access, lists: lists, reminders: reminders
+        makeDependencies(
+            remindersRepository: InMemoryRemindersRepository(
+                access: access, lists: lists, reminders: reminders
+            ),
+            sortSettings: sortSettings,
+            liveActivityService: liveActivityService,
+            appSettings: appSettings,
+            isPremium: isPremium
         )
+    }
+
+    /// 리포지토리를 직접 주입하는 코어 빌더 — 외부 변경/로딩 시뮬레이션처럼 같은 repo 인스턴스를
+    /// fetch·emit 양쪽에 써야 하는 테스트에서 gated fake를 꽂을 수 있게 한다.
+    private func makeDependencies(
+        remindersRepository: any RemindersRepository,
+        sortSettings: [String: ReminderSortSettings] = [:],
+        liveActivityService: any LiveActivityService = DisabledLiveActivityService(),
+        appSettings: AppSettings = .default,
+        isPremium: Bool = false
+    ) -> Dependencies {
         let reminderSortRepository = InMemoryReminderSortRepository(storage: sortSettings)
         let itemRepository = InMemoryItemRepository()
         let eventsRepository = InMemoryEventsRepository(access: .granted)
@@ -49,6 +66,7 @@ struct ReminderViewModelTests {
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
@@ -191,6 +209,7 @@ struct ReminderViewModelTests {
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: sortRepo),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepo),
             fetchEvents: FetchEventsUseCase(repository: eventsRepo),
+            fetchCalendars: FetchCalendarsUseCase(repository: eventsRepo),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepo),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusRepo),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusRepo),
@@ -227,6 +246,37 @@ struct ReminderViewModelTests {
         #expect(viewModel.allReminders.contains { $0.title == "외부 추가" })
     }
 
+    /// 외부 변경(자기 쓰기가 유발한 EventKit 알림 포함)으로 인한 reload는 **로딩 인디케이터를
+    /// 띄우지 않아야** 한다 — Apple 미리알림처럼 엔터 시 깜빡임/스피너 없이 반영. isLoading은
+    /// 최초 적재에만 쓴다. gated repo로 reload를 fetchReminders에서 붙잡아 "진행 중" 순간을 관측.
+    @Test func externalChangeReloadDoesNotShowLoadingIndicator() async throws {
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+        await viewModel.onAppear()
+        #expect(viewModel.isLoading == false)
+
+        // 외부 변경 발생 — 다음 fetchReminders를 게이트로 붙잡아 reload를 진행 중 상태로 고정.
+        try await base.addReminder(
+            title: "외부", notes: nil, dueDate: nil, includesTime: false, toListID: listA.id
+        )
+        await repo.closeGate()
+        await base.emitChange()
+
+        // reload가 fetchReminders에서 대기하기 시작할 때까지 (bounded — 최대 ~1s).
+        var reloadInFlight = false
+        for _ in 0..<200 {
+            if await repo.isFetchWaiting { reloadInFlight = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(reloadInFlight)
+        // 리로드가 진행 중인데도 인디케이터가 떠 있으면 안 된다.
+        #expect(viewModel.isLoading == false)
+
+        await repo.releaseFetch()
+    }
+
+
     @Test func onAppearWithDeniedAccessLoadsNothing() async {
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             access: .denied, lists: [listA]
@@ -238,8 +288,50 @@ struct ReminderViewModelTests {
         #expect(viewModel.lists.isEmpty)
     }
 
-    @Test func reloadSelectsFirstListByDefault() async {
+    // MARK: - 초기 선택 (설정의 할일 기본 화면)
+
+    /// 기본 설정(tasksDefaultScopeID = "all")이면 진입 시 '전체' 필터로 시작한다.
+    @Test func initialSelectionDefaultsToAllFilter() async {
         let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA, listB]))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.selection == .systemFilter(.all))
+    }
+
+    /// 설정이 "today"면 진입 시 오늘 필터로 시작한다.
+    @Test func initialSelectionHonorsTodaySetting() async {
+        var settings = AppSettings.default
+        settings.tasksDefaultScopeID = "today"
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB], appSettings: settings
+        ))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.selection == .systemFilter(.today))
+    }
+
+    /// 설정이 사용자 리스트 id면 진입 시 그 리스트로 시작한다.
+    @Test func initialSelectionHonorsListSetting() async {
+        var settings = AppSettings.default
+        settings.tasksDefaultScopeID = "B"
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB], appSettings: settings
+        ))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.selectedListID == "B")
+    }
+
+    /// 설정이 가리키던 리스트가 삭제돼 없으면 첫 리스트로 폴백한다.
+    @Test func initialSelectionFallsBackToFirstListWhenScopeListMissing() async {
+        var settings = AppSettings.default
+        settings.tasksDefaultScopeID = "ZZZ"   // 존재하지 않는 리스트 id
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB], appSettings: settings
+        ))
 
         await viewModel.onAppear()
 
@@ -358,7 +450,7 @@ struct ReminderViewModelTests {
             lists: [listA, listB]
         ))
         await viewModel.onAppear()
-        // 자동 selection은 .list("A"). 그래도 toListID="B"가 우선.
+        // selection 모드와 무관하게 toListID="B"가 우선.
 
         await viewModel.add(title: "B 섹션 입력", toListID: "B")
 
@@ -533,7 +625,8 @@ struct ReminderViewModelTests {
                 reminder(id: "c", creationDate: now.addingTimeInterval(30), listID: "A"),
             ]
         ))
-        await viewModel.onAppear()  // .list("A") 자동 selection.
+        await viewModel.onAppear()
+        viewModel.select(listA)  // 개별 리스트 스코프로 진입.
 
         #expect(viewModel.visibleReminders.map(\.id) == ["a", "b", "c"])
         #expect(viewModel.currentSortPreference == .default)
@@ -558,6 +651,7 @@ struct ReminderViewModelTests {
             ]
         ))
         await viewModel.onAppear()
+        viewModel.select(listA)
 
         #expect(viewModel.visibleReminders.map(\.id) == ["early", "late", "nodue"])
     }
@@ -573,6 +667,7 @@ struct ReminderViewModelTests {
             ]
         ))
         await viewModel.onAppear()
+        viewModel.select(listA)
 
         await viewModel.selectSortField(.creationDate)
         await viewModel.selectSortDirection(.descending)
@@ -593,6 +688,7 @@ struct ReminderViewModelTests {
             ]
         ))
         await viewModel.onAppear()
+        viewModel.select(listA)
 
         await viewModel.selectSortField(.title)
 
@@ -611,6 +707,7 @@ struct ReminderViewModelTests {
             ]
         ))
         await viewModel.onAppear()
+        viewModel.select(listA)
         // 기본 수동·생성 시드 → [a, b, c]. c(인덱스 2)를 맨 위로 끌어올린다.
 
         await viewModel.moveReminders(fromOffsets: IndexSet(integer: 2), toOffset: 0)
@@ -635,6 +732,7 @@ struct ReminderViewModelTests {
             ]
         ))
         await viewModel.onAppear()
+        viewModel.select(listA)
         // 마감일 오름차순 → [early, late]. late(인덱스 1)를 맨 위로.
 
         await viewModel.moveReminders(fromOffsets: IndexSet(integer: 1), toOffset: 0)
@@ -763,6 +861,7 @@ struct ReminderViewModelTests {
     @Test func addListWithBlankTitleSurfacesError() async {
         let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
         await viewModel.onAppear()
+        viewModel.select(listA)
 
         await viewModel.addList(title: "   ", colorHex: nil)
 
@@ -788,7 +887,7 @@ struct ReminderViewModelTests {
             reminders: [reminder(id: "1", listID: "A")]
         ))
         await viewModel.onAppear()
-        // 첫 진입은 A 선택.
+        viewModel.select(listA)  // A 리스트를 선택한 상태에서 그 리스트를 삭제.
 
         await viewModel.deleteList(listID: "A")
 
@@ -849,16 +948,72 @@ struct ReminderViewModelTests {
     }
 }
 
+/// `fetchReminders`를 게이트로 붙잡을 수 있는 리포지토리 더블 — 나머지는 InMemory에 위임한다.
+/// 게이트를 닫으면 다음 fetchReminders가 `releaseFetch()`까지 대기해, reload가 "진행 중"인
+/// 순간을 테스트가 결정론적으로 관측할 수 있다. 변경 신호·데이터는 모두 base 인스턴스가 소유.
+private actor GatedRemindersRepository: RemindersRepository {
+    private let base: InMemoryRemindersRepository
+    private var gateClosed = false
+    private(set) var isFetchWaiting = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(_ base: InMemoryRemindersRepository) { self.base = base }
+
+    func closeGate() { gateClosed = true }
+    func releaseFetch() {
+        gateClosed = false
+        isFetchWaiting = false
+        for waiter in waiters { waiter.resume() }
+        waiters = []
+    }
+
+    nonisolated func changes() -> AsyncStream<Void> { base.changes() }
+    func requestAccess() async -> RemindersAccess { await base.requestAccess() }
+    func fetchLists() async throws -> [ReminderList] { try await base.fetchLists() }
+    func fetchReminders() async throws -> [Reminder] {
+        if gateClosed {
+            isFetchWaiting = true
+            await withCheckedContinuation { waiters.append($0) }
+        }
+        return try await base.fetchReminders()
+    }
+    func setCompleted(_ completed: Bool, reminderID: String) async throws {
+        try await base.setCompleted(completed, reminderID: reminderID)
+    }
+    func addReminder(
+        title: String, notes: String?, dueDate: Date?, includesTime: Bool, toListID listID: String
+    ) async throws {
+        try await base.addReminder(
+            title: title, notes: notes, dueDate: dueDate, includesTime: includesTime, toListID: listID
+        )
+    }
+    func updateReminder(
+        reminderID: String, title: String, notes: String?, dueDate: Date?, includesTime: Bool
+    ) async throws {
+        try await base.updateReminder(
+            reminderID: reminderID, title: title, notes: notes, dueDate: dueDate, includesTime: includesTime
+        )
+    }
+    func deleteReminder(reminderID: String) async throws { try await base.deleteReminder(reminderID: reminderID) }
+    func addList(title: String, colorHex: String?) async throws -> String {
+        try await base.addList(title: title, colorHex: colorHex)
+    }
+    func updateList(listID: String, title: String, colorHex: String?) async throws {
+        try await base.updateList(listID: listID, title: title, colorHex: colorHex)
+    }
+    func deleteList(listID: String) async throws { try await base.deleteList(listID: listID) }
+}
+
 /// 시작/갱신 호출을 기록하는 LA 더블. `isEnabled = true`라 ViewModel이 활성으로 전환된다.
 private actor RecordingReminderLiveActivity: LiveActivityService {
     var isEnabled: Bool { true }
     private(set) var startReminderCalls: [(items: [LiveReminderItem], remaining: Int)] = []
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int) async throws {
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {
         startReminderCalls.append((items, remaining))
     }
     func endReminder() async {}
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
     func endSchedule() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}

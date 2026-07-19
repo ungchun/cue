@@ -121,10 +121,32 @@ struct SettingsView: View {
             }
 
             Section {
+                // 볼 캘린더 선택 — 전용 화면으로 push(체크리스트). 캘린더가 없으면 행 자체를 숨긴다.
+                if !viewModel.eventCalendars.isEmpty {
+                    NavigationLink {
+                        CalendarSelectionView(viewModel: viewModel)
+                    } label: {
+                        LabeledContent("Calendars", value: calendarsSummary)
+                    }
+                }
                 Toggle("Show Calendar", isOn: scheduleShowsCalendarBinding)
                     .tint(.green)
             } header: {
                 sectionHeader("Schedule")
+            }
+
+            Section {
+                // 할일 탭에 진입했을 때 가장 먼저 보여줄 화면 — 오늘/예정/전체 또는 사용자 리스트.
+                Picker("Default View", selection: tasksDefaultScopeBinding) {
+                    Text("Today").tag("today")
+                    Text("Scheduled").tag("scheduled")
+                    Text("All").tag("all")
+                    ForEach(viewModel.reminderLists, id: \.id) { list in
+                        Text(list.title).tag(list.id)
+                    }
+                }
+            } header: {
+                sectionHeader("Tasks")
             }
 
             Section {
@@ -261,6 +283,24 @@ struct SettingsView: View {
         Binding(
             get: { viewModel.settings.memoTextSize },
             set: { newValue in Task { await viewModel.setMemoTextSize(newValue) } }
+        )
+    }
+
+    /// 볼 캘린더 요약 — 전부 표시면 "All"(정상 상태), 일부 숨김이면 숨긴 개수만 강조("N Hidden").
+    /// 비율("18/20")은 사용자가 뺄셈을 해야 하므로, 기본값에서 벗어난 만큼만 보여준다.
+    private var calendarsSummary: String {
+        let hidden = viewModel.eventCalendars.filter {
+            viewModel.settings.hiddenCalendarIDs.contains($0.id)
+        }.count
+        if hidden == 0 { return String(localized: "All") }
+        return String(localized: "\(hidden) Hidden")
+    }
+
+    /// 할일 탭 기본 화면 스코프("today"/"scheduled"/"all"/리스트 id).
+    private var tasksDefaultScopeBinding: Binding<String> {
+        Binding(
+            get: { viewModel.settings.tasksDefaultScopeID },
+            set: { newValue in Task { await viewModel.setTasksDefaultScopeID(newValue) } }
         )
     }
 

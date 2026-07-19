@@ -40,7 +40,7 @@ struct FloatingMessageButton: View {
                     // 텍스트(title3)보다 한 단계 큰 아이콘 — 버튼에서 화살표가 또렷하게.
                     .font(.title2.weight(.bold))
                     .symbolEffect(.pulse, value: tapCount)
-                Text("On")
+                Text("Live")
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }

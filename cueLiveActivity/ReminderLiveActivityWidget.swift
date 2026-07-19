@@ -35,7 +35,7 @@ struct ReminderLiveActivityWidget: Widget {
                         .padding(.trailing, Spacing.sm)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    WeekCalendarStrip(now: .now)
+                    WeekCalendarStrip(now: .now, eventDots: context.state.weekEventDots)
                 }
             } compactLeading: {
                 AppIconMarkView()

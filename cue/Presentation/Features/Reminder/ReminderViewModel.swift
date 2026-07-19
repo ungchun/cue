@@ -27,6 +27,9 @@ final class ReminderViewModel {
     private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
+    /// 이번 주 캘린더 이벤트 조회 — 할일 LA도 일정 LA와 같은 주간 스트립(날짜별 일정 점)을
+    /// 그리므로 발행 시 캘린더 이벤트를 함께 싣는다. 캘린더 권한 없으면 조용히 빈 배열.
+    private let fetchEventsUseCase: FetchEventsUseCase
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
@@ -83,6 +86,7 @@ final class ReminderViewModel {
         self.endLiveActivityUseCase = dependencies.endReminderLiveActivity
         self.consumeLiveActivation = dependencies.consumeLiveActivation
         self.fetchAppSettings = dependencies.fetchAppSettings
+        self.fetchEventsUseCase = dependencies.fetchEvents
         startObservingChanges()
     }
 
@@ -100,9 +104,11 @@ final class ReminderViewModel {
     }
 
     /// 외부 변경 신호를 받아 reload — 권한이 있고 첫 적재가 끝났을 때만.
+    /// **인디케이터 없이** 조용히 갱신한다: 이 신호는 앱 자신의 쓰기(EventKit이 되쏘는 알림)로도
+    /// 오므로, 스피너를 띄우면 엔터마다 화면이 깜빡인다. Apple 미리알림처럼 무침습으로 반영한다.
     private func handleExternalChange() async {
         guard access == .granted, hasLoaded else { return }
-        await reload()
+        await reload(showsIndicator: false)
     }
 
     /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
@@ -123,7 +129,8 @@ final class ReminderViewModel {
             try await startLiveActivityUseCase(
                 listTitle: listTitle,
                 reminders: visibleReminders,
-                listColors: listColorsByID
+                listColors: listColorsByID,
+                weekEvents: await fetchWeekEvents()
             )
             liveActivityActive = true
         } catch {
@@ -143,15 +150,10 @@ final class ReminderViewModel {
         guard access == .granted else { return }
 
         let scopeID = await fetchAppSettings().liveAlwaysOnReminderScopeID
-        let scope: ReminderSelection
-        switch scopeID {
-        case "today": scope = .systemFilter(.today)
-        case "scheduled": scope = .systemFilter(.scheduled)
-        case "all": scope = .systemFilter(.all)
-        default:
-            // 사용자 리스트 id — 삭제됐으면 전체로 폴백.
-            scope = lists.contains(where: { $0.id == scopeID }) ? .list(scopeID) : .systemFilter(.all)
-        }
+        // 사용자 리스트 id가 삭제됐으면 전체로 폴백.
+        let scope = ReminderSelection.resolve(
+            scopeID: scopeID, lists: lists, fallback: .systemFilter(.all)
+        )
         let title: String
         switch scope {
         case .list(let id): title = lists.first(where: { $0.id == id })?.title ?? SystemFilter.all.title
@@ -162,7 +164,8 @@ final class ReminderViewModel {
             try await startLiveActivityUseCase(
                 listTitle: title,
                 reminders: snapshot(for: scope),
-                listColors: listColorsByID
+                listColors: listColorsByID,
+                weekEvents: await fetchWeekEvents()
             )
             liveActivityActive = true
         } catch {
@@ -177,6 +180,13 @@ final class ReminderViewModel {
     /// 현재 선택된 리스트.
     var selectedList: ReminderList? {
         lists.first { $0.id == selectedListID }
+    }
+
+    /// 이번 주(로케일 주 시작 요일 기준 7일) 캘린더 이벤트 — Dynamic Island 주간 스트립의
+    /// 날짜별 일정 점 계산용. 캘린더 권한이 없거나 조회 실패면 빈 배열(점 없음).
+    private func fetchWeekEvents() async -> [CalendarEvent] {
+        guard let week = WeekEventDotsBuilder.weekRange(for: Date()) else { return [] }
+        return (try? await fetchEventsUseCase(from: week.start, to: week.end)) ?? []
     }
 
     /// 리스트 ID → 색(`"#RRGGBB"`) 매핑. 라이브 액티비티가 항목별 동그라미 색을 채울 때 쓴다.
@@ -210,7 +220,8 @@ final class ReminderViewModel {
         try? await startLiveActivityUseCase(
             listTitle: currentSelectionTitle,
             reminders: visibleReminders,
-            listColors: listColorsByID
+            listColors: listColorsByID,
+            weekEvents: await fetchWeekEvents()
         )
     }
 
@@ -442,15 +453,15 @@ final class ReminderViewModel {
 
     /// 리스트·항목을 다시 가져온다. selection이 비어 있거나 그 리스트가 사라졌으면
     /// 첫 리스트로 자동 전환한다 (시스템 필터 selection은 그대로 둔다).
-    func reload() async {
-        isLoading = true
-        defer { isLoading = false }
+    /// `showsIndicator`가 false면 로딩 스피너 없이 조용히 갱신한다 — 외부 변경 신호처럼
+    /// 자기 쓰기로도 오는 경로에서 화면 깜빡임을 없애기 위해. 최초 적재만 스피너를 쓴다.
+    func reload(showsIndicator: Bool = true) async {
+        if showsIndicator { isLoading = true }
+        defer { if showsIndicator { isLoading = false } }
         do {
             lists = try await fetchListsUseCase()
             allReminders = try await fetchRemindersUseCase()
-            if needsResetToFirstList, let first = lists.first {
-                selection = .list(first.id)
-            }
+            await resolveInitialSelectionIfNeeded()
             // 현재 스코프(오늘·개별 리스트)의 정렬 설정을 적재 — 진입 시 저장된 정렬 복원.
             await loadSortSettingsForCurrentScope()
             // 외부(미리 알림 앱) 변경 등으로 데이터가 바뀌면 떠 있는 LA도 따라 갱신.
@@ -460,13 +471,23 @@ final class ReminderViewModel {
         }
     }
 
-    /// reload 후 selection을 첫 리스트로 떨어뜨려야 하는 상황 — 초기 진입이거나
-    /// 가리키던 리스트가 사라진 경우. 시스템 필터 selection은 영향 없음.
-    private var needsResetToFirstList: Bool {
+    /// reload 후 selection을 보정한다.
+    /// - 초기 진입(`.none`): 설정의 할일 기본 화면(`tasksDefaultScopeID`)으로 해석한다.
+    ///   지정된 리스트가 없으면 첫 리스트로 폴백. 리스트가 하나도 없으면 그대로 nil.
+    /// - 가리키던 리스트가 사라진 경우(`.list` & 없음): 첫 리스트로 폴백.
+    /// - 시스템 필터 selection은 건드리지 않는다.
+    private func resolveInitialSelectionIfNeeded() async {
+        guard let first = lists.first else { return }
         switch selection {
-        case .none: return true
-        case .list(let id): return !lists.contains(where: { $0.id == id })
-        case .systemFilter: return false
+        case .none:
+            let scopeID = await fetchAppSettings().tasksDefaultScopeID
+            selection = ReminderSelection.resolve(
+                scopeID: scopeID, lists: lists, fallback: .list(first.id)
+            )
+        case .list(let id) where !lists.contains(where: { $0.id == id }):
+            selection = .list(first.id)
+        default:
+            break
         }
     }
 

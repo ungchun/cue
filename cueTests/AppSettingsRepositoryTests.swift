@@ -52,6 +52,32 @@ struct AppSettingsRepositoryTests {
         #expect(settings.liveAlwaysOnReminder == true)
         #expect(settings.liveAlwaysOnSchedule == true)
         #expect(settings.liveAlwaysOnReminderScopeID == "all")   // 할일 범위 기본 전체
+        #expect(settings.tasksDefaultScopeID == "all")           // 할일 탭 기본 화면도 전체
+        #expect(settings.hiddenCalendarIDs.isEmpty)              // 숨긴 캘린더 기본 없음(전부 표시)
+    }
+
+    /// 숨긴 캘린더 집합이 저장·복원 왕복에서 보존된다.
+    @Test func userDefaultsRoundTripsHiddenCalendars() async {
+        let defaults = UserDefaults(suiteName: "test.appSettings.\(UUID().uuidString)")!
+        let repo = UserDefaultsAppSettingsRepository(defaults: defaults)
+
+        var settings = AppSettings.default
+        settings.hiddenCalendarIDs = ["cal-work", "cal-holidays"]
+        await repo.save(settings)
+
+        #expect(await repo.fetch().hiddenCalendarIDs == ["cal-work", "cal-holidays"])
+    }
+
+    /// 할일 탭 기본 화면 스코프가 저장·복원 왕복에서 보존된다.
+    @Test func userDefaultsRoundTripsTasksDefaultScope() async {
+        let defaults = UserDefaults(suiteName: "test.appSettings.\(UUID().uuidString)")!
+        let repo = UserDefaultsAppSettingsRepository(defaults: defaults)
+
+        var settings = AppSettings.default
+        settings.tasksDefaultScopeID = "today"
+        await repo.save(settings)
+
+        #expect(await repo.fetch().tasksDefaultScopeID == "today")
     }
 
     /// 캘린더 표시 플래그가 저장·복원 왕복에서 true로 보존된다.

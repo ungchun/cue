@@ -48,6 +48,13 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// 항상 표시 할일 LA의 범위 — "today"/"scheduled"/"all" 또는 사용자 리스트 id.
     /// Domain은 Presentation의 필터 타입을 모르므로 문자열로 보관(startTabID 전례). 기본 전체.
     var liveAlwaysOnReminderScopeID: String
+    /// 할일 탭에 진입했을 때 처음 보여줄 범위 — "today"/"scheduled"/"all" 또는 사용자 리스트 id.
+    /// 인코딩은 `liveAlwaysOnReminderScopeID`와 동일하나, 이쪽은 LA가 아니라 **화면 진입 시
+    /// 초기 선택**을 정한다("Off" 없음 — 항상 무언가는 보여야 하므로). 기본 전체.
+    var tasksDefaultScopeID: String
+    /// 일정 탭에서 **숨길** 캘린더의 식별자 집합. 비어 있으면 전부 표시(기본). 숨김을 저장하므로
+    /// 새로 생긴 캘린더는 자동으로 표시된다(애플 캘린더와 동일 동작). `EventCalendar.id` 값.
+    var hiddenCalendarIDs: Set<String>
 
     static let `default` = AppSettings(
         colorScheme: .system,
@@ -60,7 +67,9 @@ struct AppSettings: Codable, Equatable, Sendable {
         liveAlwaysOnMemo: true,
         liveAlwaysOnReminder: true,
         liveAlwaysOnSchedule: true,
-        liveAlwaysOnReminderScopeID: "all"
+        liveAlwaysOnReminderScopeID: "all",
+        tasksDefaultScopeID: "all",
+        hiddenCalendarIDs: []
     )
 }
 
@@ -92,5 +101,9 @@ extension AppSettings {
             ?? fallback.liveAlwaysOnSchedule
         liveAlwaysOnReminderScopeID = try container.decodeIfPresent(String.self, forKey: .liveAlwaysOnReminderScopeID)
             ?? fallback.liveAlwaysOnReminderScopeID
+        tasksDefaultScopeID = try container.decodeIfPresent(String.self, forKey: .tasksDefaultScopeID)
+            ?? fallback.tasksDefaultScopeID
+        hiddenCalendarIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenCalendarIDs)
+            ?? fallback.hiddenCalendarIDs
     }
 }

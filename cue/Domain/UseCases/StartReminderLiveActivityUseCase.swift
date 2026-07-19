@@ -19,10 +19,13 @@ struct StartReminderLiveActivityUseCase: Sendable {
 
     /// - Parameter listColors: 리스트 ID → 색(`"#RRGGBB"`) 매핑. 각 항목의 동그라미 색을
     ///   자기 리스트 색으로 채운다 — 매핑에 없으면 `nil`(위젯에서 시스템 색 폴백).
+    /// - Parameter weekEvents: 이번 주 캘린더 이벤트 — Dynamic Island 주간 스트립의 날짜별
+    ///   일정 점 계산용. 할일 LA도 일정 LA와 같은 스트립을 그리므로 함께 싣는다. 비면 점 없음.
     func callAsFunction(
         listTitle: String,
         reminders: [Reminder],
         listColors: [String: String],
+        weekEvents: [CalendarEvent] = [],
         now: Date = .now
     ) async throws {
         let visible = reminders.prefix(Self.storageLimit).map {
@@ -33,7 +36,8 @@ struct StartReminderLiveActivityUseCase: Sendable {
             listTitle: listTitle,
             items: Array(visible),
             remaining: remaining,
-            todayCount: Self.todayCount(reminders, now: now)
+            todayCount: Self.todayCount(reminders, now: now),
+            weekEventDots: WeekEventDotsBuilder.build(events: weekEvents, now: now)
         )
     }
 

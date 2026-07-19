@@ -23,6 +23,10 @@ struct PremiumPaywallView: View {
     @State private var echoAppeared = false
     @State private var echoPulsing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openURL) private var openURL
+
+    private let termsURL = URL(string: "https://ungchun.github.io/cue-legal/terms.html")!
+    private let privacyURL = URL(string: "https://ungchun.github.io/cue-legal/privacy.html")!
 
     var body: some View {
         VStack(spacing: Spacing.zero) {
@@ -251,9 +255,10 @@ struct PremiumPaywallView: View {
                 .padding(.top, Spacing.xs)
 
             HStack(spacing: Spacing.md) {
+                // TODO: StoreKit 복원 연결(AppStore.sync()).
                 Button("Restore") {}
-                Button("Terms of Use") {}
-                Button("Privacy Policy") {}
+                Button("Terms of Use") { openURL(termsURL) }
+                Button("Privacy Policy") { openURL(privacyURL) }
             }
             .font(.caption2)
             .foregroundStyle(.secondary)

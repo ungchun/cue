@@ -94,6 +94,9 @@ struct FocusSessionsListSheet: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            // 앱 전체 .tint(.primary)가 destructive 스와이프 배경까지 무채색으로
+            // 만들어 다크모드에서 아이콘이 묻힌다 — 이 액션만 빨강으로 되돌린다.
+            .tint(.red)
         }
     }
 

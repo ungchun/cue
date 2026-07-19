@@ -191,6 +191,8 @@ struct FocusSessionEditorSheet: View {
                 dismiss()
             } label: {
                 Text("Delete Session")
+                    // 전역 .tint(.primary)가 destructive 색을 덮어 빨강이 사라지므로 명시.
+                    .foregroundStyle(.red)
                     .frame(maxWidth: .infinity)
             }
         }

@@ -15,6 +15,8 @@ protocol EventsRepository: Sendable {
     /// `[from, to)` 범위에 걸친 이벤트를 모든 캘린더에서 모아 돌려준다.
     /// 범위와 일부라도 겹치는(straddling) 이벤트도 포함된다 — EventKit 기본 동작.
     func fetchEvents(from: Date, to: Date) async throws -> [CalendarEvent]
+    /// 사용자가 등록한 모든 캘린더 목록 — 설정의 "볼 캘린더 선택" 체크리스트용.
+    func fetchCalendars() async throws -> [EventCalendar]
     /// 외부에서 이벤트가 변경됐다는 신호 스트림 — 값은 싣지 않고, 구독자는 신호가 오면
     /// `fetchEvents`로 다시 가져온다. EventKit 구현은 `EKEventStoreChanged` 노티를 노출.
     /// 구독은 호출 측의 `Task`에 묶여 cancel 시 자동 종료된다.

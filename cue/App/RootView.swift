@@ -9,6 +9,12 @@ import SwiftUI
 /// 우하단에 메시지 버튼을 플로팅(FAB)으로 띄운다. 탭바·칩바·스크롤 축소 등 네이티브 동작 유지.
 struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dependencies) private var dependencies
+    @Environment(\.openURL) private var openURL
+    /// 강제 업데이트 필요 — 원격 최소 버전 판정 결과. true면 App Store 이동 알림(회피 불가).
+    @State private var isUpdateRequired = false
+    /// App Store 앱 페이지 — ASC 앱 정보의 Apple ID.
+    private let appStoreURL = URL(string: "https://apps.apple.com/app/id6789932436")!
     @State private var selectedTab: AppTab = .reminder
     @State private var reminderViewModel: ReminderViewModel
     @State private var scheduleViewModel: ScheduleViewModel
@@ -56,6 +62,22 @@ struct RootView: View {
         .environment(\.toastCenter, toastCenter)
         // 화면 모드(라이트/다크/시스템)를 앱 전체에 적용. `.system`이면 nil → 시스템 따름.
         .preferredColorScheme(settingsViewModel.settings.colorScheme.colorScheme)
+        // 강제 업데이트 — 최소 요구 버전 미만이면 알림. 확인은 App Store 이동뿐이고,
+        // 누른 뒤에도 플래그를 다시 켜 알림이 재표시된다(업데이트 전엔 앱 사용 불가).
+        .alert("Update Required", isPresented: $isUpdateRequired) {
+            Button("OK") {
+                openURL(appStoreURL)
+                // alert 닫힘이 바인딩을 false로 되돌린 **뒤에** 다시 켜야 재표시된다.
+                Task { @MainActor in isUpdateRequired = true }
+            }
+        } message: {
+            Text("Please update to the latest version.")
+        }
+        .task {
+            let version = Bundle.main
+                .object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+            isUpdateRequired = await dependencies.checkForcedUpdate(currentVersion: version)
+        }
         // 앱 시작 시 저장된 설정을 불러온다 — 화면 모드 반영 + 시작 탭으로 한 번 이동 + 항상 표시 게시.
         .task {
             await settingsViewModel.onAppear()

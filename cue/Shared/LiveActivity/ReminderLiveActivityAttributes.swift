@@ -20,9 +20,24 @@ struct ReminderLiveActivityAttributes: ActivityAttributes {
         /// 캘린더 스트립 우상단 카운트용. 앱에서 도메인 데이터로 계산해 싣는다(위젯엔 날짜·완료
         /// 정보가 없어 직접 못 셈). 기본값 0 — 기존 ContentState 생성부 호환.
         var todayCount: Int = 0
+        /// Dynamic Island 주간 스트립의 날짜별 일정 점(오늘 제외) — 각 날 캘린더 이벤트 색.
+        /// 할일 LA도 일정 LA와 동일한 스트립을 그리므로 캘린더 이벤트 점을 함께 싣는다.
+        /// 기본값 빈 배열 — 기존 ContentState 생성부/전방 디코딩 호환.
+        var weekEventDots: [LiveDayEventDots] = []
     }
 
     let listTitle: String
+}
+
+extension ReminderLiveActivityAttributes.ContentState {
+    /// 전방 호환 디코딩 — 옛 활성 LA에 `weekEventDots`가 없어도 기본값으로 채워 디코딩 실패를 막는다.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decode([LiveReminderItem].self, forKey: .items)
+        remaining = try container.decode(Int.self, forKey: .remaining)
+        todayCount = try container.decodeIfPresent(Int.self, forKey: .todayCount) ?? 0
+        weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
+    }
 }
 
 extension ReminderLiveActivityAttributes.ContentState {

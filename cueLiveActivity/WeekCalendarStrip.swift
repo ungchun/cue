@@ -11,6 +11,8 @@ import SwiftUI
 
 struct WeekCalendarStrip: View {
     let now: Date
+    /// 날짜별 일정 점(오늘 제외). 각 날 이벤트 색을 그 날짜 숫자 아래에 작은 원으로 그린다.
+    var eventDots: [LiveDayEventDots] = []
 
     private let calendar = Calendar.current
 
@@ -21,22 +23,44 @@ struct WeekCalendarStrip: View {
                     Text(weekdaySymbol(date))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    // 오늘 표시 — 숫자에 직접 overlay(아래·가운데)로 사각형 밑줄을 붙여 숫자 정중앙에 정렬.
                     Text(dayNumber(date))
                         .font(.callout)
                         .foregroundStyle(.primary)
-                        .padding(.bottom, Spacing.xs)
-                        .overlay(alignment: .bottom) {
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(isToday(date) ? Color.primary : Color.clear)
-                                .frame(width: 18, height: 3)
-                        }
+                    // 숫자 아래 마커 — 오늘은 밑줄 박스, 그 외 날은 일정 점. 같은 행 슬롯이라
+                    // 오늘 밑줄과 다른 날 점이 같은 세로 위치에 정렬된다.
+                    marker(for: date)
                 }
                 .frame(maxWidth: .infinity)
             }
         }
         // 월/카운트 헤더와 너무 붙지 않게 위에 여백 — 하단 영역에서 살짝 가운데로 내려온 느낌.
         .padding(.top, Spacing.sm)
+    }
+
+    /// 날짜 숫자 아래 마커 — 오늘은 밑줄 박스, 그 외 날은 일정 점(캘린더 색, 없으면 accent).
+    /// 둘 다 같은 높이를 예약해 모든 칸의 숫자·마커가 같은 세로 기준선에 정렬된다.
+    @ViewBuilder
+    private func marker(for date: Date) -> some View {
+        if isToday(date) {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.primary)
+                .frame(width: 18, height: 3)
+                .frame(height: 4)
+        } else {
+            HStack(spacing: Spacing.xxs) {
+                ForEach(Array(colorHexes(for: date).enumerated()), id: \.offset) { _, hex in
+                    Circle()
+                        .fill(Color(hex: hex) ?? .accentColor)
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .frame(height: 4)
+        }
+    }
+
+    /// 그 날짜의 일정 점 색 목록 — `eventDots`에서 같은 날을 찾아 반환(없으면 빈 배열).
+    private func colorHexes(for date: Date) -> [String] {
+        eventDots.first { calendar.isDate($0.dayStart, inSameDayAs: date) }?.colorHexes ?? []
     }
 
     /// 좌상단 월 라벨 — 위젯 leading 영역에서 쓴다. "6월".

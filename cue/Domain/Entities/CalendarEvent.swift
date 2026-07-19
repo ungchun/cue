@@ -25,4 +25,7 @@ struct CalendarEvent: Identifiable, Equatable, Sendable {
     var isAllDay: Bool
     var calendarColorHex: String?
     var isReadOnly: Bool
+    /// 이 이벤트가 속한 캘린더의 식별자(`EKCalendar.calendarIdentifier`). "볼 캘린더 선택"
+    /// 필터가 이 값으로 숨긴 캘린더의 이벤트를 걸러낸다. 기본 ""(미상 — 필터에 걸리지 않음).
+    var calendarID: String = ""
 }

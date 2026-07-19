@@ -10,6 +10,23 @@ import Foundation
 enum ReminderSelection: Equatable, Sendable {
     case list(String)                  // 사용자 리스트 ID
     case systemFilter(SystemFilter)    // 오늘 / 예정 / 전체
+
+    /// 저장된 스코프 문자열("today"/"scheduled"/"all" 또는 사용자 리스트 id)을 선택으로 해석한다.
+    /// 설정의 `tasksDefaultScopeID`·`liveAlwaysOnReminderScopeID`가 이 인코딩을 공유한다.
+    /// 리스트 id가 가리키는 리스트가 삭제돼 없으면 `fallback`으로 떨어진다.
+    static func resolve(
+        scopeID: String,
+        lists: [ReminderList],
+        fallback: ReminderSelection
+    ) -> ReminderSelection {
+        switch scopeID {
+        case "today": return .systemFilter(.today)
+        case "scheduled": return .systemFilter(.scheduled)
+        case "all": return .systemFilter(.all)
+        default:
+            return lists.contains(where: { $0.id == scopeID }) ? .list(scopeID) : fallback
+        }
+    }
 }
 
 /// 리스트 단위가 아닌 시스템 필터 — 칩 바의 첫 묶음.

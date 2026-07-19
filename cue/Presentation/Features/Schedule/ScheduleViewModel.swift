@@ -24,6 +24,10 @@ final class ScheduleViewModel {
     private let startLiveActivityUseCase: StartScheduleLiveActivityUseCase
     private let endLiveActivityUseCase: EndScheduleLiveActivityUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
+    private let fetchAppSettings: FetchAppSettingsUseCase
+    /// 설정에서 숨긴 캘린더의 식별자 집합 — 이 캘린더의 이벤트는 타임라인·LA에서 제외한다.
+    /// onAppear에서 설정을 읽어 채우고, 설정이 바뀌면 재적용한다.
+    private var hiddenCalendarIDs: Set<String> = []
     /// 첫 진입 시 가져올 일수. 사용자 결정: 1달, 과거 미포함.
     private static let initialDays = 30
     /// 바닥 도달 시 추가로 가져올 일수. 사용자 결정: 2주.
@@ -64,6 +68,7 @@ final class ScheduleViewModel {
         self.startLiveActivityUseCase = dependencies.startScheduleLiveActivity
         self.endLiveActivityUseCase = dependencies.endScheduleLiveActivity
         self.consumeLiveActivation = dependencies.consumeLiveActivation
+        self.fetchAppSettings = dependencies.fetchAppSettings
         self.now = now
         startObservingChanges()
     }
@@ -73,9 +78,16 @@ final class ScheduleViewModel {
     func onAppear() async {
         access = await requestAccessUseCase()
         guard access == .granted else { return }
+        // 볼 캘린더 설정을 매 진입마다 읽는다 — 설정 탭에서 바꾸고 돌아온 경우 즉시 반영하기 위함.
+        let hidden = await fetchAppSettings().hiddenCalendarIDs
         if !hasLoaded {
+            hiddenCalendarIDs = hidden
             await loadInitial()
             hasLoaded = true
+        } else if hidden != hiddenCalendarIDs {
+            // 숨김 설정이 바뀌었으면 지금까지 본 범위를 다시 필터링해 반영한다.
+            hiddenCalendarIDs = hidden
+            await reloadFetchedRange()
         }
     }
 
@@ -95,14 +107,27 @@ final class ScheduleViewModel {
     /// 가져와 그 범위 안의 변경을 반영한다. 페이지네이션 위치(`fetchedUntil`)는 유지.
     private func handleExternalChange() async {
         guard access == .granted, hasLoaded else { return }
+        await reloadFetchedRange()
+    }
+
+    /// 지금까지 페이지네이션으로 본 범위(오늘 → `fetchedUntil`)를 다시 가져와 재그룹핑한다.
+    /// 외부 변경 반영과 "볼 캘린더" 설정 변경 반영이 공유한다. 실패 시 기존 표시 유지.
+    private func reloadFetchedRange() async {
         let nowDate = now()
         let today = Calendar.current.startOfDay(for: nowDate)
         do {
             let events = try await fetchEventsUseCase(from: today, to: fetchedUntil)
-            eventsByDay = Self.groupByDay(events, now: nowDate)
+            eventsByDay = Self.groupByDay(visible(events), now: nowDate)
         } catch {
             // 실패 시 기존 표시 유지 — 다음 신호에 재시도.
         }
+    }
+
+    /// 숨긴 캘린더의 이벤트를 걸러낸다. 숨김이 없으면 원본 그대로.
+    private func visible(_ events: [CalendarEvent]) -> [CalendarEvent] {
+        hiddenCalendarIDs.isEmpty
+            ? events
+            : events.filter { !hiddenCalendarIDs.contains($0.calendarID) }
     }
 
     deinit {
@@ -134,13 +159,25 @@ final class ScheduleViewModel {
             liveActivityActive = false
         }
         do {
-            liveActivityActive = try await startLiveActivityUseCase(events: eventsByDay.flatMap(\.events))
+            liveActivityActive = try await startLiveActivityUseCase(
+                events: eventsByDay.flatMap(\.events),
+                weekEvents: await fetchWeekEvents()
+            )
             if !liveActivityActive { await endLiveActivityUseCase() }
         } catch {
             errorMessage = String(localized: "Couldn't start Live Activity.")
             return nil
         }
         return verdict
+    }
+
+    /// 이번 주(로케일 주 시작 요일 기준 7일) 캘린더 이벤트 — Dynamic Island 주간 스트립의
+    /// 날짜별 점 계산용. 표시용 `eventsByDay`는 다가오는 일정만 담아 과거 날짜 점을 못 그리므로
+    /// 여기서 이번 주 전체 범위를 따로 조회한다. 권한 없거나 실패면 빈 배열(점 없음).
+    private func fetchWeekEvents() async -> [CalendarEvent] {
+        guard access == .granted,
+              let week = WeekEventDotsBuilder.weekRange(for: now()) else { return [] }
+        return (try? await fetchEventsUseCase(from: week.start, to: week.end)) ?? []
     }
 
     /// 항상 표시 자동 게시 — 권한이 있으면 일정을 적재하고 LA 시작(다가오는 일정 없으면 use case가 skip).
@@ -150,7 +187,10 @@ final class ScheduleViewModel {
         await onAppear()
         guard access == .granted else { return }
         do {
-            liveActivityActive = try await startLiveActivityUseCase(events: eventsByDay.flatMap(\.events))
+            liveActivityActive = try await startLiveActivityUseCase(
+                events: eventsByDay.flatMap(\.events),
+                weekEvents: await fetchWeekEvents()
+            )
         } catch {
             // 자동 경로 — 조용히 무시.
         }
@@ -187,7 +227,7 @@ final class ScheduleViewModel {
         let to = Calendar.current.date(byAdding: .day, value: Self.pageDays, to: from) ?? from
         do {
             let events = try await fetchEventsUseCase(from: from, to: to)
-            eventsByDay = Self.merge(existing: eventsByDay, new: Self.groupByDay(events, now: nowDate))
+            eventsByDay = Self.merge(existing: eventsByDay, new: Self.groupByDay(visible(events), now: nowDate))
             fetchedUntil = to
         } catch {
             // fetchedUntil 유지 — 다음 호출에서 재시도.
@@ -203,7 +243,7 @@ final class ScheduleViewModel {
         ) ?? today
         do {
             let events = try await fetchEventsUseCase(from: today, to: to)
-            eventsByDay = Self.groupByDay(events, now: nowDate)
+            eventsByDay = Self.groupByDay(visible(events), now: nowDate)
             fetchedUntil = to
         } catch {
             eventsByDay = []

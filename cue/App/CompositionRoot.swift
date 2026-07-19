@@ -44,6 +44,7 @@ struct CompositionRoot {
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
@@ -60,6 +61,7 @@ struct CompositionRoot {
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: liveActivityService),
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: UserDefaultsLiveActivationQuotaRepository(), isPremium: PremiumAccess.isPremium),
+            checkForcedUpdate: CheckForcedUpdateUseCase(service: FirebaseAppUpdatePolicyService()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )

@@ -20,12 +20,13 @@ struct DisabledLiveActivityService: LiveActivityService {
         listTitle: String,
         items: [LiveReminderItem],
         remaining: Int,
-        todayCount: Int
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots]
     ) async throws {}
 
     func endReminder() async {}
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
 
     func endSchedule() async {}
 

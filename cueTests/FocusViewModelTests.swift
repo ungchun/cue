@@ -41,6 +41,7 @@ struct FocusViewModelTests {
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),

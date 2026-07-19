@@ -11,17 +11,23 @@ import Foundation
 actor InMemoryEventsRepository: EventsRepository {
     private var access: EventsAccess
     private var events: [CalendarEvent]
+    private var calendars: [EventCalendar]
     /// 변경 신호 stream. single-consumer 가정(테스트·ViewModel 1쌍). 다중 구독이 필요하면
     /// EventKit 구현처럼 NotificationCenter 패턴으로 바꾼다.
     private let changesStream: AsyncStream<Void>
     private let changesContinuation: AsyncStream<Void>.Continuation
 
-    init(access: EventsAccess = .granted, events: [CalendarEvent] = []) {
+    init(
+        access: EventsAccess = .granted,
+        events: [CalendarEvent] = [],
+        calendars: [EventCalendar] = []
+    ) {
         let (stream, continuation) = AsyncStream<Void>.makeStream()
         self.changesStream = stream
         self.changesContinuation = continuation
         self.access = access
         self.events = events
+        self.calendars = calendars
     }
 
     func requestAccess() async -> EventsAccess {
@@ -36,6 +42,8 @@ actor InMemoryEventsRepository: EventsRepository {
             event.startDate < to && event.endDate > from
         }
     }
+
+    func fetchCalendars() async throws -> [EventCalendar] { calendars }
 
     nonisolated func changes() -> AsyncStream<Void> { changesStream }
 

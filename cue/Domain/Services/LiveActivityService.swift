@@ -32,7 +32,8 @@ protocol LiveActivityService: Sendable {
         listTitle: String,
         items: [LiveReminderItem],
         remaining: Int,
-        todayCount: Int
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots]
     ) async throws
 
     /// 미리알림 라이브 액티비티 즉시 종료.
@@ -41,7 +42,7 @@ protocol LiveActivityService: Sendable {
     // MARK: - Schedule
 
     /// 일정 스냅샷(날짜별 묶음, 오늘부터)을 라이브 액티비티로 게시.
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws
 
     /// 일정 라이브 액티비티 즉시 종료.
     func endSchedule() async

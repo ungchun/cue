@@ -16,9 +16,13 @@ struct ScheduleViewModelTests {
     private func makeDependencies(
         access: EventsAccess = .granted,
         events: [CalendarEvent] = [],
+        calendars: [EventCalendar] = [],
+        appSettings: AppSettings = .default,
         isPremium: Bool = false
     ) -> Dependencies {
-        let eventsRepository = InMemoryEventsRepository(access: access, events: events)
+        let eventsRepository = InMemoryEventsRepository(
+            access: access, events: events, calendars: calendars
+        )
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
         let reminderSortRepository = InMemoryReminderSortRepository()
         let itemRepository = InMemoryItemRepository()
@@ -42,6 +46,7 @@ struct ScheduleViewModelTests {
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
+            fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
             observeEventsChanges: ObserveEventsChangesUseCase(repository: eventsRepository),
             fetchFocusSessions: FetchFocusSessionsUseCase(repository: focusSessionsRepository),
             saveFocusSessions: SaveFocusSessionsUseCase(repository: focusSessionsRepository),
@@ -58,8 +63,8 @@ struct ScheduleViewModelTests {
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository(), isPremium: isPremium),
-            fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository()),
-            saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository())
+            fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings)),
+            saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings))
         )
     }
 
@@ -111,13 +116,14 @@ struct ScheduleViewModelTests {
         start: Date,
         end: Date,
         isAllDay: Bool = false,
-        isReadOnly: Bool = false
+        isReadOnly: Bool = false,
+        calendarID: String = ""
     ) -> CalendarEvent {
         CalendarEvent(
             id: id, title: title,
             startDate: start, endDate: end,
             isAllDay: isAllDay, calendarColorHex: nil,
-            isReadOnly: isReadOnly
+            isReadOnly: isReadOnly, calendarID: calendarID
         )
     }
 
@@ -130,6 +136,39 @@ struct ScheduleViewModelTests {
 
         #expect(viewModel.eventsByDay.count == 1)
         #expect(viewModel.eventsByDay.first?.events.map(\.id) == ["1"])
+    }
+
+    /// 설정에서 숨긴 캘린더의 이벤트는 타임라인에서 제외된다.
+    @Test func hiddenCalendarEventsAreExcluded() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        var settings = AppSettings.default
+        settings.hiddenCalendarIDs = ["work"]
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(
+            events: [
+                event(id: "p", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60), calendarID: "personal"),
+                event(id: "w", start: today.addingTimeInterval(3 * 60 * 60), end: today.addingTimeInterval(4 * 60 * 60), calendarID: "work"),
+            ],
+            appSettings: settings
+        ), now: { today })
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["p"])
+    }
+
+    /// 숨긴 캘린더가 없으면 모든 이벤트가 보인다(기본).
+    @Test func noHiddenCalendarsShowsAllEvents() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(
+            events: [
+                event(id: "p", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60), calendarID: "personal"),
+                event(id: "w", start: today.addingTimeInterval(3 * 60 * 60), end: today.addingTimeInterval(4 * 60 * 60), calendarID: "work"),
+            ]
+        ), now: { today })
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id).sorted() == ["p", "w"])
     }
 
     /// Premium(무제한)이면 켜기 버튼이 `.unlimited`로 그대로 LA를 켠다 — 설정 "라이브 항상 표시"와 무관.

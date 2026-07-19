@@ -23,11 +23,21 @@ struct StartScheduleLiveActivityUseCase: Sendable {
     static let maxTotalEvents = 14
 
     /// 게시했으면 `true`, 보여줄 (다가오는) 일정이 없어 건너뛰었으면 `false`.
+    /// - Parameter weekEvents: 이번 주 캘린더 이벤트(과거 날짜 포함) — 주간 스트립 날짜별 점 계산용.
+    ///   `events`(다가오는 일정)와 달리 이번 주 전체를 받아 지난 날짜에도 점을 그린다. 비면 점 없음.
     @discardableResult
-    func callAsFunction(events: [CalendarEvent], now: Date = .now) async throws -> Bool {
+    func callAsFunction(
+        events: [CalendarEvent],
+        weekEvents: [CalendarEvent] = [],
+        now: Date = .now
+    ) async throws -> Bool {
         let days = Self.groupIntoDays(events, now: now)
         guard !days.isEmpty else { return false }   // 다가오는 일정 없으면 LA 안 띄움
-        try await service.startSchedule(days: days, todayCount: Self.todayEventCount(events, now: now))
+        try await service.startSchedule(
+            days: days,
+            todayCount: Self.todayEventCount(events, now: now),
+            weekEventDots: WeekEventDotsBuilder.build(events: weekEvents, now: now)
+        )
         return true
     }
 

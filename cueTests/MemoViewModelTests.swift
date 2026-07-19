@@ -251,9 +251,9 @@ private actor RecordingMemoLiveActivity: LiveActivityService {
     private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []
     private(set) var endMemoCount = 0
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int) async throws {}
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
     func endReminder() async {}
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
     func endSchedule() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
         startMemoCalls.append((text, colorHex, textColorHex))
