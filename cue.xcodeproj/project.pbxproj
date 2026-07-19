@@ -510,6 +510,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Cue;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "iOS 캘린더 이벤트를 cue에서 보고 만들기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "iOS 미리 알림을 cue에서 보고 관리하기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -555,6 +556,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Cue;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "iOS 캘린더 이벤트를 cue에서 보고 만들기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "iOS 미리 알림을 cue에서 보고 관리하기 위해 접근이 필요합니다.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;

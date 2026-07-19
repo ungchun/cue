@@ -172,10 +172,13 @@ struct ReminderView: View {
                 } label: {
                     Label("New List", systemImage: "plus")
                 }
-                Button {
-                    showingListInfoSheet = true
-                } label: {
-                    Label("Show List Info", systemImage: "info.circle")
+                // 목록 정보는 실제 리스트에만 있다 — 시스템 필터(오늘/예정/전체)에선 숨긴다.
+                if viewModel.selectedList != nil {
+                    Button {
+                        showingListInfoSheet = true
+                    } label: {
+                        Label("Show List Info", systemImage: "info.circle")
+                    }
                 }
             }
 
