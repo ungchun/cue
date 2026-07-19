@@ -12,8 +12,9 @@ import EventKit
 import Foundation
 
 enum CalendarMonthDots {
-    /// 월 셀이 좁아 하루 최대 2점(ContentState 4KB 한도 여유 확보).
-    static let maxDotsPerDay = 2
+    /// 하루 최대 3점 — 초과분은 안 그린다. 점이 늘어 ContentState가 커지면 리스트 아이템 수를
+    /// 적응형 fitter가 알아서 줄여 4KB 한도를 지킨다.
+    static let maxDotsPerDay = 3
 
     /// 표시 월(`now + monthOffset`)의 날짜별 일정 점(일 정수 기준). 캘린더 권한이 없으면 빈 배열.
     /// 숨긴 캘린더는 App Group의 `hiddenCalendarIDs`로 거른다. 오늘은 제외(밑줄로 표시).
