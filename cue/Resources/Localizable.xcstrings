@@ -9953,6 +9953,58 @@
         }
       }
     },
+    "Monthly and Yearly subscriptions renew automatically and are charged unless canceled at least 24 hours before the period ends. Cancel anytime in Settings - Subscriptions.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "월간·연간 구독은 기간 종료 24시간 전까지 해지하지 않으면 자동으로 갱신·결제됩니다. 해지는 설정-구독에서 언제든 가능합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月額・年額サブスクリプションは、期間終了の24時間前までに解約しない限り自動的に更新・課金されます。解約は「設定」-「サブスクリプション」からいつでも可能です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "除非在当前周期结束前至少24小时取消，月度和年度订阅将自动续订并扣费。可随时在“设置-订阅”中取消。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "除非在當前週期結束前至少24小時取消，月度和年度訂閱將自動續訂並扣款。可隨時在「設定-訂閱」中取消。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las suscripciones mensual y anual se renuevan automáticamente y se cobran a menos que se cancelen al menos 24 horas antes de que termine el periodo. Cancela cuando quieras en Ajustes - Suscripciones."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As assinaturas mensal e anual são renovadas e cobradas automaticamente, a menos que sejam canceladas pelo menos 24 horas antes do fim do período. Cancele quando quiser em Ajustes - Assinaturas."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monats- und Jahresabos verlängern sich automatisch und werden berechnet, sofern nicht mindestens 24 Stunden vor Ablauf gekündigt wird. Jederzeit kündbar unter Einstellungen - Abos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les abonnements mensuel et annuel se renouvellent et sont facturés automatiquement sauf annulation au moins 24 heures avant la fin de la période. Annulez à tout moment dans Réglages - Abonnements."
+          }
+        }
+      }
+    },
     "More Features Coming": {
       "localizations": {
         "ar": {
@@ -16259,58 +16311,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "儲存錯誤：%@"
-          }
-        }
-      }
-    },
-    "Subscriptions auto-renew at the listed price unless canceled at least 24 hours before the period ends. Manage or cancel anytime in Settings. Lifetime is a one-time purchase.": {
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "구독은 기간 종료 24시간 전까지 해지하지 않으면 표시된 가격으로 자동 갱신됩니다. 설정에서 언제든 관리·해지할 수 있습니다. 평생 이용권은 1회 구매입니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サブスクリプションは、期間終了の24時間前までに解約しない限り、表示価格で自動更新されます。設定でいつでも管理・解約できます。ライフタイムは1回限りの購入です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "除非在当前周期结束前至少24小时取消，否则订阅将按所列价格自动续订。可随时在“设置”中管理或取消。终身为一次性购买。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "除非在當前週期結束前至少24小時取消，否則訂閱將按所列價格自動續訂。可隨時在「設定」中管理或取消。終身為一次性購買。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las suscripciones se renuevan automáticamente al precio indicado a menos que se cancelen al menos 24 horas antes de que termine el periodo. Gestiona o cancela cuando quieras en Ajustes. Lifetime es una compra única."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As assinaturas são renovadas automaticamente pelo preço indicado, a menos que sejam canceladas pelo menos 24 horas antes do fim do período. Gerencie ou cancele quando quiser nos Ajustes. Lifetime é uma compra única."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abos verlängern sich automatisch zum angegebenen Preis, sofern nicht mindestens 24 Stunden vor Ablauf gekündigt wird. Jederzeit in den Einstellungen verwalten oder kündigen. Lifetime ist ein einmaliger Kauf."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les abonnements se renouvellent automatiquement au prix indiqué sauf annulation au moins 24 heures avant la fin de la période. Gérez ou annulez à tout moment dans Réglages. Lifetime est un achat unique."
           }
         }
       }

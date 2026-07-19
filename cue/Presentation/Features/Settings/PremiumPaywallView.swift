@@ -271,7 +271,7 @@ struct PremiumPaywallView: View {
             .tint(.primary)
             .disabled(purchasing)
 
-            Text("Subscriptions auto-renew at the listed price unless canceled at least 24 hours before the period ends. Manage or cancel anytime in Settings. Lifetime is a one-time purchase.")
+            Text("Monthly and Yearly subscriptions renew automatically and are charged unless canceled at least 24 hours before the period ends. Cancel anytime in Settings - Subscriptions.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
