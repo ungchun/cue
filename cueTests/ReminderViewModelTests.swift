@@ -153,6 +153,35 @@ struct ReminderViewModelTests {
         #expect(await service.startReminderCalls.count == 1)
     }
 
+    /// 설정에서 숨긴 리스트는 목록 칩(visibleLists)과 할일 스냅샷 어디에서도 빠진다.
+    @Test func hiddenReminderListsAreExcludedEverywhere() async {
+        var settings = AppSettings.default
+        settings.hiddenReminderListIDs = ["B"]
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [reminder(id: "a", listID: "A"), reminder(id: "b", listID: "B")],
+            appSettings: settings
+        ))
+        await viewModel.onAppear()
+
+        #expect(viewModel.visibleLists.map(\.id) == ["A"])                     // 칩에서 B 제외
+        #expect(viewModel.allModeSections.allSatisfy { $0.list.id != "B" })    // 전체 섹션에서 B 제외
+        #expect(!viewModel.visibleReminders.contains { $0.listID == "B" })     // 스냅샷에서 B 항목 제외
+    }
+
+    /// 숨김 목록 변경이 즉시 반영되고, 보고 있던 리스트가 숨겨지면 '전체'로 떨어진다.
+    @Test func applyingHiddenListResetsSelectionOffHiddenList() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA, listB]))
+        await viewModel.onAppear()
+        viewModel.select(listB)
+        #expect(viewModel.selection == .list("B"))
+
+        viewModel.applyHiddenReminderLists(["B"])
+
+        #expect(viewModel.selection == .systemFilter(.all))
+        #expect(viewModel.visibleLists.map(\.id) == ["A"])
+    }
+
     /// 설정의 할일 범위가 "today"면 오늘 마감 항목만 스냅샷에 담는다.
     @Test func alwaysOnUsesConfiguredScope() async throws {
         var settings = AppSettings.default

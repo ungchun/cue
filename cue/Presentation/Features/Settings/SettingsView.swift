@@ -138,6 +138,15 @@ struct SettingsView: View {
             }
 
             Section {
+                // 볼 목록 선택 — 전용 화면으로 push(체크리스트). 리스트가 없으면 행 자체를 숨긴다.
+                // 오늘/예정/전체는 시스템 필터라 항상 표시되며 여기 대상이 아니다.
+                if !viewModel.reminderLists.isEmpty {
+                    NavigationLink {
+                        ReminderListSelectionView(viewModel: viewModel)
+                    } label: {
+                        LabeledContent("Lists", value: reminderListsSummary)
+                    }
+                }
                 // 할일 탭에 진입했을 때 가장 먼저 보여줄 화면 — 오늘/예정/전체 또는 사용자 리스트.
                 Picker("Default View", selection: tasksDefaultScopeBinding) {
                     Text("Today").tag("today")
@@ -293,6 +302,15 @@ struct SettingsView: View {
     private var calendarsSummary: String {
         let hidden = viewModel.eventCalendars.filter {
             viewModel.settings.hiddenCalendarIDs.contains($0.id)
+        }.count
+        if hidden == 0 { return String(localized: "All") }
+        return String(localized: "\(hidden) Hidden")
+    }
+
+    /// 볼 목록 요약 — 전부 표시면 "All", 일부 숨김이면 숨긴 개수("N Hidden"). 캘린더 요약과 동일.
+    private var reminderListsSummary: String {
+        let hidden = viewModel.reminderLists.filter {
+            viewModel.settings.hiddenReminderListIDs.contains($0.id)
         }.count
         if hidden == 0 { return String(localized: "All") }
         return String(localized: "\(hidden) Hidden")

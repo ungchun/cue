@@ -139,6 +139,19 @@ final class SettingsViewModel {
         await update { $0.hiddenCalendarIDs.removeAll() }
     }
 
+    /// 할일 탭에서 이 리스트를 보일지(true) 숨길지(false) 설정한다. 캘린더 숨김과 동일 방식.
+    func setReminderListVisible(_ id: String, _ visible: Bool) async {
+        await update {
+            if visible { $0.hiddenReminderListIDs.remove(id) }
+            else { $0.hiddenReminderListIDs.insert(id) }
+        }
+    }
+
+    /// 모든 미리알림 리스트를 다시 표시 — 숨김 집합을 비운다.
+    func showAllReminderLists() async {
+        await update { $0.hiddenReminderListIDs.removeAll() }
+    }
+
     /// 캘린더 표시 토글 — 저장(App Group 미러 포함) 후 켜져 있는 LA를 재게시해 즉시 반영한다.
     func setMemoShowsCalendar(_ value: Bool) async {
         await update { $0.memoShowsCalendar = value }

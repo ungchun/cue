@@ -51,7 +51,7 @@ struct RootView: View {
         // 할일 탭일 때만 리스트 선택 chip bar를 탭바에 부착.
         .tabViewBottomAccessory(isEnabled: selectedTab == .reminder) {
             ListSelectorChipBar(
-                lists: reminderViewModel.lists,
+                lists: reminderViewModel.visibleLists,
                 selection: reminderViewModel.selection,
                 onSelectList: { reminderViewModel.select($0) },
                 onSelectFilter: { reminderViewModel.selectFilter($0) }
@@ -95,6 +95,10 @@ struct RootView: View {
         // 설정에서 항상 표시(또는 항목)를 켜는 순간 즉시 게시 — 꺼짐 방향은 건드리지 않는다
         // (사용자가 수동으로 띄운 LA를 죽이지 않기 위해).
         .onChange(of: settingsViewModel.settings) { old, new in
+            // 설정에서 숨김 목록이 바뀌면 할일 화면·칩바에 즉시 반영.
+            if old.hiddenReminderListIDs != new.hiddenReminderListIDs {
+                reminderViewModel.applyHiddenReminderLists(new.hiddenReminderListIDs)
+            }
             let newlyOn = { (kind: KeyPath<AppSettings, Bool>) -> Bool in
                 new.liveAlwaysOn && new[keyPath: kind] && !(old.liveAlwaysOn && old[keyPath: kind])
             }

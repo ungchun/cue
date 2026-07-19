@@ -114,6 +114,23 @@ struct SettingsViewModelTests {
         #expect(reloaded.settings.hiddenCalendarIDs == ["home"])
     }
 
+    /// 미리알림 리스트 숨김 토글이 hiddenReminderListIDs에 반영되고 영속화된다.
+    @Test func setReminderListHiddenPersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setReminderListVisible("work", false)   // 숨김
+        #expect(viewModel.settings.hiddenReminderListIDs == ["work"])
+
+        await viewModel.setReminderListVisible("work", true)    // 다시 표시
+        #expect(viewModel.settings.hiddenReminderListIDs.isEmpty)
+
+        await viewModel.setReminderListVisible("home", false)
+        await viewModel.showAllReminderLists()
+        #expect(viewModel.settings.hiddenReminderListIDs.isEmpty)
+    }
+
     /// "모두 표시"는 숨긴 캘린더 집합을 비운다.
     @Test func showAllCalendarsClearsHidden() async {
         let repository = InMemoryAppSettingsRepository()

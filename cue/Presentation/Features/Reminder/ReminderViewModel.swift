@@ -35,6 +35,8 @@ final class ReminderViewModel {
 
     private(set) var access: RemindersAccess = .notDetermined
     private(set) var lists: [ReminderList] = []
+    /// 설정에서 숨긴 리스트 id — 숨긴 리스트의 할일은 오늘·예정·전체 어디서도 안 보이고 칩에서도 빠진다.
+    private(set) var hiddenReminderListIDs: Set<String> = []
     private(set) var allReminders: [Reminder] = []
     private(set) var isLoading = false
     /// 현재 시각 공급자 — 자기 쓰기 에코 억제 창 판정에 쓴다(테스트에서 주입).
@@ -258,8 +260,23 @@ final class ReminderViewModel {
     }
 
     /// 주어진 선택 기준의 LA 스냅샷 — 화면(visibleReminders)과 항상 표시 자동 게시가 공유한다.
+    /// 숨긴 리스트를 제외한 표시용 리스트 — 목록 칩·전체 모드 섹션이 사용한다.
+    var visibleLists: [ReminderList] {
+        lists.filter { !hiddenReminderListIDs.contains($0.id) }
+    }
+
+    /// 설정에서 숨김 목록이 바뀌면 즉시 반영한다(설정 탭에서 토글 → 할일 화면 즉시 갱신).
+    /// 현재 보고 있던 리스트가 숨겨졌으면 '전체' 필터로 떨어뜨린다.
+    func applyHiddenReminderLists(_ ids: Set<String>) {
+        hiddenReminderListIDs = ids
+        if case .list(let id) = selection, ids.contains(id) {
+            selection = .systemFilter(.all)
+        }
+    }
+
     private func snapshot(for selection: ReminderSelection?) -> [Reminder] {
-        let incomplete = allReminders.filter { !$0.isCompleted }
+        // 숨긴 리스트의 할일은 어떤 필터에서도 제외 — 캘린더 숨김과 동일.
+        let incomplete = allReminders.filter { !$0.isCompleted && !hiddenReminderListIDs.contains($0.listID) }
         switch selection {
         case .list(let id):
             let items = incomplete.filter { $0.listID == id }
@@ -438,7 +455,7 @@ final class ReminderViewModel {
     /// 동일 처리) — `showsCompleted` OFF면 빈 배열.
     /// 빈 리스트도 포함한다(섹션 헤더는 보여야 하므로).
     var allModeSections: [(list: ReminderList, active: [Reminder], completed: [Reminder])] {
-        lists.map { list in
+        visibleLists.map { list in
             let active = allReminders
                 .filter { $0.listID == list.id && !$0.isCompleted }
                 .sorted(by: creationDateAscendingNilLast)
@@ -483,6 +500,7 @@ final class ReminderViewModel {
         do {
             lists = try await fetchListsUseCase()
             allReminders = try await fetchRemindersUseCase()
+            hiddenReminderListIDs = await fetchAppSettings().hiddenReminderListIDs
             await resolveInitialSelectionIfNeeded()
             // 현재 스코프(오늘·개별 리스트)의 정렬 설정을 적재 — 진입 시 저장된 정렬 복원.
             await loadSortSettingsForCurrentScope()

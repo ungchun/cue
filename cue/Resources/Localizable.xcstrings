@@ -8947,48 +8947,118 @@
         }
       }
     },
-    "Live": {
+    "Lists": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Live"
+            "value": "Lists"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "라이브"
+            "value": "목록"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ライブ"
+            "value": "リスト"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "实时"
+            "value": "列表"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "即時"
+            "value": "清單"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "En vivo"
+            "value": "Listas"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ao vivo"
+            "value": "Listas"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elenchi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Списки"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القوائم"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सूचियाँ"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daftar"
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senarai"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "รายการ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Danh sách"
+          }
+        }
+      }
+    },
+    "Live": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مباشر"
           }
         },
         "de": {
@@ -8997,28 +9067,22 @@
             "value": "Live"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En direct"
-          }
-        },
-        "it": {
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Live"
           }
         },
-        "ru": {
+        "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Лайв"
+            "value": "En vivo"
           }
         },
-        "ar": {
+        "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "مباشر"
+            "value": "En direct"
           }
         },
         "hi": {
@@ -9033,10 +9097,40 @@
             "value": "Langsung"
           }
         },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이브"
+          }
+        },
         "ms": {
           "stringUnit": {
             "state": "translated",
             "value": "Langsung"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ao vivo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Лайв"
           }
         },
         "th": {
@@ -9049,6 +9143,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Trực tiếp"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实时"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即時"
           }
         }
       }
@@ -9955,16 +10061,40 @@
     },
     "Monthly and Yearly subscriptions renew automatically and are charged unless canceled at least 24 hours before the period ends. Cancel anytime in Settings - Subscriptions.": {
       "localizations": {
-        "ko": {
+        "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "월간·연간 구독은 기간 종료 24시간 전까지 해지하지 않으면 자동으로 갱신·결제됩니다. 해지는 설정-구독에서 언제든 가능합니다."
+            "value": "Monats- und Jahresabos verlängern sich automatisch und werden berechnet, sofern nicht mindestens 24 Stunden vor Ablauf gekündigt wird. Jederzeit kündbar unter Einstellungen - Abos."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las suscripciones mensual y anual se renuevan automáticamente y se cobran a menos que se cancelen al menos 24 horas antes de que termine el periodo. Cancela cuando quieras en Ajustes - Suscripciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les abonnements mensuel et annuel se renouvellent et sont facturés automatiquement sauf annulation au moins 24 heures avant la fin de la période. Annulez à tout moment dans Réglages - Abonnements."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "月額・年額サブスクリプションは、期間終了の24時間前までに解約しない限り自動的に更新・課金されます。解約は「設定」-「サブスクリプション」からいつでも可能です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "월간·연간 구독은 기간 종료 24시간 전까지 해지하지 않으면 자동으로 갱신·결제됩니다. 해지는 설정-구독에서 언제든 가능합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As assinaturas mensal e anual são renovadas e cobradas automaticamente, a menos que sejam canceladas pelo menos 24 horas antes do fim do período. Cancele quando quiser em Ajustes - Assinaturas."
           }
         },
         "zh-Hans": {
@@ -9977,30 +10107,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "除非在當前週期結束前至少24小時取消，月度和年度訂閱將自動續訂並扣款。可隨時在「設定-訂閱」中取消。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las suscripciones mensual y anual se renuevan automáticamente y se cobran a menos que se cancelen al menos 24 horas antes de que termine el periodo. Cancela cuando quieras en Ajustes - Suscripciones."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As assinaturas mensal e anual são renovadas e cobradas automaticamente, a menos que sejam canceladas pelo menos 24 horas antes do fim do período. Cancele quando quiser em Ajustes - Assinaturas."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monats- und Jahresabos verlängern sich automatisch und werden berechnet, sofern nicht mindestens 24 Stunden vor Ablauf gekündigt wird. Jederzeit kündbar unter Einstellungen - Abos."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les abonnements mensuel et annuel se renouvellent et sont facturés automatiquement sauf annulation au moins 24 heures avant la fin de la période. Annulez à tout moment dans Réglages - Abonnements."
           }
         }
       }

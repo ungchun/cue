@@ -55,6 +55,10 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// 일정 탭에서 **숨길** 캘린더의 식별자 집합. 비어 있으면 전부 표시(기본). 숨김을 저장하므로
     /// 새로 생긴 캘린더는 자동으로 표시된다(애플 캘린더와 동일 동작). `EventCalendar.id` 값.
     var hiddenCalendarIDs: Set<String>
+    /// 할일 탭에서 **숨길** 미리알림 리스트의 식별자 집합. 비어 있으면 전부 표시(기본).
+    /// 캘린더 숨김과 동일 동작 — 숨긴 리스트의 할일은 오늘·예정·전체 어디서도 안 보이고,
+    /// 목록 칩에서도 빠진다. 오늘/예정/전체 시스템 필터는 항상 유지. `ReminderList.id` 값.
+    var hiddenReminderListIDs: Set<String>
 
     static let `default` = AppSettings(
         colorScheme: .system,
@@ -69,7 +73,8 @@ struct AppSettings: Codable, Equatable, Sendable {
         liveAlwaysOnSchedule: true,
         liveAlwaysOnReminderScopeID: "all",
         tasksDefaultScopeID: "all",
-        hiddenCalendarIDs: []
+        hiddenCalendarIDs: [],
+        hiddenReminderListIDs: []
     )
 }
 
@@ -105,5 +110,7 @@ extension AppSettings {
             ?? fallback.tasksDefaultScopeID
         hiddenCalendarIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenCalendarIDs)
             ?? fallback.hiddenCalendarIDs
+        hiddenReminderListIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenReminderListIDs)
+            ?? fallback.hiddenReminderListIDs
     }
 }
