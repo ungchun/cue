@@ -52,6 +52,7 @@
 		65D102F42FD032BD00081EB7 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		65D102F62FD032BD00081EB7 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		65D105452FD5A11C00081EB7 /* cueLiveActivityExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = cueLiveActivityExtension.entitlements; sourceTree = "<group>"; };
+		AAAAAAAA0000000000000001 /* Cue.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Cue.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -148,6 +149,7 @@
 			isa = PBXGroup;
 			children = (
 				65D105452FD5A11C00081EB7 /* cueLiveActivityExtension.entitlements */,
+				AAAAAAAA0000000000000001 /* Cue.storekit */,
 				6579AF562FBDEB7700393459 /* cue */,
 				6579AF642FBDEB7800393459 /* cueTests */,
 				65D102F82FD032BE00081EB7 /* cueLiveActivity */,

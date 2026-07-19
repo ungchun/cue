@@ -23,6 +23,8 @@ final class MemoViewModel {
     private let endLiveActivityUseCase: EndMemoLiveActivityUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
+    /// 프리미엄 여부의 반응형 소스 — 라이브 한도 소비 시 호출 시점에 읽는다(구매 즉시 반영).
+    private let premiumStore: PremiumStore
 
     /// 현재 메모(텍스트 + 색). View는 바인딩으로 읽고, 변경은 `setText`/`setColor`로.
     private(set) var memo: Memo = .default
@@ -33,7 +35,8 @@ final class MemoViewModel {
     /// 라이브 액티비티 시작 실패 시 사용자에게 알릴 에러 — View가 alert로 표시.
     var errorMessage: String?
 
-    init(dependencies: Dependencies) {
+    init(dependencies: Dependencies, premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService())) {
+        self.premiumStore = premiumStore
         self.fetchMemoUseCase = dependencies.fetchMemo
         self.saveMemoUseCase = dependencies.saveMemo
         self.startLiveActivityUseCase = dependencies.startMemoLiveActivity
@@ -74,7 +77,7 @@ final class MemoViewModel {
     @discardableResult
     func toggleLiveActivity() async -> LiveActivationVerdict? {
         guard canStartLiveActivity else { return nil }
-        let verdict = await consumeLiveActivation()
+        let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
         // .allowed(무료 한도 내)·.unlimited(Premium) 모두 켠다 — .denied(한도 초과)만 막는다.
         if case .denied = verdict { return verdict }
         if liveActivityActive {

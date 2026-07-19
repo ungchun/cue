@@ -20,8 +20,7 @@ struct ReminderViewModelTests {
         reminders: [Reminder] = [],
         sortSettings: [String: ReminderSortSettings] = [:],
         liveActivityService: any LiveActivityService = DisabledLiveActivityService(),
-        appSettings: AppSettings = .default,
-        isPremium: Bool = false
+        appSettings: AppSettings = .default
     ) -> Dependencies {
         makeDependencies(
             remindersRepository: InMemoryRemindersRepository(
@@ -29,9 +28,15 @@ struct ReminderViewModelTests {
             ),
             sortSettings: sortSettings,
             liveActivityService: liveActivityService,
-            appSettings: appSettings,
-            isPremium: isPremium
+            appSettings: appSettings
         )
+    }
+
+    /// 프리미엄 상태를 흉내내는 스토어 — 엔타이틀먼트가 있는 no-op 서비스로 만들고 refresh해 둔다.
+    private func premiumStore() async -> PremiumStore {
+        let store = PremiumStore(service: DisabledPurchaseService(entitled: [PremiumProduct.yearly.id]))
+        await store.refresh()
+        return store
     }
 
     /// 리포지토리를 직접 주입하는 코어 빌더 — 외부 변경/로딩 시뮬레이션처럼 같은 repo 인스턴스를
@@ -40,8 +45,7 @@ struct ReminderViewModelTests {
         remindersRepository: any RemindersRepository,
         sortSettings: [String: ReminderSortSettings] = [:],
         liveActivityService: any LiveActivityService = DisabledLiveActivityService(),
-        appSettings: AppSettings = .default,
-        isPremium: Bool = false
+        appSettings: AppSettings = .default
     ) -> Dependencies {
         let reminderSortRepository = InMemoryReminderSortRepository(storage: sortSettings)
         let itemRepository = InMemoryItemRepository()
@@ -82,7 +86,7 @@ struct ReminderViewModelTests {
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
-            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository(), isPremium: isPremium),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings)),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings))
         )
@@ -132,12 +136,14 @@ struct ReminderViewModelTests {
     /// Premium(무제한)이면 켜기 버튼이 `.unlimited`로 그대로 LA를 켠다 — 설정 "라이브 항상 표시"와 무관.
     @Test func togglePremiumUserStartsReminderLiveActivity() async {
         let service = RecordingReminderLiveActivity()
-        let viewModel = ReminderViewModel(dependencies: makeDependencies(
-            lists: [listA],
-            reminders: [reminder(id: "1", listID: "A")],
-            liveActivityService: service,
-            isPremium: true
-        ))
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(
+                lists: [listA],
+                reminders: [reminder(id: "1", listID: "A")],
+                liveActivityService: service
+            ),
+            premiumStore: await premiumStore()
+        )
         await viewModel.onAppear()
 
         let verdict = await viewModel.toggleLiveActivity(listTitle: "회사")
@@ -274,6 +280,34 @@ struct ReminderViewModelTests {
         #expect(viewModel.isLoading == false)
 
         await repo.releaseFetch()
+    }
+
+    /// 자기 쓰기(add) 직후 억제 창 이내에 온 외부 변경 에코는 추가 reload를 유발하지 않는다 —
+    /// 인라인 편집→새 행 포커스 이동 중 remount로 커서가 끊기던 문제를 막는다. 창 밖의 진짜
+    /// 외부 변경은 정상 reload된다.
+    @Test func selfWriteEchoWithinWindowSkipsReload() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 1_000_000))
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(remindersRepository: repo),
+            now: { clock.now }
+        )
+        await viewModel.onAppear()
+
+        await viewModel.add(title: "새 항목", toListID: listA.id)   // 자기 쓰기 → reloadReminders 1회 + 억제 창 open
+        let afterAdd = await repo.fetchCount
+
+        // 억제 창 이내 에코 → 무시.
+        await base.emitChange()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        #expect(await repo.fetchCount == afterAdd)
+
+        // 창 밖(시계 전진)의 진짜 외부 변경 → reload.
+        clock.now = clock.now.addingTimeInterval(5)
+        await base.emitChange()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        #expect(await repo.fetchCount == afterAdd + 1)
     }
 
 
@@ -951,10 +985,18 @@ struct ReminderViewModelTests {
 /// `fetchReminders`를 게이트로 붙잡을 수 있는 리포지토리 더블 — 나머지는 InMemory에 위임한다.
 /// 게이트를 닫으면 다음 fetchReminders가 `releaseFetch()`까지 대기해, reload가 "진행 중"인
 /// 순간을 테스트가 결정론적으로 관측할 수 있다. 변경 신호·데이터는 모두 base 인스턴스가 소유.
+/// 테스트용 가변 시계 — 억제 창 경계를 결정론적으로 넘나들기 위해 `now`를 직접 조작한다.
+@MainActor
+private final class TestClock {
+    var now: Date
+    init(_ start: Date) { now = start }
+}
+
 private actor GatedRemindersRepository: RemindersRepository {
     private let base: InMemoryRemindersRepository
     private var gateClosed = false
     private(set) var isFetchWaiting = false
+    private(set) var fetchCount = 0
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
     init(_ base: InMemoryRemindersRepository) { self.base = base }
@@ -971,6 +1013,7 @@ private actor GatedRemindersRepository: RemindersRepository {
     func requestAccess() async -> RemindersAccess { await base.requestAccess() }
     func fetchLists() async throws -> [ReminderList] { try await base.fetchLists() }
     func fetchReminders() async throws -> [Reminder] {
+        fetchCount += 1
         if gateClosed {
             isFetchWaiting = true
             await withCheckedContinuation { waiters.append($0) }

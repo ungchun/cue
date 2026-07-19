@@ -27,6 +27,8 @@ final class ReminderViewModel {
     private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
+    /// 프리미엄 여부의 반응형 소스 — 라이브 한도 소비 시 호출 시점에 읽는다(구매 즉시 반영).
+    private let premiumStore: PremiumStore
     /// 이번 주 캘린더 이벤트 조회 — 할일 LA도 일정 LA와 같은 주간 스트립(날짜별 일정 점)을
     /// 그리므로 발행 시 캘린더 이벤트를 함께 싣는다. 캘린더 권한 없으면 조용히 빈 배열.
     private let fetchEventsUseCase: FetchEventsUseCase
@@ -35,6 +37,11 @@ final class ReminderViewModel {
     private(set) var lists: [ReminderList] = []
     private(set) var allReminders: [Reminder] = []
     private(set) var isLoading = false
+    /// 현재 시각 공급자 — 자기 쓰기 에코 억제 창 판정에 쓴다(테스트에서 주입).
+    private let now: () -> Date
+    /// 이 시각 전까지 온 외부 변경 신호는 무시한다 — 앱 자신의 EventKit 쓰기가 되쏘는 알림이
+    /// 인라인 편집→새 행 포커스 이동 중 리스트를 remount해 커서를 끊는 걸 막는다.
+    private var suppressObserveUntil: Date = .distantPast
     /// 첫 데이터 적재가 끝났는지. `onAppear`가 탭 전환마다 재호출되더라도 두 번째
     /// 이상은 fetch를 건너뛴다 — 외부(미리 알림 앱)에서 실제 변경이 발생하면 그때만
     /// `observeTask`의 stream이 신호를 보내 reload가 호출되어 인디케이터 깜박임이 사라진다.
@@ -68,7 +75,13 @@ final class ReminderViewModel {
         return nil
     }
 
-    init(dependencies: Dependencies) {
+    init(
+        dependencies: Dependencies,
+        premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService()),
+        now: @escaping () -> Date = { Date() }
+    ) {
+        self.now = now
+        self.premiumStore = premiumStore
         self.requestAccessUseCase = dependencies.requestRemindersAccess
         self.fetchListsUseCase = dependencies.fetchReminderLists
         self.fetchRemindersUseCase = dependencies.fetchReminders
@@ -108,8 +121,15 @@ final class ReminderViewModel {
     /// 오므로, 스피너를 띄우면 엔터마다 화면이 깜빡인다. Apple 미리알림처럼 무침습으로 반영한다.
     private func handleExternalChange() async {
         guard access == .granted, hasLoaded else { return }
+        // 자기 쓰기 직후(억제 창 이내)의 에코 신호는 무시 — 자기 쓰기는 이미 reloadReminders로
+        // 반영했고, 여기서 또 reload하면 포커스 이동 중 remount로 커서가 끊긴다.
+        guard now() >= suppressObserveUntil else { return }
         await reload(showsIndicator: false)
     }
+
+    /// 자기 쓰기 에코 억제 창을 연다 — 이후 짧은 시간 동안 외부 변경 신호를 무시한다.
+    /// EventKit이 쓰기 알림을 (동기 완료 뒤) 살짝 늦게 쏘므로 넉넉히 둔다.
+    private static let selfWriteSuppressWindow: TimeInterval = 2
 
     /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
     /// 활성이면 즉시 종료. 아니면 현재 selection 제목 + visible reminders 스냅샷으로 시작.
@@ -117,7 +137,7 @@ final class ReminderViewModel {
     /// 무료 하루 한도를 먼저 소비 — `.denied`면 기존 LA를 건드리지 않는다(뷰가 Premium 토스트).
     @discardableResult
     func toggleLiveActivity(listTitle: String) async -> LiveActivationVerdict? {
-        let verdict = await consumeLiveActivation()
+        let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
         // .allowed(무료 한도 내)·.unlimited(Premium) 모두 켠다 — .denied(한도 초과)만 막는다.
         if case .denied = verdict { return verdict }
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
@@ -210,6 +230,8 @@ final class ReminderViewModel {
     /// 완료·추가·수정·삭제 등 데이터 변경 경로의 공통 마무리.
     private func reloadReminders() async throws {
         allReminders = try await fetchRemindersUseCase()
+        // 자기 쓰기 완료 — 잠깐 동안 EventKit이 되쏘는 외부 변경 에코를 무시한다.
+        suppressObserveUntil = now().addingTimeInterval(Self.selfWriteSuppressWindow)
         await refreshLiveActivityIfActive()
     }
 

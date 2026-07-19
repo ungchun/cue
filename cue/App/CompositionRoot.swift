@@ -11,6 +11,8 @@ import SwiftData
 struct CompositionRoot {
     let modelContainer: ModelContainer
     let dependencies: Dependencies
+    /// 프리미엄 엔타이틀먼트의 단일 반응형 소유자 — StoreKit 구현으로 조립. 앱이 시작 시 `start()`.
+    let premiumStore: PremiumStore
 
     init() {
         let container = ModelContainerFactory.make()
@@ -24,6 +26,7 @@ struct CompositionRoot {
         // 라이브 액티비티 service — @MainActor 격리. ActivityKit 호출은 모두 main actor에서.
         let liveActivityService: any LiveActivityService = ActivityKitLiveActivityService()
 
+        self.premiumStore = PremiumStore(service: StoreKitPurchaseService())
         self.modelContainer = container
         self.dependencies = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
@@ -60,7 +63,7 @@ struct CompositionRoot {
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: liveActivityService),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: liveActivityService),
-            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: UserDefaultsLiveActivationQuotaRepository(), isPremium: PremiumAccess.isPremium),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: UserDefaultsLiveActivationQuotaRepository()),
             checkForcedUpdate: CheckForcedUpdateUseCase(service: FirebaseAppUpdatePolicyService()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)

@@ -22,12 +22,17 @@ struct cueApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(dependencies: composition.dependencies)
+            RootView(dependencies: composition.dependencies, premiumStore: composition.premiumStore)
                 .environment(\.dependencies, composition.dependencies)
+                .environment(\.premiumStore, composition.premiumStore)
                 // 앱 시작 시 시스템에 살아있는 Live Activity 인스턴스를 service가 재포착.
                 // 사용자가 강제 종료한 동안에도 시스템이 Activity를 보존하므로 동기화 필수.
                 .task {
                     await composition.dependencies.syncLiveActivities()
+                }
+                // 상품 로드 + 현재 엔타이틀먼트 반영 + 구매 변경 스트림 구독.
+                .task {
+                    await composition.premiumStore.start()
                 }
         }
         .modelContainer(composition.modelContainer)

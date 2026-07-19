@@ -24,8 +24,9 @@ struct MemoViewModelTests {
         deps.saveMemo = SaveMemoUseCase(repository: repo)
         deps.startMemoLiveActivity = StartMemoLiveActivityUseCase(service: service)
         deps.endMemoLiveActivity = EndMemoLiveActivityUseCase(service: service)
-        deps.consumeLiveActivation = ConsumeLiveActivationUseCase(repository: quotaRepository, isPremium: isPremium)
-        return (MemoViewModel(dependencies: deps), repo, service)
+        deps.consumeLiveActivation = ConsumeLiveActivationUseCase(repository: quotaRepository)
+        let viewModel = MemoViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: isPremium))
+        return (viewModel, repo, service)
     }
 
     /// 오늘 사용량이 이미 `used`인 쿼터 저장소.

@@ -55,11 +55,11 @@ struct LiveActivationQuotaTests {
     /// Premium이면 소비 없이 무제한 — 사용량도 늘지 않는다.
     @Test func premiumBypassesQuota() async {
         let repository = InMemoryLiveActivationQuotaRepository()
-        let consume = ConsumeLiveActivationUseCase(repository: repository, isPremium: true)
+        let consume = ConsumeLiveActivationUseCase(repository: repository)
         let now = date(2026, 7, 11)
 
-        #expect(await consume(now: now, calendar: calendar) == .unlimited)
-        #expect(await consume(now: now, calendar: calendar) == .unlimited)
+        #expect(await consume(isPremium: true, now: now, calendar: calendar) == .unlimited)
+        #expect(await consume(isPremium: true, now: now, calendar: calendar) == .unlimited)
         #expect(await repository.fetch() == .empty)   // 저장소 미변경
     }
 

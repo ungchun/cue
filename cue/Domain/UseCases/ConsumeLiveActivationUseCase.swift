@@ -12,13 +12,17 @@ import Foundation
 /// Premium(`isPremium`)이면 소비 없이 `.unlimited` — 조립(CompositionRoot)에서 주입한다.
 struct ConsumeLiveActivationUseCase: Sendable {
     let repository: any LiveActivationQuotaRepository
-    /// Premium이면 한도를 소비하지 않고 `.unlimited`를 돌려준다(기존 라이브/새로고침 토스트 유지).
-    var isPremium: Bool = false
 
     /// 하루 허용 횟수 — 켜기와 새로고침을 구분하지 않는다.
     static let dailyLimit = 2
 
-    func callAsFunction(now: Date = .now, calendar: Calendar = .current) async -> LiveActivationVerdict {
+    /// - Parameter isPremium: 호출 시점의 프리미엄 여부. true면 한도를 소비하지 않고 `.unlimited`.
+    ///   구매가 런타임에 바뀌므로 생성 시점이 아니라 **호출 시점**에 `PremiumStore`에서 읽어 전달한다.
+    func callAsFunction(
+        isPremium: Bool = false,
+        now: Date = .now,
+        calendar: Calendar = .current
+    ) async -> LiveActivationVerdict {
         guard !isPremium else { return .unlimited }
         let key = Self.dayKey(for: now, calendar: calendar)
         var quota = await repository.fetch()

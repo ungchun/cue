@@ -17,13 +17,24 @@ struct PremiumPaywallView: View {
         case monthly
         case yearly
         case lifetime
+
+        /// 대응 StoreKit 상품 — 구매·가격 조회 키.
+        var product: PremiumProduct {
+            switch self {
+            case .monthly: return .monthly
+            case .yearly: return .yearly
+            case .lifetime: return .lifetime
+            }
+        }
     }
 
     @State private var selectedPlan: Plan = .yearly
     @State private var echoAppeared = false
     @State private var echoPulsing = false
+    @State private var purchasing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
+    @Environment(\.premiumStore) private var premiumStore
 
     private let termsURL = URL(string: "https://ungchun.github.io/cue-legal/terms.html")!
     private let privacyURL = URL(string: "https://ungchun.github.io/cue-legal/privacy.html")!
@@ -177,9 +188,13 @@ struct PremiumPaywallView: View {
 
     private var plans: some View {
         VStack(spacing: Spacing.sm) {
-            planCard(.monthly, title: "Monthly", price: "₩2,900", unit: "/ mo", badge: nil)
-            planCard(.yearly, title: "Yearly", price: "₩19,000", unit: "/ yr", badge: "Save 45%")
-            planCard(.lifetime, title: "Lifetime", price: "₩44,000", unit: "one-time", badge: nil)
+            // 가격은 StoreKit에서 로드된 로케일 가격을 우선 사용, 미로드 시 폴백 문자열.
+            planCard(.monthly, title: "Monthly",
+                     price: premiumStore.displayPrice(for: .monthly) ?? "₩2,900", unit: "/ mo", badge: nil)
+            planCard(.yearly, title: "Yearly",
+                     price: premiumStore.displayPrice(for: .yearly) ?? "₩19,000", unit: "/ yr", badge: "Save 45%")
+            planCard(.lifetime, title: "Lifetime",
+                     price: premiumStore.displayPrice(for: .lifetime) ?? "₩44,000", unit: "one-time", badge: nil)
         }
     }
 
@@ -236,27 +251,34 @@ struct PremiumPaywallView: View {
     private var footer: some View {
         VStack(spacing: Spacing.sm) {
             Button {
-                // TODO: StoreKit 결제 연결.
+                Task { await startPurchase() }
             } label: {
-                Text("Start Premium")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(Color(.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .padding(.vertical, Spacing.md)
+                Group {
+                    if purchasing {
+                        ProgressView().tint(Color(.systemBackground))
+                    } else {
+                        Text("Start Premium")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(Color(.systemBackground))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.md)
             }
             .buttonStyle(.borderedProminent)
             .tint(.primary)
+            .disabled(purchasing)
 
-            Text("Auto-renews · Cancel anytime")
+            Text("Subscriptions auto-renew at the listed price unless canceled at least 24 hours before the period ends. Manage or cancel anytime in Settings. Lifetime is a one-time purchase.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
                 .padding(.top, Spacing.xs)
 
             HStack(spacing: Spacing.md) {
-                // TODO: StoreKit 복원 연결(AppStore.sync()).
-                Button("Restore") {}
+                Button("Restore") { Task { await restore() } }
                 Button("Terms of Use") { openURL(termsURL) }
                 Button("Privacy Policy") { openURL(privacyURL) }
             }
@@ -269,6 +291,22 @@ struct PremiumPaywallView: View {
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)
         .padding(.bottom, Spacing.md)
+    }
+
+    // MARK: - 구매 · 복원
+
+    /// 선택 플랜을 구매한다. 성공(또는 이미 프리미엄)이면 페이월을 닫는다.
+    private func startPurchase() async {
+        purchasing = true
+        defer { purchasing = false }
+        let outcome = await premiumStore.purchase(selectedPlan.product.id)
+        if outcome == .success || premiumStore.isPremium { dismiss() }
+    }
+
+    /// 이전 구매를 복원한다. 프리미엄이 확인되면 페이월을 닫는다.
+    private func restore() async {
+        await premiumStore.restore()
+        if premiumStore.isPremium { dismiss() }
     }
 }
 

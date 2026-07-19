@@ -11,10 +11,10 @@ struct SettingsView: View {
     let viewModel: SettingsViewModel
     @Environment(\.requestReview) private var requestReview
     @Environment(\.toastCenter) private var toastCenter
+    @Environment(\.premiumStore) private var premiumStore
 
-    /// 유료(Premium) 전용 설정 게이트 — 전역 스위치를 따른다(현재 전 기능 개방).
-    /// TODO: 결제/구독 도입 시 PremiumAccess를 실제 엔타이틀먼트로 교체.
-    private let isPremiumUser = PremiumAccess.isPremium
+    /// 유료(Premium) 전용 설정 게이트 — 실제 구매 엔타이틀먼트(`PremiumStore`)를 반응형으로 따른다.
+    private var isPremiumUser: Bool { premiumStore.isPremium }
 
     /// 메모 LA 카드 색 — ColorPicker 선택을 로컬 @State로 동기 보관한다.
     /// (async 저장 setter를 직접 binding하면 get이 stale 값을 돌려줘 선택이 즉시 풀리는
@@ -34,16 +34,18 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            // Cue Premium 배너 — 설정 타이틀 바로 아래. 탭하면 페이월 시트(내용 추후).
-            Section {
-                PremiumBannerView {
-                    showsPremiumSheet = true
+            // Cue Premium 배너 — 설정 타이틀 바로 아래. 탭하면 페이월 시트. 이미 프리미엄이면 숨긴다.
+            if !isPremiumUser {
+                Section {
+                    PremiumBannerView {
+                        showsPremiumSheet = true
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+                // 배너 아래 간격은 전역(28)보다 좁게 — 리스트 간격 값이라 28처럼 리터럴(20).
+                .listSectionSpacing(20)
             }
-            // 배너 아래 간격은 전역(28)보다 좁게 — 리스트 간격 값이라 28처럼 리터럴(20).
-            .listSectionSpacing(20)
 
             Section {
                 Picker("Display Mode", selection: colorSchemeBinding) {

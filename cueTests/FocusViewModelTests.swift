@@ -68,7 +68,7 @@ struct FocusViewModelTests {
 
     @Test func initialStateHasNoSessionsAndNoSelection() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
 
         #expect(viewModel.sessions.isEmpty)
         #expect(viewModel.selectedSessionID == nil)
@@ -97,7 +97,7 @@ struct FocusViewModelTests {
 
     @Test func addSessionAppendsToList() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let custom = FocusSettings(focusDuration: 30 * 60, restDuration: 5 * 60, isRepeating: true, cycleCount: 4)
 
         let added = viewModel.addSession(title: "독서", settings: custom, colorHex: "#FF9500")!
@@ -111,7 +111,7 @@ struct FocusViewModelTests {
 
     @Test func updateSessionReplacesInPlace() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let original = viewModel.addSession(title: "독서", settings: .default, colorHex: "#FF3B30")!
         let newSettings = FocusSettings(focusDuration: 45 * 60, restDuration: 10 * 60, isRepeating: false, cycleCount: 1)
 
@@ -126,7 +126,7 @@ struct FocusViewModelTests {
 
     @Test func updateSessionWithUnknownIDIsNoop() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         viewModel.addSession(title: "원본", settings: .default, colorHex: "#FF3B30")
 
         viewModel.updateSession(id: UUID(), title: "다른", settings: .default, colorHex: "#FF3B30")
@@ -136,7 +136,7 @@ struct FocusViewModelTests {
 
     @Test func deleteSessionRemovesFromList() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let a = viewModel.addSession(title: "A", settings: .default, colorHex: "#FF3B30")!
         let b = viewModel.addSession(title: "B", settings: .default, colorHex: "#FF9500")!
 
@@ -147,7 +147,7 @@ struct FocusViewModelTests {
 
     @Test func deletingSelectedSessionClearsSelection() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let added = viewModel.addSession(title: "독서", settings: .default, colorHex: "#FF3B30")!
         viewModel.selectSession(id: added.id)
 
@@ -158,7 +158,7 @@ struct FocusViewModelTests {
 
     @Test func deletingNonSelectedSessionKeepsSelection() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let kept = viewModel.addSession(title: "유지", settings: .default, colorHex: "#FF3B30")!
         let toRemove = viewModel.addSession(title: "삭제", settings: .default, colorHex: "#FF9500")!
         viewModel.selectSession(id: kept.id)
@@ -172,7 +172,7 @@ struct FocusViewModelTests {
 
     @Test func selectSessionUpdatesDisplayedSettings() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let custom = FocusSettings(focusDuration: 45 * 60, restDuration: 10 * 60, isRepeating: false, cycleCount: 1)
         let added = viewModel.addSession(title: "글쓰기", settings: custom, colorHex: "#5856D6")!
 
@@ -184,7 +184,7 @@ struct FocusViewModelTests {
 
     @Test func selectingUnknownIDKeepsDisplayedSettingsAtDefault() {
         let (deps, _) = makeDependencies()
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
 
         viewModel.selectSession(id: UUID())
 
@@ -201,7 +201,7 @@ struct FocusViewModelTests {
         let session = FocusSession(id: storedID, title: "집중", settings: .default, colorHex: "#FF3B30")
         let repo = InMemoryFocusSessionsRepository(sessions: [session], selectedID: storedID)
         let (deps, _) = makeDependencies(focusSessionsRepository: repo)
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
 
         await viewModel.onAppear()
 
@@ -217,7 +217,7 @@ struct FocusViewModelTests {
             selectedID: UUID()
         )
         let (deps, _) = makeDependencies(focusSessionsRepository: repo)
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
 
         await viewModel.onAppear()
 
@@ -229,7 +229,7 @@ struct FocusViewModelTests {
         let only = FocusSession(id: UUID(), title: "유일", settings: .default, colorHex: "#FF3B30")
         let repo = InMemoryFocusSessionsRepository(sessions: [only], selectedID: nil)
         let (deps, _) = makeDependencies(focusSessionsRepository: repo)
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
 
         await viewModel.onAppear()
 
@@ -240,7 +240,7 @@ struct FocusViewModelTests {
     @Test func onAppearKeepsSelectionNilWhenNoSessions() async {
         let repo = InMemoryFocusSessionsRepository(sessions: [], selectedID: UUID())
         let (deps, _) = makeDependencies(focusSessionsRepository: repo)
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
 
         await viewModel.onAppear()
 
@@ -251,7 +251,7 @@ struct FocusViewModelTests {
     @Test func selectSessionPersistsAcrossInstances() async {
         let repo = InMemoryFocusSessionsRepository()
         let (deps, _) = makeDependencies(focusSessionsRepository: repo)
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let a = viewModel.addSession(title: "A", settings: .default, colorHex: "#FF3B30")!
         let b = viewModel.addSession(title: "B", settings: .default, colorHex: "#FF9500")!
 
@@ -260,7 +260,7 @@ struct FocusViewModelTests {
         await Task.yield()
 
         let (deps2, _) = makeDependencies(focusSessionsRepository: repo)
-        let restored = FocusViewModel(dependencies: deps2, isPremiumUser: true)
+        let restored = FocusViewModel(dependencies: deps2, premiumStore: PremiumStore(previewIsPremium: true))
         await restored.onAppear()
 
         #expect(restored.selectedSessionID == b.id)
@@ -271,7 +271,7 @@ struct FocusViewModelTests {
     @Test func deletingSelectedSessionPersistsNilSelection() async {
         let repo = InMemoryFocusSessionsRepository()
         let (deps, _) = makeDependencies(focusSessionsRepository: repo)
-        let viewModel = FocusViewModel(dependencies: deps, isPremiumUser: true)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let only = viewModel.addSession(title: "유일", settings: .default, colorHex: "#FF3B30")!
         viewModel.selectSession(id: only.id)
         await Task.yield()

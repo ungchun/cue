@@ -24,6 +24,8 @@ final class ScheduleViewModel {
     private let startLiveActivityUseCase: StartScheduleLiveActivityUseCase
     private let endLiveActivityUseCase: EndScheduleLiveActivityUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
+    /// 프리미엄 여부의 반응형 소스 — 라이브 한도 소비 시 호출 시점에 읽는다(구매 즉시 반영).
+    private let premiumStore: PremiumStore
     private let fetchAppSettings: FetchAppSettingsUseCase
     /// 설정에서 숨긴 캘린더의 식별자 집합 — 이 캘린더의 이벤트는 타임라인·LA에서 제외한다.
     /// onAppear에서 설정을 읽어 채우고, 설정이 바뀌면 재적용한다.
@@ -61,7 +63,8 @@ final class ScheduleViewModel {
     /// 현재 시각 공급자 — "종료 지난 일정 숨김" 필터의 기준. 테스트에서 고정값 주입.
     private let now: () -> Date
 
-    init(dependencies: Dependencies, now: @escaping () -> Date = { Date() }) {
+    init(dependencies: Dependencies, premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService()), now: @escaping () -> Date = { Date() }) {
+        self.premiumStore = premiumStore
         self.requestAccessUseCase = dependencies.requestEventsAccess
         self.fetchEventsUseCase = dependencies.fetchEvents
         self.observeChangesUseCase = dependencies.observeEventsChanges
@@ -150,7 +153,7 @@ final class ScheduleViewModel {
     /// 무료 하루 한도를 먼저 소비 — `.denied`면 기존 LA를 건드리지 않는다(뷰가 Premium 토스트).
     @discardableResult
     func toggleLiveActivity() async -> LiveActivationVerdict? {
-        let verdict = await consumeLiveActivation()
+        let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
         // .allowed(무료 한도 내)·.unlimited(Premium) 모두 켠다 — .denied(한도 초과)만 막는다.
         if case .denied = verdict { return verdict }
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.

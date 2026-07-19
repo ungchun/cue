@@ -25,11 +25,11 @@ struct RootView: View {
     /// 앱 전반 토스트 코디네이터 — 여기서 소유해 환경으로 주입하고, 상단 오버레이를 부착한다.
     @State private var toastCenter = ToastCenter()
 
-    init(dependencies: Dependencies) {
-        _reminderViewModel = State(initialValue: ReminderViewModel(dependencies: dependencies))
-        _scheduleViewModel = State(initialValue: ScheduleViewModel(dependencies: dependencies))
-        _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, isPremiumUser: PremiumAccess.isPremium))
-        _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies))
+    init(dependencies: Dependencies, premiumStore: PremiumStore) {
+        _reminderViewModel = State(initialValue: ReminderViewModel(dependencies: dependencies, premiumStore: premiumStore))
+        _scheduleViewModel = State(initialValue: ScheduleViewModel(dependencies: dependencies, premiumStore: premiumStore))
+        _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, premiumStore: premiumStore))
+        _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
     }
 
@@ -131,5 +131,5 @@ struct RootView: View {
 }
 
 #Preview {
-    RootView(dependencies: .preview)
+    RootView(dependencies: .preview, premiumStore: PremiumStore(service: DisabledPurchaseService()))
 }

@@ -17,8 +17,7 @@ struct ScheduleViewModelTests {
         access: EventsAccess = .granted,
         events: [CalendarEvent] = [],
         calendars: [EventCalendar] = [],
-        appSettings: AppSettings = .default,
-        isPremium: Bool = false
+        appSettings: AppSettings = .default
     ) -> Dependencies {
         let eventsRepository = InMemoryEventsRepository(
             access: access, events: events, calendars: calendars
@@ -62,7 +61,7 @@ struct ScheduleViewModelTests {
             endMemoLiveActivity: EndMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
             syncLiveActivities: SyncLiveActivitiesUseCase(service: DisabledLiveActivityService()),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: DisabledLiveActivityService()),
-            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository(), isPremium: isPremium),
+            consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings)),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings))
         )
@@ -177,7 +176,8 @@ struct ScheduleViewModelTests {
         let today = Calendar.current.startOfDay(for: Date())
         let allDay = event(id: "allday", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
         let viewModel = ScheduleViewModel(
-            dependencies: makeDependencies(events: [allDay], isPremium: true),
+            dependencies: makeDependencies(events: [allDay]),
+            premiumStore: PremiumStore(previewIsPremium: true),
             now: { today }
         )
         await viewModel.onAppear()
