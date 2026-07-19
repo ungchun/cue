@@ -71,18 +71,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         // 캘린더 껐다 켤 때 원본에서 복원하도록 전체 items 보관(cap 이전).
         lastReminderItems = items
-        // 캘린더 ON이면 위젯이 3개만 보여주고 월간 점까지 실어야 하므로 아이템을 제한한다
-        // (긴 EventKit id × 다수 + 월간 점이 ContentState 4KB를 넘기지 않게). OFF면 전부.
+        // 캘린더 ON이면 월간 점을 싣는다. 아이템은 예산에 맞는 만큼 최대로(안 들어가면 사다리로 축소).
         let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
-        let displayItems = showsCalendar ? Array(items.prefix(Self.calendarModeItemCap)) : items
-
-        var state = ReminderLiveActivityAttributes.ContentState(
-            items: displayItems,
-            remaining: remaining,
-            todayCount: todayCount,
-            weekEventDots: weekEventDots
+        let monthDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
+        let state = Self.fittedReminderState(
+            items: items, remaining: remaining, todayCount: todayCount,
+            weekEventDots: weekEventDots, monthEventDots: monthDots
         )
-        state.monthEventDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
         // 시간 흐름과 무관 — staleDate 미지정. 사용자 동작 시점에만 update.
         // Dynamic Island 우선순위(relevanceScore): 집중(AlarmKit, 시스템 우선) > 메모(3) > 일정=할일(2).
         let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 2)
@@ -129,19 +124,16 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         // 캘린더 껐다 켤 때 원본에서 다시 계산하도록 전체 days를 보관한다(cap 이전 값).
         lastScheduleDays = days
-        // 캘린더 함께 보기 ON이면 월간 점을 싣고 이벤트 목록은 1열로 좁아진다 — ContentState
-        // 4KB 한도를 위해 이벤트 수를 줄인다(단독 목록 모드에선 2열이라 그대로 다 싣는다).
+        // 캘린더 함께 보기 ON이면 월간 점을 싣는다. 이벤트는 예산에 맞는 만큼 최대로(안 들어가면 축소).
         let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
-        let displayDays = showsCalendar ? Self.cappingEvents(days, max: Self.calendarModeEventCap) : days
-
-        var state = ScheduleLiveActivityAttributes.ContentState(days: displayDays, todayCount: todayCount, weekEventDots: weekEventDots)
-        state.monthEventDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
+        let monthDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
+        let state = Self.fittedScheduleState(days: days, todayCount: todayCount, weekEventDots: weekEventDots, monthEventDots: monthDots)
         // staleDate = "이 시점 이후 정보는 오래됨"을 시스템에 알리는 미래 시각.
         // **과거 시각을 넣으면 request 직후 시스템이 즉시 stale로 처리해 화면에 표시 자체가
         // 안 뜬다** — 오늘 첫 이벤트가 이미 시작된 시각인 경우(오후에 토글)가 흔한 함정.
         // 따라서 `> now`인 미래 시작 시각 중 가장 가까운 것만 staleDate로 채택, 없으면 nil.
         let now = Date.now
-        let upcomingStart = displayDays
+        let upcomingStart = state.days
             .flatMap(\.events)
             .map(\.startDate)
             .filter { $0 > now }
@@ -210,11 +202,58 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         return CalendarMonthDots.dots(monthOffset: offset)
     }
 
-    /// 캘린더 함께 보기 모드에서 일정 이벤트 총량을 이 값으로 제한한다 — 1열이라 더 못 보이고,
-    /// 월간 점까지 실어야 해 ContentState 4KB 한도를 지킨다.
-    static let calendarModeEventCap = 6
-    /// 캘린더 함께 보기 모드에서 할일 아이템 총량 제한 — 위젯은 3개만 표시하나 backfill 여유로 6개.
-    static let calendarModeItemCap = 6
+    /// ContentState 인코딩 크기 예산 — ActivityKit ~4KB 한도에 여유(그 자체 인코딩 오버헤드 대비).
+    /// 이 값 이하가 되도록 아이템/이벤트를 적응적으로 줄인다.
+    private static let contentStateByteBudget = 3500
+
+    /// 후보 개수를 큰 것부터 시도한다 — 들어가면 그대로, 안 들어가면 한 단계 줄인다(네 아이디어: 20→15→10→6).
+    private static let itemCapLadder = [20, 15, 10, 6, 3]
+
+    /// 인코딩 크기가 예산 안인지 — 실제 게시(request/update) 전에 미리 재서 실패를 예방한다.
+    private static func fits<T: Encodable>(_ state: T) -> Bool {
+        ((try? JSONEncoder().encode(state))?.count ?? .max) <= contentStateByteBudget
+    }
+
+    /// 예산에 맞는 가장 큰 할일 ContentState — 전체부터 시도해 안 들어가면 사다리대로 줄인다.
+    private static func fittedReminderState(
+        items: [LiveReminderItem], remaining: Int, todayCount: Int,
+        weekEventDots: [LiveDayEventDots], monthEventDots: [LiveMonthDot]
+    ) -> ReminderLiveActivityAttributes.ContentState {
+        func make(_ n: Int) -> ReminderLiveActivityAttributes.ContentState {
+            var s = ReminderLiveActivityAttributes.ContentState(
+                items: Array(items.prefix(n)), remaining: remaining, todayCount: todayCount, weekEventDots: weekEventDots
+            )
+            s.monthEventDots = monthEventDots
+            return s
+        }
+        let candidates = [items.count] + itemCapLadder.filter { $0 < items.count }
+        for n in candidates where n > 0 {
+            let s = make(n)
+            if fits(s) { return s }
+        }
+        return make(Swift.min(3, items.count))   // 최소치라도 게시(예산을 못 맞춰도 최선).
+    }
+
+    /// 예산에 맞는 가장 큰 일정 ContentState — 이벤트 총량을 전체부터 사다리대로 줄인다.
+    private static func fittedScheduleState(
+        days: [LiveScheduleDay], todayCount: Int,
+        weekEventDots: [LiveDayEventDots], monthEventDots: [LiveMonthDot]
+    ) -> ScheduleLiveActivityAttributes.ContentState {
+        func make(_ n: Int) -> ScheduleLiveActivityAttributes.ContentState {
+            var s = ScheduleLiveActivityAttributes.ContentState(
+                days: cappingEvents(days, max: n), todayCount: todayCount, weekEventDots: weekEventDots
+            )
+            s.monthEventDots = monthEventDots
+            return s
+        }
+        let total = days.reduce(0) { $0 + $1.events.count }
+        let candidates = [total] + itemCapLadder.filter { $0 < total }
+        for n in candidates where n > 0 {
+            let s = make(n)
+            if fits(s) { return s }
+        }
+        return make(Swift.min(3, total))
+    }
 
     /// 날짜 묶음의 이벤트 총량을 앞에서부터 `max`개로 자른다(초과 날짜/이벤트 제거).
     private static func cappingEvents(_ days: [LiveScheduleDay], max: Int) -> [LiveScheduleDay] {
@@ -249,16 +288,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
 
         if let reminder = reminderActivity {
-            var state = reminder.content.state
+            let prev = reminder.content.state
             let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
-            let source = lastReminderItems.isEmpty ? state.items : lastReminderItems
-            if showsCalendar {
-                state.items = Array(source.prefix(Self.calendarModeItemCap))
-                state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
-            } else {
-                state.items = source
-                state.monthEventDots = []
-            }
+            let source = lastReminderItems.isEmpty ? prev.items : lastReminderItems
+            let monthDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
+            var state = Self.fittedReminderState(
+                items: source, remaining: prev.remaining, todayCount: prev.todayCount,
+                weekEventDots: prev.weekEventDots, monthEventDots: monthDots
+            )
+            state.calendarMonthOffset = prev.calendarMonthOffset
             await reminder.update(ActivityContent(state: state, staleDate: reminder.content.staleDate, relevanceScore: 2))
         }
         if let memo = memoActivity {
@@ -267,19 +305,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             await memo.update(ActivityContent(state: state, staleDate: memo.content.staleDate, relevanceScore: 3))
         }
         if let schedule = scheduleActivity {
-            var state = schedule.content.state
+            let prev = schedule.content.state
             let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
             // 게시된(cap됐을 수 있는) days가 아니라 보관해 둔 원본에서 다시 계산 — 껐다 켤 때 복원.
-            let source = lastScheduleDays.isEmpty ? state.days : lastScheduleDays
-            if showsCalendar {
-                // 캘린더 ON: 이벤트 cap(4KB 한도) + 월간 점.
-                state.days = Self.cappingEvents(source, max: Self.calendarModeEventCap)
-                state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
-            } else {
-                // 캘린더 OFF: 전체 days 복원 + 월간 점 제거.
-                state.days = source
-                state.monthEventDots = []
-            }
+            let source = lastScheduleDays.isEmpty ? prev.days : lastScheduleDays
+            let monthDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
+            var state = Self.fittedScheduleState(days: source, todayCount: prev.todayCount, weekEventDots: prev.weekEventDots, monthEventDots: monthDots)
+            state.calendarMonthOffset = prev.calendarMonthOffset
             await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: 2))
         }
     }

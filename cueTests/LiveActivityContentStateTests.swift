@@ -15,9 +15,10 @@ struct LiveActivityContentStateTests {
 
     /// 일정 ContentState는 worst-case(캘린더 함께 보기 ON: 이벤트 cap + 주간·월간 점 가득)에서도
     /// ActivityKit 4KB 한도 안이어야 한다. 초과하면 `Activity.request`가 throw해 "라이브 시작 불가"
-    /// alert가 뜬다. 수정: 이벤트 `id`를 짧은 합성값으로, 캘린더 ON이면 이벤트를 `calendarModeEventCap`로 제한.
+    /// alert가 뜬다. 수정: 이벤트 `id`를 짧은 합성값으로, 캘린더 ON이면 서비스가 예산에 맞게 이벤트 수를
+    /// 적응적으로 줄인다(안 들어가면 사다리로 축소). 이 테스트는 대표 heavy 상태가 4KB 안임을 고정.
     @Test func scheduleContentStateStaysUnderSizeLimit() throws {
-        // 캘린더 ON이면 서비스가 이벤트를 calendarModeEventCap(6)로 제한하고 짧은 id를 붙인다.
+        // 서비스가 예산 안에서 낮춘 대표값(6 이벤트) + 짧은 id.
         let cap = 6
         let events = (0..<cap).map { i in
             LiveEventItem(
@@ -53,7 +54,7 @@ struct LiveActivityContentStateTests {
     /// 할일 아이템 id는 EventKit 식별자(긴 문자열)라 못 줄이므로 캘린더 ON이면 아이템 수를 제한한다.
     @Test func reminderContentStateStaysUnderSizeLimit() throws {
         let longID = "x-apple-reminderkit://REMCDReminder/8A9B0C1D-2E3F-4A5B-6C7D-8E9F0A1B2C3D"
-        // 캘린더 ON이면 서비스가 아이템을 calendarModeItemCap(6)로 제한한다.
+        // 서비스가 예산 안에서 낮춘 대표값(6 아이템).
         let items = (0..<6).map { i in
             LiveReminderItem(id: "\(longID)-\(i)", title: "장보기 목록 정리 및 확인 \(i)", colorHex: "#FF3B30")
         }
