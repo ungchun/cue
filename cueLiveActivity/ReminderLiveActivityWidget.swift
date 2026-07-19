@@ -53,6 +53,29 @@ private struct ReminderLockScreenView: View {
     let state: ReminderLiveActivityAttributes.ContentState
 
     var body: some View {
+        // 설정 "할일 + 캘린더"(App Group 미러)면 왼쪽 반을 월간 캘린더로, 할일은 오른쪽 1열로.
+        if showsCalendar() {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                MonthCalendarView(
+                    grid: MonthCalendarGrid(now: .now, monthOffset: state.calendarMonthOffset),
+                    intentTarget: ShiftCalendarMonthIntent.reminderTarget,
+                    eventDots: state.monthEventDots
+                )
+                .frame(maxWidth: .infinity)
+                // 캘린더 모드는 1열 세로 나열이라 많으면 LA 높이를 넘는다 — 3개로 제한.
+                content(columns: 1, limit: 3)
+                    .frame(maxWidth: .infinity)
+            }
+            // 캘린더 모드에선 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다(일정과 동일).
+            .frame(minHeight: ScheduleMetrics.columnMax, alignment: .top)
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            content(columns: 2, limit: Self.displayLimit)
+        }
+    }
+
+    /// 카운트 + 체크리스트. `columns`는 열 수(2열 기본, 캘린더 모드 1열), `limit`은 표시 개수.
+    private func content(columns: Int, limit: Int) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             // 좌상단은 비움, 우상단에 미완료 카운트.
             HStack {
@@ -64,7 +87,7 @@ private struct ReminderLockScreenView: View {
             }
 
             Grid(alignment: .leading, horizontalSpacing: Spacing.md, verticalSpacing: Spacing.smd) {
-                ForEach(rows, id: \.first?.id) { row in
+                ForEach(rows(columns: columns, limit: limit), id: \.first?.id) { row in
                     GridRow {
                         ForEach(row) { item in
                             ReminderItemCell(item: item)
@@ -75,16 +98,21 @@ private struct ReminderLockScreenView: View {
         }
     }
 
-    /// 위젯이 한 번에 보여주는 항목 수(2열 × 3행). ContentState엔 backfill용으로 더 실려 있고
-    /// 여기서 앞 6개만 잘라 표시 — 체크로 하나 빠지면 다음 항목이 이 6칸을 자동으로 메운다.
+    /// 기본(캘린더 없음) 표시 항목 수(2열 × 3행). ContentState엔 backfill용으로 더 실려 있고
+    /// 여기서 앞부분만 잘라 표시 — 체크로 하나 빠지면 다음 항목이 자동으로 메운다.
     private static let displayLimit = 6
 
-    /// 표시 항목을 2개씩 묶어 행 단위로 — 좌→우, 위→아래(읽기 순서).
-    private var rows: [[LiveReminderItem]] {
-        let shown = Array(state.items.prefix(Self.displayLimit))
-        return stride(from: 0, to: shown.count, by: 2).map { start in
-            Array(shown[start..<min(start + 2, shown.count)])
+    /// 표시 항목을 앞 `limit`개만 잘라 `columns`개씩 묶어 행 단위로 — 좌→우, 위→아래(읽기 순서).
+    private func rows(columns: Int, limit: Int) -> [[LiveReminderItem]] {
+        let shown = Array(state.items.prefix(limit))
+        return stride(from: 0, to: shown.count, by: columns).map { start in
+            Array(shown[start..<min(start + columns, shown.count)])
         }
+    }
+
+    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
+    private func showsCalendar() -> Bool {
+        SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
     }
 }
 

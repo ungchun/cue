@@ -163,6 +163,11 @@ final class SettingsViewModel {
         await refreshLiveActivityLayout()
     }
 
+    func setReminderShowsCalendar(_ value: Bool) async {
+        await update { $0.reminderShowsCalendar = value }
+        await refreshLiveActivityLayout()
+    }
+
     /// 메모 LA 카드 배경 색을 바꾼다 — 최신 메모를 다시 읽어 색만 갈아끼우고 저장한다
     /// (텍스트·글자색을 덮어쓰지 않도록 fetch→modify→save). 다음에 메모 화면이 열리면 새 색을 읽는다.
     func setMemoColor(_ hex: String) async {

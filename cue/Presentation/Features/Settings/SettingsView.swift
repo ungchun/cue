@@ -156,6 +156,8 @@ struct SettingsView: View {
                         Text(list.title).tag(list.id)
                     }
                 }
+                Toggle("Show Calendar", isOn: reminderShowsCalendarBinding)
+                    .tint(.green)
             } header: {
                 sectionHeader("Tasks")
             }
@@ -378,6 +380,19 @@ struct SettingsView: View {
                     return
                 }
                 Task { await viewModel.setScheduleShowsCalendar(newValue) }
+            }
+        )
+    }
+
+    private var reminderShowsCalendarBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.reminderShowsCalendar },
+            set: { newValue in
+                guard isPremiumUser || !newValue else {
+                    toastCenter.show("Premium")
+                    return
+                }
+                Task { await viewModel.setReminderShowsCalendar(newValue) }
             }
         )
     }

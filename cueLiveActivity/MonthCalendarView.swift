@@ -20,6 +20,8 @@ struct MonthCalendarView: View {
     /// 기본은 시스템 컬러. 메모 LA는 카드가 사용자 색이라 사용자 글자색을 주입한다.
     var foreground: Color = .primary
     var secondaryForeground: Color = .secondary
+    /// 표시 월의 날짜별 일정 점(일 정수 기준) — 각 날 숫자 아래에 캘린더 색 동그라미. 오늘은 제외.
+    var eventDots: [LiveMonthDot] = []
 
     /// 표시 월의 공휴일(일 숫자) — 일요일과 같은 빨강으로 칠한다.
     private var holidays: Set<Int> {
@@ -76,20 +78,42 @@ struct MonthCalendarView: View {
     @ViewBuilder
     private func dayCell(_ day: Int?, column: Int) -> some View {
         if let day {
-            // 오늘 표시 — WeekCalendarStrip과 같은 밑줄 바(숫자 정중앙 아래).
-            Text("\(day)")
-                .font(.footnote.weight(grid.isToday(day: day) ? .bold : .regular))
-                .monospacedDigit()
-                .foregroundStyle(dayColor(day, column: column))
-                .overlay(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(grid.isToday(day: day) ? foreground : Color.clear)
-                        .frame(width: 14, height: 2)
-                        .offset(y: Spacing.xxs)
-                }
+            VStack(spacing: 1) {
+                // 오늘 표시 — WeekCalendarStrip과 같은 밑줄 바(숫자 정중앙 아래).
+                Text("\(day)")
+                    .font(.footnote.weight(grid.isToday(day: day) ? .bold : .regular))
+                    .monospacedDigit()
+                    .foregroundStyle(dayColor(day, column: column))
+                    .overlay(alignment: .bottom) {
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(grid.isToday(day: day) ? foreground : Color.clear)
+                            .frame(width: 14, height: 2)
+                            .offset(y: Spacing.xxs)
+                    }
+                // 일정 점 — 그날 이벤트마다 한 점(캘린더 색). 오늘은 빌더에서 제외돼 점 없음.
+                dots(for: day)
+            }
         } else {
             Text(" ").font(.footnote)   // 빈 칸도 같은 높이 유지.
         }
+    }
+
+    /// 날짜 숫자 아래 일정 점 한 줄 — 좁은 셀이라 작게(3pt). 점이 없어도 같은 높이를 예약해
+    /// 모든 셀의 숫자가 같은 세로 기준선에 정렬되게 한다.
+    private func dots(for day: Int) -> some View {
+        HStack(spacing: 1) {
+            ForEach(Array(colorHexes(forDay: day).enumerated()), id: \.offset) { _, hex in
+                Circle()
+                    .fill(Color(hex: hex) ?? foreground)
+                    .frame(width: 3, height: 3)
+            }
+        }
+        .frame(height: 3)
+    }
+
+    /// 그날(표시 월 기준 일 숫자)의 일정 점 색 목록 — `eventDots`는 표시 월만 담아 일 숫자로 매칭.
+    private func colorHexes(forDay day: Int) -> [String] {
+        eventDots.first { $0.day == day }?.colorHexes ?? []
     }
 
     /// 일요일·공휴일 빨강, 토요일 옅게, 평일은 본문 색.

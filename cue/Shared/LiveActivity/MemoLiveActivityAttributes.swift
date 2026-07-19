@@ -23,12 +23,15 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
         /// 잠금화면 월간 캘린더의 표시 월 오프셋(이번 달 = 0, ±12 클램프) — 셰브런 탭
         /// 인텐트가 갱신한다. 앱이 재게시하면 0으로 리셋(이번 달로 복귀).
         var calendarMonthOffset: Int
+        /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
+        var monthEventDots: [LiveMonthDot]
 
-        init(text: String, colorHex: String, textColorHex: String = "#FFFFFF", calendarMonthOffset: Int = 0) {
+        init(text: String, colorHex: String, textColorHex: String = "#FFFFFF", calendarMonthOffset: Int = 0, monthEventDots: [LiveMonthDot] = []) {
             self.text = text
             self.colorHex = colorHex
             self.textColorHex = textColorHex
             self.calendarMonthOffset = calendarMonthOffset
+            self.monthEventDots = monthEventDots
         }
 
         /// 전방 호환 디코딩 — 앱 업데이트 전 게시된 활성 LA의 옛 상태에 `textColorHex`·
@@ -39,6 +42,7 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
             colorHex = try container.decode(String.self, forKey: .colorHex)
             textColorHex = try container.decodeIfPresent(String.self, forKey: .textColorHex) ?? "#FFFFFF"
             calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
+            monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
         }
     }
 

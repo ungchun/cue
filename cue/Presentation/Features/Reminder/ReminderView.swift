@@ -489,6 +489,8 @@ struct ReminderView: View {
                     break
                 }
             }
+            // 보여줄 할일이 없으면(현재 선택 기준) 라이브 버튼 비활성 — 메모와 동일.
+            .disabled(viewModel.visibleReminders.isEmpty)
         }
         .listRowSeparator(.hidden)
         // leading은 다른 행과 동일(rowInsets)하게 맞추되, trailing만 md로 줄여 LIVE 버튼

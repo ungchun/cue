@@ -74,13 +74,17 @@ struct MemoLiveActivityWidget: Widget {
                     grid: MonthCalendarGrid(now: .now, monthOffset: state.calendarMonthOffset),
                     intentTarget: ShiftCalendarMonthIntent.memoTarget,
                     foreground: color,
-                    secondaryForeground: color.opacity(0.55)
+                    secondaryForeground: color.opacity(0.55),
+                    eventDots: state.monthEventDots
                 )
                 .frame(maxWidth: .infinity)
                 // 반쪽에선 44가 과해 한 단계 줄인다(설정 배율은 그대로 곱해짐).
                 bigText(state.text, size: 32 * memoSizeScale(), color: color)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            // 캘린더 모드에선 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다(일정과 동일).
+            .frame(minHeight: ScheduleMetrics.columnMax, alignment: .center)
+            .fixedSize(horizontal: false, vertical: true)
         } else {
             bigText(state.text, size: 44 * memoSizeScale(), color: color)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

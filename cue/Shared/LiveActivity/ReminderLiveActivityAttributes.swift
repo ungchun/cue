@@ -24,6 +24,11 @@ struct ReminderLiveActivityAttributes: ActivityAttributes {
         /// 할일 LA도 일정 LA와 동일한 스트립을 그리므로 캘린더 이벤트 점을 함께 싣는다.
         /// 기본값 빈 배열 — 기존 ContentState 생성부/전방 디코딩 호환.
         var weekEventDots: [LiveDayEventDots] = []
+        /// 잠금화면 월간 캘린더의 표시 월 오프셋(이번 달 = 0, ±12 클램프) — 셰브런 탭 인텐트가 갱신.
+        /// 앱이 재게시하면 0으로 리셋. 일정 LA와 동일. 기본값 0 — 전방 디코딩 호환.
+        var calendarMonthOffset: Int = 0
+        /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
+        var monthEventDots: [LiveMonthDot] = []
     }
 
     let listTitle: String
@@ -37,6 +42,8 @@ extension ReminderLiveActivityAttributes.ContentState {
         remaining = try container.decode(Int.self, forKey: .remaining)
         todayCount = try container.decodeIfPresent(Int.self, forKey: .todayCount) ?? 0
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
+        calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
+        monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
     }
 }
 

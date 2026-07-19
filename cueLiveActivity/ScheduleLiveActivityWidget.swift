@@ -16,7 +16,8 @@ struct ScheduleLiveActivityWidget: Widget {
         ActivityConfiguration(for: ScheduleLiveActivityAttributes.self) { context in
             ScheduleLockScreenView(
                 days: context.state.days,
-                calendarMonthOffset: context.state.calendarMonthOffset
+                calendarMonthOffset: context.state.calendarMonthOffset,
+                monthEventDots: context.state.monthEventDots
             )
             .padding(ScheduleMetrics.outerPadding)
         } dynamicIsland: { context in
@@ -55,6 +56,7 @@ struct ScheduleLiveActivityWidget: Widget {
 private struct ScheduleLockScreenView: View {
     let days: [LiveScheduleDay]
     let calendarMonthOffset: Int
+    var monthEventDots: [LiveMonthDot] = []
 
     /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
     private var showsCalendar: Bool {
@@ -68,7 +70,8 @@ private struct ScheduleLockScreenView: View {
             if showsCalendar {
                 MonthCalendarView(
                     grid: MonthCalendarGrid(now: .now, monthOffset: calendarMonthOffset),
-                    intentTarget: ShiftCalendarMonthIntent.scheduleTarget
+                    intentTarget: ShiftCalendarMonthIntent.scheduleTarget,
+                    eventDots: monthEventDots
                 )
                 .frame(maxWidth: .infinity)
                 Divider()

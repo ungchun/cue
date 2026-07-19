@@ -130,6 +130,8 @@ struct ScheduleView: View {
                     break
                 }
             }
+            // 보여줄 일정이 없으면 라이브 버튼 비활성 — 메모·할일과 동일.
+            .disabled(viewModel.eventsByDay.isEmpty)
         }
         .listRowSeparator(.hidden)
         // 할일 탭과 같은 좌우 인셋(24) — 두 탭의 큰 제목 leading을 같은 세로선에 맞춘다.

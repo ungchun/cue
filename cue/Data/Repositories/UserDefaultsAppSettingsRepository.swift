@@ -36,5 +36,7 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
         group.set(settings.memoTextSize.rawValue, forKey: SharedAppGroup.Keys.memoTextSize)
         group.set(settings.memoShowsCalendar, forKey: SharedAppGroup.Keys.memoShowsCalendar)
         group.set(settings.scheduleShowsCalendar, forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+        group.set(settings.reminderShowsCalendar, forKey: SharedAppGroup.Keys.reminderShowsCalendar)
+        group.set(Array(settings.hiddenCalendarIDs), forKey: SharedAppGroup.Keys.hiddenCalendarIDs)
     }
 }

@@ -27,6 +27,8 @@ struct ScheduleLiveActivityAttributes: ActivityAttributes {
         /// Dynamic Island 주간 스트립의 날짜별 일정 점(오늘 제외) — 각 날 이벤트 색.
         /// 기본값 빈 배열 — 기존 ContentState 생성부/전방 디코딩 호환.
         var weekEventDots: [LiveDayEventDots] = []
+        /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
+        var monthEventDots: [LiveMonthDot] = []
     }
 
     let startedAt: Date
@@ -42,5 +44,6 @@ extension ScheduleLiveActivityAttributes.ContentState {
         todayCount = try container.decodeIfPresent(Int.self, forKey: .todayCount) ?? 0
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
+        monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
     }
 }

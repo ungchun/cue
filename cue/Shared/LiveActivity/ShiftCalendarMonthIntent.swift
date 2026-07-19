@@ -30,6 +30,7 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
 
     static let memoTarget = "memo"
     static let scheduleTarget = "schedule"
+    static let reminderTarget = "reminder"
 
     init() {}
 
@@ -42,6 +43,7 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         switch targetRaw {
         case Self.memoTarget: await shiftMemo()
         case Self.scheduleTarget: await shiftSchedule()
+        case Self.reminderTarget: await shiftReminder()
         default: break
         }
         return .result()
@@ -51,6 +53,8 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         guard let activity = Activity<MemoLiveActivityAttributes>.activities.first else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
+        // 이동한 달의 일정 점을 그 자리에서 재조회해 함께 갱신 — 어느 달로 넘겨도 점이 뜬다.
+        state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
         // staleDate는 기존 값 보존 — 월 이동이 신선도 정책을 바꾸면 안 된다.
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
     }
@@ -59,6 +63,15 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         guard let activity = Activity<ScheduleLiveActivityAttributes>.activities.first else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
+        state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
+        await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
+    }
+
+    private func shiftReminder() async {
+        guard let activity = Activity<ReminderLiveActivityAttributes>.activities.first else { return }
+        var state = activity.content.state
+        state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
+        state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
     }
 }

@@ -64,14 +64,17 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     ) async throws {
         guard await isEnabled else { return }
 
-        let state = ReminderLiveActivityAttributes.ContentState(
+        var state = ReminderLiveActivityAttributes.ContentState(
             items: items,
             remaining: remaining,
             todayCount: todayCount,
             weekEventDots: weekEventDots
         )
+        // 캘린더 함께 보기가 켜진 경우에만 이번 달 일정 점을 실어 월간 캘린더에 찍는다.
+        state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.reminderShowsCalendar)
         // 시간 흐름과 무관 — staleDate 미지정. 사용자 동작 시점에만 update.
-        let content = ActivityContent(state: state, staleDate: nil)
+        // Dynamic Island 우선순위(relevanceScore): 집중(AlarmKit, 시스템 우선) > 메모(3) > 일정=할일(2).
+        let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 2)
 
         // 같은 리스트로 이미 떠 있으면 **부드럽게 update** — 재시작은 깜빡임 + 새 인스턴스 발생.
         // listTitle은 attributes(불변)라, 리스트가 바뀐 경우엔 end 후 새로 request해야 한다.
@@ -123,7 +126,10 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             .map(\.startDate)
             .filter { $0 > now }
             .min()
-        let content = ActivityContent(state: state, staleDate: upcomingStart)
+        var withDots = state
+        withDots.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+        // 일정은 할일과 동일 우선순위(2) — Dynamic Island 표시가 같아 함께 둔다.
+        let content = ActivityContent(state: withDots, staleDate: upcomingStart, relevanceScore: 2)
 
         stampRingAnchor()
         scheduleActivity = try Activity.request(
@@ -144,9 +150,11 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
         guard await isEnabled else { return }
 
-        let state = MemoLiveActivityAttributes.ContentState(text: text, colorHex: colorHex, textColorHex: textColorHex)
+        var state = MemoLiveActivityAttributes.ContentState(text: text, colorHex: colorHex, textColorHex: textColorHex)
+        state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.memoShowsCalendar)
         // 시간 흐름과 무관 — staleDate 미지정. 사용자가 텍스트·색을 바꿀 때만 update.
-        let content = ActivityContent(state: state, staleDate: nil)
+        // 메모는 일정·할일보다 높은 우선순위(3) — 집중(AlarmKit) 다음으로 앞에 뜬다.
+        let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 3)
 
         // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
         if let existing = memoActivity {
@@ -177,6 +185,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         SharedAppGroup.defaults.set(Date.now.timeIntervalSince1970, forKey: SharedAppGroup.Keys.ringAnchor)
     }
 
+    /// 캘린더 함께 보기가 켜진 경우에만 표시 월(`offset`)의 일정 점을 계산한다. 꺼져 있으면 빈 배열.
+    private static func monthDots(showKey: String, offset: Int = 0) -> [LiveMonthDot] {
+        guard SharedAppGroup.defaults.bool(forKey: showKey) else { return [] }
+        return CalendarMonthDots.dots(monthOffset: offset)
+    }
+
     // MARK: - Sync
 
     func sync() async {
@@ -189,16 +203,26 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     // MARK: - Refresh
 
     func refreshLayout() async {
-        // 캘린더 함께 표시 설정의 대상인 메모·일정만 재게시하면 충분하다.
-        // 핸들이 유실됐을 수 있어(설정 화면이 sync보다 먼저 쓰이는 경우) 재포착 후 갱신.
+        // 캘린더 함께 표시 설정의 대상인 메모·일정·할일을 재게시한다. 핸들이 유실됐을 수 있어
+        // (설정 화면이 sync보다 먼저 쓰이는 경우) 재포착 후 갱신. 캘린더 점도 표시 월 기준 재계산.
+        reminderActivity = Activity<ReminderLiveActivityAttributes>.activities.first
         memoActivity = Activity<MemoLiveActivityAttributes>.activities.first
         scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
 
+        if let reminder = reminderActivity {
+            var state = reminder.content.state
+            state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.reminderShowsCalendar, offset: state.calendarMonthOffset)
+            await reminder.update(ActivityContent(state: state, staleDate: reminder.content.staleDate, relevanceScore: 2))
+        }
         if let memo = memoActivity {
-            await memo.update(memo.content)
+            var state = memo.content.state
+            state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.memoShowsCalendar, offset: state.calendarMonthOffset)
+            await memo.update(ActivityContent(state: state, staleDate: memo.content.staleDate, relevanceScore: 3))
         }
         if let schedule = scheduleActivity {
-            await schedule.update(schedule.content)
+            var state = schedule.content.state
+            state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.scheduleShowsCalendar, offset: state.calendarMonthOffset)
+            await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: 2))
         }
     }
 }
