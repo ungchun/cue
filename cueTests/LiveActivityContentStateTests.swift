@@ -49,6 +49,26 @@ struct LiveActivityContentStateTests {
         #expect(size < 4096, "일정 ContentState가 \(size) 바이트로 4KB 한도를 넘음")
     }
 
+    /// 할일 ContentState도 캘린더 ON worst-case(아이템 cap + 주간·월간 점)에서 4KB 안이어야 한다.
+    /// 할일 아이템 id는 EventKit 식별자(긴 문자열)라 못 줄이므로 캘린더 ON이면 아이템 수를 제한한다.
+    @Test func reminderContentStateStaysUnderSizeLimit() throws {
+        let longID = "x-apple-reminderkit://REMCDReminder/8A9B0C1D-2E3F-4A5B-6C7D-8E9F0A1B2C3D"
+        // 캘린더 ON이면 서비스가 아이템을 calendarModeItemCap(6)로 제한한다.
+        let items = (0..<6).map { i in
+            LiveReminderItem(id: "\(longID)-\(i)", title: "장보기 목록 정리 및 확인 \(i)", colorHex: "#FF3B30")
+        }
+        let weekDots = (0..<7).map { i in
+            LiveDayEventDots(dayStart: Date(timeIntervalSince1970: 1_784_000_000 + Double(i) * 86_400), colorHexes: ["#FF3B30", "#34C759"])
+        }
+        let monthDots = (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) }
+
+        var state = ReminderLiveActivityAttributes.ContentState(items: items, remaining: 30, todayCount: 30, weekEventDots: weekDots)
+        state.monthEventDots = monthDots
+
+        let size = try JSONEncoder().encode(state).count
+        #expect(size < 4096, "할일 ContentState가 \(size) 바이트로 4KB 한도를 넘음")
+    }
+
     // MARK: - 메모 ContentState
 
     /// `calendarMonthOffset` 키가 없는 옛 상태는 0(이번 달)으로 채워 디코딩된다.

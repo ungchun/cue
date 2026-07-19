@@ -43,6 +43,8 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 마지막 일정 게시의 **전체(미-cap) days** — 캘린더 함께 보기를 껐다 켤 때 refreshLayout이
     /// 게시된 (cap된) 상태가 아니라 이 원본에서 다시 계산해 이벤트 손실을 막는다.
     private var lastScheduleDays: [LiveScheduleDay] = []
+    /// 마지막 할일 게시의 **전체(미-cap) items** — 일정과 같은 이유(캘린더 토글 복원).
+    private var lastReminderItems: [LiveReminderItem] = []
 
     init() {}
 
@@ -67,14 +69,20 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     ) async throws {
         guard await isEnabled else { return }
 
+        // 캘린더 껐다 켤 때 원본에서 복원하도록 전체 items 보관(cap 이전).
+        lastReminderItems = items
+        // 캘린더 ON이면 위젯이 3개만 보여주고 월간 점까지 실어야 하므로 아이템을 제한한다
+        // (긴 EventKit id × 다수 + 월간 점이 ContentState 4KB를 넘기지 않게). OFF면 전부.
+        let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
+        let displayItems = showsCalendar ? Array(items.prefix(Self.calendarModeItemCap)) : items
+
         var state = ReminderLiveActivityAttributes.ContentState(
-            items: items,
+            items: displayItems,
             remaining: remaining,
             todayCount: todayCount,
             weekEventDots: weekEventDots
         )
-        // 캘린더 함께 보기가 켜진 경우에만 이번 달 일정 점을 실어 월간 캘린더에 찍는다.
-        state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.reminderShowsCalendar)
+        state.monthEventDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
         // 시간 흐름과 무관 — staleDate 미지정. 사용자 동작 시점에만 update.
         // Dynamic Island 우선순위(relevanceScore): 집중(AlarmKit, 시스템 우선) > 메모(3) > 일정=할일(2).
         let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 2)
@@ -104,6 +112,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         guard let activity = reminderActivity else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         reminderActivity = nil
+        lastReminderItems = []
     }
 
     // MARK: - Schedule
@@ -204,6 +213,8 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 캘린더 함께 보기 모드에서 일정 이벤트 총량을 이 값으로 제한한다 — 1열이라 더 못 보이고,
     /// 월간 점까지 실어야 해 ContentState 4KB 한도를 지킨다.
     static let calendarModeEventCap = 6
+    /// 캘린더 함께 보기 모드에서 할일 아이템 총량 제한 — 위젯은 3개만 표시하나 backfill 여유로 6개.
+    static let calendarModeItemCap = 6
 
     /// 날짜 묶음의 이벤트 총량을 앞에서부터 `max`개로 자른다(초과 날짜/이벤트 제거).
     private static func cappingEvents(_ days: [LiveScheduleDay], max: Int) -> [LiveScheduleDay] {
@@ -239,7 +250,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         if let reminder = reminderActivity {
             var state = reminder.content.state
-            state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.reminderShowsCalendar, offset: state.calendarMonthOffset)
+            let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
+            let source = lastReminderItems.isEmpty ? state.items : lastReminderItems
+            if showsCalendar {
+                state.items = Array(source.prefix(Self.calendarModeItemCap))
+                state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
+            } else {
+                state.items = source
+                state.monthEventDots = []
+            }
             await reminder.update(ActivityContent(state: state, staleDate: reminder.content.staleDate, relevanceScore: 2))
         }
         if let memo = memoActivity {
