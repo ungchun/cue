@@ -40,6 +40,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     private var reminderActivity: Activity<ReminderLiveActivityAttributes>?
     private var scheduleActivity: Activity<ScheduleLiveActivityAttributes>?
     private var memoActivity: Activity<MemoLiveActivityAttributes>?
+    /// 마지막 일정 게시의 **전체(미-cap) days** — 캘린더 함께 보기를 껐다 켤 때 refreshLayout이
+    /// 게시된 (cap된) 상태가 아니라 이 원본에서 다시 계산해 이벤트 손실을 막는다.
+    private var lastScheduleDays: [LiveScheduleDay] = []
 
     init() {}
 
@@ -115,6 +118,8 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         let attributes = ScheduleLiveActivityAttributes(startedAt: .now)
 
+        // 캘린더 껐다 켤 때 원본에서 다시 계산하도록 전체 days를 보관한다(cap 이전 값).
+        lastScheduleDays = days
         // 캘린더 함께 보기 ON이면 월간 점을 싣고 이벤트 목록은 1열로 좁아진다 — ContentState
         // 4KB 한도를 위해 이벤트 수를 줄인다(단독 목록 모드에선 2열이라 그대로 다 싣는다).
         let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
@@ -147,6 +152,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         guard let activity = scheduleActivity else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         scheduleActivity = nil
+        lastScheduleDays = []
     }
 
     // MARK: - Memo
@@ -244,11 +250,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         if let schedule = scheduleActivity {
             var state = schedule.content.state
             let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+            // 게시된(cap됐을 수 있는) days가 아니라 보관해 둔 원본에서 다시 계산 — 껐다 켤 때 복원.
+            let source = lastScheduleDays.isEmpty ? state.days : lastScheduleDays
             if showsCalendar {
-                // 캘린더 ON: 월간 점 + 이벤트 cap(4KB 한도). days가 이미 cap됐어도 idempotent.
-                state.days = Self.cappingEvents(state.days, max: Self.calendarModeEventCap)
+                // 캘린더 ON: 이벤트 cap(4KB 한도) + 월간 점.
+                state.days = Self.cappingEvents(source, max: Self.calendarModeEventCap)
                 state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
             } else {
+                // 캘린더 OFF: 전체 days 복원 + 월간 점 제거.
+                state.days = source
                 state.monthEventDots = []
             }
             await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: 2))
