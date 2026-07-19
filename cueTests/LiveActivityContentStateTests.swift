@@ -11,6 +11,44 @@ import Testing
 /// 재포착(sync)할 때 새 필드(`calendarMonthOffset` 등)가 없어도 깨지지 않아야 한다.
 struct LiveActivityContentStateTests {
 
+    // MARK: - 크기 한도 (ActivityKit ~4KB)
+
+    /// 일정 ContentState는 worst-case(캘린더 함께 보기 ON: 이벤트 cap + 주간·월간 점 가득)에서도
+    /// ActivityKit 4KB 한도 안이어야 한다. 초과하면 `Activity.request`가 throw해 "라이브 시작 불가"
+    /// alert가 뜬다. 수정: 이벤트 `id`를 짧은 합성값으로, 캘린더 ON이면 이벤트를 `calendarModeEventCap`로 제한.
+    @Test func scheduleContentStateStaysUnderSizeLimit() throws {
+        // 캘린더 ON이면 서비스가 이벤트를 calendarModeEventCap(6)로 제한하고 짧은 id를 붙인다.
+        let cap = 6
+        let events = (0..<cap).map { i in
+            LiveEventItem(
+                id: "\(i)",
+                title: "프로젝트 회의 및 주간 리뷰 \(i)",
+                startDate: Date(timeIntervalSince1970: 1_784_000_000 + Double(i) * 3600),
+                endDate: Date(timeIntervalSince1970: 1_784_003_600 + Double(i) * 3600),
+                timeText: "오전 9:00 - 오전 10:00",
+                calendarColorHex: "#FF3B30",
+                isAllDay: false
+            )
+        }
+        let days = stride(from: 0, to: events.count, by: 3).map { start in
+            LiveScheduleDay(
+                id: "2026-07-\(20 + start)",
+                label: "7/\(20 + start) (월)",
+                events: Array(events[start..<min(start + 3, events.count)])
+            )
+        }
+        let weekDots = (0..<7).map { i in
+            LiveDayEventDots(dayStart: Date(timeIntervalSince1970: 1_784_000_000 + Double(i) * 86_400), colorHexes: ["#FF3B30", "#34C759"])
+        }
+        let monthDots = (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) }
+
+        var state = ScheduleLiveActivityAttributes.ContentState(days: days, todayCount: 14, weekEventDots: weekDots)
+        state.monthEventDots = monthDots
+
+        let size = try JSONEncoder().encode(state).count
+        #expect(size < 4096, "일정 ContentState가 \(size) 바이트로 4KB 한도를 넘음")
+    }
+
     // MARK: - 메모 ContentState
 
     /// `calendarMonthOffset` 키가 없는 옛 상태는 0(이번 달)으로 채워 디코딩된다.

@@ -114,22 +114,26 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
 
         let attributes = ScheduleLiveActivityAttributes(startedAt: .now)
-        let state = ScheduleLiveActivityAttributes.ContentState(days: days, todayCount: todayCount, weekEventDots: weekEventDots)
+
+        // 캘린더 함께 보기 ON이면 월간 점을 싣고 이벤트 목록은 1열로 좁아진다 — ContentState
+        // 4KB 한도를 위해 이벤트 수를 줄인다(단독 목록 모드에선 2열이라 그대로 다 싣는다).
+        let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+        let displayDays = showsCalendar ? Self.cappingEvents(days, max: Self.calendarModeEventCap) : days
+
+        var state = ScheduleLiveActivityAttributes.ContentState(days: displayDays, todayCount: todayCount, weekEventDots: weekEventDots)
+        state.monthEventDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
         // staleDate = "이 시점 이후 정보는 오래됨"을 시스템에 알리는 미래 시각.
         // **과거 시각을 넣으면 request 직후 시스템이 즉시 stale로 처리해 화면에 표시 자체가
         // 안 뜬다** — 오늘 첫 이벤트가 이미 시작된 시각인 경우(오후에 토글)가 흔한 함정.
-        // 따라서 `> now`인 미래 시작 시각 중 가장 가까운 것만 staleDate로 채택, 없으면 nil
-        // (시간 흐름과 무관 — 사용자 동작에서만 갱신).
+        // 따라서 `> now`인 미래 시작 시각 중 가장 가까운 것만 staleDate로 채택, 없으면 nil.
         let now = Date.now
-        let upcomingStart = days
+        let upcomingStart = displayDays
             .flatMap(\.events)
             .map(\.startDate)
             .filter { $0 > now }
             .min()
-        var withDots = state
-        withDots.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.scheduleShowsCalendar)
         // 일정은 할일과 동일 우선순위(2) — Dynamic Island 표시가 같아 함께 둔다.
-        let content = ActivityContent(state: withDots, staleDate: upcomingStart, relevanceScore: 2)
+        let content = ActivityContent(state: state, staleDate: upcomingStart, relevanceScore: 2)
 
         stampRingAnchor()
         scheduleActivity = try Activity.request(
@@ -191,6 +195,24 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         return CalendarMonthDots.dots(monthOffset: offset)
     }
 
+    /// 캘린더 함께 보기 모드에서 일정 이벤트 총량을 이 값으로 제한한다 — 1열이라 더 못 보이고,
+    /// 월간 점까지 실어야 해 ContentState 4KB 한도를 지킨다.
+    static let calendarModeEventCap = 6
+
+    /// 날짜 묶음의 이벤트 총량을 앞에서부터 `max`개로 자른다(초과 날짜/이벤트 제거).
+    private static func cappingEvents(_ days: [LiveScheduleDay], max: Int) -> [LiveScheduleDay] {
+        var remaining = max
+        var result: [LiveScheduleDay] = []
+        for day in days {
+            if remaining <= 0 { break }
+            let kept = Array(day.events.prefix(remaining))
+            guard !kept.isEmpty else { continue }
+            remaining -= kept.count
+            result.append(LiveScheduleDay(id: day.id, label: day.label, events: kept))
+        }
+        return result
+    }
+
     // MARK: - Sync
 
     func sync() async {
@@ -221,7 +243,14 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
         if let schedule = scheduleActivity {
             var state = schedule.content.state
-            state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.scheduleShowsCalendar, offset: state.calendarMonthOffset)
+            let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+            if showsCalendar {
+                // 캘린더 ON: 월간 점 + 이벤트 cap(4KB 한도). days가 이미 cap됐어도 idempotent.
+                state.days = Self.cappingEvents(state.days, max: Self.calendarModeEventCap)
+                state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
+            } else {
+                state.monthEventDots = []
+            }
             await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: 2))
         }
     }

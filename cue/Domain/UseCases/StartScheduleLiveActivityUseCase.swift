@@ -70,13 +70,17 @@ struct StartScheduleLiveActivityUseCase: Sendable {
 
         var remaining = maxTotalEvents
         var days: [LiveScheduleDay] = []
+        var eventIndex = 0   // ContentState 전체에서 고유한 짧은 id — 긴 EventKit 식별자 대신.
         // 일수 제한 없음 — 다가오는 날을 순서대로 담되, 총량(maxTotalEvents)·하루(maxEventsPerDay)로만 자른다.
         for dayStart in grouped.keys.sorted() {
             if remaining <= 0 { break }
             let dayEvents = (grouped[dayStart] ?? [])
                 .sorted { $0.startDate < $1.startDate }   // 인앱(ScheduleViewModel)과 동일 — 순수 시작시간순
                 .prefix(min(maxEventsPerDay, remaining))
-                .map { map($0, dayStart: dayStart) }
+                .map { event -> LiveEventItem in
+                    defer { eventIndex += 1 }
+                    return map(event, id: "\(eventIndex)", dayStart: dayStart)
+                }
             if dayEvents.isEmpty { continue }
             remaining -= dayEvents.count
             days.append(LiveScheduleDay(
@@ -109,9 +113,11 @@ struct StartScheduleLiveActivityUseCase: Sendable {
     }()
 
     /// 표시용 매핑 — id/title/시각/캘린더 색/종일 여부 + 그 날(dayStart) 기준 시간 문구.
-    private static func map(_ event: CalendarEvent, dayStart: Date) -> LiveEventItem {
+    /// `id`는 EventKit 식별자(50자↑) 대신 **짧은 합성 인덱스**를 받는다 — 위젯은 id를
+    /// ForEach 구분에만 쓰고 인텐트가 없어, 긴 식별자는 ContentState 4KB 한도를 잡아먹는 낭비다.
+    private static func map(_ event: CalendarEvent, id: String, dayStart: Date) -> LiveEventItem {
         LiveEventItem(
-            id: event.id,
+            id: id,
             title: event.title,
             startDate: event.startDate,
             endDate: event.endDate,
