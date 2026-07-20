@@ -28,8 +28,8 @@ final class MemoViewModel {
 
     /// 현재 메모(텍스트 + 색). View는 바인딩으로 읽고, 변경은 `setText`/`setColor`로.
     private(set) var memo: Memo = .default
-    /// 메모 입력 글자 크기 — 설정에서 읽어 View가 글꼴에 반영한다. 기본 `.large`(현재 동작).
-    private(set) var textSize: MemoTextSize = .large
+    /// 메모 입력 글자 크기 — 설정에서 읽어 View가 글꼴에 반영한다. 기본 `.medium`.
+    private(set) var textSize: MemoTextSize = .medium
     /// 라이브 액티비티 활성 상태 — 동그라미 버튼 시각 상태 + 토글 분기.
     private(set) var liveActivityActive = false
     /// 라이브 액티비티 시작 실패 시 사용자에게 알릴 에러 — View가 alert로 표시.

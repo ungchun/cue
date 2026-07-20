@@ -24,7 +24,7 @@ struct MemoLiveActivityWidget: Widget {
             // 캘린더 모드는 패딩을 줄여 캘린더가 최대 크기로 그려지게 한다.
             lockScreen(context.state)
                 .padding(.horizontal, showsCalendar() ? Spacing.md : Spacing.lg)
-                .padding(.vertical, showsCalendar() ? Spacing.sm : Spacing.md)
+                .padding(.vertical, showsCalendar() ? Spacing.sm : Spacing.lg)
                 .activityBackgroundTint(cardColor(context.state.colorHex))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
@@ -128,12 +128,12 @@ struct MemoLiveActivityWidget: Widget {
     }
 
     /// 메모 글자 크기 배율 — 설정(App Group 미러 "small"/"medium"/"large")을 읽어 큰 텍스트를 줄인다.
-    /// 키가 없으면(첫 실행·미저장) 기본 `.large` = 1.0으로 현재 크기를 유지한다.
+    /// 키가 없으면(첫 실행·미저장) 기본 `.medium` = 0.85로, AppSettings 기본값과 일치시킨다.
     private func memoSizeScale() -> CGFloat {
         switch SharedAppGroup.defaults.string(forKey: SharedAppGroup.Keys.memoTextSize) {
         case "small": 0.7
-        case "medium": 0.85
-        default: 1.0
+        case "large": 1.0
+        default: 0.85   // "medium" 또는 키 미저장(첫 실행)
         }
     }
 }

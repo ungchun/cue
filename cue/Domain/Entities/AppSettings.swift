@@ -66,7 +66,7 @@ struct AppSettings: Codable, Equatable, Sendable {
         colorScheme: .system,
         startTabID: "reminder",
         focusEndSound: false,
-        memoTextSize: .large,
+        memoTextSize: .medium,
         memoShowsCalendar: false,
         scheduleShowsCalendar: false,
         reminderShowsCalendar: false,
