@@ -148,7 +148,7 @@ struct PremiumPaywallView: View {
             featureRow(
                 icon: "calendar",
                 title: "Show Calendar",
-                detail: "A monthly calendar beside your memos and schedule"
+                detail: "A monthly calendar beside your memos, schedule, and to-dos"
             )
             featureRow(
                 icon: "paintpalette",
@@ -275,7 +275,7 @@ struct PremiumPaywallView: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.top, Spacing.xs)
+                .padding(.top, Spacing.smd)
 
             HStack(spacing: Spacing.md) {
                 Button("Restore") { Task { await restore() } }

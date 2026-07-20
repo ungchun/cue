@@ -543,102 +543,102 @@
         }
       }
     },
-    "A monthly calendar beside your memos and schedule": {
+    "A monthly calendar beside your memos, schedule, and to-dos": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تقويم شهري بجانب مذكراتك وجدولك"
+            "value": "تقويم شهري بجانب مذكراتك وجدولك ومهامك"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein Monatskalender neben Memos und Terminen"
+            "value": "Ein Monatskalender neben Memos, Terminen und Aufgaben"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un calendario mensual junto a tus notas y tu agenda"
+            "value": "Un calendario mensual junto a tus notas, tu agenda y tus tareas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un calendrier mensuel à côté de vos mémos et de votre agenda"
+            "value": "Un calendrier mensuel à côté de vos mémos, de votre agenda et de vos tâches"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "आपके मेमो और शेड्यूल के साथ मासिक कैलेंडर"
+            "value": "आपके मेमो, शेड्यूल और कार्यों के साथ मासिक कैलेंडर"
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kalender bulanan di samping memo dan jadwal"
+            "value": "Kalender bulanan di samping memo, jadwal, dan tugas"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un calendario mensile accanto a note e agenda"
+            "value": "Un calendario mensile accanto a note, agenda e attività"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メモや予定の横に月間カレンダー"
+            "value": "メモ・予定・タスクの横に月間カレンダー"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "메모·일정 옆에 월간 캘린더"
+            "value": "메모·일정·할일 옆에 월간 캘린더"
           }
         },
         "ms": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kalendar bulanan di sebelah memo dan jadual anda"
+            "value": "Kalendar bulanan di sebelah memo, jadual, dan tugasan anda"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Um calendário mensal ao lado das suas notas e agenda"
+            "value": "Um calendário mensal ao lado das suas notas, agenda e tarefas"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Календарь на месяц рядом с заметками и расписанием"
+            "value": "Календарь на месяц рядом с заметками, расписанием и задачами"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "ปฏิทินรายเดือนข้างบันทึกและกำหนดการ"
+            "value": "ปฏิทินรายเดือนข้างบันทึก กำหนดการ และงานที่ต้องทำ"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lịch tháng bên cạnh ghi chú và lịch trình"
+            "value": "Lịch tháng bên cạnh ghi chú, lịch trình và việc cần làm"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "备忘和日程旁的月历"
+            "value": "备忘、日程和待办旁的月历"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "備忘和行程旁的月曆"
+            "value": "備忘、行程和待辦旁的月曆"
           }
         }
       }

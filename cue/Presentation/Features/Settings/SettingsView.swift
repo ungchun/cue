@@ -63,7 +63,7 @@ struct SettingsView: View {
             }
 
             Section {
-                // 항상 표시 로직 연결은 추후 — 지금은 설정 저장까지. Premium 게이트도 추후 복원.
+                // 켜기는 Premium 전용 — 바인딩 setter가 가로채 Premium 토스트만 띄운다(끄기는 항상 허용).
                 Toggle("Always Show Live", isOn: liveAlwaysOnBinding)
                     .tint(.green)
                 // 대상 선택 — 평면 메뉴 한 번에 열림. 서브메뉴 펼침이 없어서 메뉴 재배치
@@ -349,10 +349,17 @@ struct SettingsView: View {
             }
     }
 
+    /// "항상 표시" 켜기는 Premium 전용 — 무료면 저장하지 않고 Premium 토스트만. 끄기는 항상 허용.
     private var liveAlwaysOnBinding: Binding<Bool> {
         Binding(
             get: { viewModel.settings.liveAlwaysOn },
-            set: { newValue in Task { await viewModel.setLiveAlwaysOn(newValue) } }
+            set: { newValue in
+                guard isPremiumUser || !newValue else {
+                    toastCenter.show("Premium")
+                    return
+                }
+                Task { await viewModel.setLiveAlwaysOn(newValue) }
+            }
         )
     }
 
