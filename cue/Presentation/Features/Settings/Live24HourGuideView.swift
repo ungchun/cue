@@ -59,6 +59,9 @@ struct Live24HourGuideView: View {
                     .frame(width: Spacing.lg, height: Spacing.lg)
                 Text("Open Shortcuts")
                     .font(.body.weight(.semibold))
+                    // tint(.primary) 캡슐은 다크에서 흰 배경 — 라벨 기본 흰색이 묻히므로
+                    // 배경 반전색으로 명시(페이월 CTA와 같은 관용구).
+                    .foregroundStyle(Color(.systemBackground))
             }
         }
         .buttonStyle(.borderedProminent)

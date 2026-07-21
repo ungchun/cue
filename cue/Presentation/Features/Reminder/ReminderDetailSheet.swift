@@ -168,15 +168,15 @@ struct ReminderDetailSheet: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    // 파란 Liquid Glass capsule + 흰 체크 — `.glassProminent` 스타일로 prominent.
-                    // capsule은 .tint(AccentColor) 따라간다. dark mode에서 label color가 자동으로
-                    // 검은색이 되는 이슈 우회를 위해 `Label` + `.foregroundStyle(.white)` 명시.
+                    // prominent capsule은 전역 tint(.primary)를 상속해 라이트=검정/다크=흰색 —
+                    // 라벨은 배경 반전색(systemBackground)으로 명시해 항상 대비를 보장한다
+                    // (흰색 고정은 다크에서 흰 캡슐에 묻힘 — 페이월 CTA와 같은 관용구).
                     Button {
                         complete()
                     } label: {
                         Label("Save", systemImage: "checkmark")
                             .labelStyle(.iconOnly)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color(.systemBackground))
                     }
                     .buttonStyle(.glassProminent)
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

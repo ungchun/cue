@@ -185,7 +185,9 @@ struct ListEditorSheet: View {
             } label: {
                 Label("Save", systemImage: "checkmark")
                     .labelStyle(.iconOnly)
-                    .foregroundStyle(.white)
+                    // prominent capsule은 전역 tint(.primary) 상속 — 라벨은 배경 반전색으로
+                    // 명시해 다크(흰 캡슐)에서도 대비 보장(페이월 CTA와 같은 관용구).
+                    .foregroundStyle(Color(.systemBackground))
             }
             .buttonStyle(.glassProminent)
             .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
