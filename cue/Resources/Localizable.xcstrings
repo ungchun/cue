@@ -18503,102 +18503,102 @@
         }
       }
     },
-    "Turn on and refresh without the 2-per-day limit" : {
+    "Turn on and refresh without daily limits" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "التشغيل والتحديث دون حدّ المرتين يومياً"
+            "value" : "التشغيل والتحديث دون حدود يومية"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ohne das Limit von 2 pro Tag einschalten und aktualisieren"
+            "value" : "Ohne Tageslimit einschalten und aktualisieren"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Activa y actualiza sin el límite de 2 al día"
+            "value" : "Activa y actualiza sin límites diarios"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Activez et actualisez sans la limite de 2 par jour"
+            "value" : "Activez et actualisez sans limite quotidienne"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "प्रतिदिन 2 की सीमा के बिना चालू और रिफ़्रेश करें"
+            "value" : "दैनिक सीमा के बिना चालू और रिफ़्रेश करें"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nyalakan dan segarkan tanpa batas 2 kali/hari"
+            "value" : "Nyalakan dan segarkan tanpa batas harian"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Attiva e aggiorna senza il limite di 2 al giorno"
+            "value" : "Attiva e aggiorna senza limiti giornalieri"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1日2回の制限なしでオンにして更新"
+            "value" : "1日の回数制限なしでオンにして更新"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "하루 2회 제한 없이 켜고 새로고침"
+            "value" : "하루 횟수 제한 없이 켜고 새로고침"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nyalakan dan segarkan tanpa had 2 kali/hari"
+            "value" : "Nyalakan dan segarkan tanpa had harian"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ative e atualize sem o limite de 2 por dia"
+            "value" : "Ative e atualize sem limites diários"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Включайте и обновляйте без лимита 2 раза в день"
+            "value" : "Включайте и обновляйте без дневных лимитов"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เปิดและรีเฟรชได้โดยไม่จำกัดวันละ 2 ครั้ง"
+            "value" : "เปิดและรีเฟรชได้ไม่จำกัดต่อวัน"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bật và làm mới không giới hạn 2 lần/ngày"
+            "value" : "Bật và làm mới không giới hạn mỗi ngày"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开启并刷新，不受每天 2 次限制"
+            "value" : "开启并刷新，无每日次数限制"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟並重新整理，不受每天 2 次限制"
+            "value" : "開啟並重新整理，無每日次數限制"
           }
         }
       }

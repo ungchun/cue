@@ -175,14 +175,14 @@ struct MemoViewModelTests {
         #expect(await service.startMemoCalls.count == 1)
     }
 
-    /// 하루 한도 안이면 소비하고 잔여를 돌려준다 — 뷰가 "1/2" 토스트를 띄우는 근거.
+    /// 한도 안이면 소비하고 잔여/한도를 돌려준다 — 뷰가 "1/2" 토스트를 띄우는 근거(최초 사용일 한도 2).
     @Test func toggleConsumesQuotaAndReturnsRemaining() async {
         let (viewModel, _, service) = makeViewModel(memo: Memo(text: "메모", colorHex: "#FF3B30"))
         await viewModel.onAppear()
 
         let verdict = await viewModel.toggleLiveActivity()
 
-        #expect(verdict == .allowed(remaining: 1))
+        #expect(verdict == .allowed(remaining: 1, limit: 2))
         #expect(viewModel.liveActivityActive == true)
         #expect(await service.startMemoCalls.count == 1)
     }

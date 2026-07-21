@@ -482,9 +482,9 @@ struct ReminderView: View {
                     toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
                 case .denied:
                     toastCenter.show("Premium")
-                case .allowed(let remaining) where viewModel.liveActivityActive:
+                case .allowed(let remaining, let limit) where viewModel.liveActivityActive:
                     // 무료 한도 잔여 표기 — "1/2" → "0/2".
-                    toastCenter.show("\(remaining) / \(ConsumeLiveActivationUseCase.dailyLimit)")
+                    toastCenter.show("\(remaining) / \(limit)")
                 default:
                     break
                 }

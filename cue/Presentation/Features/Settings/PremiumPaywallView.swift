@@ -149,7 +149,7 @@ struct PremiumPaywallView: View {
             featureRow(
                 icon: "infinity",
                 title: "Unlimited Live",
-                detail: "Turn on and refresh without the 2-per-day limit"
+                detail: "Turn on and refresh without daily limits"
             )
             featureRow(
                 icon: "clock.arrow.2.circlepath",
