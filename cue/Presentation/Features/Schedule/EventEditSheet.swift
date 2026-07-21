@@ -35,9 +35,10 @@ struct EventEditSheet: UIViewControllerRepresentable {
     let eventStore: EKEventStore
     /// nil이면 신규 모드. 값이 있으면 그 ID의 기존 이벤트를 편집한다.
     let editingEventID: String?
-    let onCompletion: () -> Void
+    /// 저장이면 true, 취소·삭제면 false — 호출처가 분석 이벤트(event_created) 판별에 쓴다.
+    let onCompletion: (Bool) -> Void
 
-    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping () -> Void) {
+    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping (Bool) -> Void) {
         self.eventStore = eventStore
         self.editingEventID = editingEventID
         self.onCompletion = onCompletion
@@ -66,9 +67,9 @@ struct EventEditSheet: UIViewControllerRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, EKEventEditViewDelegate {
-        let onCompletion: () -> Void
+        let onCompletion: (Bool) -> Void
 
-        init(onCompletion: @escaping () -> Void) {
+        init(onCompletion: @escaping (Bool) -> Void) {
             self.onCompletion = onCompletion
         }
 
@@ -78,7 +79,7 @@ struct EventEditSheet: UIViewControllerRepresentable {
             _ controller: EKEventEditViewController,
             didCompleteWith action: EKEventEditViewAction
         ) {
-            onCompletion()
+            onCompletion(action == .saved)
         }
     }
 }
@@ -93,11 +94,11 @@ struct EventEditSheet: UIViewControllerRepresentable {
 struct EventEditSheetContainer: View {
     let eventStore: EKEventStore
     let editingEventID: String?
-    let onCompletion: () -> Void
+    let onCompletion: (Bool) -> Void
 
     @State private var loaderVisible = true
 
-    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping () -> Void) {
+    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping (Bool) -> Void) {
         self.eventStore = eventStore
         self.editingEventID = editingEventID
         self.onCompletion = onCompletion

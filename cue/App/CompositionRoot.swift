@@ -66,7 +66,8 @@ struct CompositionRoot {
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: UserDefaultsLiveActivationQuotaRepository()),
             checkForcedUpdate: CheckForcedUpdateUseCase(service: FirebaseAppUpdatePolicyService()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
-            saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
+            saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository),
+            analytics: FirebaseAnalyticsService()
         )
     }
 }

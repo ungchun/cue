@@ -83,14 +83,14 @@ struct ScheduleView: View {
         .sheet(isPresented: $viewModel.showingNewEvent) {
             EventEditSheetContainer(
                 eventStore: eventStore,
-                onCompletion: { viewModel.dismissNewEvent() }
+                onCompletion: { saved in viewModel.dismissNewEvent(saved: saved) }
             )
         }
         .sheet(item: $viewModel.editingEvent) { event in
             EventEditSheetContainer(
                 eventStore: eventStore,
                 editingEventID: event.id,
-                onCompletion: { viewModel.dismissEdit() }
+                onCompletion: { _ in viewModel.dismissEdit() }
             )
         }
         .alert("Error", isPresented: errorBinding) {

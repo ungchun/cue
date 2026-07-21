@@ -24,6 +24,7 @@ final class ScheduleViewModel {
     private let startLiveActivityUseCase: StartScheduleLiveActivityUseCase
     private let endLiveActivityUseCase: EndScheduleLiveActivityUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
+    private let analytics: any AnalyticsService
     /// 프리미엄 여부의 반응형 소스 — 라이브 한도 소비 시 호출 시점에 읽는다(구매 즉시 반영).
     private let premiumStore: PremiumStore
     private let fetchAppSettings: FetchAppSettingsUseCase
@@ -71,6 +72,7 @@ final class ScheduleViewModel {
         self.startLiveActivityUseCase = dependencies.startScheduleLiveActivity
         self.endLiveActivityUseCase = dependencies.endScheduleLiveActivity
         self.consumeLiveActivation = dependencies.consumeLiveActivation
+        self.analytics = dependencies.analytics
         self.fetchAppSettings = dependencies.fetchAppSettings
         self.now = now
         startObservingChanges()
@@ -155,7 +157,10 @@ final class ScheduleViewModel {
     func toggleLiveActivity() async -> LiveActivationVerdict? {
         let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
         // .allowed(무료 한도 내)·.unlimited(Premium) 모두 켠다 — .denied(한도 초과)만 막는다.
-        if case .denied = verdict { return verdict }
+        if case .denied = verdict {
+            analytics.log(.liveDenied(kind: "schedule"))
+            return verdict
+        }
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
@@ -167,6 +172,7 @@ final class ScheduleViewModel {
                 weekEvents: await fetchWeekEvents()
             )
             if !liveActivityActive { await endLiveActivityUseCase() }
+            if liveActivityActive { analytics.log(.liveToggled(kind: "schedule", on: true)) }
         } catch {
             errorMessage = String(localized: "Couldn't start Live Activity.")
             return nil
@@ -199,8 +205,9 @@ final class ScheduleViewModel {
         }
     }
 
-    /// 시트의 저장·취소 콜백에서 호출 — 시트를 닫는다.
-    func dismissNewEvent() {
+    /// 시트의 저장·취소 콜백에서 호출 — 시트를 닫는다. 저장이면 분석 이벤트 기록.
+    func dismissNewEvent(saved: Bool = false) {
+        if saved { analytics.log(.eventCreated) }
         showingNewEvent = false
     }
 

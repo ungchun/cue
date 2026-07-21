@@ -26,6 +26,15 @@ struct PremiumPaywallView: View {
             case .lifetime: return .lifetime
             }
         }
+
+        /// 분석 이벤트 파라미터용 이름.
+        var analyticsName: String {
+            switch self {
+            case .monthly: "monthly"
+            case .yearly: "yearly"
+            case .lifetime: "lifetime"
+            }
+        }
     }
 
     @State private var selectedPlan: Plan = .yearly
@@ -35,6 +44,7 @@ struct PremiumPaywallView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
     @Environment(\.premiumStore) private var premiumStore
+    @Environment(\.dependencies) private var dependencies
 
     private let termsURL = URL(string: "https://ungchun.github.io/cue-legal/terms.html")!
     private let privacyURL = URL(string: "https://ungchun.github.io/cue-legal/privacy.html")!
@@ -66,6 +76,7 @@ struct PremiumPaywallView: View {
             .padding(Spacing.md)
         }
         .presentationDetents([.large])
+        .onAppear { dependencies.analytics.log(.paywallShown(source: "settings")) }
     }
 
     // MARK: - 에코 장식
@@ -301,12 +312,16 @@ struct PremiumPaywallView: View {
     private func startPurchase() async {
         purchasing = true
         defer { purchasing = false }
+        let plan = selectedPlan.analyticsName
+        dependencies.analytics.log(.purchaseAttempted(plan: plan))
         let outcome = await premiumStore.purchase(selectedPlan.product.id)
+        dependencies.analytics.log(.purchaseResult(plan: plan, outcome: String(describing: outcome)))
         if outcome == .success || premiumStore.isPremium { dismiss() }
     }
 
     /// 이전 구매를 복원한다. 프리미엄이 확인되면 페이월을 닫는다.
     private func restore() async {
+        dependencies.analytics.log(.restoreTapped)
         await premiumStore.restore()
         if premiumStore.isPremium { dismiss() }
     }

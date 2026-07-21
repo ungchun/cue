@@ -22,6 +22,7 @@ final class SettingsViewModel {
     private let refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase
     private let fetchReminderLists: FetchReminderListsUseCase
     private let fetchCalendars: FetchCalendarsUseCase
+    private let analytics: any AnalyticsService
 
     /// 현재 설정. View는 읽기만 하고, 변경은 아래 `set...` 메서드로.
     private(set) var settings: AppSettings = .default
@@ -47,6 +48,7 @@ final class SettingsViewModel {
         self.refreshLiveActivityLayout = dependencies.refreshLiveActivityLayout
         self.fetchReminderLists = dependencies.fetchReminderLists
         self.fetchCalendars = dependencies.fetchCalendars
+        self.analytics = dependencies.analytics
     }
 
     /// 화면이 나타날 때 — 저장된 설정과 메모 색(배경·글자)을 불러온다.
@@ -75,12 +77,14 @@ final class SettingsViewModel {
     }
 
     func setMemoTextSize(_ size: MemoTextSize) async {
+        analytics.log(.textSizeChanged(size: size.rawValue))
         await update { $0.memoTextSize = size }
     }
 
     /// 라이브 항상 표시 마스터 — 다시 켤 때 하위가 전부 꺼진 불능 상태면 셋 다 on으로 리셋한다
     /// (켜자마자 다시 접히는 상태 방지).
     func setLiveAlwaysOn(_ value: Bool) async {
+        analytics.log(.alwaysOnToggled(on: value))
         await update {
             $0.liveAlwaysOn = value
             if value, !$0.liveAlwaysOnMemo, !$0.liveAlwaysOnReminder, !$0.liveAlwaysOnSchedule {
@@ -158,16 +162,19 @@ final class SettingsViewModel {
 
     /// 캘린더 표시 토글 — 저장(App Group 미러 포함) 후 켜져 있는 LA를 재게시해 즉시 반영한다.
     func setMemoShowsCalendar(_ value: Bool) async {
+        analytics.log(.showCalendarToggled(kind: "memo", on: value))
         await update { $0.memoShowsCalendar = value }
         await refreshLiveActivityLayout()
     }
 
     func setScheduleShowsCalendar(_ value: Bool) async {
+        analytics.log(.showCalendarToggled(kind: "schedule", on: value))
         await update { $0.scheduleShowsCalendar = value }
         await refreshLiveActivityLayout()
     }
 
     func setReminderShowsCalendar(_ value: Bool) async {
+        analytics.log(.showCalendarToggled(kind: "tasks", on: value))
         await update { $0.reminderShowsCalendar = value }
         await refreshLiveActivityLayout()
     }

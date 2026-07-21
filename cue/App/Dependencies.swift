@@ -81,6 +81,10 @@ struct Dependencies: Sendable {
     /// 각 기능 ViewModel도 자기 화면 진입 시 fetch로 관련 설정을 읽는다.
     var fetchAppSettings: FetchAppSettingsUseCase
     var saveAppSettings: SaveAppSettingsUseCase
+
+    /// 분석 이벤트 기록 — 프로덕션은 Firebase(GA4), 프리뷰·테스트는 no-op.
+    /// fire-and-forget이라 UseCase 없이 서비스 경계를 그대로 노출한다.
+    var analytics: any AnalyticsService = DisabledAnalyticsService()
 }
 
 extension EnvironmentValues {

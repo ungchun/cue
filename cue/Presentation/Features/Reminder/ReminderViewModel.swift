@@ -27,6 +27,7 @@ final class ReminderViewModel {
     private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
+    private let analytics: any AnalyticsService
     /// 프리미엄 여부의 반응형 소스 — 라이브 한도 소비 시 호출 시점에 읽는다(구매 즉시 반영).
     private let premiumStore: PremiumStore
     /// 이번 주 캘린더 이벤트 조회 — 할일 LA도 일정 LA와 같은 주간 스트립(날짜별 일정 점)을
@@ -102,6 +103,7 @@ final class ReminderViewModel {
         self.consumeLiveActivation = dependencies.consumeLiveActivation
         self.fetchAppSettings = dependencies.fetchAppSettings
         self.fetchEventsUseCase = dependencies.fetchEvents
+        self.analytics = dependencies.analytics
         startObservingChanges()
     }
 
@@ -141,7 +143,10 @@ final class ReminderViewModel {
     func toggleLiveActivity(listTitle: String) async -> LiveActivationVerdict? {
         let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
         // .allowed(무료 한도 내)·.unlimited(Premium) 모두 켠다 — .denied(한도 초과)만 막는다.
-        if case .denied = verdict { return verdict }
+        if case .denied = verdict {
+            analytics.log(.liveDenied(kind: "tasks"))
+            return verdict
+        }
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
@@ -155,6 +160,7 @@ final class ReminderViewModel {
                 weekEvents: await fetchWeekEvents()
             )
             liveActivityActive = true
+            analytics.log(.liveToggled(kind: "tasks", on: true))
         } catch {
             errorMessage = String(localized: "Couldn't start Live Activity.")
             return nil
@@ -545,6 +551,8 @@ final class ReminderViewModel {
     func toggle(_ reminder: Reminder) async {
         do {
             try await toggleCompletionUseCase(reminder)
+            // 완료로 바뀌는 방향만 기록 — 체크 해제는 완료 취소라 세지 않는다.
+            if !reminder.isCompleted { analytics.log(.reminderCompleted) }
             try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
@@ -570,6 +578,7 @@ final class ReminderViewModel {
                 includesTime: includesTime,
                 listID: listID
             )
+            analytics.log(.reminderCreated)
             try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription

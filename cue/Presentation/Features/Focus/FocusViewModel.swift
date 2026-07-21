@@ -61,6 +61,7 @@ final class FocusViewModel {
     private let fetchSelectedFocusSessionID: FetchSelectedFocusSessionIDUseCase
     private let saveSelectedFocusSessionID: SaveSelectedFocusSessionIDUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
+    private let analytics: any AnalyticsService
 
     /// 무료 사용자의 세션 프리셋 한도 — Premium이면 무제한.
     static let freeSessionLimit = 1
@@ -74,6 +75,7 @@ final class FocusViewModel {
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
         self.saveSelectedFocusSessionID = dependencies.saveSelectedFocusSessionID
         self.fetchAppSettings = dependencies.fetchAppSettings
+        self.analytics = dependencies.analytics
     }
 
     var selectedSession: FocusSession? {
@@ -129,6 +131,7 @@ final class FocusViewModel {
         ).save()
 
         isTransitioning = true
+        analytics.log(.focusStarted)
         beginPhase(.focus, cycle: 1, duration: settings.focusDuration, totalCycles: settings.totalCycles)
         startObserving()
         Task {
@@ -148,6 +151,7 @@ final class FocusViewModel {
     }
 
     func stopSession() {
+        analytics.log(.focusEnded)
         cancelAllFocusAlarms()
         FocusAlarmPlan.clear()
         clearActive()
@@ -155,6 +159,7 @@ final class FocusViewModel {
 
     func pause() {
         guard isActive, !isPaused else { return }
+        analytics.log(.focusPaused)
         isPaused = true
         if let fire = fireDate { frozenRemaining = max(0, fire.timeIntervalSinceNow) }
         remaining = frozenRemaining
@@ -164,6 +169,7 @@ final class FocusViewModel {
 
     func resume() {
         guard isActive, isPaused else { return }
+        analytics.log(.focusResumed)
         isPaused = false
         fireDate = Date().addingTimeInterval(frozenRemaining)
         remaining = frozenRemaining
@@ -171,6 +177,7 @@ final class FocusViewModel {
     }
 
     func skip() {
+        analytics.log(.focusSkipped)
         advance()
     }
 
@@ -341,6 +348,7 @@ final class FocusViewModel {
         guard premiumStore.isPremium || sessions.count < Self.freeSessionLimit else { return nil }
         let new = FocusSession(id: UUID(), title: title, settings: settings, colorHex: colorHex)
         sessions.append(new)
+        analytics.log(.focusSessionCreated)
         persist()
         return new
     }
@@ -348,10 +356,12 @@ final class FocusViewModel {
     func updateSession(id: UUID, title: String, settings: FocusSettings, colorHex: String) {
         guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
         sessions[index] = FocusSession(id: id, title: title, settings: settings, colorHex: colorHex)
+        analytics.log(.focusSessionUpdated)
         persist()
     }
 
     func deleteSession(id: UUID) {
+        analytics.log(.focusSessionDeleted)
         sessions.removeAll { $0.id == id }
         if selectedSessionID == id {
             selectedSessionID = nil
