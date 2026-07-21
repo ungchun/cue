@@ -15,7 +15,8 @@ struct RootView: View {
     @State private var isUpdateRequired = false
     /// App Store 앱 페이지 — ASC 앱 정보의 Apple ID.
     private let appStoreURL = URL(string: "https://apps.apple.com/app/id6789932436")!
-    @State private var selectedTab: AppTab = .reminder
+    /// 설정 로드 전 첫 프레임의 탭 — 기본 시작 탭(메모)과 일치시켜 깜빡임 없이 시작한다.
+    @State private var selectedTab: AppTab = .memo
     @State private var reminderViewModel: ReminderViewModel
     @State private var scheduleViewModel: ScheduleViewModel
     @State private var focusViewModel: FocusViewModel
@@ -46,6 +47,10 @@ struct RootView: View {
         // 앱 전체를 무채색(.primary, 라이트=검정/다크=하양)으로 — 탭 선택·메뉴 아이콘·토글·버튼의
         // accent(보라)·시스템 파랑 강조를 없앤다. 세션 색·메모 LA 색 등 명시적 색은 영향 없음.
         .tint(.primary)
+        // 탭 진입 분석 — 시작 탭 포함 첫 표시 1회 + 이후 전환마다.
+        .onChange(of: selectedTab, initial: true) { _, tab in
+            dependencies.analytics.log(.tabViewed(tab: tab.rawValue))
+        }
         // minimize 동작은 할일 탭에서만 — 다른 탭에선 `.never`로 항상 expanded.
         .tabBarMinimizeBehavior(selectedTab == .reminder ? .onScrollDown : .never)
         // 할일 탭일 때만 리스트 선택 chip bar를 탭바에 부착.

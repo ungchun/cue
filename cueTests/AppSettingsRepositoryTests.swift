@@ -43,7 +43,7 @@ struct AppSettingsRepositoryTests {
         let partial = Data(#"{"colorScheme":"dark"}"#.utf8)  // 화면모드만 저장됐던 시절
         let settings = try JSONDecoder().decode(AppSettings.self, from: partial)
         #expect(settings.colorScheme == .dark)          // 있던 값 유지
-        #expect(settings.startTabID == "reminder")      // 새 필드는 기본값
+        #expect(settings.startTabID == "memo")          // 새 필드는 기본값(시작 탭 = 메모)
         #expect(settings.focusEndSound == false)
         #expect(settings.memoShowsCalendar == false)    // 캘린더 표시 플래그도 기본 false
         #expect(settings.scheduleShowsCalendar == false)

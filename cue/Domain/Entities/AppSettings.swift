@@ -64,7 +64,7 @@ struct AppSettings: Codable, Equatable, Sendable {
 
     static let `default` = AppSettings(
         colorScheme: .system,
-        startTabID: "reminder",
+        startTabID: "memo",
         focusEndSound: false,
         memoTextSize: .medium,
         memoShowsCalendar: false,
