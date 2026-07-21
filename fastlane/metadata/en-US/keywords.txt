@@ -1,0 +1,1 @@
+widgets,checklist,agenda,reminder,pomodoro,timer,focus,calendar,tasks,schedule,habit,countdown

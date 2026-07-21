@@ -1,0 +1,40 @@
+Satu hal yang tak boleh kamu lupakan sekarang — pasang di Layar Terkunci.
+Tugas, catatan, jadwal — semuanya terlihat tanpa membuka aplikasi.
+
+Notifikasi hilang begitu lewat, dan aplikasi catatan harus dibuka dulu.
+Cue berbeda. Satu hal yang kamu pilih sendiri tampil di Layar Terkunci dan Dynamic Island, dan tetap di sana sampai selesai.
+
+
+[Live]
+Tampilkan tugas atau catatan ke Layar Terkunci dengan satu ketukan.
+Setiap kali layar menyala, langsung terlihat. Tidak hilang seperti notifikasi.
+
+[Kalender]
+Cek jadwal hari ini langsung dari Layar Terkunci.
+Lihat alur satu bulan penuh lewat kalender bulanan.
+
+[Mode Fokus]
+Pilih satu hal untuk difokuskan, lalu mulai timernya.
+Selama timer berjalan, hal yang harus dikerjakan terus ada di depan mata.
+
+[Linimasa]
+Cue yang kamu tampilkan hari ini tersusun berurutan sesuai waktu.
+Kamu juga bisa menjadwalkan Cue untuk muncul lagi di waktu tertentu.
+
+[Sinkronisasi]
+Cadangan otomatis lewat iCloud. Tanpa perlu daftar akun.
+Data hanya tersimpan di perangkat dan iCloud — tidak ada server eksternal.
+
+
+Cue cocok untukmu, kalau:
+
+Kamu mencatat sesuatu lalu tidak pernah membukanya lagi,
+Daftar tugasmu berakhir hanya sebagai daftar,
+Kamu ingin fokus pada satu hal sekarang, bukan seluruh rencana.
+
+
+Bukan aplikasi untuk mengatur harimu, tapi aplikasi yang terus menunjukkan satu hal yang tak boleh dilupakan sekarang.
+Cue your day.
+
+Terms of Use: https://ungchun.github.io/cue-legal/terms.html
+Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html

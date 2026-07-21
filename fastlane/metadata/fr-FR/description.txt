@@ -1,0 +1,40 @@
+Une seule chose à ne pas oublier, affichée sur votre écran verrouillé.
+Tâches, mémos, agenda : tout reste visible sans ouvrir l'app.
+
+Les notifications disparaissent, et les apps de notes doivent être ouvertes.
+Cue est différent : vous choisissez une chose, elle s'affiche sur l'écran verrouillé et dans la Dynamic Island, et elle y reste tranquillement jusqu'à ce que ce soit terminé.
+
+
+[En direct]
+Affichez une tâche ou un mémo sur l'écran verrouillé en un seul tap.
+Visible à chaque fois que vous allumez l'écran. Ça ne disparaît pas comme une notification.
+
+[Calendrier]
+Consultez le programme du jour directement sur l'écran verrouillé.
+Le calendrier mensuel vous donne aussi une vue d'ensemble du mois.
+
+[Mode concentration]
+Choisissez une chose sur laquelle vous concentrer et lancez le minuteur.
+Pendant que le minuteur tourne, ce que vous avez à faire reste sous vos yeux.
+
+[Chronologie]
+Les Cues du jour s'empilent dans l'ordre chronologique.
+Vous pouvez aussi programmer un Cue pour qu'il s'affiche à une heure précise.
+
+[Synchronisation]
+Sauvegarde automatique via iCloud. Pas de compte à créer.
+Vos données restent sur votre appareil et sur iCloud — aucun serveur externe.
+
+
+Cue est fait pour vous si...
+
+vous notez des choses que vous ne relisez jamais,
+vos to-do lists restent de simples listes,
+vous voulez vous concentrer sur une seule chose maintenant, pas sur tout le plan.
+
+
+Pas une app pour gérer votre journée, mais une app qui garde sous vos yeux la seule chose à ne pas oublier.
+Cue your day.
+
+Terms of Use: https://ungchun.github.io/cue-legal/terms.html
+Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html

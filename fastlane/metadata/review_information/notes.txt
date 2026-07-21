@@ -1,0 +1,8 @@
+Cue pins the user's tasks, memos, and calendar to the Lock Screen and Dynamic Island using Live Activities.
+
+To test:
+1. Create a todo or memo in the app.
+2. Tap the pin/live button — a Live Activity appears. Lock the device to see it on the Lock Screen.
+3. Focus timer: pick an item, start a focus session — the countdown runs as a Live Activity.
+
+No account or sign-in is required. All data is stored on-device and in the user's iCloud; the app has no external servers. All premium features are currently unlocked for review.

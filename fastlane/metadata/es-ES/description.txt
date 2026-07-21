@@ -1,0 +1,40 @@
+Esa única cosa que no puedes olvidar, fija en tu pantalla bloqueada.
+Tareas, notas y agenda: todo sigue visible sin abrir la app.
+
+Las notificaciones desaparecen, y las apps de notas hay que abrirlas.
+Cue es diferente: eliges una cosa, la fijas en la pantalla bloqueada y en la Dynamic Island, y ahí se queda, en silencio, hasta que la termines.
+
+
+[En vivo]
+Fija una tarea o una nota en la pantalla bloqueada con un solo toque.
+La ves cada vez que enciendes la pantalla. No desaparece como una notificación.
+
+[Calendario]
+Consulta los planes de hoy directamente en la pantalla bloqueada.
+Con el calendario mensual también ves el mes entero de un vistazo.
+
+[Modo enfoque]
+Elige una cosa en la que concentrarte y arranca el temporizador.
+Mientras corre el temporizador, lo que tienes que hacer sigue delante de tus ojos.
+
+[Cronología]
+Los Cues del día se van acumulando en orden cronológico.
+También puedes programar un Cue para que aparezca a una hora concreta.
+
+[Sincronización]
+Copia de seguridad automática con iCloud. Sin registro.
+Tus datos se guardan solo en tu dispositivo y en iCloud, sin servidores externos.
+
+
+Cue es para ti si...
+
+apuntas cosas en notas que nunca vuelves a abrir,
+tus listas de tareas se quedan en simples listas,
+quieres centrarte en una sola cosa ahora, no en todo el plan.
+
+
+No es una app para gestionar tu día: es una app que te muestra, todo el tiempo, lo único que no debes olvidar.
+Cue your day.
+
+Terms of Use: https://ungchun.github.io/cue-legal/terms.html
+Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html

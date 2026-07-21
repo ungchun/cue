@@ -36,3 +36,4 @@ fastlane/test_output
 # Secrets
 *.env
 secrets.plist
+*.p8

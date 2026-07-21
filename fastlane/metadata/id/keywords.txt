@@ -1,0 +1,1 @@
+jadwal,catatan,todo,planner,widget,pengingat,timer,pomodoro,kebiasaan,rutinitas,produktivitas

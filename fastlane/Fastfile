@@ -1,0 +1,59 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "누락된 언어의 App Info 현지화를 metadata의 고유 이름으로 먼저 생성한다 (기본 이름 'Cue' 복사로 인한 이름 충돌 우회)"
+  lane :add_localizations do
+    require 'spaceship'
+    Spaceship::ConnectAPI.login(
+      CredentialsManager::AppfileConfig.try_fetch_value(:apple_id),
+      use_portal: false,
+      use_tunes: true,
+      tunes_team_id: CredentialsManager::AppfileConfig.try_fetch_value(:itc_team_id)
+    )
+    app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
+    info = app.fetch_edit_app_info || app.fetch_live_app_info
+    existing = info.get_app_info_localizations.map(&:locale)
+    UI.message("이미 존재하는 현지화: #{existing.sort.join(', ')}")
+
+    base = File.expand_path("metadata", __dir__)
+    Dir.children(base)
+       .select { |d| File.directory?(File.join(base, d)) && d != "review_information" }
+       .sort
+       .each do |loc|
+      next if existing.include?(loc)
+      name = File.read(File.join(base, loc, "name.txt")).strip
+      subtitle_path = File.join(base, loc, "subtitle.txt")
+      attributes = { locale: loc, name: name }
+      if File.exist?(subtitle_path)
+        subtitle = File.read(subtitle_path).strip
+        attributes[:subtitle] = subtitle unless subtitle.empty?
+      end
+      UI.message("현지화 생성: #{loc} → #{name}")
+      begin
+        info.create_app_info_localization(attributes: attributes)
+      rescue => e
+        UI.error("#{loc} 실패: #{e.message}")
+      end
+    end
+    UI.success("App Info 현지화 생성 완료 — 이어서 'fastlane upload_metadata'를 실행하세요")
+  end
+  desc "메타데이터만 App Store Connect에 업로드한다 (바이너리·스크린샷 제외)"
+  lane :upload_metadata do
+    deliver(
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      force: true
+    )
+  end
+
+  desc "스크린샷만 App Store Connect에 업로드한다 (메타데이터 제외, 기존 스크린샷 덮어씀)"
+  lane :upload_screenshots do
+    deliver(
+      skip_metadata: true,
+      skip_screenshots: false,
+      skip_binary_upload: true,
+      overwrite_screenshots: true,
+      force: true
+    )
+  end
+end

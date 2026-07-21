@@ -1,0 +1,40 @@
+Một điều bạn không được quên lúc này — hãy để nó trên Màn hình khóa.
+Việc cần làm, ghi chú, lịch trình — luôn hiển thị mà không cần mở ứng dụng.
+
+Thông báo trôi qua là biến mất, còn ứng dụng ghi chú thì phải mở mới thấy.
+Cue thì khác. Một điều bạn tự chọn sẽ hiện trên Màn hình khóa và Dynamic Island, lặng lẽ ở đó cho đến khi bạn hoàn thành.
+
+
+[Live]
+Đưa việc cần làm hoặc ghi chú lên Màn hình khóa chỉ với một chạm.
+Mỗi lần bật màn hình là thấy ngay. Không biến mất như thông báo.
+
+[Lịch]
+Xem lịch hôm nay ngay trên Màn hình khóa.
+Nắm cả tháng trong tầm mắt với lịch tháng.
+
+[Chế độ tập trung]
+Chọn một việc cần tập trung rồi bắt đầu hẹn giờ.
+Trong lúc đồng hồ chạy, việc phải làm luôn ở ngay trước mắt.
+
+[Dòng thời gian]
+Các Cue bạn đã đưa lên trong ngày được xếp theo thứ tự thời gian.
+Bạn cũng có thể hẹn một Cue hiện lại vào giờ nhất định.
+
+[Đồng bộ]
+Tự động sao lưu qua iCloud. Không cần đăng ký tài khoản.
+Dữ liệu chỉ nằm trên thiết bị và iCloud — không có máy chủ bên ngoài.
+
+
+Cue dành cho bạn, nếu:
+
+Bạn ghi chú xong rồi chẳng bao giờ mở lại,
+Danh sách việc cần làm của bạn mãi chỉ là danh sách,
+Bạn muốn tập trung vào một việc ngay bây giờ, thay vì cả kế hoạch.
+
+
+Không phải ứng dụng quản lý cả ngày, mà là ứng dụng luôn cho bạn thấy một điều không được quên lúc này.
+Cue your day.
+
+Terms of Use: https://ungchun.github.io/cue-legal/terms.html
+Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html

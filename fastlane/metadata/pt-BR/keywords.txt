@@ -1,0 +1,1 @@
+calendário,lembrete,widget,pomodoro,cronômetro,hábitos,rotina,lista,foco,memo,produtividade

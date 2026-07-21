@@ -1,0 +1,40 @@
+The one thing you can't forget right now — keep it on your Lock Screen.
+Your todos, memos, and schedule stay visible without opening the app.
+
+Notifications disappear once they pass, and memo apps only show things when you open them.
+Cue is different. Pick one thing, put it on your Lock Screen and Dynamic Island, and it quietly stays there until you're done.
+
+
+[Live]
+Put a todo or memo on your Lock Screen with a single tap.
+It's right there every time you wake your screen. It doesn't vanish like a notification.
+
+[Calendar]
+Check today's schedule right on your Lock Screen.
+The monthly calendar shows your whole month at a glance.
+
+[Focus Mode]
+Pick one thing to focus on and start the timer.
+While the timer runs, what you need to do stays right in front of you.
+
+[Timeline]
+The Cues you put up today stack up in time order.
+You can also schedule a Cue to appear again at a specific time.
+
+[Sync]
+Automatic iCloud backup. No sign-up needed.
+Your data lives only on your device and in iCloud — no external servers.
+
+
+Cue is for you if:
+
+You jot things down in a memo app and never open it again,
+Your to-do list stays just a list,
+You want to focus on one thing now — not the whole plan.
+
+
+Not an app for managing your day, but an app that keeps showing you the one thing you can't forget right now.
+Cue your day.
+
+Terms of Use: https://ungchun.github.io/cue-legal/terms.html
+Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html
