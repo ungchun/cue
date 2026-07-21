@@ -85,6 +85,16 @@ struct Dependencies: Sendable {
     /// 분석 이벤트 기록 — 프로덕션은 Firebase(GA4), 프리뷰·테스트는 no-op.
     /// fire-and-forget이라 UseCase 없이 서비스 경계를 그대로 노출한다.
     var analytics: any AnalyticsService = DisabledAnalyticsService()
+
+    /// 앱 시작 시 강등(비프리미엄) 사용자의 프리미엄 전용 설정 잔존값을 정리한다.
+    /// 기본값은 인메모리 no-op — 프리뷰·테스트 조립이 실 저장소 없이 동작한다.
+    var reconcilePremiumSettings: ReconcilePremiumSettingsUseCase = {
+        let repository = InMemoryAppSettingsRepository()
+        return ReconcilePremiumSettingsUseCase(
+            fetch: FetchAppSettingsUseCase(repository: repository),
+            save: SaveAppSettingsUseCase(repository: repository)
+        )
+    }()
 }
 
 extension EnvironmentValues {

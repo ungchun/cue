@@ -120,11 +120,13 @@ struct MemoViewModelTests {
 
     // MARK: - 항상 표시 자동 게시
 
-    /// 항상 표시 자동 게시는 사용자 탭이 아니므로 쿼터를 소비하지 않는다 — 한도 소진 상태여도 게시.
+    /// 항상 표시 자동 게시(Premium 전용)는 사용자 탭이 아니므로 쿼터를 소비하지 않는다 —
+    /// 한도 소진 상태여도 게시.
     @Test func alwaysOnStartsWithoutConsumingQuota() async {
         let (viewModel, _, service) = makeViewModel(
             memo: Memo(text: "메모", colorHex: "#FF3B30"),
-            quotaRepository: quotaRepository(used: 2)
+            quotaRepository: quotaRepository(used: 2),
+            isPremium: true
         )
 
         await viewModel.startAlwaysOnLiveActivity()
@@ -133,9 +135,25 @@ struct MemoViewModelTests {
         #expect(await service.startMemoCalls.count == 1)
     }
 
+    /// 항상 표시는 Premium 전용 — 무료(구독 만료 포함)는 저장값이 켜져 있어도 자동 게시하지 않는다.
+    @Test func alwaysOnSkipsWhenNotPremium() async {
+        let (viewModel, _, service) = makeViewModel(
+            memo: Memo(text: "메모", colorHex: "#FF3B30"),
+            isPremium: false
+        )
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == false)
+        #expect(await service.startMemoCalls.isEmpty)
+    }
+
     /// 빈 메모는 자동 게시 대상이 아니다.
     @Test func alwaysOnSkipsWhenTextEmpty() async {
-        let (viewModel, _, service) = makeViewModel(memo: .init(text: "   ", colorHex: "#FF3B30"))
+        let (viewModel, _, service) = makeViewModel(
+            memo: .init(text: "   ", colorHex: "#FF3B30"),
+            isPremium: true
+        )
 
         await viewModel.startAlwaysOnLiveActivity()
 
@@ -145,7 +163,10 @@ struct MemoViewModelTests {
 
     /// 이미 활성(이 실행에서 켜짐)이면 중복 게시하지 않는다 — 포그라운드 복귀마다 재시작 방지.
     @Test func alwaysOnSkipsWhenAlreadyActive() async {
-        let (viewModel, _, service) = makeViewModel(memo: Memo(text: "메모", colorHex: "#FF3B30"))
+        let (viewModel, _, service) = makeViewModel(
+            memo: Memo(text: "메모", colorHex: "#FF3B30"),
+            isPremium: true
+        )
         await viewModel.onAppear()
         await viewModel.toggleLiveActivity()
 

@@ -67,7 +67,11 @@ struct CompositionRoot {
             checkForcedUpdate: CheckForcedUpdateUseCase(service: FirebaseAppUpdatePolicyService()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository),
-            analytics: FirebaseAnalyticsService()
+            analytics: FirebaseAnalyticsService(),
+            reconcilePremiumSettings: ReconcilePremiumSettingsUseCase(
+                fetch: FetchAppSettingsUseCase(repository: appSettingsRepository),
+                save: SaveAppSettingsUseCase(repository: appSettingsRepository)
+            )
         )
     }
 }

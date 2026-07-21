@@ -192,6 +192,8 @@ final class ScheduleViewModel {
     /// 항상 표시 자동 게시 — 권한이 있으면 일정을 적재하고 LA 시작(다가오는 일정 없으면 use case가 skip).
     /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 건너뛴다.
     func startAlwaysOnLiveActivity() async {
+        // 항상 표시는 Premium 전용 — 게시 시점에 재확인(구독 만료·과거 저장값 잔존 방어).
+        guard premiumStore.isPremium else { return }
         guard !liveActivityActive else { return }
         await onAppear()
         guard access == .granted else { return }

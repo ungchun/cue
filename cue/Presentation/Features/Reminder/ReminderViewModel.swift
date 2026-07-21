@@ -173,6 +173,8 @@ final class ReminderViewModel {
     /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 건너뛴다.
     /// `force`면 이미 활성이어도 다시 게시한다 — 설정에서 범위를 바꾼 직후 반영용.
     func startAlwaysOnLiveActivity(force: Bool = false) async {
+        // 항상 표시는 Premium 전용 — 게시 시점에 재확인(구독 만료·과거 저장값 잔존 방어).
+        guard premiumStore.isPremium else { return }
         guard force || !liveActivityActive else { return }
         await onAppear()
         guard access == .granted else { return }

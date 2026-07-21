@@ -26,7 +26,11 @@ struct RootView: View {
     /// 앱 전반 토스트 코디네이터 — 여기서 소유해 환경으로 주입하고, 상단 오버레이를 부착한다.
     @State private var toastCenter = ToastCenter()
 
+    /// 항상 표시 게시 전 엔타이틀먼트 확정용 — `start()`(cueApp)와 경쟁해도 게시 시점 값이 정확하게.
+    private let premiumStore: PremiumStore
+
     init(dependencies: Dependencies, premiumStore: PremiumStore) {
+        self.premiumStore = premiumStore
         _reminderViewModel = State(initialValue: ReminderViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _scheduleViewModel = State(initialValue: ScheduleViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, premiumStore: premiumStore))
@@ -118,9 +122,12 @@ struct RootView: View {
         }
     }
 
-    /// 항상 표시 설정에 따라 선택된 항목의 LA를 자동 게시한다 — 각 VM이 중복·권한·빈 데이터를 거른다.
+    /// 항상 표시 설정에 따라 선택된 항목의 LA를 자동 게시한다 — 각 VM이 중복·권한·빈 데이터·
+    /// **Premium 여부**를 거른다. 콜드런치에 `start()`(cueApp)보다 먼저 돌 수 있어, 게시 전
+    /// 엔타이틀먼트를 직접 새로고침해 프리미엄 사용자의 첫 게시가 레이스로 빠지지 않게 한다.
     private func startAlwaysOnActivities(_ settings: AppSettings) async {
         guard settings.liveAlwaysOn else { return }
+        await premiumStore.refresh()
         if settings.liveAlwaysOnMemo { await memoViewModel.startAlwaysOnLiveActivity() }
         if settings.liveAlwaysOnReminder { await reminderViewModel.startAlwaysOnLiveActivity() }
         if settings.liveAlwaysOnSchedule { await scheduleViewModel.startAlwaysOnLiveActivity() }

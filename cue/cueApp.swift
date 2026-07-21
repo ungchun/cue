@@ -31,8 +31,16 @@ struct cueApp: App {
                     await composition.dependencies.syncLiveActivities()
                 }
                 // 상품 로드 + 현재 엔타이틀먼트 반영 + 구매 변경 스트림 구독.
+                // 이어서 강등(비프리미엄) 사용자의 프리미엄 전용 설정 잔존값을 정리한다 —
+                // 정리됐으면 떠 있는 LA를 재게시해 캘린더 등 프리미엄 표시를 즉시 걷는다.
                 .task {
                     await composition.premiumStore.start()
+                    let stripped = await composition.dependencies.reconcilePremiumSettings(
+                        isPremium: composition.premiumStore.isPremium
+                    )
+                    if stripped {
+                        await composition.dependencies.refreshLiveActivityLayout()
+                    }
                 }
         }
         .modelContainer(composition.modelContainer)

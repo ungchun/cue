@@ -118,8 +118,26 @@ struct ReminderViewModelTests {
         #expect(viewModel.allReminders.count == 1)
     }
 
-    /// 항상 표시 자동 게시 — 권한이 있으면 현재 선택 스냅샷으로 LA를 시작한다(쿼터 미소비).
+    /// 항상 표시 자동 게시(Premium 전용) — 권한이 있으면 현재 선택 스냅샷으로 LA를 시작한다(쿼터 미소비).
     @Test func alwaysOnStartsReminderLiveActivity() async throws {
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(
+                lists: [listA],
+                reminders: [reminder(id: "1", listID: "A")],
+                liveActivityService: service
+            ),
+            premiumStore: await premiumStore()
+        )
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == true)
+        #expect(await service.startReminderCalls.count == 1)
+    }
+
+    /// 항상 표시는 Premium 전용 — 무료(구독 만료 포함)는 저장값이 켜져 있어도 자동 게시하지 않는다.
+    @Test func alwaysOnSkipsWhenNotPremium() async {
         let service = RecordingReminderLiveActivity()
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
             lists: [listA],
@@ -129,8 +147,8 @@ struct ReminderViewModelTests {
 
         await viewModel.startAlwaysOnLiveActivity()
 
-        #expect(viewModel.liveActivityActive == true)
-        #expect(await service.startReminderCalls.count == 1)
+        #expect(viewModel.liveActivityActive == false)
+        #expect(await service.startReminderCalls.isEmpty)
     }
 
     /// Premium(무제한)이면 켜기 버튼이 `.unlimited`로 그대로 LA를 켠다 — 설정 "라이브 항상 표시"와 무관.
@@ -187,15 +205,18 @@ struct ReminderViewModelTests {
         var settings = AppSettings.default
         settings.liveAlwaysOnReminderScopeID = "today"
         let service = RecordingReminderLiveActivity()
-        let viewModel = ReminderViewModel(dependencies: makeDependencies(
-            lists: [listA],
-            reminders: [
-                reminder(id: "due-today", dueDate: Date(), listID: "A"),
-                reminder(id: "no-due", listID: "A"),
-            ],
-            liveActivityService: service,
-            appSettings: settings
-        ))
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(
+                lists: [listA],
+                reminders: [
+                    reminder(id: "due-today", dueDate: Date(), listID: "A"),
+                    reminder(id: "no-due", listID: "A"),
+                ],
+                liveActivityService: service,
+                appSettings: settings
+            ),
+            premiumStore: await premiumStore()
+        )
 
         await viewModel.startAlwaysOnLiveActivity()
 
@@ -206,10 +227,13 @@ struct ReminderViewModelTests {
     /// 권한이 거부돼 있으면 자동 게시하지 않는다.
     @Test func alwaysOnSkipsWhenAccessDenied() async {
         let service = RecordingReminderLiveActivity()
-        let viewModel = ReminderViewModel(dependencies: makeDependencies(
-            access: .denied,
-            liveActivityService: service
-        ))
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(
+                access: .denied,
+                liveActivityService: service
+            ),
+            premiumStore: await premiumStore()
+        )
 
         await viewModel.startAlwaysOnLiveActivity()
 

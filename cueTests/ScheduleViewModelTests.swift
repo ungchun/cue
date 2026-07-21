@@ -188,6 +188,35 @@ struct ScheduleViewModelTests {
         #expect(viewModel.liveActivityActive == true)
     }
 
+    /// 항상 표시 자동 게시(Premium 전용) — 권한·데이터가 있으면 쿼터 소비 없이 LA를 시작한다.
+    @Test func alwaysOnStartsWhenPremium() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let allDay = event(id: "allday", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let viewModel = ScheduleViewModel(
+            dependencies: makeDependencies(events: [allDay]),
+            premiumStore: PremiumStore(previewIsPremium: true),
+            now: { today }
+        )
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == true)
+    }
+
+    /// 항상 표시는 Premium 전용 — 무료(구독 만료 포함)는 저장값이 켜져 있어도 자동 게시하지 않는다.
+    @Test func alwaysOnSkipsWhenNotPremium() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let allDay = event(id: "allday", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let viewModel = ScheduleViewModel(
+            dependencies: makeDependencies(events: [allDay]),
+            now: { today }
+        )
+
+        await viewModel.startAlwaysOnLiveActivity()
+
+        #expect(viewModel.liveActivityActive == false)
+    }
+
     @Test func eventsByDayGroupsByCalendarDay() async {
         let today = Calendar.current.startOfDay(for: Date())
         let tomorrow = today.addingTimeInterval(24 * 60 * 60)

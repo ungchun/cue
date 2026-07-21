@@ -13,7 +13,13 @@ actor InMemoryAppSettingsRepository: AppSettingsRepository {
         self.storage = storage
     }
 
+    /// 저장 호출 횟수 — 테스트가 "불필요한 write 없음"을 검증할 때 읽는다.
+    private(set) var saveCount = 0
+
     func fetch() -> AppSettings { storage }
 
-    func save(_ settings: AppSettings) { storage = settings }
+    func save(_ settings: AppSettings) {
+        storage = settings
+        saveCount += 1
+    }
 }

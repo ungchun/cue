@@ -114,6 +114,9 @@ final class MemoViewModel {
     /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다(항상 표시는 Premium 전용 기능).
     /// 이 실행에서 이미 켜져 있으면 건너뛴다(복귀마다 재시작 방지). 빈 메모도 건너뛴다.
     func startAlwaysOnLiveActivity() async {
+        // 항상 표시는 Premium 전용 — 게시 시점에 재확인한다. 설정 켜기 게이트만으로는
+        // 구독 만료·과거 저장값(liveAlwaysOn=true 잔존)이 무료로 무제한 게시되는 걸 못 막는다.
+        guard premiumStore.isPremium else { return }
         guard !liveActivityActive else { return }
         memo = await fetchMemoUseCase()
         guard canStartLiveActivity else { return }
