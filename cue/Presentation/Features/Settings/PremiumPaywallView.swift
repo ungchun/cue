@@ -271,15 +271,17 @@ struct PremiumPaywallView: View {
             .tint(.primary)
             .disabled(purchasing)
 
-            Text("Monthly and Yearly subscriptions renew automatically and are charged unless canceled at least 24 hours before the period ends. Cancel anytime in Settings - Subscriptions.")
+            Text("Auto-renewable · Cancel anytime")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.top, Spacing.smd)
+                .padding(.top, Spacing.sm)
 
-            HStack(spacing: Spacing.md) {
+            HStack(spacing: Spacing.sm) {
                 Button("Restore") { Task { await restore() } }
+                Text("·")
                 Button("Terms of Use") { openURL(termsURL) }
+                Text("·")
                 Button("Privacy Policy") { openURL(privacyURL) }
             }
             .font(.caption2)
@@ -290,7 +292,7 @@ struct PremiumPaywallView: View {
         }
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.md)
+        .padding(.bottom, Spacing.sm)
     }
 
     // MARK: - 구매 · 복원
