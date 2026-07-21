@@ -208,6 +208,27 @@ struct MemoViewModelTests {
         #expect(await repo.fetch().text == "새 메모")
     }
 
+    /// 입력 상한 — LA 상한(120)과 동일하게 잘라 저장한다("적은 만큼 다 보인다" 보장).
+    @Test func setTextCapsAtMaxLength() async {
+        let (viewModel, repo, _) = makeViewModel()
+        let long = String(repeating: "가", count: 130)
+
+        await viewModel.setText(long)
+
+        #expect(viewModel.memo.text.count == MemoViewModel.maxTextLength)
+        #expect(await repo.fetch().text == String(repeating: "가", count: MemoViewModel.maxTextLength))
+    }
+
+    /// 정확히 상한 길이면 자르지 않는다.
+    @Test func setTextKeepsTextAtExactLimit() async {
+        let (viewModel, repo, _) = makeViewModel()
+        let exact = String(repeating: "a", count: MemoViewModel.maxTextLength)
+
+        await viewModel.setText(exact)
+
+        #expect(await repo.fetch().text == exact)
+    }
+
     @Test func setColorPersistsMemo() async {
         let (viewModel, repo, _) = makeViewModel(memo: Memo(text: "메모", colorHex: "#FF3B30"))
 

@@ -24,6 +24,9 @@ struct MemoView: View {
         VStack(spacing: Spacing.zero) {
             Spacer()
             VStack(spacing: Spacing.lg) {
+                // 아래 라이브 버튼 줄과 같은 높이의 균형용 미러 — 버튼 줄이 블록에 포함돼
+                // 텍스트가 화면 중앙보다 위로 밀리는 것을 상쇄해, 입력+밑줄이 정중앙에 온다.
+                liveButtonRow.hidden()
                 HStack(spacing: Spacing.sm) {
                     // 좌측 균형용 빈 칸 — 우측 x 버튼과 같은 폭(같은 글래스 버튼을 hidden)으로
                     // 비워 텍스트가 화면 가운데 정렬되게.
@@ -36,7 +39,8 @@ struct MemoView: View {
                         textColor: .label,
                         textAlignment: .center,
                         hidesPlaceholderWhenFocused: true,
-                        maxLines: 5
+                        maxLines: 5,
+                        maxLength: MemoViewModel.maxTextLength
                     )
                     // 텍스트 필드 오른쪽 끝의 지우기(x) — 입력 있을 때만 보이되, 빈 칸은 항상
                     // 차지해 레이아웃이 흔들리지 않게(opacity로만 토글).
@@ -51,25 +55,7 @@ struct MemoView: View {
                     .animation(.easeInOut(duration: 0.2), value: hasText)
 
                 // 밑줄 아래 — 켜기(우). 입력 있을 때만 활성.
-                HStack {
-                    Spacer()
-                    FloatingMessageButton {
-                        let wasActive = viewModel.liveActivityActive
-                        let verdict = await viewModel.toggleLiveActivity()
-                        switch verdict {
-                        case .unlimited where viewModel.liveActivityActive:
-                            toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
-                        case .denied:
-                            toastCenter.show("Premium")
-                        case .allowed(let remaining) where viewModel.liveActivityActive:
-                            // 무료 한도 잔여 표기 — "1/2" → "0/2".
-                            toastCenter.show("\(remaining) / \(ConsumeLiveActivationUseCase.dailyLimit)")
-                        default:
-                            break
-                        }
-                    }
-                    .disabled(!hasText)
-                }
+                liveButtonRow
             }
             .padding(.horizontal, Spacing.lg)
             Spacer()
@@ -80,6 +66,29 @@ struct MemoView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.onAppear()
+        }
+    }
+
+    /// 밑줄 아래 라이브 켜기 버튼 줄 — 균형용 미러(hidden)와 실제 줄이 공유한다.
+    private var liveButtonRow: some View {
+        HStack {
+            Spacer()
+            FloatingMessageButton {
+                let wasActive = viewModel.liveActivityActive
+                let verdict = await viewModel.toggleLiveActivity()
+                switch verdict {
+                case .unlimited where viewModel.liveActivityActive:
+                    toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
+                case .denied:
+                    toastCenter.show("Premium")
+                case .allowed(let remaining) where viewModel.liveActivityActive:
+                    // 무료 한도 잔여 표기 — "1/2" → "0/2".
+                    toastCenter.show("\(remaining) / \(ConsumeLiveActivationUseCase.dailyLimit)")
+                default:
+                    break
+                }
+            }
+            .disabled(!hasText)
         }
     }
 

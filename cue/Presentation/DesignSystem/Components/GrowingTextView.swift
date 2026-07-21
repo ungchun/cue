@@ -41,6 +41,8 @@ struct GrowingTextView: View {
     var hidesPlaceholderWhenFocused: Bool = false
     /// 설정 시 이 줄 수까지만 높이가 자라고, 넘으면 내부 스크롤된다(nil이면 무한 확장).
     var maxLines: Int? = nil
+    /// 설정 시 이 글자 수를 넘는 입력을 막는다(붙여넣기는 상한까지만 잘라 수용). nil이면 무제한.
+    var maxLength: Int? = nil
 
     var body: some View {
         ZStack(alignment: textAlignment == .center ? .top : .topLeading) {
@@ -59,7 +61,8 @@ struct GrowingTextView: View {
                 textColor: textColor,
                 submitOnReturn: submitOnReturn,
                 textAlignment: textAlignment,
-                maxLines: maxLines
+                maxLines: maxLines,
+                maxLength: maxLength
             )
         }
         // UIViewRepresentable은 SwiftUI에 firstTextBaseline을 보고하지 않으므로 직접 명시 —
@@ -77,6 +80,7 @@ private struct Representable: UIViewRepresentable {
     var submitOnReturn: Bool
     var textAlignment: NSTextAlignment
     var maxLines: Int?
+    var maxLength: Int?
 
     func makeUIView(context: Context) -> UITextView {
         let view = AutoFocusTextView()
@@ -202,6 +206,8 @@ private struct Representable: UIViewRepresentable {
 
         /// Return 키를 줄바꿈으로 두지 않고 commit 트리거로 쓰려면, 입력을 막고 firstResponder를 푼다.
         /// 외부 onChange(isFocused)가 commit 흐름을 받는다.
+        /// `maxLength` 설정 시 상한을 넘는 변경을 막는다 — 타이핑은 상한에서 멈추고,
+        /// 붙여넣기는 상한까지만 잘라 직접 반영한다(변경을 통째로 거부하면 UX가 나빠서).
         func textView(
             _ textView: UITextView,
             shouldChangeTextIn range: NSRange,
@@ -210,6 +216,15 @@ private struct Representable: UIViewRepresentable {
             if parent.submitOnReturn && text == "\n" {
                 textView.resignFirstResponder()
                 return false
+            }
+            if let maxLength = parent.maxLength {
+                let current = (textView.text ?? "") as NSString
+                let updated = current.replacingCharacters(in: range, with: text)
+                if updated.count > maxLength {
+                    textView.text = String(updated.prefix(maxLength))
+                    textViewDidChange(textView)
+                    return false
+                }
             }
             return true
         }

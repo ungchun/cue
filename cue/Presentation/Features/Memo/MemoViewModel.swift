@@ -23,6 +23,7 @@ final class MemoViewModel {
     private let endLiveActivityUseCase: EndMemoLiveActivityUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
+    private let analytics: any AnalyticsService
     /// 프리미엄 여부의 반응형 소스 — 라이브 한도 소비 시 호출 시점에 읽는다(구매 즉시 반영).
     private let premiumStore: PremiumStore
 
@@ -43,6 +44,7 @@ final class MemoViewModel {
         self.endLiveActivityUseCase = dependencies.endMemoLiveActivity
         self.fetchAppSettings = dependencies.fetchAppSettings
         self.consumeLiveActivation = dependencies.consumeLiveActivation
+        self.analytics = dependencies.analytics
     }
 
     /// 빈 텍스트(공백만 포함)면 라이브 액티비티를 시작할 수 없다 — 버튼 비활성 기준.
@@ -56,10 +58,20 @@ final class MemoViewModel {
         textSize = await fetchAppSettings().memoTextSize
     }
 
-    /// 텍스트 변경 — 저장하고, LA가 떠 있으면 반영.
+    /// 입력 최대 글자 수 — LA에 실리는 상한(`StartMemoLiveActivityUseCase.maxTextLength`)과
+    /// 동일하게 묶어 "적은 만큼 잠금화면에 다 보인다"를 보장한다(조용한 잘림 방지).
+    static var maxTextLength: Int { StartMemoLiveActivityUseCase.maxTextLength }
+
+    /// 텍스트 변경 — 상한(120자)으로 잘라 저장하고, LA가 떠 있으면 반영.
+    /// 분석은 키 입력마다가 아니라 "빈 메모 → 내용 있음" 전환에 1회만 — 새 메모 작성 신호.
     func setText(_ text: String) async {
-        memo.text = text
+        let capped = String(text.prefix(Self.maxTextLength))
+        let wasEmpty = memo.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        memo.text = capped
         await saveMemoUseCase(memo)
+        if wasEmpty, !capped.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            analytics.log(.memoSaved)
+        }
         await refreshLiveActivityIfActive()
     }
 
@@ -79,7 +91,10 @@ final class MemoViewModel {
         guard canStartLiveActivity else { return nil }
         let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
         // .allowed(무료 한도 내)·.unlimited(Premium) 모두 켠다 — .denied(한도 초과)만 막는다.
-        if case .denied = verdict { return verdict }
+        if case .denied = verdict {
+            analytics.log(.liveDenied(kind: "memo"))
+            return verdict
+        }
         if liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false
@@ -87,6 +102,7 @@ final class MemoViewModel {
         do {
             try await startLiveActivityUseCase(memo)
             liveActivityActive = true
+            analytics.log(.liveToggled(kind: "memo", on: true))
         } catch {
             errorMessage = String(localized: "Couldn't start Live Activity.")
             return nil
