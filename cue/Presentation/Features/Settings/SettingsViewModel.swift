@@ -31,6 +31,9 @@ final class SettingsViewModel {
     private(set) var memoColorHex: String = Memo.default.colorHex
     /// 메모 라이브 액티비티 카드 글자(폰트) 색(hex). 출처는 `Memo.textColorHex`.
     private(set) var memoTextColorHex: String = Memo.default.textColorHex
+    /// 메모 라이브 액티비티 미리보기에 실을 현재 메모 본문. 출처는 `Memo.text`.
+    /// 비어 있으면 미리보기 뷰가 샘플 문구로 대체한다(설정 화면은 편집면이 아니라 표시용).
+    private(set) var memoText: String = Memo.default.text
     /// 항상 표시 할일 범위 선택지용 사용자 리스트 — 권한 없으면 빈 배열(시스템 필터만 노출).
     private(set) var reminderLists: [ReminderList] = []
     /// "볼 캘린더 선택" 체크리스트용 캘린더 목록 — 권한 없으면 빈 배열.
@@ -52,6 +55,7 @@ final class SettingsViewModel {
         let memo = await fetchMemoUseCase()
         memoColorHex = memo.colorHex
         memoTextColorHex = memo.textColorHex
+        memoText = memo.text
         reminderLists = (try? await fetchReminderLists()) ?? []
         eventCalendars = (try? await fetchCalendars()) ?? []
     }

@@ -28,6 +28,10 @@ struct SettingsView: View {
     /// Premium 배너 탭 시 페이월 시트 — 내용은 추후 채운다(현재 빈 시트).
     @State private var showsPremiumSheet = false
 
+    /// 브랜드 푸터 에코 숨쉬기 트리거 — 페이월 에코와 같은 느린 pulse 루프.
+    @State private var footerEchoPulsing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
 
     /// 시작 탭 선택지 — 설정 탭 자신은 제외(설정 화면으로 앱을 켜는 건 의미가 없음).
     private static let startTabOptions = AppTab.allCases.filter { $0 != .settings }
@@ -95,12 +99,32 @@ struct SettingsView: View {
                     .menuOrder(.fixed)
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
-                Button("Use 24 Hours") {
+                Button {
                     shows24HourSheet = true
+                } label: {
+                    chevronRowLabel("Use 24 Hours")
                 }
                 .foregroundStyle(.primary)
             } header: {
                 sectionHeader("Live")
+            }
+
+            // 라이브 액티비티 미리보기 — row는 셀 코너 마스크로 잘리지만, 카드 반경을 마스크 반경보다
+            // 크게 잡으면(카드 ⊆ 마스크) 기하학적으로 잘릴 수 없다. 폭은 row라 아래 박스와 정렬된다.
+            Section {
+                MemoLivePreviewCard(
+                    text: viewModel.memoText,
+                    backgroundColor: memoBackgroundColor,
+                    fontColor: memoFontColor,
+                    textSize: viewModel.settings.memoTextSize,
+                    showsCalendar: viewModel.settings.memoShowsCalendar
+                )
+                .listRowInsets(EdgeInsets(top: Spacing.zero, leading: Spacing.zero, bottom: Spacing.zero, trailing: Spacing.zero))
+                .listRowBackground(Color.clear)
+            } header: {
+                sectionHeader("Memo")
+            } footer: {
+                sectionFooter("May differ slightly from the actual screen.")
             }
 
             Section {
@@ -118,8 +142,6 @@ struct SettingsView: View {
                 // 켜기는 Premium 전용 — 바인딩 setter가 가로채 Premium 토스트만 띄운다(끄기는 항상 허용).
                 Toggle("Show Calendar", isOn: memoShowsCalendarBinding)
                     .tint(.green)
-            } header: {
-                sectionHeader("Memo")
             }
 
             Section {
@@ -172,16 +194,31 @@ struct SettingsView: View {
             .tint(.green)
 
             Section {
-                Button("Leave a Review") {
+                Button {
                     requestReview()
+                } label: {
+                    chevronRowLabel("Leave a Review")
                 }
-                Link("Send Feedback", destination: SupportLinks.feedbackMailtoURL)
-                LabeledContent("Version", value: AppVersionInfo.display)
+                Link(destination: SupportLinks.feedbackMailtoURL) {
+                    chevronRowLabel("Send Feedback")
+                }
+                // 버전 — "버전 1.0.0" 형태로 왼쪽 정렬(값을 오른쪽으로 밀지 않는다).
+                HStack(spacing: Spacing.xs) {
+                    Text("Version")
+                    Text(verbatim: AppVersionInfo.display)
+                }
             } header: {
                 sectionHeader("Support")
             }
             // 지원 섹션의 버튼·링크 색(틴트) 제거 — 단색 텍스트로.
             .tint(.primary)
+
+            // 브랜드 푸터 — 설정 맨 끝의 서명(물결 마크 + 슬로건 + 컨셉 문구).
+            // 기본 row 인셋 유지 — 위 섹션들의 텍스트와 좌측 기준선을 맞춘다.
+            Section {
+                brandFooter
+                    .listRowBackground(Color.clear)
+            }
         }
         .listSectionSpacing(28)
         // 타이틀↔배너 간격 — 배너 아래 간격과 같은 20.
@@ -271,6 +308,66 @@ struct SettingsView: View {
     /// 섹션 풋터 설명 — 기본보다 작은 글자.
     private func sectionFooter(_ text: LocalizedStringKey) -> some View {
         Text(text).font(.caption2)
+    }
+
+    /// 브랜드 푸터 — 슬로건 두 줄 센터 서명 + 텍스트를 진원지로 퍼지는 동심원 에코.
+    /// 페이월 에코의 축소판(스트로크 링) — 문구 자체가 신호의 진원지라는 cue 컨셉.
+    /// 바깥 링은 행 높이에 잘려 텍스트 좌우로 감싸는 괄호( ) 아크만 남는다(의도).
+    private var brandFooter: some View {
+        VStack(spacing: Spacing.xxs) {
+            // 태그라인이 워드마크 역할(브랜드 이름이 이 줄에만 있다) — 굵고 둥근 톤이 주인공.
+            // headline 기본 굵기(semibold) 그대로 — bold는 리스트 콘텐츠와 경쟁하고,
+            // medium은 아래 footnote와 대비가 뭉개진다. 17/13pt + 굵기 + 색 3축 대비.
+            Text(verbatim: "Cue your day.")
+                .font(.headline)
+                .fontDesign(.rounded)
+                .foregroundStyle(.secondary)
+            Text("Never forget, never waver")
+                .font(.footnote)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.xl)
+        .background { footerEcho }
+        .onAppear { footerEchoPulsing = true }
+    }
+
+    /// 푸터 에코 링 — 텍스트 중심 동심원 3겹. 페이월처럼 링마다 시차를 둔 느린 숨쉬기 루프,
+    /// Reduce Motion이면 정적 표시. 순수 장식이라 히트·접근성에서 제외.
+    private var footerEcho: some View {
+        ZStack {
+            ForEach(0..<3, id: \.self) { index in
+                let diameter = 90 + CGFloat(index) * 70
+                let opacities: [Double] = [0.14, 0.09, 0.05]
+                Circle()
+                    .strokeBorder(Color.primary.opacity(opacities[index]), lineWidth: 1)
+                    .frame(width: diameter, height: diameter)
+                    .scaleEffect(footerEchoPulsing && !reduceMotion ? 1.06 : 1)
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            : .easeInOut(duration: 4)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.35),
+                        value: footerEchoPulsing
+                    )
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// 탭 액션 행 라벨 — 오른쪽 끝에 시스템 disclosure(›) 모양 셰브런.
+    /// SwiftUI List의 Button/Link는 NavigationLink와 달리 셰브런을 안 그려줘 직접 붙인다.
+    private func chevronRowLabel(_ title: LocalizedStringKey) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .contentShape(Rectangle())
     }
 
     // MARK: - 바인딩
