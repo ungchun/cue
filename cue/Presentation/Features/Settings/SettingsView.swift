@@ -327,7 +327,7 @@ struct SettingsView: View {
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.xl)
+        .padding(.vertical, Spacing.xl + Spacing.sm)
         .background { footerEcho }
         .onAppear { footerEchoPulsing = true }
     }
@@ -337,7 +337,7 @@ struct SettingsView: View {
     private var footerEcho: some View {
         ZStack {
             ForEach(0..<3, id: \.self) { index in
-                let diameter = 90 + CGFloat(index) * 70
+                let diameter = 110 + CGFloat(index) * 80
                 let opacities: [Double] = [0.14, 0.09, 0.05]
                 Circle()
                     .strokeBorder(Color.primary.opacity(opacities[index]), lineWidth: 1)
