@@ -157,21 +157,25 @@ actor EventKitRemindersRepository: RemindersRepository {
         try store.removeCalendar(calendar, commit: true)
     }
 
-    /// 새 리스트가 들어갈 EKSource — iCloud(CalDAV with "icloud" in title) → 사용자 기본
-    /// 미리알림 리스트의 source → reminders 지원 첫 source 순으로 고른다.
+    /// 새 리스트가 들어갈 EKSource — 우선순위는 `ReminderListSourcePicker`(순수 정책)가 정한다:
+    /// 기본 미리알림 리스트의 source → 미리알림을 가진 iCloud → 미리알림을 가진 아무 계정.
+    /// 이름("iCloud") 매칭으로 고르면 iCloud 미리알림 동기화가 꺼진 기기에서 미지원 계정을
+    /// 찍어 저장이 실패한다 — 능력 기준으로만 고르고, 지원 계정이 없으면 nil(호출처가 안내).
     private func pickListSource() -> EKSource? {
         let sources = store.sources
-        if let iCloud = sources.first(where: {
-            $0.sourceType == .calDAV && $0.title.lowercased().contains("icloud")
-        }) {
-            return iCloud
+        let candidates = sources.map { source in
+            ReminderListSourcePicker.Candidate(
+                id: source.sourceIdentifier,
+                isICloud: source.sourceType == .calDAV
+                    && source.title.lowercased().contains("icloud"),
+                hasReminderCalendars: !source.calendars(for: .reminder).isEmpty
+            )
         }
-        if let defaultSource = store.defaultCalendarForNewReminders()?.source {
-            return defaultSource
-        }
-        return sources.first { source in
-            !source.calendars(for: .reminder).isEmpty
-        } ?? sources.first
+        let defaultSourceID = store.defaultCalendarForNewReminders()?.source?.sourceIdentifier
+        guard let pickedID = ReminderListSourcePicker.pick(
+            from: candidates, defaultSourceID: defaultSourceID
+        ) else { return nil }
+        return sources.first { $0.sourceIdentifier == pickedID }
     }
 
     /// `EKEventStoreChanged`는 미리알림·캘린더 변경 모두에 발송되는 공통 노티 — reminders
