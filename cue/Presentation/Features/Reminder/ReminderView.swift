@@ -320,6 +320,9 @@ struct ReminderView: View {
         .listStyle(.plain)
         .listRowSpacing(Spacing.zero)
         .listSectionSpacing(Spacing.zero)
+        // 키보드가 떠 있을 때 아래로 스크롤하면 스크롤을 따라 자연스럽게 내려간다(메시지 앱 방식).
+        // 포커스 해제 onChange가 기존 자동 커밋 흐름을 그대로 받는다 — 입력 유실 없음.
+        .scrollDismissesKeyboard(.interactively)
         // 시스템 기본 row 최소 높이(44pt)를 0으로 깎아 row가 컨텐츠 자체 높이로 줄어든다.
         // horizontal inset은 시스템 기본 유지 — `.listRowInsets`처럼 좌우까지 강제하지 않는다.
         .environment(\.defaultMinListRowHeight, Spacing.zero)
@@ -419,13 +422,47 @@ struct ReminderView: View {
         }
     }
 
+    /// 인라인 편집 → 새 입력 행 동기 전환 — startInlineEdit(A→B)와 같은 한 렌더 swap.
+    /// 정리·포커스가 같은 업데이트로 처리돼 새 행 GrowingTextView가 enabled로 다시 그려지며
+    /// updateUIView become으로 이어받는다(커서 깜빡임 없는 단일 transfer).
+    private func switchInlineEditToNewRow() {
+        let snapshot = capturedInlineEdit()
+        swappingInlineEdit = true
+        editingReminderID = nil
+        editTitleFocused = false
+        editMemoFocused = false
+        backgroundCommit(snapshot)
+        newTitleFocused = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            swappingInlineEdit = false
+        }
+    }
+
     /// placeholder 탭 처리 — active를 그 섹션으로 옮기고 다음 runloop에서 포커스 set.
     /// mount 직전에 focus를 true로 두면 새로 그려질 GrowingTextView가 이를 받아 keyboard 띄움.
     private func activateNewRow(forListID listID: String) {
-        activeNewRowListID = listID
-        DispatchQueue.main.async {
-            newTitleFocused = true
+        // 인라인 편집 중이면 **탭 시점에 동기로** 정리한다 — newRowFocusBinding.set과 동일 시퀀스.
+        // 정리를 우회하면 editingID가 남아 새 행이 포커스를 받은 직후 기존 행의 async become이
+        // 포커스를 재탈취하고(A↔새행 바운스), 바운스가 만든 낡은 didEnd가 새 행 포커스를 죽인다.
+        if editingReminderID != nil {
+            let snapshot = capturedInlineEdit()
+            swappingInlineEdit = true
+            editingReminderID = nil
+            editTitleFocused = false
+            editMemoFocused = false
+            backgroundCommit(snapshot)
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(250))
+                swappingInlineEdit = false
+            }
         }
+        // 포커스도 **같은 동기 업데이트**로 — A 접힘·새 행 mount·포커스가 한 렌더에 처리되고,
+        // 새 GrowingTextView가 mount 시점 become(didMoveToWindow)으로 A→B와 같은 same-tick
+        // transfer를 탄다. async로 미루면 "A 접힘 → (한 박자) → 새 행 확장" 렌더가 쪼개져
+        // 커서가 깜빡이며 넘어간다.
+        activeNewRowListID = listID
+        newTitleFocused = true
     }
 
     /// reminder row + swipe(삭제) — `.all` 섹션용 ForEach(재배열 없음).
@@ -771,12 +808,25 @@ struct ReminderView: View {
         Binding(
             get: { newTitleFocused },
             set: { newValue in
+                // 인라인 편집으로의 swap 진행 중(startInlineEdit 직후 250ms)에 도착한 stale
+                // set(true) — 새 행의 낡은 didBegin async가 방금 시작한 편집을 CLEANUP으로
+                // 죽이는 것을 막는다. 이 창의 true는 이전 포커스의 잔향이라 통째로 무시.
+                if newValue, swappingInlineEdit, editingReminderID != nil {
+                    return
+                }
                 if newValue, editingReminderID != nil {
                     let snapshot = capturedInlineEdit()
+                    // startInlineEdit(A→B)와 같은 swap 가드 — 정리 직후 기존 행이 disabled로
+                    // 전환되며 resign을 유발하거나, 창(window) 동안 재탈취하는 걸 억제한다.
+                    swappingInlineEdit = true
                     editingReminderID = nil
                     editTitleFocused = false
                     editMemoFocused = false
                     backgroundCommit(snapshot)
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(250))
+                        swappingInlineEdit = false
+                    }
                 }
                 newTitleFocused = newValue
             }
@@ -791,7 +841,9 @@ struct ReminderView: View {
                 return field == .title ? editTitleFocused : editMemoFocused
             },
             set: { newValue in
-                guard editingReminderID == reminder.id else { return }
+                guard editingReminderID == reminder.id else {
+                    return
+                }
                 if field == .title { editTitleFocused = newValue }
                 else { editMemoFocused = newValue }
             }
@@ -822,6 +874,20 @@ struct ReminderView: View {
                     submitOnReturn: true
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // 인라인 편집 중엔 비활성 + 탭을 제스처로 받아 **동기 전환** — A→B(행간 swap)와
+                // 같은 문법. 활성 텍스트뷰를 직접 탭하게 두면 UIKit이 상태 정리보다 먼저 포커스를
+                // 옮겨 "A 접힘 → 새 행 확장" 렌더가 쪼개지고 커서가 깜빡이며 넘어간다.
+                // swap 중엔 enabled 유지(행들과 동일) — 새행→행 전환 렌더에서 disabled로 바뀌면
+                // UIKit이 FR을 강제 resign해 키보드가 내려갔다 올라온다(딥). 가드가 풀린 뒤에만
+                // 비활성 적용(그땐 FR이 아니라 무해).
+                .disabled(swappingInlineEdit ? false : editingReminderID != nil)
+                .overlay {
+                    if editingReminderID != nil {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { switchInlineEditToNewRow() }
+                    }
+                }
 
                 if newTitleFocused || newMemoFocused {
                     Button {
@@ -966,6 +1032,13 @@ struct ReminderView: View {
         if editingReminderID == reminder.id { return }
         let previous = capturedInlineEdit()
         swappingInlineEdit = true
+        // 새 입력 행에서 넘어오는 경우 — 새 행 포커스를 **같은 동기 업데이트로** 끈다
+        // (switchInlineEditToNewRow의 거울상). 안 끄면 새 행 GrowingTextView의 async become이
+        // stale true를 읽고 포커스를 재탈취해 커서가 새 행으로 되돌아간다.
+        if newTitleFocused || newMemoFocused {
+            newTitleFocused = false
+            newMemoFocused = false
+        }
         editingReminderID = reminder.id
         editingTitle = reminder.title
         editingMemo = reminder.notes ?? ""
@@ -1054,7 +1127,9 @@ struct ReminderView: View {
             guard !editTitleFocused, !editMemoFocused,
                   let id = editingReminderID,
                   let reminder = viewModel.allReminders.first(where: { $0.id == id })
-            else { return }
+            else {
+                return
+            }
             commitInlineEdit(reminder)
         }
     }
@@ -1063,7 +1138,9 @@ struct ReminderView: View {
     /// 80ms 지연 후 둘 다 풀려 있으면 add 시도. ⓘ 경로는 가드로 한 번 건너뜀.
     private func scheduleNewCommit() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            guard !newTitleFocused, !newMemoFocused else { return }
+            guard !newTitleFocused, !newMemoFocused else {
+                return
+            }
             if suppressNewRowAutoSubmit {
                 suppressNewRowAutoSubmit = false
                 return

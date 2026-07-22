@@ -106,18 +106,24 @@ private struct Representable: UIViewRepresentable {
         view.becomeFirstResponderOnMount = isFocused
         // 키보드 위 "완료"로 dismiss. SwiftUI `.keyboard` toolbar는 UIViewRepresentable
         // 응답자엔 안 붙으므로 UITextView에 inputAccessoryView를 직접 단다.
-        view.inputAccessoryView = Self.makeKeyboardAccessory(for: view)
+        view.inputAccessoryView = Self.makeKeyboardAccessory(for: view, coordinator: context.coordinator)
         return view
     }
 
     /// 키보드 위 액세서리 바 — 오른쪽 정렬 chevron 아이콘으로 키보드를 내린다(앱 전역 동일
     /// 패턴). 기본 44pt보다 높은 60pt로 둬 버튼이 키보드 위로 떠 보이게 한다.
-    private static func makeKeyboardAccessory(for textView: UITextView) -> UIToolbar {
+    /// 명시적 dismiss는 binding을 **즉시** false로 내린다 — resign만 하면 +150ms 지연 클리어
+    /// 전에 키보드 dismiss가 유발한 re-render의 async become이 stale true를 읽고 키보드를
+    /// 도로 올린다(내려갔다 다시 올라오는 버그).
+    private static func makeKeyboardAccessory(for textView: UITextView, coordinator: Coordinator) -> UIToolbar {
         let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: 100, height: 60))
         let done = UIBarButtonItem(
             title: nil,
             image: UIImage(systemName: "keyboard.chevron.compact.down"),
-            primaryAction: UIAction { [weak textView] _ in textView?.resignFirstResponder() },
+            primaryAction: UIAction { [weak textView, weak coordinator] _ in
+                coordinator?.parent.isFocused = false
+                textView?.resignFirstResponder()
+            },
             menu: nil
         )
         toolbar.items = [.flexibleSpace(), done]
@@ -199,7 +205,15 @@ private struct Representable: UIViewRepresentable {
             // 처리. async 시점 delegate가 self가 아니면 dispose된 것 → binding 건드리지 않음.
             // 사용자가 키보드를 직접 dismiss한 경우엔 view 살아있어 delegate 그대로 → 정상 false.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self, weak textView] in
-                guard let self, let textView, textView.delegate === self else { return }
+                guard let self, let textView else { return }
+                guard textView.delegate === self else {
+                    return
+                }
+                // 이 150ms 사이 같은 텍스트뷰가 first responder를 **다시** 얻었으면(포커스
+                // 바운스 후 복귀) 낡은 end가 산 포커스를 죽이면 안 된다 — 스킵.
+                guard !textView.isFirstResponder else {
+                    return
+                }
                 self.parent.isFocused = false
             }
         }
@@ -214,6 +228,8 @@ private struct Representable: UIViewRepresentable {
             replacementText text: String
         ) -> Bool {
             if parent.submitOnReturn && text == "\n" {
+                // 명시적 커밋 — 액세서리 dismiss와 동일하게 binding을 즉시 false로(재-become 방지).
+                parent.isFocused = false
                 textView.resignFirstResponder()
                 return false
             }
