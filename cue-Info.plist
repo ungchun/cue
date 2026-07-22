@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>NSAlarmKitUsageDescription</key>
-	<string>집중·휴식 단계 전환을 잠금화면과 다이나믹 아일랜드에 정확한 시각으로 알리기 위해 사용합니다.</string>
+	<string>Used to announce focus and break transitions on the Lock Screen and Dynamic Island at the exact time.</string>
 </dict>
 </plist>

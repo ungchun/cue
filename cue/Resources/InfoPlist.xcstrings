@@ -1,0 +1,327 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSAlarmKitUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used to announce focus and break transitions on the Lock Screen and Dynamic Island at the exact time."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "집중·휴식 단계 전환을 잠금화면과 다이나믹 아일랜드에 정확한 시각으로 알리기 위해 사용합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "集中と休憩の切り替えを正確な時刻にロック画面とDynamic Islandでお知らせするために使用します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用于在准确时间在锁定屏幕和灵动岛上提示专注与休息的切换。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用於在準確時間在鎖定畫面和動態島上提示專注與休息的切換。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se usa para anunciar los cambios entre concentración y descanso en la pantalla bloqueada y la Dynamic Island a la hora exacta."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird verwendet, um Fokus- und Pausenwechsel zur exakten Zeit auf dem Sperrbildschirm und in der Dynamic Island anzukündigen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sert à annoncer les transitions entre concentration et pause sur l'écran verrouillé et la Dynamic Island à l'heure exacte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serve ad annunciare i passaggi tra concentrazione e pausa sulla schermata di blocco e nella Dynamic Island all'ora esatta."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usado para anunciar as transições entre foco e pausa na Tela Bloqueada e na Dynamic Island no horário exato."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Используется, чтобы точно вовремя сообщать о смене фокуса и перерыва на экране блокировки и в Dynamic Island."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُستخدم للإعلان عن التبديل بين التركيز والاستراحة على شاشة القفل وDynamic Island في الوقت المحدد."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लॉक स्क्रीन और Dynamic Island पर सही समय पर फ़ोकस और ब्रेक बदलाव की सूचना देने के लिए उपयोग होता है।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digunakan untuk memberi tahu pergantian fokus dan istirahat di Layar Terkunci dan Dynamic Island tepat waktu."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digunakan untuk memaklumkan pertukaran fokus dan rehat pada Skrin Kunci dan Dynamic Island pada masa yang tepat."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ใช้เพื่อแจ้งการสลับระหว่างโหมดโฟกัสและพักบนหน้าจอล็อคและ Dynamic Island ตรงเวลา"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dùng để thông báo chuyển đổi giữa tập trung và nghỉ trên Màn hình khóa và Dynamic Island đúng giờ."
+          }
+        }
+      }
+    },
+    "NSCalendarsFullAccessUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue needs access to view and create your iOS Calendar events."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 캘린더 이벤트를 cue에서 보고 만들기 위해 접근이 필요합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOSカレンダーの予定をCueで表示・作成するためにアクセスが必要です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue 需要访问权限以查看和创建您的 iOS 日历日程。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue 需要取用權限以查看和建立您的 iOS 行事曆行程。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue necesita acceso para ver y crear tus eventos del Calendario de iOS."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue benötigt Zugriff, um deine iOS-Kalenderereignisse anzuzeigen und zu erstellen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue a besoin d'accéder à votre Calendrier iOS pour afficher et créer des événements."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue ha bisogno dell'accesso per visualizzare e creare gli eventi del Calendario di iOS."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Cue precisa de acesso para ver e criar seus eventos do Calendário do iOS."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue требуется доступ, чтобы просматривать и создавать события Календаря iOS."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحتاج Cue إلى الوصول لعرض أحداث تقويم iOS وإنشائها."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS कैलेंडर इवेंट देखने और बनाने के लिए Cue को एक्सेस चाहिए।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue memerlukan akses untuk melihat dan membuat acara Kalender iOS Anda."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue memerlukan akses untuk melihat dan mencipta acara Kalendar iOS anda."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue ต้องการสิทธิ์เข้าถึงเพื่อดูและสร้างกิจกรรมในปฏิทิน iOS ของคุณ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue cần quyền truy cập để xem và tạo sự kiện Lịch iOS của bạn."
+          }
+        }
+      }
+    },
+    "NSRemindersFullAccessUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue needs access to view and manage your iOS Reminders."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 미리 알림을 cue에서 보고 관리하기 위해 접근이 필요합니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOSリマインダーをCueで表示・管理するためにアクセスが必要です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue 需要访问权限以查看和管理您的 iOS 提醒事项。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue 需要取用權限以查看和管理您的 iOS 提醒事項。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue necesita acceso para ver y gestionar tus Recordatorios de iOS."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue benötigt Zugriff, um deine iOS-Erinnerungen anzuzeigen und zu verwalten."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue a besoin d'accéder à vos Rappels iOS pour les afficher et les gérer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue ha bisogno dell'accesso per visualizzare e gestire i tuoi Promemoria di iOS."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Cue precisa de acesso para ver e gerenciar seus Lembretes do iOS."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue требуется доступ, чтобы просматривать напоминания iOS и управлять ими."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحتاج Cue إلى الوصول لعرض تذكيرات iOS وإدارتها."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS रिमाइंडर देखने और प्रबंधित करने के लिए Cue को एक्सेस चाहिए।"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue memerlukan akses untuk melihat dan mengelola Pengingat iOS Anda."
+          }
+        },
+        "ms": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue memerlukan akses untuk melihat dan mengurus Peringatan iOS anda."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue ต้องการสิทธิ์เข้าถึงเพื่อดูและจัดการเตือนความจำ iOS ของคุณ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cue cần quyền truy cập để xem và quản lý Lời nhắc iOS của bạn."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

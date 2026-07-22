@@ -513,8 +513,8 @@
 				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Cue;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "iOS 캘린더 이벤트를 cue에서 보고 만들기 위해 접근이 필요합니다.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "iOS 미리 알림을 cue에서 보고 관리하기 위해 접근이 필요합니다.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Cue needs access to view and create your iOS Calendar events.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Cue needs access to view and manage your iOS Reminders.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -559,8 +559,8 @@
 				INFOPLIST_FILE = "cue-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Cue;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "iOS 캘린더 이벤트를 cue에서 보고 만들기 위해 접근이 필요합니다.";
-				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "iOS 미리 알림을 cue에서 보고 관리하기 위해 접근이 필요합니다.";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Cue needs access to view and create your iOS Calendar events.";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Cue needs access to view and manage your iOS Reminders.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
