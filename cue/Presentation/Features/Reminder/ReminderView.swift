@@ -876,6 +876,32 @@ struct ReminderView: View {
         )
     }
 
+    /// newReminderRow 메모의 isFocused binding — 포커스가 잡히는 순간 빈 제목을 기본 제목으로
+    /// 채운다(Apple 미리 알림 동일 — 메모부터 쓰기 시작해도 제목 없는 항목이 안 생기게).
+    private var newMemoFocusBinding: Binding<Bool> {
+        Binding(
+            get: { newMemoFocused },
+            set: { newValue in
+                if newValue { fillNewTitleIfEmpty() }
+                newMemoFocused = newValue
+            }
+        )
+    }
+
+    /// 메모 칸 탭 → 명시적 포커스 전환. binding set만으로 updateUIView의 async become이
+    /// first responder를 끌어온다(placeholder 행 activateNewRow와 같은 경로).
+    private func focusNewMemo() {
+        fillNewTitleIfEmpty()
+        newMemoFocused = true
+    }
+
+    /// 새 입력 행 제목이 비어 있으면 기본 제목("새로운 미리 알림")으로 채운다.
+    private func fillNewTitleIfEmpty() {
+        if newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            newTitle = String(localized: "New Reminder")
+        }
+    }
+
     /// row의 isFocused binding — editing 중인 row만 actual focus state에 연결.
     private func focusBinding(for reminder: Reminder, field: InlineField) -> Binding<Bool> {
         Binding(
@@ -948,13 +974,26 @@ struct ReminderView: View {
             if newTitleFocused || newMemoFocused {
                 GrowingTextView(
                     text: $newMemo,
-                    isFocused: $newMemoFocused,
+                    // setter에서 빈 제목을 기본 제목으로 채운다 — 네이티브 탭이 didBegin으로
+                    // 들어오는 경로까지 한 곳에서 처리.
+                    isFocused: newMemoFocusBinding,
                     placeholder: String(localized: "Add Note"),
                     font: .preferredFont(forTextStyle: .callout),
                     textColor: .secondaryLabel,
                     submitOnReturn: true
                 )
                 .padding(.leading, titleIndent)
+                // 미포커스 상태의 메모 칸은 네이티브 탭이 List 안에서 first responder를 못
+                // 잡는 경우가 있어(placeholder 행과 동일 증상), 탭을 명시적으로 받아 binding
+                // set → async become 경로로 포커스를 옮긴다 — 이 화면의 표준 전환 문법.
+                // 포커스 후엔 overlay를 걷어 커서 이동·선택 등 UITextView 상호작용을 살린다.
+                .overlay {
+                    if !newMemoFocused {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { focusNewMemo() }
+                    }
+                }
             }
         }
         .listRowInsets(rowInsets)
