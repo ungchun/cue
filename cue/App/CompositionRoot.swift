@@ -23,6 +23,8 @@ struct CompositionRoot {
         let memoRepository = UserDefaultsMemoRepository()
         let reminderSortRepository = UserDefaultsReminderSortRepository()
         let appSettingsRepository = UserDefaultsAppSettingsRepository()
+        // 첫 페인트 스냅샷 캐시 — 마지막 fetch 결과를 저장해 앱 재시작 시 스피너 없이 그린다.
+        let snapshotCacheRepository = UserDefaultsSnapshotCacheRepository()
         // 라이브 액티비티 service — @MainActor 격리. ActivityKit 호출은 모두 main actor에서.
         let liveActivityService: any LiveActivityService = ActivityKitLiveActivityService()
 
@@ -68,6 +70,13 @@ struct CompositionRoot {
             checkForcedUpdate: CheckForcedUpdateUseCase(service: FirebaseAppUpdatePolicyService()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository),
+            // 앱 시작 프리페치용 프롬프트-없는 권한 조회 + 첫 페인트 스냅샷 캐시.
+            currentRemindersAccess: CurrentRemindersAccessUseCase(repository: remindersRepository),
+            currentEventsAccess: CurrentEventsAccessUseCase(repository: eventsRepository),
+            loadRemindersSnapshot: LoadRemindersSnapshotUseCase(repository: snapshotCacheRepository),
+            saveRemindersSnapshot: SaveRemindersSnapshotUseCase(repository: snapshotCacheRepository),
+            loadEventsSnapshot: LoadEventsSnapshotUseCase(repository: snapshotCacheRepository),
+            saveEventsSnapshot: SaveEventsSnapshotUseCase(repository: snapshotCacheRepository),
             analytics: FirebaseAnalyticsService(),
             reconcilePremiumSettings: ReconcilePremiumSettingsUseCase(
                 fetch: FetchAppSettingsUseCase(repository: appSettingsRepository),

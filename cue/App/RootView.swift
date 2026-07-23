@@ -87,6 +87,14 @@ struct RootView: View {
                 .object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
             isUpdateRequired = await dependencies.checkForcedUpdate(currentVersion: version)
         }
+        // 앱 시작 프리페치 — 탭 진입을 기다리지 않고 할일·일정 첫 적재를 병렬로 미리 끝낸다.
+        // 이미 권한이 허용된 경우에만 동작(프롬프트 없음)하고, 첫 탭의 onAppear와는
+        // 각 ViewModel의 first-load single-flight로 합류해 fetch가 중복되지 않는다.
+        .task {
+            async let reminders: Void = reminderViewModel.prefetch()
+            async let schedule: Void = scheduleViewModel.prefetch()
+            _ = await (reminders, schedule)
+        }
         // 앱 시작 시 저장된 설정을 불러온다 — 화면 모드 반영 + 시작 탭으로 한 번 이동 + 항상 표시 게시.
         .task {
             await settingsViewModel.onAppear()
