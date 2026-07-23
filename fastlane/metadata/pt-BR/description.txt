@@ -1,30 +1,21 @@
-Aquela única coisa que você não pode esquecer, fixa na Tela Bloqueada.
-Tarefas, notas e agenda: tudo continua visível sem abrir o app.
+Aquela única coisa que você não pode esquecer, fixa na Tela Bloqueada. Tarefas, notas e agenda: tudo continua visível sem abrir o app.
 
-Notificações somem, e apps de notas você precisa abrir.
-O Cue é diferente: você escolhe uma coisa, fixa na Tela Bloqueada e na Dynamic Island, e ela fica ali, quietinha, até você terminar.
-
+Notificações somem, e apps de notas você precisa abrir. O Cue é diferente: você escolhe uma coisa, fixa na Tela Bloqueada e na Dynamic Island, e ela fica ali, quietinha, até você terminar.
 
 [Ao vivo]
-Fixe uma tarefa ou nota na Tela Bloqueada com um só toque.
-Você vê toda vez que acende a tela. Não some como notificação.
+Fixe uma tarefa ou nota na Tela Bloqueada com um só toque. Você vê toda vez que acende a tela. Não some como notificação.
 
 [Calendário]
-Veja os compromissos de hoje direto na Tela Bloqueada.
-Com o calendário mensal, você também enxerga o mês inteiro de uma vez.
+Veja os compromissos de hoje direto na Tela Bloqueada. Com o calendário mensal, você também enxerga o mês inteiro de uma vez.
 
 [Modo foco]
-Escolha uma coisa para focar e inicie o timer.
-Enquanto o timer roda, o que você precisa fazer continua na sua frente.
+Escolha uma coisa para focar e inicie o timer. Enquanto o timer roda, o que você precisa fazer continua na sua frente.
 
 [Linha do tempo]
-Os Cues do dia vão se acumulando em ordem cronológica.
-Você também pode agendar um Cue para aparecer em um horário específico.
+Os Cues do dia vão se acumulando em ordem cronológica. Você também pode agendar um Cue para aparecer em um horário específico.
 
 [Sincronização]
-Backup automático com o iCloud. Sem cadastro.
-Seus dados ficam só no seu aparelho e no iCloud, sem servidores externos.
-
+Backup automático com o iCloud. Sem cadastro. Seus dados ficam só no seu aparelho e no iCloud, sem servidores externos.
 
 O Cue é para você que...
 
@@ -32,9 +23,7 @@ anota coisas em apps de notas e nunca mais abre,
 tem listas de tarefas que ficam só na lista,
 quer focar em uma coisa agora, não no plano inteiro.
 
-
-Não é um app para gerenciar o seu dia: é um app que mantém à vista a única coisa que você não pode esquecer.
-Cue your day.
+Não é um app para gerenciar o seu dia: é um app que mantém à vista a única coisa que você não pode esquecer. Cue your day.
 
 Terms of Use: https://ungchun.github.io/cue-legal/terms.html
 Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html

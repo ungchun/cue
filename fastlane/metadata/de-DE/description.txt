@@ -1,30 +1,21 @@
-Das eine, das du jetzt nicht vergessen darfst — lass es auf dem Sperrbildschirm stehen.
-To-dos, Memos und Termine bleiben sichtbar, ohne dass du die App öffnest.
+Das eine, das du jetzt nicht vergessen darfst — lass es auf dem Sperrbildschirm stehen. To-dos, Memos und Termine bleiben sichtbar, ohne dass du die App öffnest.
 
-Benachrichtigungen verschwinden, sobald sie vorbei sind, und Notiz-Apps zeigen dir nur etwas, wenn du sie öffnest.
-Cue ist anders. Wähle eine Sache, hol sie auf Sperrbildschirm und Dynamic Island — und sie bleibt ruhig sichtbar, bis du fertig bist.
-
+Benachrichtigungen verschwinden, sobald sie vorbei sind, und Notiz-Apps zeigen dir nur etwas, wenn du sie öffnest. Cue ist anders. Wähle eine Sache, hol sie auf Sperrbildschirm und Dynamic Island — und sie bleibt ruhig sichtbar, bis du fertig bist.
 
 [Live]
-Bring ein To-do oder Memo mit einem Tipp auf den Sperrbildschirm.
-Jedes Mal, wenn du das Display aktivierst, ist es sofort da. Es verschwindet nicht wie eine Benachrichtigung.
+Bring ein To-do oder Memo mit einem Tipp auf den Sperrbildschirm. Jedes Mal, wenn du das Display aktivierst, ist es sofort da. Es verschwindet nicht wie eine Benachrichtigung.
 
 [Kalender]
-Sieh deine heutigen Termine direkt auf dem Sperrbildschirm.
-Der Monatskalender zeigt dir den ganzen Monat auf einen Blick.
+Sieh deine heutigen Termine direkt auf dem Sperrbildschirm. Der Monatskalender zeigt dir den ganzen Monat auf einen Blick.
 
 [Fokusmodus]
-Wähle eine Sache, auf die du dich konzentrieren willst, und starte den Timer.
-Solange der Timer läuft, bleibt deine Aufgabe direkt vor deinen Augen.
+Wähle eine Sache, auf die du dich konzentrieren willst, und starte den Timer. Solange der Timer läuft, bleibt deine Aufgabe direkt vor deinen Augen.
 
 [Timeline]
-Die Cues von heute sammeln sich in zeitlicher Reihenfolge.
-Du kannst einen Cue auch für eine bestimmte Uhrzeit vormerken.
+Die Cues von heute sammeln sich in zeitlicher Reihenfolge. Du kannst einen Cue auch für eine bestimmte Uhrzeit vormerken.
 
 [Sync]
-Automatisches iCloud-Backup. Keine Registrierung.
-Deine Daten bleiben nur auf deinem Gerät und in iCloud — keine externen Server.
-
+Automatisches iCloud-Backup. Keine Registrierung. Deine Daten bleiben nur auf deinem Gerät und in iCloud — keine externen Server.
 
 Cue ist für dich, wenn:
 
@@ -32,9 +23,7 @@ du Dinge in Notiz-Apps aufschreibst und sie nie wieder öffnest,
 deine To-do-Liste nur eine Liste bleibt,
 du dich auf das Eine jetzt konzentrieren willst statt auf den ganzen Plan.
 
-
-Keine App, um deinen Tag zu verwalten — eine App, die dir das Eine zeigt, das du jetzt nicht vergessen darfst.
-Cue your day.
+Keine App, um deinen Tag zu verwalten — eine App, die dir das Eine zeigt, das du jetzt nicht vergessen darfst. Cue your day.
 
 Terms of Use: https://ungchun.github.io/cue-legal/terms.html
 Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html

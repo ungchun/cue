@@ -1,1 +1,1 @@
-
+Hemos corregido errores ocultos y mejorado la estabilidad. Si algo no funciona bien, cuéntanoslo cuando quieras: leemos cada mensaje y seguimos mejorando.

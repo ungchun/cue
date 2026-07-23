@@ -1,30 +1,21 @@
-Quell'unica cosa da non dimenticare, sempre sulla schermata di blocco.
-Attività, memo e impegni: tutto resta visibile senza aprire l'app.
+Quell'unica cosa da non dimenticare, sempre sulla schermata di blocco. Attività, memo e impegni: tutto resta visibile senza aprire l'app.
 
-Le notifiche spariscono, e le app di note vanno aperte.
-Cue è diverso: scegli una cosa, la fissi sulla schermata di blocco e nella Dynamic Island, e resta lì, in silenzio, finché non hai finito.
-
+Le notifiche spariscono, e le app di note vanno aperte. Cue è diverso: scegli una cosa, la fissi sulla schermata di blocco e nella Dynamic Island, e resta lì, in silenzio, finché non hai finito.
 
 [Live]
-Fissa un'attività o un memo sulla schermata di blocco con un solo tocco.
-La vedi ogni volta che accendi lo schermo. Non sparisce come una notifica.
+Fissa un'attività o un memo sulla schermata di blocco con un solo tocco. La vedi ogni volta che accendi lo schermo. Non sparisce come una notifica.
 
 [Calendario]
-Controlla gli impegni di oggi direttamente sulla schermata di blocco.
-Con il calendario mensile hai anche il mese intero a colpo d'occhio.
+Controlla gli impegni di oggi direttamente sulla schermata di blocco. Con il calendario mensile hai anche il mese intero a colpo d'occhio.
 
 [Modalità focus]
-Scegli una cosa su cui concentrarti e avvia il timer.
-Mentre il timer scorre, quello che devi fare resta davanti ai tuoi occhi.
+Scegli una cosa su cui concentrarti e avvia il timer. Mentre il timer scorre, quello che devi fare resta davanti ai tuoi occhi.
 
 [Timeline]
-I Cue di oggi si accumulano in ordine cronologico.
-Puoi anche programmare un Cue perché appaia a un orario preciso.
+I Cue di oggi si accumulano in ordine cronologico. Puoi anche programmare un Cue perché appaia a un orario preciso.
 
 [Sincronizzazione]
-Backup automatico con iCloud. Nessuna registrazione.
-I tuoi dati restano solo sul dispositivo e su iCloud, senza server esterni.
-
+Backup automatico con iCloud. Nessuna registrazione. I tuoi dati restano solo sul dispositivo e su iCloud, senza server esterni.
 
 Cue fa per te se...
 
@@ -32,9 +23,7 @@ scrivi note che poi non riapri mai,
 le tue liste di cose da fare restano solo liste,
 vuoi concentrarti su una cosa sola adesso, non su tutto il piano.
 
-
-Non è un'app per gestire la giornata: è un'app che ti tiene davanti agli occhi l'unica cosa da non dimenticare.
-Cue your day.
+Non è un'app per gestire la giornata: è un'app che ti tiene davanti agli occhi l'unica cosa da non dimenticare. Cue your day.
 
 Terms of Use: https://ungchun.github.io/cue-legal/terms.html
 Privacy Policy: https://ungchun.github.io/cue-legal/privacy.html

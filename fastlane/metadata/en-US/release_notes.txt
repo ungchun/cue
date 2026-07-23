@@ -1,1 +1,1 @@
-
+Fixed hidden bugs and improved stability. If anything feels off, let us know anytime — we read every message and keep improving.

@@ -1,1 +1,1 @@
-
+Abbiamo corretto bug nascosti e migliorato la stabilità. Se qualcosa non va, faccelo sapere in qualsiasi momento: leggiamo ogni messaggio e continuiamo a migliorare.
