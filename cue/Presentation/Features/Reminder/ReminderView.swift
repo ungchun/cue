@@ -5,6 +5,7 @@
 
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// 할일 탭 화면 — 선택된 리스트의 미완료 항목을 보여주고 완료 토글을 제공한다.
 struct ReminderView: View {
@@ -410,7 +411,7 @@ struct ReminderView: View {
     private var allModeContent: some View {
         ForEach(viewModel.allModeSections, id: \.list.id) { section in
             Section {
-                remindersForEach(section.active)
+                allModeRemindersForEach(section: section)
                 // 그 리스트의 완료 항목들 — showsCompleted OFF면 ViewModel이 빈 배열로 줘서 자동 생략.
                 ForEach(section.completed) { reminder in
                     completedReminderRow(reminder)
@@ -508,11 +509,39 @@ struct ReminderView: View {
         newTitleFocused = true
     }
 
-    /// reminder row + swipe(삭제) — `.all` 섹션용 ForEach(재배열 없음).
+    /// reminder row + swipe(삭제) — `.all` 섹션용 ForEach.
+    /// 드래그 앤 드랍(미리 알림 앱과 동일):
+    /// - 섹션 안 재배열은 `.onMove` — 그 리스트 정렬이 '수동'으로 전환되고 순서가 저장된다.
+    /// - 섹션 간 이동은 `.onDrag`(항목 id를 NSItemProvider로) + 대상 섹션 `.onInsert` —
+    ///   항목이 실제로 그 리스트로 이동하고 드랍 위치가 수동 순서에 반영된다.
     @ViewBuilder
-    private func remindersForEach(_ reminders: [Reminder]) -> some View {
-        ForEach(reminders) { reminder in
+    private func allModeRemindersForEach(
+        section: (list: ReminderList, active: [Reminder], completed: [Reminder])
+    ) -> some View {
+        ForEach(section.active) { reminder in
             swipeableRow(reminder)
+                .onDrag { NSItemProvider(object: reminder.id as NSString) }
+        }
+        .onMove { source, destination in
+            Task { await viewModel.moveReminders(in: section.list.id, fromOffsets: source, toOffset: destination) }
+        }
+        .onInsert(of: [.utf8PlainText, .plainText]) { offset, providers in
+            insertDroppedReminders(providers, intoListID: section.list.id, at: offset)
+        }
+    }
+
+    /// `.onInsert`가 넘겨준 NSItemProvider에서 항목 id를 복원해 리스트 간 이동을 실행한다.
+    /// provider 로딩은 백그라운드 콜백이라 MainActor Task로 홉해 ViewModel을 호출한다.
+    private func insertDroppedReminders(
+        _ providers: [NSItemProvider], intoListID listID: String, at offset: Int
+    ) {
+        for provider in providers {
+            _ = provider.loadObject(ofClass: NSString.self) { object, _ in
+                guard let id = object as? String else { return }
+                Task { @MainActor in
+                    await viewModel.moveReminder(reminderID: id, toListID: listID, toOffset: offset)
+                }
+            }
         }
     }
 

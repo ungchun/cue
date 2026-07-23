@@ -474,12 +474,6 @@ final class ReminderViewModel {
         }
     }
 
-    /// 생성순(추가한 순서) 오름차순 — 먼저 추가한 항목이 위, 나중에 추가한 항목이 아래.
-    /// 미리 알림 앱의 전체·예정 기본 정렬과 동일. nil은 `distantFuture`로 취급해 맨 뒤로
-    /// (생성일 미상은 가장 나중에 추가된 것으로 본다).
-    private func creationDateAscendingNilLast(_ lhs: Reminder, _ rhs: Reminder) -> Bool {
-        (lhs.creationDate ?? .distantFuture) < (rhs.creationDate ?? .distantFuture)
-    }
 
     /// `.all` 모드에서 본문에 그릴 (리스트, 미완료, 완료) 묶음.
     /// 리스트 표시 순서는 `lists`와 동일하고, 미완료는 **생성순**(추가한 순서) — 미리 알림
