@@ -41,6 +41,7 @@ struct CompositionRoot {
             addReminder: AddReminderUseCase(repository: remindersRepository),
             updateReminder: UpdateReminderUseCase(repository: remindersRepository),
             deleteReminder: DeleteReminderUseCase(repository: remindersRepository),
+            moveReminder: MoveReminderUseCase(repository: remindersRepository),
             addReminderList: AddReminderListUseCase(repository: remindersRepository),
             updateReminderList: UpdateReminderListUseCase(repository: remindersRepository),
             deleteReminderList: DeleteReminderListUseCase(repository: remindersRepository),

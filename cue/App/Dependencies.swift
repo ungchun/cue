@@ -19,6 +19,9 @@ struct Dependencies: Sendable {
     var addReminder: AddReminderUseCase
     var updateReminder: UpdateReminderUseCase
     var deleteReminder: DeleteReminderUseCase
+    /// 전체 탭 섹션 간 드래그 — 항목을 다른 리스트로 이동. 기본값은 인메모리 no-op 수준 —
+    /// 실 배선은 `CompositionRoot`·테스트 헬퍼에서 같은 repo 인스턴스로 교체.
+    var moveReminder: MoveReminderUseCase = .init(repository: InMemoryRemindersRepository())
     var addReminderList: AddReminderListUseCase
     var updateReminderList: UpdateReminderListUseCase
     var deleteReminderList: DeleteReminderListUseCase

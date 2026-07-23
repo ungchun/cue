@@ -129,6 +129,18 @@ actor EventKitRemindersRepository: RemindersRepository {
         try store.remove(reminder, commit: true)
     }
 
+    func moveReminder(reminderID: String, toListID listID: String) async throws {
+        guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
+            throw DomainError.notFound
+        }
+        guard let calendar = store.calendars(for: .reminder)
+            .first(where: { $0.calendarIdentifier == listID }) else {
+            throw DomainError.notFound
+        }
+        reminder.calendar = calendar
+        try store.save(reminder, commit: true)
+    }
+
     // MARK: - Lists (calendars)
 
     func addList(title: String, colorHex: String?) async throws -> String {

@@ -1207,6 +1207,9 @@ private actor GatedRemindersRepository: RemindersRepository {
         )
     }
     func deleteReminder(reminderID: String) async throws { try await base.deleteReminder(reminderID: reminderID) }
+    func moveReminder(reminderID: String, toListID listID: String) async throws {
+        try await base.moveReminder(reminderID: reminderID, toListID: listID)
+    }
     func addList(title: String, colorHex: String?) async throws -> String {
         try await base.addList(title: title, colorHex: colorHex)
     }

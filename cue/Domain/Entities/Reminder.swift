@@ -22,5 +22,6 @@ struct Reminder: Identifiable, Equatable, Sendable, Codable {
     /// 생성 시각(EventKit `creationDate`). 시스템 필터(전체·예정)의 "추가한 순서" 정렬 기준.
     /// nil이면 정렬에서 맨 뒤로 보낸다(미리 알림 앱과 동일하게 가장 나중에 추가된 것 취급).
     var creationDate: Date? = nil
-    let listID: String
+    /// 속한 리스트 — 전체 탭 섹션 간 드래그(리스트 이동)로 바뀔 수 있어 가변.
+    var listID: String
 }

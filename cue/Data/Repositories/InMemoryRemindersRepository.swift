@@ -102,6 +102,16 @@ actor InMemoryRemindersRepository: RemindersRepository {
         reminders[index].includesTime = includesTime
     }
 
+    func moveReminder(reminderID: String, toListID listID: String) async throws {
+        guard lists.contains(where: { $0.id == listID }) else {
+            throw DomainError.notFound
+        }
+        guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
+            throw DomainError.notFound
+        }
+        reminders[index].listID = listID
+    }
+
     func deleteReminder(reminderID: String) async throws {
         guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
             throw DomainError.notFound

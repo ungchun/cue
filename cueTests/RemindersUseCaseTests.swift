@@ -304,4 +304,35 @@ struct RemindersUseCaseTests {
             try await DeleteReminderListUseCase(repository: repository)(listID: "없는ID")
         }
     }
+
+    // MARK: - 리스트 간 이동 (전체 탭 섹션 간 드래그)
+
+    @Test func moveReminderChangesList() async throws {
+        let repository = InMemoryRemindersRepository(
+            access: .granted,
+            lists: [list, ReminderList(id: "L2", title: "다른 리스트", colorHex: nil)],
+            reminders: [makeReminder(id: "R1")]
+        )
+
+        try await MoveReminderUseCase(repository: repository)(reminderID: "R1", toListID: "L2")
+
+        let moved = try await FetchRemindersUseCase(repository: repository)().first { $0.id == "R1" }
+        #expect(moved?.listID == "L2")
+    }
+
+    @Test func moveReminderThrowsForMissingReminder() async {
+        let repository = makeRepository()
+
+        await #expect(throws: (any Error).self) {
+            try await MoveReminderUseCase(repository: repository)(reminderID: "없는ID", toListID: "L1")
+        }
+    }
+
+    @Test func moveReminderThrowsForMissingTargetList() async {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1")])
+
+        await #expect(throws: (any Error).self) {
+            try await MoveReminderUseCase(repository: repository)(reminderID: "R1", toListID: "없는ID")
+        }
+    }
 }

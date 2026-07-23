@@ -42,6 +42,8 @@ protocol RemindersRepository: Sendable {
     ) async throws
     /// 항목을 삭제한다.
     func deleteReminder(reminderID: String) async throws
+    /// 항목을 다른 리스트로 옮긴다 (전체 탭 섹션 간 드래그). EventKit에선 calendar 교체.
+    func moveReminder(reminderID: String, toListID listID: String) async throws
 
     /// 새 리스트(섹션)를 만든다. 만들어진 리스트의 ID를 돌려준다 — 호출자가 곧장 선택하도록.
     /// `colorHex`가 nil이면 시스템 기본 색.
