@@ -1259,6 +1259,99 @@ struct ReminderViewModelTests {
         #expect(viewModel.allReminders.first { $0.id == "1" }?.listID == "B")
     }
 
+    /// 완료 항목 표시가 켜져 있으면 완료 행이 미완료와 입력 슬롯 사이에 끼어 평탄화된다.
+    @Test func allModeRowsIncludeCompletedRowsWhenShown() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", isCompleted: true, creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+        viewModel.showsCompleted = true
+
+        #expect(viewModel.allModeRows.map(\.id) == [
+            "header:A", "reminder:1", "completed:2", "input:A", "divider:A",
+        ])
+    }
+
+    /// moveDisabled 없이 헤더·입력 행도 들 수는 있으므로, 비항목 행이 소스인 onMove는
+    /// 아무것도 바꾸지 않아야 한다 — 유일한 방어선인 소스 가드 검증.
+    @Test func moveAllModeRowIgnoresNonReminderSource() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "B"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+        let before = viewModel.allModeRows.map(\.id)
+
+        // 인덱스 0 = header:A, 인덱스 2 = input:A — 둘 다 no-op이어야 한다.
+        await viewModel.moveAllModeRow(fromOffsets: IndexSet(integer: 0), toOffset: 6)
+        await viewModel.moveAllModeRow(fromOffsets: IndexSet(integer: 2), toOffset: 6)
+
+        #expect(viewModel.allModeRows.map(\.id) == before)
+    }
+
+    /// 평탄 인덱스 → (리스트, 섹션 내 위치) 해석의 경계값들.
+    @Test func allModeDropTargetResolvesBoundaryDestinations() {
+        let a = ReminderList(id: "A", title: "A", colorHex: nil)
+        let b = ReminderList(id: "B", title: "B", colorHex: nil)
+        let r1 = reminder(id: "1", listID: "A")
+        let r2 = reminder(id: "2", isCompleted: true, listID: "A")
+        let r3 = reminder(id: "3", listID: "B")
+        let rows: [ReminderViewModel.AllModeRow] = [
+            .header(a), .reminder(r1), .completed(r2), .inputSlot(listID: "A"), .divider(listID: "A"),
+            .header(b), .reminder(r3), .inputSlot(listID: "B"), .divider(listID: "B"),
+        ]
+
+        func target(_ destination: Int) -> (listID: String, offset: Int)? {
+            ReminderViewModel.allModeDropTarget(rows: rows, destination: destination)
+        }
+        // 모든 헤더보다 위 → 첫 리스트 맨 앞.
+        #expect(target(0)?.listID == "A"); #expect(target(0)?.offset == 0)
+        // 다음 섹션 헤더 자리(위쪽 틈) → 이전 리스트 맨 뒤.
+        #expect(target(5)?.listID == "A"); #expect(target(5)?.offset == 1)
+        // 완료 행 사이/뒤 → 그 리스트 미완료 맨 뒤(완료 행은 위치 계산에서 제외).
+        #expect(target(3)?.listID == "A"); #expect(target(3)?.offset == 1)
+        // 헤더 바로 아래 → 그 리스트 맨 앞.
+        #expect(target(6)?.listID == "B"); #expect(target(6)?.offset == 0)
+        // 목록 끝(마지막 디바이더 뒤) → 마지막 리스트 맨 뒤.
+        #expect(target(rows.count)?.listID == "B"); #expect(target(rows.count)?.offset == 1)
+    }
+
+    /// 섹션 간 이동 시 원본 리스트의 수동 순서에서 그 항목이 제거되어 영속된다.
+    @Test func moveAcrossSectionsRemovesIDFromSourceManualOrder() async {
+        let sortRepository = InMemoryReminderSortRepository(storage: [
+            "list:A": ReminderSortSettings(
+                preference: .init(field: .manual, direction: .ascending),
+                manualOrder: ["2", "1"]
+            ),
+        ])
+        var deps = makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+            ]
+        )
+        deps.fetchReminderSortSettings = FetchReminderSortSettingsUseCase(repository: sortRepository)
+        deps.saveReminderSortSettings = SaveReminderSortSettingsUseCase(repository: sortRepository)
+        let viewModel = ReminderViewModel(dependencies: deps)
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        await viewModel.moveReminder(reminderID: "1", toListID: "B", toOffset: 0)
+
+        #expect(await sortRepository.fetch(scope: "list:A").manualOrder == ["2"])
+        #expect(await sortRepository.fetch(scope: "list:B").manualOrder == ["1"])
+    }
+
     /// 같은 섹션 안에 드랍한 경우 — 리스트 이동 없이 수동 재배열로 처리한다.
     /// (.onInsert 드랍 경로가 섹션 내 재배열까지 담당하므로: offset은 원본 행이 아직
     /// 제거되지 않은 상태의 삽입 위치 — 뒤로 옮길 땐 1 보정된다.)
