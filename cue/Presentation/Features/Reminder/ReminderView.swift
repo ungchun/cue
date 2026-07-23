@@ -676,6 +676,9 @@ struct ReminderView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            noteLine(for: reminder)
+                .padding(.leading, titleIndent)
+
             if let dueDate = reminder.dueDate {
                 Text(dueDateText(dueDate))
                     .font(.callout)
@@ -744,7 +747,10 @@ struct ReminderView: View {
                         submitOnReturn: true
                     )
                 } else {
-                    metaRow(for: reminder)
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        noteLine(for: reminder)
+                        metaRow(for: reminder)
+                    }
                 }
             }
             .padding(.leading, titleIndent)
@@ -752,6 +758,18 @@ struct ReminderView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             if !isEditing { startInlineEdit(reminder) }
+        }
+    }
+
+    /// 메모 표시 줄 — 메모가 있으면 제목 아래 항상 보인다(편집 중이 아닐 때).
+    /// Apple 미리 알림과 동일하게 secondary 색 한 줄 말줄임. 폰트는 메모 편집 칸(callout)과 맞춘다.
+    @ViewBuilder
+    private func noteLine(for reminder: Reminder) -> some View {
+        if let notes = reminder.notes, !notes.isEmpty {
+            Text(notes)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 
