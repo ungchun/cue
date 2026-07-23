@@ -428,17 +428,25 @@ struct ReminderView: View {
                             .tint(.red)
                         }
                 }
+                // 입력 행·디바이더는 "섹션 맨 뒤에 추가" 드랍 타깃을 겸한다 — 항목 행 위가
+                // 아니라 섹션 끝자락에 놓아도 그 리스트로 들어가게.
                 if activeNewRowListID == section.list.id {
                     newReminderRow
                         .listRowSeparator(.hidden)
                 } else {
                     newRowPlaceholder(forListID: section.list.id)
                         .listRowSeparator(.hidden)
+                        .onDrop(of: [.utf8PlainText, .plainText], isTargeted: nil) { providers in
+                            dropReminders(providers, intoListID: section.list.id, at: section.active.count)
+                        }
                 }
                 Color(.separator)
                     .frame(height: 1)
                     .listRowSeparator(.hidden)
                     .padding(.vertical, Spacing.zero)
+                    .onDrop(of: [.utf8PlainText, .plainText], isTargeted: nil) { providers in
+                        dropReminders(providers, intoListID: section.list.id, at: section.active.count)
+                    }
             } header: {
                 sectionHeader(for: section.list)
             }
@@ -510,30 +518,36 @@ struct ReminderView: View {
     }
 
     /// reminder row + swipe(삭제) — `.all` 섹션용 ForEach.
-    /// 드래그 앤 드랍(미리 알림 앱과 동일): `.onDrag`(항목 id를 NSItemProvider로) +
-    /// 각 섹션 `.onInsert` 단일 경로. 같은 섹션 드랍은 수동 재배열, 다른 섹션 드랍은
-    /// 리스트 실이동 — 분기는 ViewModel `moveReminder`가 한다.
-    /// `.onMove`는 쓰지 않는다: 있으면 List가 길게 누르기를 자기 ForEach로 제한된
-    /// 재배열 세션으로 가로채 `.onDrag`가 시작되지 않아 섹션 간 이동이 불가능해진다.
+    /// 드래그 앤 드랍(미리 알림 앱과 동일): 행 `.onDrag`(항목 id를 NSItemProvider로) +
+    /// **행 단위 `.onDrop`** — 어떤 행 위에 놓으면 그 행 앞에 삽입된다. 같은 섹션이면
+    /// 수동 재배열, 다른 섹션이면 리스트 실이동 — 분기는 ViewModel `moveReminder`가 한다.
+    /// `.onMove`는 드래그 세션을 자기 ForEach로 제한해 섹션 간 이동을 막고,
+    /// `.onInsert`는 List에서 불리지 않아 둘 다 쓰지 않는다.
     @ViewBuilder
     private func allModeRemindersForEach(
         section: (list: ReminderList, active: [Reminder], completed: [Reminder])
     ) -> some View {
-        ForEach(section.active) { reminder in
+        ForEach(Array(section.active.enumerated()), id: \.element.id) { index, reminder in
             swipeableRow(reminder)
                 .onDrag { NSItemProvider(object: reminder.id as NSString) }
-        }
-        .onInsert(of: [.utf8PlainText, .plainText]) { offset, providers in
-            insertDroppedReminders(providers, intoListID: section.list.id, at: offset)
+                .onDrop(
+                    of: [.utf8PlainText, .plainText],
+                    isTargeted: nil
+                ) { providers in
+                    dropReminders(providers, intoListID: section.list.id, at: index)
+                }
         }
     }
 
-    /// `.onInsert`가 넘겨준 NSItemProvider에서 항목 id를 복원해 리스트 간 이동을 실행한다.
+    /// 드랍된 NSItemProvider에서 항목 id를 복원해 재배열/리스트 이동을 실행한다.
     /// provider 로딩은 백그라운드 콜백이라 MainActor Task로 홉해 ViewModel을 호출한다.
-    private func insertDroppedReminders(
+    @discardableResult
+    private func dropReminders(
         _ providers: [NSItemProvider], intoListID listID: String, at offset: Int
-    ) {
-        for provider in providers {
+    ) -> Bool {
+        let usable = providers.filter { $0.canLoadObject(ofClass: NSString.self) }
+        guard !usable.isEmpty else { return false }
+        for provider in usable {
             _ = provider.loadObject(ofClass: NSString.self) { object, _ in
                 guard let id = object as? String else { return }
                 Task { @MainActor in
@@ -541,6 +555,7 @@ struct ReminderView: View {
                 }
             }
         }
+        return true
     }
 
     /// reminder row + swipe(삭제) 한 줄 — single/all 모드 공통 행 본문.
