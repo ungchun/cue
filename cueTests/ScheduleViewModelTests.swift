@@ -17,16 +17,17 @@ struct ScheduleViewModelTests {
         access: EventsAccess = .granted,
         events: [CalendarEvent] = [],
         calendars: [EventCalendar] = [],
-        appSettings: AppSettings = .default
+        appSettings: AppSettings = .default,
+        eventsRepository injected: (any EventsRepository)? = nil
     ) -> Dependencies {
-        let eventsRepository = InMemoryEventsRepository(
+        let eventsRepository = injected ?? InMemoryEventsRepository(
             access: access, events: events, calendars: calendars
         )
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
         let reminderSortRepository = InMemoryReminderSortRepository()
         let itemRepository = InMemoryItemRepository()
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
-        return Dependencies(
+        var dependencies = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
             deleteItem: DeleteItemUseCase(repository: itemRepository),
@@ -65,6 +66,10 @@ struct ScheduleViewModelTests {
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings)),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings))
         )
+        // 프리페치의 프롬프트-없는 권한 조회도 같은 repo를 보게 배선 — 기본값(별도 인메모리)은
+        // 항상 미결정이라 프리페치가 무조건 건너뛰게 된다.
+        dependencies.currentEventsAccess = CurrentEventsAccessUseCase(repository: eventsRepository)
+        return dependencies
     }
 
     @Test func initialStateHasNoAccessAndSheetClosed() {
@@ -411,4 +416,151 @@ struct ScheduleViewModelTests {
 
         #expect(viewModel.eventsByDay.isEmpty)
     }
+
+    // MARK: - 스냅샷 캐시 + 프리페치
+
+    /// 캐시가 유효하면(fetchedUntil이 미래) fetch를 기다리지 않고 즉시 페인트한다.
+    /// 조용한 최신화가 끝나면 fetch 결과로 대체된다.
+    @Test func cachedSnapshotPaintsImmediatelyBeforeFetchCompletes() async throws {
+        let today = Calendar.current.startOfDay(for: Date())
+        let cachedEvent = event(id: "cached",
+                                start: today.addingTimeInterval(10 * 60 * 60),
+                                end: today.addingTimeInterval(11 * 60 * 60))
+        let freshEvent = event(id: "fresh",
+                               start: today.addingTimeInterval(12 * 60 * 60),
+                               end: today.addingTimeInterval(13 * 60 * 60))
+        let cachedUntil = today.addingTimeInterval(7 * 24 * 60 * 60)
+        let cache = InMemorySnapshotCacheRepository(
+            eventsSnapshot: EventsSnapshot(events: [cachedEvent], fetchedUntil: cachedUntil)
+        )
+        let base = InMemoryEventsRepository(access: .granted, events: [freshEvent])
+        let repo = GatedEventsRepository(base)
+        await repo.closeGate()   // 조용한 최신화 fetch를 붙잡아 "캐시만 그려진" 순간을 관측.
+        var deps = makeDependencies(eventsRepository: repo)
+        deps.loadEventsSnapshot = LoadEventsSnapshotUseCase(repository: cache)
+        deps.saveEventsSnapshot = SaveEventsSnapshotUseCase(repository: cache)
+        let viewModel = ScheduleViewModel(dependencies: deps, now: { today })
+
+        let appearTask = Task { await viewModel.onAppear() }
+        var painted = false
+        for _ in 0..<200 {
+            if viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["cached"] { painted = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(painted)
+        #expect(viewModel.fetchedUntil == cachedUntil)   // 캐시 범위 복원 — loadInitial(+30일) 아님.
+
+        await repo.releaseFetch()
+        await appearTask.value
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["fresh"])
+    }
+
+    /// fetchedUntil이 이미 지난 낡은 캐시는 버리고 기존 첫 페이지(loadInitial) 경로로 간다.
+    @Test func staleSnapshotIsIgnored() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let pastEvent = event(id: "old",
+                              start: today.addingTimeInterval(-48 * 60 * 60),
+                              end: today.addingTimeInterval(-47 * 60 * 60))
+        let cache = InMemorySnapshotCacheRepository(
+            eventsSnapshot: EventsSnapshot(
+                events: [pastEvent],
+                fetchedUntil: today.addingTimeInterval(-24 * 60 * 60)
+            )
+        )
+        let fresh = event(id: "fresh",
+                          start: today.addingTimeInterval(10 * 60 * 60),
+                          end: today.addingTimeInterval(11 * 60 * 60))
+        var deps = makeDependencies(events: [fresh])
+        deps.loadEventsSnapshot = LoadEventsSnapshotUseCase(repository: cache)
+        deps.saveEventsSnapshot = SaveEventsSnapshotUseCase(repository: cache)
+        let viewModel = ScheduleViewModel(dependencies: deps, now: { today })
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["fresh"])
+        // loadInitial 경로 — fetch 범위가 오늘+30일로 새로 잡힌다.
+        let expectedUntil = Calendar.current.date(byAdding: .day, value: 30, to: today)
+        #expect(viewModel.fetchedUntil == expectedUntil)
+    }
+
+    /// 첫 페이지 적재가 성공하면 스냅샷을 저장한다 — 다음 실행의 첫 페인트 재료.
+    @Test func loadInitialSavesSnapshot() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let item = event(id: "1",
+                         start: today.addingTimeInterval(10 * 60 * 60),
+                         end: today.addingTimeInterval(11 * 60 * 60))
+        let cache = InMemorySnapshotCacheRepository()
+        var deps = makeDependencies(events: [item])
+        deps.loadEventsSnapshot = LoadEventsSnapshotUseCase(repository: cache)
+        deps.saveEventsSnapshot = SaveEventsSnapshotUseCase(repository: cache)
+        let viewModel = ScheduleViewModel(dependencies: deps, now: { today })
+
+        await viewModel.onAppear()
+
+        let saved = await cache.eventsSnapshot
+        #expect(saved?.events.map(\.id) == ["1"])
+        #expect(saved?.fetchedUntil == viewModel.fetchedUntil)
+    }
+
+    /// 프리페치 — 이미 권한이 허용된 경우에만 첫 페이지를 미리 적재한다.
+    @Test func prefetchLoadsWhenAccessAlreadyGranted() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(
+            events: [event(id: "1",
+                           start: today.addingTimeInterval(10 * 60 * 60),
+                           end: today.addingTimeInterval(11 * 60 * 60))]
+        ), now: { today })
+
+        await viewModel.prefetch()
+
+        #expect(viewModel.access == .granted)
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["1"])
+    }
+
+    /// 프리페치는 권한 프롬프트를 절대 유발하지 않는다 — 미결정이면 아무것도 하지 않는다.
+    @Test func prefetchDoesNothingWhenAccessNotDetermined() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(
+            access: .notDetermined,
+            events: [event(id: "1",
+                           start: today.addingTimeInterval(10 * 60 * 60),
+                           end: today.addingTimeInterval(11 * 60 * 60))]
+        ), now: { today })
+
+        await viewModel.prefetch()
+
+        #expect(viewModel.access == .notDetermined)
+        #expect(viewModel.eventsByDay.isEmpty)
+    }
+}
+
+/// `fetchEvents`를 게이트로 붙잡을 수 있는 리포지토리 더블 — 나머지는 InMemory에 위임한다.
+/// `GatedRemindersRepository`(ReminderViewModelTests)와 같은 관측 패턴.
+private actor GatedEventsRepository: EventsRepository {
+    private let base: InMemoryEventsRepository
+    private var gateClosed = false
+    private(set) var isFetchWaiting = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    init(_ base: InMemoryEventsRepository) { self.base = base }
+
+    func closeGate() { gateClosed = true }
+    func releaseFetch() {
+        gateClosed = false
+        isFetchWaiting = false
+        for waiter in waiters { waiter.resume() }
+        waiters = []
+    }
+
+    func requestAccess() async -> EventsAccess { await base.requestAccess() }
+    func currentAccess() async -> EventsAccess { await base.currentAccess() }
+    func fetchEvents(from: Date, to: Date) async throws -> [CalendarEvent] {
+        if gateClosed {
+            isFetchWaiting = true
+            await withCheckedContinuation { waiters.append($0) }
+        }
+        return try await base.fetchEvents(from: from, to: to)
+    }
+    func fetchCalendars() async throws -> [EventCalendar] { try await base.fetchCalendars() }
+    nonisolated func changes() -> AsyncStream<Void> { base.changes() }
 }

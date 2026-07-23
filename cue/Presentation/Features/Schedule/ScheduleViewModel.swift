@@ -19,6 +19,9 @@ import Observation
 @Observable
 final class ScheduleViewModel {
     private let requestAccessUseCase: RequestEventsAccessUseCase
+    private let currentAccessUseCase: CurrentEventsAccessUseCase
+    private let loadSnapshotUseCase: LoadEventsSnapshotUseCase
+    private let saveSnapshotUseCase: SaveEventsSnapshotUseCase
     private let fetchEventsUseCase: FetchEventsUseCase
     private let observeChangesUseCase: ObserveEventsChangesUseCase
     private let startLiveActivityUseCase: StartScheduleLiveActivityUseCase
@@ -38,6 +41,9 @@ final class ScheduleViewModel {
     /// 첫 데이터 적재가 끝났는지. `onAppear`가 탭 전환마다 재호출되더라도 두 번째
     /// 이상은 첫 페이지 fetch를 건너뛴다 — 변경 스트림이 알려줄 때만 reload.
     private var hasLoaded = false
+    /// 진행 중인 첫 적재 — 앱 시작 프리페치와 탭 진입 `onAppear`가 동시에 도착해도
+    /// 첫 적재는 정확히 한 번만 돌도록 single-flight로 공유한다.
+    private var firstLoadTask: Task<Void, Never>?
     /// 외부 변경 신호 스트림 구독. ViewModel 생애 동안 유지되며 신호가 올 때마다 fetched 범위
     /// 전체를 reload한다. 탭 전환에도 살아있어 다른 탭에서 발생한 변경을 놓치지 않는다.
     /// `nonisolated(unsafe)`: Swift 6의 nonisolated `deinit`에서 cancel을 호출하기 위함.
@@ -67,6 +73,9 @@ final class ScheduleViewModel {
     init(dependencies: Dependencies, premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService()), now: @escaping () -> Date = { Date() }) {
         self.premiumStore = premiumStore
         self.requestAccessUseCase = dependencies.requestEventsAccess
+        self.currentAccessUseCase = dependencies.currentEventsAccess
+        self.loadSnapshotUseCase = dependencies.loadEventsSnapshot
+        self.saveSnapshotUseCase = dependencies.saveEventsSnapshot
         self.fetchEventsUseCase = dependencies.fetchEvents
         self.observeChangesUseCase = dependencies.observeEventsChanges
         self.startLiveActivityUseCase = dependencies.startScheduleLiveActivity
@@ -87,12 +96,50 @@ final class ScheduleViewModel {
         let hidden = await fetchAppSettings().hiddenCalendarIDs
         if !hasLoaded {
             hiddenCalendarIDs = hidden
-            await loadInitial()
-            hasLoaded = true
+            await ensureFirstLoad()
         } else if hidden != hiddenCalendarIDs {
             // 숨김 설정이 바뀌었으면 지금까지 본 범위를 다시 필터링해 반영한다.
             hiddenCalendarIDs = hidden
             await reloadFetchedRange()
+        }
+    }
+
+    /// 앱 시작 프리페치 — 탭 진입을 기다리지 않고 첫 페이지 적재를 미리 끝낸다.
+    /// 권한 프롬프트를 절대 유발하지 않는다: 이미 허용된 경우에만 진행하고,
+    /// 미결정이면 아무것도 하지 않아 첫 탭 진입 시 기존 프롬프트 흐름이 그대로 남는다.
+    func prefetch() async {
+        guard !hasLoaded else { return }
+        guard await currentAccessUseCase() == .granted else { return }
+        access = .granted
+        hiddenCalendarIDs = await fetchAppSettings().hiddenCalendarIDs
+        await ensureFirstLoad()
+    }
+
+    /// 첫 적재 single-flight — 프리페치와 onAppear가 겹쳐도 fetch는 정확히 한 번.
+    private func ensureFirstLoad() async {
+        if hasLoaded { return }
+        if let task = firstLoadTask {
+            await task.value
+            return
+        }
+        let task = Task { await performFirstLoad() }
+        firstLoadTask = task
+        await task.value
+        firstLoadTask = nil
+    }
+
+    /// 첫 적재 — 유효한 캐시(fetchedUntil이 미래)가 있으면 즉시 페인트한 뒤 조용히 최신화하고,
+    /// 없거나 낡았으면 기존 첫 페이지(loadInitial) 경로. 어느 쪽이든 끝나면 `hasLoaded`.
+    private func performFirstLoad() async {
+        let nowDate = now()
+        if let snapshot = await loadSnapshotUseCase(), snapshot.fetchedUntil > nowDate {
+            eventsByDay = Self.groupByDay(visible(snapshot.events), now: nowDate)
+            fetchedUntil = snapshot.fetchedUntil
+            hasLoaded = true
+            await reloadFetchedRange()
+        } else {
+            await loadInitial()
+            hasLoaded = true
         }
     }
 
@@ -123,6 +170,9 @@ final class ScheduleViewModel {
         do {
             let events = try await fetchEventsUseCase(from: today, to: fetchedUntil)
             eventsByDay = Self.groupByDay(visible(events), now: nowDate)
+            // fetch 성공 결과를 스냅샷으로 저장 — 다음 실행의 첫 페인트 재료.
+            // 필터 전 원본을 저장해 숨김 해제 시에도 캐시가 쓸모를 잃지 않는다.
+            await saveSnapshotUseCase(EventsSnapshot(events: events, fetchedUntil: fetchedUntil))
         } catch {
             // 실패 시 기존 표시 유지 — 다음 신호에 재시도.
         }
@@ -257,6 +307,8 @@ final class ScheduleViewModel {
             let events = try await fetchEventsUseCase(from: today, to: to)
             eventsByDay = Self.groupByDay(visible(events), now: nowDate)
             fetchedUntil = to
+            // fetch 성공 결과를 스냅샷으로 저장 — 다음 실행의 첫 페인트 재료.
+            await saveSnapshotUseCase(EventsSnapshot(events: events, fetchedUntil: to))
         } catch {
             eventsByDay = []
         }

@@ -51,7 +51,7 @@ struct ReminderViewModelTests {
         let itemRepository = InMemoryItemRepository()
         let eventsRepository = InMemoryEventsRepository(access: .granted)
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
-        return Dependencies(
+        var dependencies = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
             deleteItem: DeleteItemUseCase(repository: itemRepository),
@@ -90,6 +90,10 @@ struct ReminderViewModelTests {
             fetchAppSettings: FetchAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings)),
             saveAppSettings: SaveAppSettingsUseCase(repository: InMemoryAppSettingsRepository(storage: appSettings))
         )
+        // 프리페치의 프롬프트-없는 권한 조회도 같은 repo를 보게 배선 — 기본값(별도 인메모리)은
+        // 항상 미결정이라 프리페치가 무조건 건너뛰게 된다.
+        dependencies.currentRemindersAccess = CurrentRemindersAccessUseCase(repository: remindersRepository)
+        return dependencies
     }
 
     private func reminder(
