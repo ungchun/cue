@@ -14,8 +14,17 @@ struct ReminderView: View {
 
     @State private var newTitle = ""
     @State private var newMemo = ""
-    @State private var showingDetail = false
+    // 생성용 세부사항 시트 — isPresented + 파라미터 전달은 body가 newTitle을 직접 읽지 않아
+    // 낡은(빈) 스냅샷으로 시트가 뜬다. ⓘ 탭 시점 값을 item으로 snapshot해 넘긴다(수정 경로와 동일 패턴).
+    @State private var newDraftDetail: NewReminderDraft?
     @State private var editingReminder: Reminder?
+
+    /// ⓘ 탭 순간의 새 입력 행 스냅샷 — `.sheet(item:)` 프레젠테이션용.
+    private struct NewReminderDraft: Identifiable {
+        let id = UUID()
+        var title: String
+        var memo: String
+    }
 
     // 새 입력 행 — title/memo 각자 focus 추적. 둘 다 풀리면 add 시도.
     @State private var newTitleFocused = false
@@ -78,9 +87,9 @@ struct ReminderView: View {
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
-            .sheet(isPresented: $showingDetail) {
-                // 생성 — 입력 행에 적힌 제목·메모를 초기값으로 시트에 흘려준다.
-                ReminderDetailSheet(title: newTitle, memo: newMemo) { draft in
+            .sheet(item: $newDraftDetail) { snapshot in
+                // 생성 — ⓘ 탭 순간 snapshot한 제목·메모를 초기값으로 시트에 흘려준다.
+                ReminderDetailSheet(title: snapshot.title, memo: snapshot.memo) { draft in
                     saveNewReminder(draft: draft)
                 }
             }
@@ -892,7 +901,7 @@ struct ReminderView: View {
                 if newTitleFocused || newMemoFocused {
                     Button {
                         suppressNewRowAutoSubmit = true
-                        showingDetail = true
+                        newDraftDetail = NewReminderDraft(title: newTitle, memo: newMemo)
                     } label: {
                         Image(systemName: "info.circle")
                             .font(.title3)
