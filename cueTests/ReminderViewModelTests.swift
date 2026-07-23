@@ -93,6 +93,7 @@ struct ReminderViewModelTests {
         // 프리페치의 프롬프트-없는 권한 조회도 같은 repo를 보게 배선 — 기본값(별도 인메모리)은
         // 항상 미결정이라 프리페치가 무조건 건너뛰게 된다.
         dependencies.currentRemindersAccess = CurrentRemindersAccessUseCase(repository: remindersRepository)
+        dependencies.moveReminder = MoveReminderUseCase(repository: remindersRepository)
         return dependencies
     }
 
@@ -1148,6 +1149,78 @@ struct ReminderViewModelTests {
         #expect(afterPrefetch == 1)
         #expect(await repo.fetchCount == afterPrefetch)
         #expect(viewModel.allReminders.count == 1)
+    }
+
+    // MARK: - 전체 탭 드래그 앤 드랍
+
+    private let baseDate = Date(timeIntervalSince1970: 1_700_000_000)
+
+    /// 전체 탭 섹션 내부도 각 리스트의 저장된 정렬 설정(수동 순서)을 따른다 —
+    /// 생성순 고정이던 기존 동작에서 전환(설정 없으면 .default = 생성순 시드라 동일).
+    @Test func allModeSectionsRespectPerListManualOrder() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+            ],
+            sortSettings: ["list:A": ReminderSortSettings(
+                preference: .init(field: .manual, direction: .ascending),
+                manualOrder: ["2", "1"]
+            )]
+        ))
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        #expect(viewModel.allModeSections.first?.active.map(\.id) == ["2", "1"])
+    }
+
+    /// 전체 탭 섹션 내 드래그 — 그 리스트의 정렬을 수동으로 전환하고 새 순서를 표시·저장한다.
+    @Test func moveWithinAllModeSectionReordersAndPersists() async {
+        let sortRepository = InMemoryReminderSortRepository()
+        var deps = makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+                reminder(id: "3", creationDate: baseDate.addingTimeInterval(120), listID: "A"),
+            ]
+        )
+        deps.fetchReminderSortSettings = FetchReminderSortSettingsUseCase(repository: sortRepository)
+        deps.saveReminderSortSettings = SaveReminderSortSettingsUseCase(repository: sortRepository)
+        let viewModel = ReminderViewModel(dependencies: deps)
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        await viewModel.moveReminders(in: "A", fromOffsets: IndexSet(integer: 0), toOffset: 3)
+
+        #expect(viewModel.allModeSections.first?.active.map(\.id) == ["2", "3", "1"])
+        let saved = await sortRepository.fetch(scope: "list:A")
+        #expect(saved.preference.field == .manual)
+        #expect(saved.manualOrder == ["2", "3", "1"])
+    }
+
+    /// 전체 탭 섹션 간 드래그 — 항목이 실제로 다른 리스트로 이동하고, 드랍 위치가
+    /// 대상 리스트의 수동 순서에 반영된다.
+    @Test func moveAcrossAllModeSectionsMovesListAndKeepsDropPosition() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+                reminder(id: "3", creationDate: baseDate.addingTimeInterval(120), listID: "B"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        // A의 "1"을 B 섹션 맨 앞(offset 0)에 드랍.
+        await viewModel.moveReminder(reminderID: "1", toListID: "B", toOffset: 0)
+
+        let sections = viewModel.allModeSections
+        #expect(sections.first { $0.list.id == "A" }?.active.map(\.id) == ["2"])
+        #expect(sections.first { $0.list.id == "B" }?.active.map(\.id) == ["1", "3"])
+        #expect(viewModel.allReminders.first { $0.id == "1" }?.listID == "B")
     }
 }
 

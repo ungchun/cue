@@ -20,6 +20,7 @@ final class ReminderViewModel {
     private let addReminderUseCase: AddReminderUseCase
     private let updateReminderUseCase: UpdateReminderUseCase
     private let deleteReminderUseCase: DeleteReminderUseCase
+    private let moveReminderUseCase: MoveReminderUseCase
     private let addReminderListUseCase: AddReminderListUseCase
     private let updateReminderListUseCase: UpdateReminderListUseCase
     private let deleteReminderListUseCase: DeleteReminderListUseCase
@@ -101,6 +102,7 @@ final class ReminderViewModel {
         self.addReminderUseCase = dependencies.addReminder
         self.updateReminderUseCase = dependencies.updateReminder
         self.deleteReminderUseCase = dependencies.deleteReminder
+        self.moveReminderUseCase = dependencies.moveReminder
         self.addReminderListUseCase = dependencies.addReminderList
         self.updateReminderListUseCase = dependencies.updateReminderList
         self.deleteReminderListUseCase = dependencies.deleteReminderList
@@ -400,6 +402,17 @@ final class ReminderViewModel {
         sortSettingsByScope[key] = await fetchSortSettingsUseCase(scope: key)
     }
 
+    /// 모든 리스트 스코프의 정렬 설정을 채운다 — `.all` 모드 섹션들이 리스트별 저장 정렬을
+    /// 쓰므로 어떤 리스트가 화면에 나와도 순서가 복원되게 reload 시 함께 적재한다.
+    private func loadSortSettingsForAllLists() async {
+        for list in lists {
+            let key = Self.listScopeKey(list.id)
+            if sortSettingsByScope[key] == nil {
+                sortSettingsByScope[key] = await fetchSortSettingsUseCase(scope: key)
+            }
+        }
+    }
+
     /// 선택 변경 직후 백그라운드로 그 스코프 설정을 적재한다 — 동기 select/selectFilter용.
     private func loadSortSettingsInBackground() {
         guard let key = currentSortScopeKey, sortSettingsByScope[key] == nil else { return }
@@ -475,13 +488,71 @@ final class ReminderViewModel {
     /// 빈 리스트도 포함한다(섹션 헤더는 보여야 하므로).
     var allModeSections: [(list: ReminderList, active: [Reminder], completed: [Reminder])] {
         visibleLists.map { list in
-            let active = allReminders
-                .filter { $0.listID == list.id && !$0.isCompleted }
-                .sorted(by: creationDateAscendingNilLast)
             let completed = showsCompleted
                 ? allReminders.filter { $0.listID == list.id && $0.isCompleted }
                 : []
-            return (list, active, completed)
+            return (list, sectionActiveReminders(listID: list.id), completed)
+        }
+    }
+
+    /// `.all` 모드 한 섹션의 미완료 항목 — 그 리스트의 저장된 정렬 설정을 따른다(단일 리스트
+    /// 모드와 동일). 설정이 없으면 `.default`(수동 + 빈 순서 = 생성순 시드)라 기존 생성순과 같다.
+    private func sectionActiveReminders(listID: String) -> [Reminder] {
+        sortedBySettings(
+            allReminders.filter { $0.listID == listID && !$0.isCompleted },
+            scope: Self.listScopeKey(listID)
+        )
+    }
+
+    /// `.all` 모드 섹션 내 드래그 재배열 — 그 리스트의 정렬을 '수동'으로 전환하고 순서를 저장한다
+    /// (`moveReminders(fromOffsets:toOffset:)`의 리스트 스코프 버전).
+    func moveReminders(in listID: String, fromOffsets source: IndexSet, toOffset destination: Int) async {
+        let key = Self.listScopeKey(listID)
+        let ids = Self.movingElements(
+            sectionActiveReminders(listID: listID).map(\.id),
+            fromOffsets: source, toOffset: destination
+        )
+        var settings = sortSettingsByScope[key] ?? .default
+        settings.preference.field = .manual
+        settings.manualOrder = ids
+        sortSettingsByScope[key] = settings
+        await saveSortSettingsUseCase(settings, scope: key)
+    }
+
+    /// `.all` 모드 섹션 간 드래그 — 항목을 다른 리스트로 실제 이동(EventKit calendar 교체)하고,
+    /// 드랍 위치를 대상 리스트의 수동 순서에 반영한다. 원본 리스트 수동 순서에선 제거.
+    func moveReminder(reminderID: String, toListID listID: String, toOffset destination: Int) async {
+        guard let moving = allReminders.first(where: { $0.id == reminderID }),
+              moving.listID != listID else { return }
+        do {
+            try await moveReminderUseCase(reminderID: reminderID, toListID: listID)
+        } catch {
+            errorMessage = error.localizedDescription
+            return
+        }
+
+        // 대상 리스트 수동 순서 — 이동 전 대상 섹션 순서에 드랍 위치로 삽입.
+        let targetKey = Self.listScopeKey(listID)
+        var targetIDs = sectionActiveReminders(listID: listID).map(\.id)
+        targetIDs.insert(reminderID, at: min(max(destination, 0), targetIDs.count))
+        var target = sortSettingsByScope[targetKey] ?? .default
+        target.preference.field = .manual
+        target.manualOrder = targetIDs
+        sortSettingsByScope[targetKey] = target
+        await saveSortSettingsUseCase(target, scope: targetKey)
+
+        // 원본 리스트 수동 순서에서 제거 — 낡은 ID가 남아 순위를 차지하지 않게.
+        let sourceKey = Self.listScopeKey(moving.listID)
+        if var source = sortSettingsByScope[sourceKey], source.manualOrder.contains(reminderID) {
+            source.manualOrder.removeAll { $0 == reminderID }
+            sortSettingsByScope[sourceKey] = source
+            await saveSortSettingsUseCase(source, scope: sourceKey)
+        }
+
+        do {
+            try await reloadReminders()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -538,6 +609,7 @@ final class ReminderViewModel {
             hiddenReminderListIDs = await fetchAppSettings().hiddenReminderListIDs
             await resolveInitialSelectionIfNeeded()
             await loadSortSettingsForCurrentScope()
+            await loadSortSettingsForAllLists()
             hasLoaded = true
             await reload(showsIndicator: false)
         } else {
@@ -560,6 +632,8 @@ final class ReminderViewModel {
             await resolveInitialSelectionIfNeeded()
             // 현재 스코프(오늘·개별 리스트)의 정렬 설정을 적재 — 진입 시 저장된 정렬 복원.
             await loadSortSettingsForCurrentScope()
+            // 전체 모드 섹션이 리스트별 저장 정렬을 쓰므로 모든 리스트 스코프도 채운다.
+            await loadSortSettingsForAllLists()
             // 외부(미리 알림 앱) 변경 등으로 데이터가 바뀌면 떠 있는 LA도 따라 갱신.
             await refreshLiveActivityIfActive()
             // fetch 성공 결과를 스냅샷으로 저장 — 다음 실행의 첫 페인트 재료.
