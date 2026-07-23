@@ -5,7 +5,6 @@
 
 import SwiftUI
 import UIKit
-import UniformTypeIdentifiers
 
 /// 할일 탭 화면 — 선택된 리스트의 미완료 항목을 보여주고 완료 토글을 제공한다.
 struct ReminderView: View {
@@ -402,54 +401,64 @@ struct ReminderView: View {
             .listRowSeparator(.hidden)
     }
 
-    /// `.all` selection 본문 — 리스트별 섹션 그루핑. SwiftUI `Section` + `.listStyle(.plain)`
-    /// 조합으로 섹션 헤더가 자동 sticky(공중에 떠 있는 형태)로 동작한다.
-    /// 각 섹션 끝에 입력 row가 있고 — `activeNewRowListID == section.list.id`인 섹션만
-    /// 진짜 `newReminderRow`(GrowingTextView mount)를 그리고, 나머진 placeholder.
-    /// 입력 row 다음에 섹션 끝 디바이더 1pt.
+    /// `.all` selection 본문 — 리스트별 그루핑을 **단일 ForEach의 평탄 행 목록**으로 그린다.
+    /// Section 조합은 `.onMove`가 섹션을 넘지 못하고 `.onInsert`/`.onDrop`은 List 안에서
+    /// 불리지 않아, 섹션 간 드래그는 단일 ForEach + `.onMove`가 유일한 네이티브 경로다.
+    /// 헤더·완료·입력·디바이더 행은 `.moveDisabled`로 고정하고 항목 행만 끌 수 있다.
+    /// (헤더는 sticky가 아니라 컨텐츠와 함께 스크롤 — Apple 미리 알림 전체 화면과 동일.)
     @ViewBuilder
     private var allModeContent: some View {
-        ForEach(viewModel.allModeSections, id: \.list.id) { section in
-            Section {
-                allModeRemindersForEach(section: section)
-                // 그 리스트의 완료 항목들 — showsCompleted OFF면 ViewModel이 빈 배열로 줘서 자동 생략.
-                ForEach(section.completed) { reminder in
-                    completedReminderRow(reminder)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(rowInsets)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                Task { await viewModel.delete(reminder) }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            // 앱 전체 .tint(.primary)가 destructive 스와이프 배경까지 무채색으로
-                            // 만들어 다크모드에서 아이콘이 묻힌다 — 이 액션만 빨강으로 되돌린다.
-                            .tint(.red)
-                        }
-                }
-                // 입력 행·디바이더는 "섹션 맨 뒤에 추가" 드랍 타깃을 겸한다 — 항목 행 위가
-                // 아니라 섹션 끝자락에 놓아도 그 리스트로 들어가게.
-                if activeNewRowListID == section.list.id {
-                    newReminderRow
-                        .listRowSeparator(.hidden)
-                } else {
-                    newRowPlaceholder(forListID: section.list.id)
-                        .listRowSeparator(.hidden)
-                        .onDrop(of: [.utf8PlainText, .plainText], isTargeted: nil) { providers in
-                            dropReminders(providers, intoListID: section.list.id, at: section.active.count)
-                        }
-                }
-                Color(.separator)
-                    .frame(height: 1)
-                    .listRowSeparator(.hidden)
-                    .padding(.vertical, Spacing.zero)
-                    .onDrop(of: [.utf8PlainText, .plainText], isTargeted: nil) { providers in
-                        dropReminders(providers, intoListID: section.list.id, at: section.active.count)
+        ForEach(viewModel.allModeRows) { row in
+            allModeRow(row)
+        }
+        .onMove { source, destination in
+            Task { await viewModel.moveAllModeRow(fromOffsets: source, toOffset: destination) }
+        }
+    }
+
+    /// 평탄 행 하나 렌더 — 종류별로 기존 row 빌더를 그대로 재사용한다.
+    @ViewBuilder
+    private func allModeRow(_ row: ReminderViewModel.AllModeRow) -> some View {
+        switch row {
+        case .header(let list):
+            sectionHeader(for: list)
+                .listRowSeparator(.hidden)
+                .listRowInsets(rowInsets)
+                .padding(.top, Spacing.sm)
+                .moveDisabled(true)
+        case .reminder(let reminder):
+            swipeableRow(reminder)
+        case .completed(let reminder):
+            completedReminderRow(reminder)
+                .listRowSeparator(.hidden)
+                .listRowInsets(rowInsets)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        Task { await viewModel.delete(reminder) }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
-            } header: {
-                sectionHeader(for: section.list)
+                    // 앱 전체 .tint(.primary)가 destructive 스와이프 배경까지 무채색으로
+                    // 만들어 다크모드에서 아이콘이 묻힌다 — 이 액션만 빨강으로 되돌린다.
+                    .tint(.red)
+                }
+                .moveDisabled(true)
+        case .inputSlot(let listID):
+            Group {
+                if activeNewRowListID == listID {
+                    newReminderRow
+                } else {
+                    newRowPlaceholder(forListID: listID)
+                }
             }
+            .listRowSeparator(.hidden)
+            .moveDisabled(true)
+        case .divider:
+            Color(.separator)
+                .frame(height: 1)
+                .listRowSeparator(.hidden)
+                .padding(.vertical, Spacing.zero)
+                .moveDisabled(true)
         }
     }
 
@@ -517,46 +526,6 @@ struct ReminderView: View {
         newTitleFocused = true
     }
 
-    /// reminder row + swipe(삭제) — `.all` 섹션용 ForEach.
-    /// 드래그 앤 드랍(미리 알림 앱과 동일): 행 `.onDrag`(항목 id를 NSItemProvider로) +
-    /// **행 단위 `.onDrop`** — 어떤 행 위에 놓으면 그 행 앞에 삽입된다. 같은 섹션이면
-    /// 수동 재배열, 다른 섹션이면 리스트 실이동 — 분기는 ViewModel `moveReminder`가 한다.
-    /// `.onMove`는 드래그 세션을 자기 ForEach로 제한해 섹션 간 이동을 막고,
-    /// `.onInsert`는 List에서 불리지 않아 둘 다 쓰지 않는다.
-    @ViewBuilder
-    private func allModeRemindersForEach(
-        section: (list: ReminderList, active: [Reminder], completed: [Reminder])
-    ) -> some View {
-        ForEach(Array(section.active.enumerated()), id: \.element.id) { index, reminder in
-            swipeableRow(reminder)
-                .onDrag { NSItemProvider(object: reminder.id as NSString) }
-                .onDrop(
-                    of: [.utf8PlainText, .plainText],
-                    isTargeted: nil
-                ) { providers in
-                    dropReminders(providers, intoListID: section.list.id, at: index)
-                }
-        }
-    }
-
-    /// 드랍된 NSItemProvider에서 항목 id를 복원해 재배열/리스트 이동을 실행한다.
-    /// provider 로딩은 백그라운드 콜백이라 MainActor Task로 홉해 ViewModel을 호출한다.
-    @discardableResult
-    private func dropReminders(
-        _ providers: [NSItemProvider], intoListID listID: String, at offset: Int
-    ) -> Bool {
-        let usable = providers.filter { $0.canLoadObject(ofClass: NSString.self) }
-        guard !usable.isEmpty else { return false }
-        for provider in usable {
-            _ = provider.loadObject(ofClass: NSString.self) { object, _ in
-                guard let id = object as? String else { return }
-                Task { @MainActor in
-                    await viewModel.moveReminder(reminderID: id, toListID: listID, toOffset: offset)
-                }
-            }
-        }
-        return true
-    }
 
     /// reminder row + swipe(삭제) 한 줄 — single/all 모드 공통 행 본문.
     @ViewBuilder

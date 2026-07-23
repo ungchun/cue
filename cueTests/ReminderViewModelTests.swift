@@ -1198,6 +1198,67 @@ struct ReminderViewModelTests {
         #expect(viewModel.allReminders.first { $0.id == "1" }?.listID == "B")
     }
 
+    /// `.all` 모드 평탄화 — 리스트마다 헤더 → 미완료 항목 → (완료) → 입력 슬롯 → 디바이더 순.
+    /// 단일 ForEach + .onMove로 섹션 간 드래그를 가능하게 하는 행 구조.
+    @Test func allModeRowsFlattenSectionsInOrder() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "B"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        #expect(viewModel.allModeRows.map(\.id) == [
+            "header:A", "reminder:1", "input:A", "divider:A",
+            "header:B", "reminder:2", "input:B", "divider:B",
+        ])
+    }
+
+    /// 평탄 인덱스 onMove — 같은 섹션 안(입력 슬롯 직전 = 맨 뒤)으로 옮기면 수동 재배열.
+    @Test func moveAllModeRowWithinSameSectionReorders() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+                reminder(id: "3", creationDate: baseDate.addingTimeInterval(120), listID: "A"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        // rows: [header:A, r1, r2, r3, input:A, divider:A] — r1(인덱스 1)을 인덱스 4(맨 뒤)로.
+        await viewModel.moveAllModeRow(fromOffsets: IndexSet(integer: 1), toOffset: 4)
+
+        #expect(viewModel.allModeSections.first?.active.map(\.id) == ["2", "3", "1"])
+    }
+
+    /// 평탄 인덱스 onMove — 다른 섹션 헤더 바로 아래로 옮기면 그 리스트 맨 앞으로 이동.
+    @Test func moveAllModeRowAcrossSectionsMovesList() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA, listB],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+                reminder(id: "3", creationDate: baseDate.addingTimeInterval(120), listID: "B"),
+            ]
+        ))
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        // rows: [header:A, r1, r2, input:A, divider:A, header:B, r3, input:B, divider:B]
+        // r1(인덱스 1)을 인덱스 6(header:B 바로 아래, r3 앞)으로.
+        await viewModel.moveAllModeRow(fromOffsets: IndexSet(integer: 1), toOffset: 6)
+
+        let sections = viewModel.allModeSections
+        #expect(sections.first { $0.list.id == "A" }?.active.map(\.id) == ["2"])
+        #expect(sections.first { $0.list.id == "B" }?.active.map(\.id) == ["1", "3"])
+        #expect(viewModel.allReminders.first { $0.id == "1" }?.listID == "B")
+    }
+
     /// 같은 섹션 안에 드랍한 경우 — 리스트 이동 없이 수동 재배열로 처리한다.
     /// (.onInsert 드랍 경로가 섹션 내 재배열까지 담당하므로: offset은 원본 행이 아직
     /// 제거되지 않은 상태의 삽입 위치 — 뒤로 옮길 땐 1 보정된다.)

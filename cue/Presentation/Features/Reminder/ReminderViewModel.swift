@@ -489,6 +489,78 @@ final class ReminderViewModel {
         }
     }
 
+    /// `.all` 모드의 평탄화된 행 — 리스트마다 헤더 → 미완료 항목 → (완료) → 입력 슬롯 → 디바이더.
+    /// List의 Section 조합은 .onMove가 섹션을 넘지 못하고 .onInsert/.onDrop은 List 안에서
+    /// 불리지 않으므로, 단일 ForEach + .onMove가 섹션 간 드래그의 유일한 네이티브 경로다.
+    enum AllModeRow: Identifiable, Equatable {
+        case header(ReminderList)
+        case reminder(Reminder)
+        case completed(Reminder)
+        /// 새 입력 행 자리 — 활성/placeholder 분기는 View가 한다.
+        case inputSlot(listID: String)
+        case divider(listID: String)
+
+        var id: String {
+            switch self {
+            case .header(let list): return "header:\(list.id)"
+            case .reminder(let reminder): return "reminder:\(reminder.id)"
+            case .completed(let reminder): return "completed:\(reminder.id)"
+            case .inputSlot(let listID): return "input:\(listID)"
+            case .divider(let listID): return "divider:\(listID)"
+            }
+        }
+    }
+
+    /// `.all` 모드 화면이 그리는 평탄 행 목록 — `allModeSections`를 행 단위로 편 것.
+    var allModeRows: [AllModeRow] {
+        allModeSections.flatMap { section -> [AllModeRow] in
+            [.header(section.list)]
+                + section.active.map(AllModeRow.reminder)
+                + section.completed.map(AllModeRow.completed)
+                + [.inputSlot(listID: section.list.id), .divider(listID: section.list.id)]
+        }
+    }
+
+    /// `.all` 모드 onMove — 평탄 인덱스를 (대상 리스트, 섹션 내 위치)로 해석해
+    /// 같은 리스트면 수동 재배열, 다른 리스트면 리스트 이동으로 위임한다.
+    func moveAllModeRow(fromOffsets source: IndexSet, toOffset destination: Int) async {
+        let rows = allModeRows
+        guard let sourceIndex = source.first,
+              rows.indices.contains(sourceIndex),
+              case .reminder(let moving) = rows[sourceIndex] else { return }
+        guard let target = Self.allModeDropTarget(rows: rows, destination: destination) else { return }
+        if target.listID == moving.listID {
+            await reorderAfterDrop(reminderID: moving.id, inListID: target.listID, toOffset: target.offset)
+        } else {
+            await moveReminder(reminderID: moving.id, toListID: target.listID, toOffset: target.offset)
+        }
+    }
+
+    /// 평탄 삽입 인덱스 → (리스트, 섹션 내 삽입 위치). destination 위쪽에서 가장 가까운 헤더가
+    /// 대상 리스트, 그 헤더 이후의 미완료 행 수가 섹션 내 위치다. 완료·입력 영역에 떨어지면
+    /// 그 수가 곧 active 개수라 자연히 맨 뒤. 첫 헤더보다 위면 첫 리스트 맨 앞.
+    static func allModeDropTarget(rows: [AllModeRow], destination: Int) -> (listID: String, offset: Int)? {
+        var currentListID: String?
+        var offsetInSection = 0
+        for (index, row) in rows.enumerated() {
+            if index == destination { break }
+            switch row {
+            case .header(let list):
+                currentListID = list.id
+                offsetInSection = 0
+            case .reminder:
+                offsetInSection += 1
+            case .completed, .inputSlot, .divider:
+                break
+            }
+        }
+        if let currentListID { return (currentListID, offsetInSection) }
+        for row in rows {
+            if case .header(let list) = row { return (list.id, 0) }
+        }
+        return nil
+    }
+
     /// `.all` 모드 한 섹션의 미완료 항목 — 그 리스트의 저장된 정렬 설정을 따른다(단일 리스트
     /// 모드와 동일). 설정이 없으면 `.default`(수동 + 빈 순서 = 생성순 시드)라 기존 생성순과 같다.
     private func sectionActiveReminders(listID: String) -> [Reminder] {
