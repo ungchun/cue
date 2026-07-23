@@ -34,6 +34,16 @@ actor EventKitEventsRepository: EventsRepository {
         }
     }
 
+    /// 상태-전용 조회 — 프롬프트를 절대 띄우지 않는다(앱 시작 프리페치 경로).
+    /// `requestAccess`와 같은 매핑: writeOnly도 granted로 본다.
+    func currentAccess() async -> EventsAccess {
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .fullAccess, .writeOnly: return .granted
+        case .notDetermined: return .notDetermined
+        default: return .denied
+        }
+    }
+
     /// `[from, to)` 범위와 겹치는 이벤트를 모든 캘린더에서 모은다.
     /// `predicateForEvents(withStart:end:calendars:)`은 범위 경계와 겹치는
     /// 이벤트(straddling)를 자동 포함 — InMemory 구현과 의미론이 일치한다.

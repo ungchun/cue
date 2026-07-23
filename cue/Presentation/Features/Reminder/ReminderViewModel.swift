@@ -11,6 +11,9 @@ import Observation
 @Observable
 final class ReminderViewModel {
     private let requestAccessUseCase: RequestRemindersAccessUseCase
+    private let currentAccessUseCase: CurrentRemindersAccessUseCase
+    private let loadSnapshotUseCase: LoadRemindersSnapshotUseCase
+    private let saveSnapshotUseCase: SaveRemindersSnapshotUseCase
     private let fetchListsUseCase: FetchReminderListsUseCase
     private let fetchRemindersUseCase: FetchRemindersUseCase
     private let toggleCompletionUseCase: ToggleReminderCompletionUseCase
@@ -49,6 +52,9 @@ final class ReminderViewModel {
     /// 이상은 fetch를 건너뛴다 — 외부(미리 알림 앱)에서 실제 변경이 발생하면 그때만
     /// `observeTask`의 stream이 신호를 보내 reload가 호출되어 인디케이터 깜박임이 사라진다.
     private var hasLoaded = false
+    /// 진행 중인 첫 적재 — 앱 시작 프리페치와 탭 진입 `onAppear`가 동시에 도착해도
+    /// 첫 적재는 정확히 한 번만 돌도록 single-flight로 공유한다.
+    private var firstLoadTask: Task<Void, Never>?
     /// 외부 변경 신호 스트림 구독. ViewModel 생애 동안 유지되며 신호가 올 때마다 reload.
     /// 탭 전환으로 view가 disappear되어도 ViewModel은 `@State`로 살아있어 구독이 끊기지 않는다.
     /// `nonisolated(unsafe)`: Swift 6의 nonisolated `deinit`에서 cancel을 호출하기 위함.
@@ -86,6 +92,9 @@ final class ReminderViewModel {
         self.now = now
         self.premiumStore = premiumStore
         self.requestAccessUseCase = dependencies.requestRemindersAccess
+        self.currentAccessUseCase = dependencies.currentRemindersAccess
+        self.loadSnapshotUseCase = dependencies.loadRemindersSnapshot
+        self.saveSnapshotUseCase = dependencies.saveRemindersSnapshot
         self.fetchListsUseCase = dependencies.fetchReminderLists
         self.fetchRemindersUseCase = dependencies.fetchReminders
         self.toggleCompletionUseCase = dependencies.toggleReminderCompletion
@@ -243,6 +252,8 @@ final class ReminderViewModel {
         // 자기 쓰기 완료 — 잠깐 동안 EventKit이 되쏘는 외부 변경 에코를 무시한다.
         suppressObserveUntil = now().addingTimeInterval(Self.selfWriteSuppressWindow)
         await refreshLiveActivityIfActive()
+        // 자기 쓰기 결과도 스냅샷에 반영 — 껐다 켜도 방금 추가·수정한 항목이 즉시 보인다.
+        await saveSnapshotUseCase(RemindersSnapshot(lists: lists, reminders: allReminders))
     }
 
     /// LA가 떠 있으면 현재 selection 스냅샷으로 다시 게시한다. 같은 리스트면 service가 부드럽게
@@ -492,7 +503,44 @@ final class ReminderViewModel {
     func onAppear() async {
         access = await requestAccessUseCase()
         guard access == .granted else { return }
-        if !hasLoaded {
+        await ensureFirstLoad()
+    }
+
+    /// 앱 시작 프리페치 — 탭 진입을 기다리지 않고 첫 적재를 미리 끝내 스피너를 없앤다.
+    /// 권한 프롬프트를 절대 유발하지 않는다: 이미 허용된 경우에만 진행하고,
+    /// 미결정이면 아무것도 하지 않아 첫 탭 진입 시 기존 프롬프트 흐름이 그대로 남는다.
+    func prefetch() async {
+        guard !hasLoaded else { return }
+        guard await currentAccessUseCase() == .granted else { return }
+        access = .granted
+        await ensureFirstLoad()
+    }
+
+    /// 첫 적재 single-flight — 프리페치와 onAppear가 겹쳐도 fetch는 정확히 한 번.
+    private func ensureFirstLoad() async {
+        if hasLoaded { return }
+        if let task = firstLoadTask {
+            await task.value
+            return
+        }
+        let task = Task { await performFirstLoad() }
+        firstLoadTask = task
+        await task.value
+        firstLoadTask = nil
+    }
+
+    /// 첫 적재 — 캐시가 있으면 스피너 없이 즉시 페인트한 뒤 조용히 최신화하고,
+    /// 없으면 기존 스피너 경로. 어느 쪽이든 끝나면 `hasLoaded`.
+    private func performFirstLoad() async {
+        if let snapshot = await loadSnapshotUseCase() {
+            lists = snapshot.lists
+            allReminders = snapshot.reminders
+            hiddenReminderListIDs = await fetchAppSettings().hiddenReminderListIDs
+            await resolveInitialSelectionIfNeeded()
+            await loadSortSettingsForCurrentScope()
+            hasLoaded = true
+            await reload(showsIndicator: false)
+        } else {
             await reload()
             hasLoaded = true
         }
@@ -514,6 +562,8 @@ final class ReminderViewModel {
             await loadSortSettingsForCurrentScope()
             // 외부(미리 알림 앱) 변경 등으로 데이터가 바뀌면 떠 있는 LA도 따라 갱신.
             await refreshLiveActivityIfActive()
+            // fetch 성공 결과를 스냅샷으로 저장 — 다음 실행의 첫 페인트 재료.
+            await saveSnapshotUseCase(RemindersSnapshot(lists: lists, reminders: allReminders))
         } catch {
             errorMessage = error.localizedDescription
         }

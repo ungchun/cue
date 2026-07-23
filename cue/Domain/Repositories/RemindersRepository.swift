@@ -12,6 +12,9 @@ import Foundation
 protocol RemindersRepository: Sendable {
     /// 접근 권한을 요청한다 (필요 시 시스템 프롬프트). 결과 상태를 돌려준다.
     func requestAccess() async -> RemindersAccess
+    /// 프롬프트 없이 현재 권한 상태만 읽는다 — 앱 시작 프리페치가 권한 팝업을
+    /// 유발하지 않기 위한 경로. 이미 허용된 경우에만 프리페치가 진행된다.
+    func currentAccess() async -> RemindersAccess
     /// 모든 미리 알림 리스트.
     func fetchLists() async throws -> [ReminderList]
     /// 모든 리스트의 미리 알림 항목 전체.
@@ -52,4 +55,10 @@ protocol RemindersRepository: Sendable {
     /// `fetchLists` / `fetchReminders`로 다시 가져온다. EventKit 구현은 `EKEventStoreChanged`
     /// 노티를 노출. 구독은 호출 측의 `Task`에 묶여 cancel 시 자동 종료된다.
     func changes() -> AsyncStream<Void>
+}
+
+extension RemindersRepository {
+    /// 기본 구현 — 프롬프트 없는 상태 조회가 없는 구현(테스트 더블 등)은 requestAccess로
+    /// 폴백한다. 실 EventKit 구현은 반드시 상태-전용 조회로 오버라이드한다.
+    func currentAccess() async -> RemindersAccess { await requestAccess() }
 }

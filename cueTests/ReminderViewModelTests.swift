@@ -1033,6 +1033,118 @@ struct ReminderViewModelTests {
 
         #expect(await recording.startReminderCalls.isEmpty)
     }
+
+    // MARK: - 스냅샷 캐시 + 프리페치
+
+    /// 캐시가 있으면 fetch를 기다리지 않고 즉시 페인트하고, 스피너를 띄우지 않는다.
+    /// (조용한 최신화가 끝나면 fetch 결과로 대체된다.)
+    @Test func cachedSnapshotPaintsImmediatelyWithoutSpinner() async throws {
+        let cached = reminder(id: "cached", title: "캐시 항목", listID: "A")
+        let fresh = reminder(id: "fresh", title: "실제 항목", listID: "A")
+        let cache = InMemorySnapshotCacheRepository(
+            remindersSnapshot: RemindersSnapshot(lists: [listA], reminders: [cached])
+        )
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA], reminders: [fresh])
+        let repo = GatedRemindersRepository(base)
+        await repo.closeGate()   // 조용한 최신화 fetch를 붙잡아 "캐시만 그려진" 순간을 관측.
+        var deps = makeDependencies(remindersRepository: repo)
+        deps.loadRemindersSnapshot = LoadRemindersSnapshotUseCase(repository: cache)
+        deps.saveRemindersSnapshot = SaveRemindersSnapshotUseCase(repository: cache)
+        let viewModel = ReminderViewModel(dependencies: deps)
+
+        let appearTask = Task { await viewModel.onAppear() }
+        // 캐시 페인트가 일어날 때까지 (bounded — 최대 ~1s).
+        var painted = false
+        for _ in 0..<200 {
+            if viewModel.allReminders == [cached] { painted = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(painted)
+        #expect(viewModel.lists == [listA])
+        #expect(viewModel.isLoading == false)   // 캐시 경로는 스피너 금지.
+
+        await repo.releaseFetch()
+        await appearTask.value
+        #expect(viewModel.allReminders == [fresh])   // 최신화 완료 — fetch 결과로 대체.
+    }
+
+    /// 캐시가 없으면 기존 경로 그대로 — 첫 적재 동안 스피너를 띄운다.
+    @Test func firstLoadWithoutCacheShowsSpinner() async throws {
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let repo = GatedRemindersRepository(base)
+        await repo.closeGate()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+
+        let appearTask = Task { await viewModel.onAppear() }
+        var waiting = false
+        for _ in 0..<200 {
+            if await repo.isFetchWaiting { waiting = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(waiting)
+        #expect(viewModel.isLoading == true)
+
+        await repo.releaseFetch()
+        await appearTask.value
+        #expect(viewModel.isLoading == false)
+    }
+
+    /// 적재가 성공하면 스냅샷을 저장한다 — 다음 실행의 첫 페인트 재료.
+    @Test func reloadSavesSnapshotForNextLaunch() async {
+        let cache = InMemorySnapshotCacheRepository()
+        let item = reminder(id: "1", listID: "A")
+        var deps = makeDependencies(access: .granted, lists: [listA], reminders: [item])
+        deps.loadRemindersSnapshot = LoadRemindersSnapshotUseCase(repository: cache)
+        deps.saveRemindersSnapshot = SaveRemindersSnapshotUseCase(repository: cache)
+        let viewModel = ReminderViewModel(dependencies: deps)
+
+        await viewModel.onAppear()
+
+        #expect(await cache.remindersSnapshot == RemindersSnapshot(lists: [listA], reminders: [item]))
+    }
+
+    /// 프리페치 — 이미 권한이 허용된 경우에만 첫 적재를 미리 수행한다(탭 진입 전 스피너 제거).
+    @Test func prefetchLoadsWhenAccessAlreadyGranted() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            access: .granted, lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        ))
+
+        await viewModel.prefetch()
+
+        #expect(viewModel.access == .granted)
+        #expect(viewModel.allReminders.count == 1)
+    }
+
+    /// 프리페치는 권한 프롬프트를 절대 유발하지 않는다 — 미결정이면 아무것도 하지 않는다.
+    /// (InMemory 구현은 requestAccess가 미결정→허용으로 바꾸므로, 상태가 미결정 그대로면
+    /// 프롬프트 경로를 타지 않았다는 증거다.)
+    @Test func prefetchDoesNothingWhenAccessNotDetermined() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            access: .notDetermined, lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        ))
+
+        await viewModel.prefetch()
+
+        #expect(viewModel.access == .notDetermined)
+        #expect(viewModel.allReminders.isEmpty)
+    }
+
+    /// 프리페치가 끝난 뒤 탭 진입(onAppear)은 fetch를 반복하지 않는다 — 첫 적재는 한 번뿐.
+    @Test func onAppearAfterPrefetchDoesNotRefetch() async {
+        let base = InMemoryRemindersRepository(
+            access: .granted, lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        )
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+
+        await viewModel.prefetch()
+        let afterPrefetch = await repo.fetchCount
+        await viewModel.onAppear()
+
+        #expect(afterPrefetch == 1)
+        #expect(await repo.fetchCount == afterPrefetch)
+        #expect(viewModel.allReminders.count == 1)
+    }
 }
 
 /// `fetchReminders`를 게이트로 붙잡을 수 있는 리포지토리 더블 — 나머지는 InMemory에 위임한다.

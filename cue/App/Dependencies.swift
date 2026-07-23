@@ -82,6 +82,26 @@ struct Dependencies: Sendable {
     var fetchAppSettings: FetchAppSettingsUseCase
     var saveAppSettings: SaveAppSettingsUseCase
 
+    // MARK: - 앱 시작 프리페치 + 첫 페인트 스냅샷 캐시
+
+    /// 프롬프트 없는 권한 상태 조회 — 앱 시작 프리페치가 "이미 허용된 경우에만" 돌기 위한 경로.
+    /// 기본값은 인메모리 no-op 수준 — 실 배선은 `CompositionRoot`에서 같은 repo 인스턴스로 교체.
+    var currentRemindersAccess: CurrentRemindersAccessUseCase =
+        .init(repository: InMemoryRemindersRepository(access: .notDetermined))
+    var currentEventsAccess: CurrentEventsAccessUseCase =
+        .init(repository: InMemoryEventsRepository(access: .notDetermined))
+
+    /// 마지막 fetch 결과 스냅샷 — 앱 재시작 시 스피너 없이 즉시 첫 페인트하기 위한 캐시.
+    /// 기본값은 빈 인메모리(복원 nil = 기존 스피너 경로) — 실 배선은 `CompositionRoot`에서.
+    var loadRemindersSnapshot: LoadRemindersSnapshotUseCase =
+        .init(repository: InMemorySnapshotCacheRepository())
+    var saveRemindersSnapshot: SaveRemindersSnapshotUseCase =
+        .init(repository: InMemorySnapshotCacheRepository())
+    var loadEventsSnapshot: LoadEventsSnapshotUseCase =
+        .init(repository: InMemorySnapshotCacheRepository())
+    var saveEventsSnapshot: SaveEventsSnapshotUseCase =
+        .init(repository: InMemorySnapshotCacheRepository())
+
     /// 분석 이벤트 기록 — 프로덕션은 Firebase(GA4), 프리뷰·테스트는 no-op.
     /// fire-and-forget이라 UseCase 없이 서비스 경계를 그대로 노출한다.
     var analytics: any AnalyticsService = DisabledAnalyticsService()

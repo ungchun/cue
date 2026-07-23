@@ -35,6 +35,11 @@ actor InMemoryEventsRepository: EventsRepository {
         return access
     }
 
+    /// 프롬프트 시뮬레이션(미결정→허용) 없이 상태 그대로 — 프리페치 가드 테스트의 관측점.
+    func currentAccess() async -> EventsAccess {
+        access
+    }
+
     /// `[from, to)` 범위와 겹치는 이벤트만 돌려준다 (start < to && end > from).
     /// EventKit `predicateForEvents`의 겹침 규칙과 일치.
     func fetchEvents(from: Date, to: Date) async throws -> [CalendarEvent] {

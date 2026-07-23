@@ -31,6 +31,15 @@ actor EventKitRemindersRepository: RemindersRepository {
         }
     }
 
+    /// 상태-전용 조회 — 프롬프트를 절대 띄우지 않는다(앱 시작 프리페치 경로).
+    func currentAccess() async -> RemindersAccess {
+        switch EKEventStore.authorizationStatus(for: .reminder) {
+        case .fullAccess: return .granted
+        case .notDetermined: return .notDetermined
+        default: return .denied
+        }
+    }
+
     func fetchLists() async throws -> [ReminderList] {
         let defaultListID = store.defaultCalendarForNewReminders()?.calendarIdentifier
         return store.calendars(for: .reminder).map { ReminderMapper.toList($0, defaultListID: defaultListID) }

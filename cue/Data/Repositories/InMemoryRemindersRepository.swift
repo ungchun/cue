@@ -43,6 +43,11 @@ actor InMemoryRemindersRepository: RemindersRepository {
         return access
     }
 
+    /// 프롬프트 시뮬레이션(미결정→허용) 없이 상태 그대로 — 프리페치 가드 테스트의 관측점.
+    func currentAccess() async -> RemindersAccess {
+        access
+    }
+
     func fetchLists() async throws -> [ReminderList] {
         lists
     }
