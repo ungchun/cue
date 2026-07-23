@@ -425,7 +425,6 @@ struct ReminderView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(rowInsets)
                 .padding(.top, Spacing.sm)
-                .moveDisabled(true)
         case .reminder(let reminder):
             swipeableRow(reminder)
         case .completed(let reminder):
@@ -442,7 +441,6 @@ struct ReminderView: View {
                     // 만들어 다크모드에서 아이콘이 묻힌다 — 이 액션만 빨강으로 되돌린다.
                     .tint(.red)
                 }
-                .moveDisabled(true)
         case .inputSlot(let listID):
             Group {
                 if activeNewRowListID == listID {
@@ -452,13 +450,11 @@ struct ReminderView: View {
                 }
             }
             .listRowSeparator(.hidden)
-            .moveDisabled(true)
         case .divider:
             Color(.separator)
                 .frame(height: 1)
                 .listRowSeparator(.hidden)
                 .padding(.vertical, Spacing.zero)
-                .moveDisabled(true)
         }
     }
 
