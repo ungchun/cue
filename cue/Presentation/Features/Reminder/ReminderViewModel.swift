@@ -498,26 +498,16 @@ final class ReminderViewModel {
         )
     }
 
-    /// `.all` 모드 섹션 내 드래그 재배열 — 그 리스트의 정렬을 '수동'으로 전환하고 순서를 저장한다
-    /// (`moveReminders(fromOffsets:toOffset:)`의 리스트 스코프 버전).
-    func moveReminders(in listID: String, fromOffsets source: IndexSet, toOffset destination: Int) async {
-        let key = Self.listScopeKey(listID)
-        let ids = Self.movingElements(
-            sectionActiveReminders(listID: listID).map(\.id),
-            fromOffsets: source, toOffset: destination
-        )
-        var settings = sortSettingsByScope[key] ?? .default
-        settings.preference.field = .manual
-        settings.manualOrder = ids
-        sortSettingsByScope[key] = settings
-        await saveSortSettingsUseCase(settings, scope: key)
-    }
-
     /// `.all` 모드 섹션 간 드래그 — 항목을 다른 리스트로 실제 이동(EventKit calendar 교체)하고,
     /// 드랍 위치를 대상 리스트의 수동 순서에 반영한다. 원본 리스트 수동 순서에선 제거.
     func moveReminder(reminderID: String, toListID listID: String, toOffset destination: Int) async {
-        guard let moving = allReminders.first(where: { $0.id == reminderID }),
-              moving.listID != listID else { return }
+        guard let moving = allReminders.first(where: { $0.id == reminderID }) else { return }
+        // 같은 섹션 안에 드랍 — 리스트 이동 없이 수동 재배열. `.onInsert` 드랍 경로가
+        // 섹션 내 재배열까지 담당한다(.onMove는 드래그 세션을 가로채 섹션 간 이동을 막아 미사용).
+        if moving.listID == listID {
+            await reorderAfterDrop(reminderID: reminderID, inListID: listID, toOffset: destination)
+            return
+        }
         do {
             try await moveReminderUseCase(reminderID: reminderID, toListID: listID)
         } catch {
@@ -548,6 +538,22 @@ final class ReminderViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 같은 리스트 안 드랍 재배열 — `offset`은 원본 행이 아직 제거되지 않은 상태의 삽입
+    /// 위치이므로, 원래 위치가 삽입 위치보다 앞이면 1을 보정한다. 정렬은 '수동'으로 전환·저장.
+    private func reorderAfterDrop(reminderID: String, inListID listID: String, toOffset destination: Int) async {
+        let key = Self.listScopeKey(listID)
+        var ids = sectionActiveReminders(listID: listID).map(\.id)
+        guard let oldIndex = ids.firstIndex(of: reminderID) else { return }
+        ids.remove(at: oldIndex)
+        let adjusted = oldIndex < destination ? destination - 1 : destination
+        ids.insert(reminderID, at: min(max(adjusted, 0), ids.count))
+        var settings = sortSettingsByScope[key] ?? .default
+        settings.preference.field = .manual
+        settings.manualOrder = ids
+        sortSettingsByScope[key] = settings
+        await saveSortSettingsUseCase(settings, scope: key)
     }
 
     /// 리스트별 미완료 항목 수 — 리스트 선택 메뉴 옆 카운트 표기용.

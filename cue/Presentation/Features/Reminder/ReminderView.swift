@@ -510,10 +510,11 @@ struct ReminderView: View {
     }
 
     /// reminder row + swipe(삭제) — `.all` 섹션용 ForEach.
-    /// 드래그 앤 드랍(미리 알림 앱과 동일):
-    /// - 섹션 안 재배열은 `.onMove` — 그 리스트 정렬이 '수동'으로 전환되고 순서가 저장된다.
-    /// - 섹션 간 이동은 `.onDrag`(항목 id를 NSItemProvider로) + 대상 섹션 `.onInsert` —
-    ///   항목이 실제로 그 리스트로 이동하고 드랍 위치가 수동 순서에 반영된다.
+    /// 드래그 앤 드랍(미리 알림 앱과 동일): `.onDrag`(항목 id를 NSItemProvider로) +
+    /// 각 섹션 `.onInsert` 단일 경로. 같은 섹션 드랍은 수동 재배열, 다른 섹션 드랍은
+    /// 리스트 실이동 — 분기는 ViewModel `moveReminder`가 한다.
+    /// `.onMove`는 쓰지 않는다: 있으면 List가 길게 누르기를 자기 ForEach로 제한된
+    /// 재배열 세션으로 가로채 `.onDrag`가 시작되지 않아 섹션 간 이동이 불가능해진다.
     @ViewBuilder
     private func allModeRemindersForEach(
         section: (list: ReminderList, active: [Reminder], completed: [Reminder])
@@ -521,9 +522,6 @@ struct ReminderView: View {
         ForEach(section.active) { reminder in
             swipeableRow(reminder)
                 .onDrag { NSItemProvider(object: reminder.id as NSString) }
-        }
-        .onMove { source, destination in
-            Task { await viewModel.moveReminders(in: section.list.id, fromOffsets: source, toOffset: destination) }
         }
         .onInsert(of: [.utf8PlainText, .plainText]) { offset, providers in
             insertDroppedReminders(providers, intoListID: section.list.id, at: offset)

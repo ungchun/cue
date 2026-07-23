@@ -1175,31 +1175,6 @@ struct ReminderViewModelTests {
         #expect(viewModel.allModeSections.first?.active.map(\.id) == ["2", "1"])
     }
 
-    /// 전체 탭 섹션 내 드래그 — 그 리스트의 정렬을 수동으로 전환하고 새 순서를 표시·저장한다.
-    @Test func moveWithinAllModeSectionReordersAndPersists() async {
-        let sortRepository = InMemoryReminderSortRepository()
-        var deps = makeDependencies(
-            lists: [listA],
-            reminders: [
-                reminder(id: "1", creationDate: baseDate, listID: "A"),
-                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
-                reminder(id: "3", creationDate: baseDate.addingTimeInterval(120), listID: "A"),
-            ]
-        )
-        deps.fetchReminderSortSettings = FetchReminderSortSettingsUseCase(repository: sortRepository)
-        deps.saveReminderSortSettings = SaveReminderSortSettingsUseCase(repository: sortRepository)
-        let viewModel = ReminderViewModel(dependencies: deps)
-        await viewModel.onAppear()
-        viewModel.selectFilter(.all)
-
-        await viewModel.moveReminders(in: "A", fromOffsets: IndexSet(integer: 0), toOffset: 3)
-
-        #expect(viewModel.allModeSections.first?.active.map(\.id) == ["2", "3", "1"])
-        let saved = await sortRepository.fetch(scope: "list:A")
-        #expect(saved.preference.field == .manual)
-        #expect(saved.manualOrder == ["2", "3", "1"])
-    }
-
     /// 전체 탭 섹션 간 드래그 — 항목이 실제로 다른 리스트로 이동하고, 드랍 위치가
     /// 대상 리스트의 수동 순서에 반영된다.
     @Test func moveAcrossAllModeSectionsMovesListAndKeepsDropPosition() async {
@@ -1221,6 +1196,34 @@ struct ReminderViewModelTests {
         #expect(sections.first { $0.list.id == "A" }?.active.map(\.id) == ["2"])
         #expect(sections.first { $0.list.id == "B" }?.active.map(\.id) == ["1", "3"])
         #expect(viewModel.allReminders.first { $0.id == "1" }?.listID == "B")
+    }
+
+    /// 같은 섹션 안에 드랍한 경우 — 리스트 이동 없이 수동 재배열로 처리한다.
+    /// (.onInsert 드랍 경로가 섹션 내 재배열까지 담당하므로: offset은 원본 행이 아직
+    /// 제거되지 않은 상태의 삽입 위치 — 뒤로 옮길 땐 1 보정된다.)
+    @Test func dropWithinSameSectionReordersManually() async {
+        let sortRepository = InMemoryReminderSortRepository()
+        var deps = makeDependencies(
+            lists: [listA],
+            reminders: [
+                reminder(id: "1", creationDate: baseDate, listID: "A"),
+                reminder(id: "2", creationDate: baseDate.addingTimeInterval(60), listID: "A"),
+                reminder(id: "3", creationDate: baseDate.addingTimeInterval(120), listID: "A"),
+            ]
+        )
+        deps.fetchReminderSortSettings = FetchReminderSortSettingsUseCase(repository: sortRepository)
+        deps.saveReminderSortSettings = SaveReminderSortSettingsUseCase(repository: sortRepository)
+        let viewModel = ReminderViewModel(dependencies: deps)
+        await viewModel.onAppear()
+        viewModel.selectFilter(.all)
+
+        // "1"을 맨 뒤(offset 3 — 제거 전 기준)에 드랍.
+        await viewModel.moveReminder(reminderID: "1", toListID: "A", toOffset: 3)
+
+        #expect(viewModel.allModeSections.first?.active.map(\.id) == ["2", "3", "1"])
+        let saved = await sortRepository.fetch(scope: "list:A")
+        #expect(saved.preference.field == .manual)
+        #expect(saved.manualOrder == ["2", "3", "1"])
     }
 }
 
