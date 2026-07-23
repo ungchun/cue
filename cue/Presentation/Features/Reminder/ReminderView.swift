@@ -404,7 +404,9 @@ struct ReminderView: View {
     /// `.all` selection 본문 — 리스트별 그루핑을 **단일 ForEach의 평탄 행 목록**으로 그린다.
     /// Section 조합은 `.onMove`가 섹션을 넘지 못하고 `.onInsert`/`.onDrop`은 List 안에서
     /// 불리지 않아, 섹션 간 드래그는 단일 ForEach + `.onMove`가 유일한 네이티브 경로다.
-    /// 헤더·완료·입력·디바이더 행은 `.moveDisabled`로 고정하고 항목 행만 끌 수 있다.
+    /// 비항목 행(헤더·완료·입력·디바이더)에 `.moveDisabled`를 쓰지 않는다 — 비활성 행은
+    /// 재배열 중 밀려나지 않는 고정 벽이 되어 인접 드랍 슬롯(섹션 첫/마지막 위치)을 죽인다.
+    /// 대신 ViewModel `moveAllModeRow`의 소스 가드가 항목 행 외의 이동을 no-op으로 막는다.
     /// (헤더는 sticky가 아니라 컨텐츠와 함께 스크롤 — Apple 미리 알림 전체 화면과 동일.)
     @ViewBuilder
     private var allModeContent: some View {
