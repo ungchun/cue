@@ -80,6 +80,12 @@ struct ReminderView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     optionsMenu
                 }
+                // 입력 포커스 중엔 … 오른쪽에 완료(체크) 버튼 — Apple 미리 알림과 동일 패턴.
+                if isAnyInputFocused {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        commitInputButton
+                    }
+                }
             }
             .task { await viewModel.onAppear() }
             .alert("Error", isPresented: errorBinding) {
@@ -152,6 +158,34 @@ struct ReminderView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
+    }
+
+    /// 새 입력 행·인라인 편집 어느 쪽이든 입력 포커스가 살아 있는지 — 완료(체크) 버튼 노출 조건.
+    private var isAnyInputFocused: Bool {
+        newTitleFocused || newMemoFocused || editTitleFocused || editMemoFocused
+    }
+
+    /// 우상단 완료(체크) 버튼 — 포커스를 내리고 키보드를 dismiss한다. 저장은 기존 자동 커밋
+    /// 흐름(scheduleNewCommit/scheduleEditCommit)이 focus 해제 onChange로 그대로 처리한다.
+    /// 키보드 액세서리 dismiss와 동일하게 binding을 **즉시** false로 — resign만 하면 re-render의
+    /// async become이 stale true를 읽고 키보드를 도로 올린다.
+    private var commitInputButton: some View {
+        Button {
+            newTitleFocused = false
+            newMemoFocused = false
+            editTitleFocused = false
+            editMemoFocused = false
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+            )
+        } label: {
+            // 세부사항 시트의 Save 버튼과 동일 관용구 — prominent capsule은 전역 tint를 상속하므로
+            // 라벨은 배경 반전색(systemBackground)으로 명시해 항상 대비를 보장한다.
+            Label("Done", systemImage: "checkmark")
+                .labelStyle(.iconOnly)
+                .foregroundStyle(Color(.systemBackground))
+        }
+        .buttonStyle(.glassProminent)
     }
 
     /// 우측 상단 옵션 메뉴 — 완료된 항목 토글, 목록 CRUD 진입.
