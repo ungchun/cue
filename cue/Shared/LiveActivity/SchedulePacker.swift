@@ -98,17 +98,58 @@ enum ScheduleMetrics {
     /// 헤더↔이벤트 / 이벤트 사이 간격.
     static let rowGap: CGFloat = Spacing.xs             // 4
 
-    static var titleLine: CGFloat { UIFont.preferredFont(forTextStyle: .caption1).lineHeight }
-    static var timeLine: CGFloat { UIFont.preferredFont(forTextStyle: .caption2).lineHeight }
+    /// 줄높이는 **기본(large) 콘텐츠 크기로 고정해** 읽는다 — 위젯 익스텐션 프로세스의
+    /// `preferredFont`는 기기 글자 크기가 기본이어도 부풀려진 값(실측 16.3/15.1)을 돌려줘,
+    /// 실제 렌더(≈14.3/13.1 스케일)보다 행을 크게 추정 → 패커가 예산을 30~40pt 남기고도
+    /// 조기 마감해 뒷날 일정이 통째로 잘렸다(실기기 진단 오버레이로 확정).
+    private static let defaultTraits = UITraitCollection(preferredContentSizeCategory: .large)
+    static var titleLine: CGFloat {
+        UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: defaultTraits).lineHeight
+    }
+    static var timeLine: CGFloat {
+        UIFont.preferredFont(forTextStyle: .caption2, compatibleWith: defaultTraits).lineHeight
+    }
     /// 날짜 헤더는 caption2로 렌더 — 뷰(ScheduleDayView)와 동기.
     static var header: CGFloat { timeLine }
+    /// CJK·이모지 제목은 SF 추정보다 줄이 ~2pt 크게 렌더된다 — 이벤트당 안전 마진.
+    /// 없으면 딱 맞게 채운 열이 실렌더에서 1~2pt 넘쳐 마지막 줄이 잘릴 수 있다.
+    static let glyphMargin: CGFloat = Spacing.xxs
 
     static func eventHeight(_ event: LiveEventItem) -> CGFloat {
-        event.isAllDay
+        let base = event.isAllDay
             ? titleLine + Spacing.xxs * 2   // 캡슐 상하 패딩(2) — 뷰(ScheduleEventRow)와 동기
             : titleLine + timeLine          // 제목 + 시간 두 줄(간격 없음)
+        return base + glyphMargin
     }
 
     /// 160pt(시스템 최대) − 상하 패딩.
     static var columnMax: CGFloat { 160 - outerPadding * 2 }
+}
+
+extension SchedulePacker {
+    /// ⚠️ 임시 진단 — 잠금화면 카드에 패킹 산술을 그대로 노출하기 위한 요약.
+    /// (며칠/몇 개가 실렸는지 · 각 열 추정 사용 높이 · 예산 · 줄높이) 원인 확정 후 제거한다.
+    static func debugSummary(_ days: [LiveScheduleDay]) -> String {
+        let (left, right) = pack(days)
+        let m = ScheduleMetrics.self
+        return "\(days.count)d/\(days.flatMap(\.events).count)e"
+            + " L\(Int(columnHeight(left))) R\(Int(columnHeight(right)))"
+            + " max\(Int(m.columnMax))"
+            + String(format: " t%.1f s%.1f", m.titleLine, m.timeLine)
+            + " g\(Int(m.dayGap))"
+    }
+
+    /// 임시 진단용 — 패킹 결과 한 열의 추정 사용 높이(패커와 같은 산술).
+    private static func columnHeight(_ chunks: [DayChunk]) -> CGFloat {
+        var used: CGFloat = 0
+        for (index, chunk) in chunks.enumerated() {
+            if index > 0 || chunks.first?.label == nil { used += used > 0 ? ScheduleMetrics.dayGap : 0 }
+            if chunk.label != nil { used += ScheduleMetrics.header + ScheduleMetrics.rowGap }
+            for (eventIndex, event) in chunk.events.enumerated() {
+                if eventIndex > 0 { used += ScheduleMetrics.rowGap }
+                used += ScheduleMetrics.eventHeight(event)
+            }
+        }
+        return used
+    }
 }
