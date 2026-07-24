@@ -48,10 +48,13 @@ enum SchedulePacker {
                     let inc: CGFloat
                     if chunk.isEmpty {
                         let lead = used > 0 ? ScheduleMetrics.dayGap : 0
-                        let head = showsHeader ? ScheduleMetrics.header + ScheduleMetrics.rowGap : 0
+                        let head = showsHeader ? ScheduleMetrics.header + ScheduleMetrics.headerGap : 0
                         inc = lead + head + ScheduleMetrics.eventHeight(event)
+                    } else if let previous = chunk.last {
+                        inc = ScheduleMetrics.rowGap(previous: previous, next: event)
+                            + ScheduleMetrics.eventHeight(event)
                     } else {
-                        inc = ScheduleMetrics.rowGap + ScheduleMetrics.eventHeight(event)
+                        inc = ScheduleMetrics.eventHeight(event)
                     }
                     if used + inc <= ScheduleMetrics.columnMax {
                         used += inc
@@ -97,9 +100,15 @@ enum ScheduleMetrics {
     static let columnGap: CGFloat = Spacing.smd         // 12
     /// 컬럼 내 날짜 묶음 사이 간격 — 160pt 예산에 한 줄이라도 더 들어가게 조밀하게.
     static let dayGap: CGFloat = Spacing.xs             // 4
-    /// 헤더↔이벤트 / 이벤트 사이 간격 — 0. 한글 폰트 리딩(글자 위아래 투명 여백 ~2pt씩)만으로
-    /// 시각적 분리가 충분하다(잉크 기준 ~4.5pt로 보임).
-    static let rowGap: CGFloat = Spacing.zero
+    /// 날짜 헤더 ↔ 첫 이벤트 간격.
+    static let headerGap: CGFloat = Spacing.xxs         // 2
+
+    /// 인접 행 간격 — 행 종류에 따라 다르다. 종일 캡슐은 배경 경계가 그대로 보여 2로 딱
+    /// 붙이고, 시간 일정이 끼는 인접은 폰트 리딩(투명 여백)이 이미 보이므로 4를 준다.
+    /// 뷰(ScheduleDayView)의 행별 상단 패딩과 반드시 동기.
+    static func rowGap(previous: LiveEventItem, next: LiveEventItem) -> CGFloat {
+        previous.isAllDay && next.isAllDay ? Spacing.xxs : Spacing.xs
+    }
 
     /// 줄높이는 **xSmall 콘텐츠 크기로 고정해** 읽는다 — iOS 26의 표준(.large) 타입 램프가
     /// 커져(caption1 실측 16.3, 이전 14.3) 잠금화면 예산 136pt에 행이 몇 개 못 들어간다.

@@ -144,7 +144,9 @@ private struct ScheduleDayView: View {
     let chunk: DayChunk
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ScheduleMetrics.rowGap) {
+        // 행 간격은 종류별로 달라(캡슐끼리 2, 시간 일정 인접 4) 단일 spacing 대신
+        // 행마다 상단 패딩으로 준다 — 패커의 headerGap/rowGap(previous:next:)와 동기.
+        VStack(alignment: .leading, spacing: Spacing.zero) {
             if let label = chunk.label {
                 Text(label)
                     // 헤더를 이벤트 제목보다 한 단계 작게 — 패커의 header 추정(caption2)과 동기.
@@ -152,10 +154,20 @@ private struct ScheduleDayView: View {
                     // 오늘만 강조, 그 외 날짜는 옅게. 앱이 심은 라벨과 같은 로케일 키로 비교.
                     .foregroundStyle(label == String(localized: "Today") ? Color.primary : Color.secondary)
             }
-            ForEach(chunk.events) { event in
+            ForEach(Array(chunk.events.enumerated()), id: \.element.id) { index, event in
                 ScheduleEventRow(event: event)
+                    .padding(.top, topGap(at: index))
             }
         }
+    }
+
+    /// 행별 상단 간격 — 첫 행은 헤더가 있으면 headerGap, 없으면(연속 청크) 0.
+    /// 이후 행은 이전 행 종류에 따라 rowGap(previous:next:).
+    private func topGap(at index: Int) -> CGFloat {
+        if index == 0 {
+            return chunk.label != nil ? ScheduleMetrics.headerGap : Spacing.zero
+        }
+        return ScheduleMetrics.rowGap(previous: chunk.events[index - 1], next: chunk.events[index])
     }
 }
 
