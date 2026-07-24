@@ -29,19 +29,24 @@ enum MockScheduleLiveCases {
         }
     }
 
-    static var count: Int { builders.count }
+    static let count = 8
 
     static func mockCase(at index: Int, now: Date = .now) -> MockCase {
-        let builder = builders[((index % count) + count) % count]
-        var made = builder(now)
+        let normalized = ((index % count) + count) % count
+        let made: MockCase
+        switch normalized {
+        case 0: made = fullBothColumns(now: now)
+        case 1: made = empty(now: now)
+        case 2: made = single(now: now)
+        case 3: made = three(now: now)
+        case 4: made = allDayOnly(now: now)
+        case 5: made = oneDaySplit(now: now)
+        case 6: made = longTitles(now: now)
+        default: made = cjkEmoji(now: now)
+        }
         // 첫 이벤트 제목에 케이스 번호·이름 태깅 — 잠금화면에서 어느 케이스인지 식별.
-        made = tagged(made, index: ((index % count) + count) % count)
-        return made
+        return tagged(made, index: normalized)
     }
-
-    private static let builders: [(Date) -> MockCase] = [
-        fullBothColumns, empty, single, three, allDayOnly, oneDaySplit, longTitles, cjkEmoji,
-    ]
 
     private static func tagged(_ mockCase: MockCase, index: Int) -> MockCase {
         guard let firstDay = mockCase.days.first, let firstEvent = firstDay.events.first else {
