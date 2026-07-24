@@ -76,6 +76,7 @@
 				Shared/LiveActivity/FocusAlarmPlan.swift,
 				Shared/LiveActivity/FocusAlarmScheduling.swift,
 				Shared/LiveActivity/KoreanHolidayCalculator.swift,
+				Shared/LiveActivity/LiveActivityAnalyticsBridge.swift,
 				Shared/LiveActivity/LiveDayEventDots.swift,
 				Shared/LiveActivity/LiveEventItem.swift,
 				Shared/LiveActivity/LiveMonthDot.swift,

@@ -7,4 +7,5 @@
 
 struct DisabledAnalyticsService: AnalyticsService {
     func log(_ event: AnalyticsEvent) {}
+    func log(name: String, parameters: [String: String]) {}
 }

@@ -28,6 +28,13 @@ struct CompositionRoot {
         // 라이브 액티비티 service — @MainActor 격리. ActivityKit 호출은 모두 main actor에서.
         let liveActivityService: any LiveActivityService = ActivityKitLiveActivityService()
 
+        let analytics = FirebaseAnalyticsService()
+        // 잠금화면 LA 인텐트는 Domain을 모르는 Shared 코드라 브리지로 이벤트를 넘긴다.
+        // 인텐트 perform()은 본앱 프로세스에서 돌므로 여기서 주입한 클로저가 실제로 불린다.
+        LiveActivityAnalyticsBridge.log = { name, parameters in
+            analytics.log(name: name, parameters: parameters)
+        }
+
         self.premiumStore = PremiumStore(service: StoreKitPurchaseService())
         self.modelContainer = container
         self.dependencies = Dependencies(
@@ -78,7 +85,7 @@ struct CompositionRoot {
             saveRemindersSnapshot: SaveRemindersSnapshotUseCase(repository: snapshotCacheRepository),
             loadEventsSnapshot: LoadEventsSnapshotUseCase(repository: snapshotCacheRepository),
             saveEventsSnapshot: SaveEventsSnapshotUseCase(repository: snapshotCacheRepository),
-            analytics: FirebaseAnalyticsService(),
+            analytics: analytics,
             reconcilePremiumSettings: ReconcilePremiumSettingsUseCase(
                 fetch: FetchAppSettingsUseCase(repository: appSettingsRepository),
                 save: SaveAppSettingsUseCase(repository: appSettingsRepository)

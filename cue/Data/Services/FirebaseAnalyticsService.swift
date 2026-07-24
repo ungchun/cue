@@ -11,4 +11,8 @@ struct FirebaseAnalyticsService: AnalyticsService {
     func log(_ event: AnalyticsEvent) {
         Analytics.logEvent(event.name, parameters: event.parameters)
     }
+
+    func log(name: String, parameters: [String: String]) {
+        Analytics.logEvent(name, parameters: parameters)
+    }
 }
