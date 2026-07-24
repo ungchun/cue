@@ -91,10 +91,10 @@ enum SchedulePacker {
 enum ScheduleMetrics {
     /// 위젯 상하 패딩 — 이 값이 바뀌면 columnMax(높이 예산)가 자동으로 따라간다.
     static let outerPadding: CGFloat = Spacing.smd      // 12
-    /// 위젯 좌우 패딩 — 높이 예산과 무관. 디자인 결정으로 토큰(12/16) 사이 값을 직접 쓴다.
-    static let outerHorizontalPadding: CGFloat = 14
+    /// 위젯 좌우 패딩 — 높이 예산과 무관.
+    static let outerHorizontalPadding: CGFloat = Spacing.md    // 16
     /// 두 열 사이 간격 — HStack spacing이라 디바이더 양옆에 각각 적용된다.
-    static let columnGap: CGFloat = Spacing.sm          // 8
+    static let columnGap: CGFloat = Spacing.smd         // 12
     /// 컬럼 내 날짜 묶음 사이 간격 — 160pt 예산에 한 줄이라도 더 들어가게 조밀하게.
     static let dayGap: CGFloat = Spacing.xs             // 4
     /// 헤더↔이벤트 / 이벤트 사이 간격 — 한글 줄박스가 커서(caption2 하한 11pt도 15.1pt)
