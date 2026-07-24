@@ -7,6 +7,15 @@ import EventKit
 import EventKitUI
 import SwiftUI
 
+/// 시트 종료 결과 — 호출처(ViewModel)가 분석 이벤트(event_created/updated/deleted) 판별에
+/// 쓴다. EventKitUI의 `EKEventEditViewAction`을 Presentation 값으로 옮겨 ViewModel이
+/// EventKitUI를 모르게 한다. 취소·기타 액션은 전부 `.canceled`.
+enum EventEditOutcome: Equatable, Sendable {
+    case saved
+    case deleted
+    case canceled
+}
+
 /// iOS 캘린더의 "신규/편집 이벤트" 시트를 그대로 띄우는 SwiftUI 래퍼.
 ///
 /// `EKEventEditViewController`(EventKitUI 제공)는 Apple 캘린더 앱과 동일한 UI를 노출하며
@@ -35,10 +44,10 @@ struct EventEditSheet: UIViewControllerRepresentable {
     let eventStore: EKEventStore
     /// nil이면 신규 모드. 값이 있으면 그 ID의 기존 이벤트를 편집한다.
     let editingEventID: String?
-    /// 저장이면 true, 취소·삭제면 false — 호출처가 분석 이벤트(event_created) 판별에 쓴다.
-    let onCompletion: (Bool) -> Void
+    /// 저장·삭제·취소를 구분해 전달 — 호출처가 분석 이벤트 판별에 쓴다.
+    let onCompletion: (EventEditOutcome) -> Void
 
-    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping (Bool) -> Void) {
+    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping (EventEditOutcome) -> Void) {
         self.eventStore = eventStore
         self.editingEventID = editingEventID
         self.onCompletion = onCompletion
@@ -67,19 +76,24 @@ struct EventEditSheet: UIViewControllerRepresentable {
 
     @MainActor
     final class Coordinator: NSObject, EKEventEditViewDelegate {
-        let onCompletion: (Bool) -> Void
+        let onCompletion: (EventEditOutcome) -> Void
 
-        init(onCompletion: @escaping (Bool) -> Void) {
+        init(onCompletion: @escaping (EventEditOutcome) -> Void) {
             self.onCompletion = onCompletion
         }
 
         /// 저장·취소·삭제 어떤 액션이든 SwiftUI 시트 상태를 false로 떨어뜨려 닫는다.
-        /// 저장 액션이면 컨트롤러가 내부적으로 `eventStore`에 save까지 마친 상태.
+        /// 저장 액션이면 컨트롤러가 내부적으로 `eventStore`에 save까지 마친 상태 —
+        /// 삭제도 마찬가지로 store 반영이 끝난 뒤 `.deleted`가 온다.
         func eventEditViewController(
             _ controller: EKEventEditViewController,
             didCompleteWith action: EKEventEditViewAction
         ) {
-            onCompletion(action == .saved)
+            switch action {
+            case .saved: onCompletion(.saved)
+            case .deleted: onCompletion(.deleted)
+            default: onCompletion(.canceled)
+            }
         }
     }
 }
@@ -94,11 +108,11 @@ struct EventEditSheet: UIViewControllerRepresentable {
 struct EventEditSheetContainer: View {
     let eventStore: EKEventStore
     let editingEventID: String?
-    let onCompletion: (Bool) -> Void
+    let onCompletion: (EventEditOutcome) -> Void
 
     @State private var loaderVisible = true
 
-    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping (Bool) -> Void) {
+    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping (EventEditOutcome) -> Void) {
         self.eventStore = eventStore
         self.editingEventID = editingEventID
         self.onCompletion = onCompletion

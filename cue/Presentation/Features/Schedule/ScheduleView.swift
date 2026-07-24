@@ -83,14 +83,14 @@ struct ScheduleView: View {
         .sheet(isPresented: $viewModel.showingNewEvent) {
             EventEditSheetContainer(
                 eventStore: eventStore,
-                onCompletion: { saved in viewModel.dismissNewEvent(saved: saved) }
+                onCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
             )
         }
         .sheet(item: $viewModel.editingEvent) { event in
             EventEditSheetContainer(
                 eventStore: eventStore,
                 editingEventID: event.id,
-                onCompletion: { _ in viewModel.dismissEdit() }
+                onCompletion: { outcome in viewModel.dismissEdit(outcome: outcome) }
             )
         }
         .alert("Error", isPresented: errorBinding) {
@@ -143,6 +143,7 @@ struct ScheduleView: View {
     /// URL scheme. ReminderView의 `openRemindersAppButton`과 동일 패턴.
     private var openCalendarAppButton: some View {
         Button {
+            viewModel.calendarAppOpened()
             if let url = URL(string: "calshow://") {
                 openURL(url)
             }
@@ -182,6 +183,7 @@ struct ScheduleView: View {
             Label("Calendar access needed", systemImage: "calendar.badge.exclamationmark")
         } actions: {
             Button("Open Settings") {
+                viewModel.permissionSettingsOpened()
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }

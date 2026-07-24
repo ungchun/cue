@@ -18,7 +18,8 @@ struct ScheduleViewModelTests {
         events: [CalendarEvent] = [],
         calendars: [EventCalendar] = [],
         appSettings: AppSettings = .default,
-        eventsRepository injected: (any EventsRepository)? = nil
+        eventsRepository injected: (any EventsRepository)? = nil,
+        analytics: SpyAnalyticsService? = nil
     ) -> Dependencies {
         let eventsRepository = injected ?? InMemoryEventsRepository(
             access: access, events: events, calendars: calendars
@@ -69,6 +70,7 @@ struct ScheduleViewModelTests {
         // 프리페치의 프롬프트-없는 권한 조회도 같은 repo를 보게 배선 — 기본값(별도 인메모리)은
         // 항상 미결정이라 프리페치가 무조건 건너뛰게 된다.
         dependencies.currentEventsAccess = CurrentEventsAccessUseCase(repository: eventsRepository)
+        if let analytics { dependencies.analytics = analytics }
         return dependencies
     }
 
@@ -341,6 +343,89 @@ struct ScheduleViewModelTests {
         #expect(viewModel.editingEvent == nil)
     }
 
+    // MARK: - 분석 (event_created / event_updated / event_deleted / 외부 열기)
+
+    /// 신규 시트 저장 → `.eventCreated` 1회 — 콜백 구조 변경(outcome) 후에도 기존 로깅 보존.
+    @Test func dismissNewEventSavedLogsEventCreated() {
+        let analytics = SpyAnalyticsService()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
+        viewModel.presentNewEvent()
+
+        viewModel.dismissNewEvent(outcome: .saved)
+
+        #expect(analytics.events == [.eventCreated])
+        #expect(viewModel.showingNewEvent == false)
+    }
+
+    /// 신규 시트 취소 → 아무것도 로깅하지 않는다.
+    @Test func dismissNewEventCanceledLogsNothing() {
+        let analytics = SpyAnalyticsService()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
+        viewModel.presentNewEvent()
+
+        viewModel.dismissNewEvent()
+
+        #expect(analytics.events.isEmpty)
+    }
+
+    /// 편집 시트 저장 → `.eventUpdated` 1회 + 시트 닫힘.
+    @Test func dismissEditSavedLogsEventUpdated() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let analytics = SpyAnalyticsService()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
+        viewModel.presentEdit(event(id: "e", start: today, end: today.addingTimeInterval(60 * 60)))
+
+        viewModel.dismissEdit(outcome: .saved)
+
+        #expect(analytics.events == [.eventUpdated])
+        #expect(viewModel.editingEvent == nil)
+    }
+
+    /// 편집 시트 안 삭제 버튼 → `.eventDeleted` 1회 — `.saved`가 아니라고 취소로 뭉개지지 않는다.
+    @Test func dismissEditDeletedLogsEventDeleted() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let analytics = SpyAnalyticsService()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
+        viewModel.presentEdit(event(id: "e", start: today, end: today.addingTimeInterval(60 * 60)))
+
+        viewModel.dismissEdit(outcome: .deleted)
+
+        #expect(analytics.events == [.eventDeleted])
+        #expect(viewModel.editingEvent == nil)
+    }
+
+    /// 편집 시트 취소 → 아무것도 로깅하지 않는다.
+    @Test func dismissEditCanceledLogsNothing() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let analytics = SpyAnalyticsService()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
+        viewModel.presentEdit(event(id: "e", start: today, end: today.addingTimeInterval(60 * 60)))
+
+        viewModel.dismissEdit()
+
+        #expect(analytics.events.isEmpty)
+    }
+
+    /// 좌상단 캘린더 버튼 — Apple 캘린더 앱 열기를 기록한다.
+    @Test func calendarAppOpenedLogsExternalAppOpened() {
+        let analytics = SpyAnalyticsService()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
+
+        viewModel.calendarAppOpened()
+
+        #expect(analytics.events == [.externalAppOpened(app: "calendar")])
+    }
+
+    /// 권한 거부 화면 "설정 열기" — 설정 앱 이동을 기록한다.
+    @Test func permissionSettingsOpenedLogsWithScheduleKind() {
+        let analytics = SpyAnalyticsService()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(access: .denied, analytics: analytics))
+
+        viewModel.permissionSettingsOpened()
+
+        #expect(analytics.events == [.permissionSettingsOpened(kind: "schedule")])
+    }
+
     @Test func loadMoreFetchesEventsInExtendedRange() async {
         // initial 30일 이후 35일 후 시점의 이벤트 — initial fetch엔 안 들어오고
         // loadMore(+14일 추가)에서 들어와야 한다.
@@ -532,6 +617,19 @@ struct ScheduleViewModelTests {
         #expect(viewModel.access == .notDetermined)
         #expect(viewModel.eventsByDay.isEmpty)
     }
+}
+
+// MARK: - 분석 이벤트 기록용 더블
+
+/// `log(_:)`가 동기라 actor를 못 쓴다 — 테스트는 MainActor 단일 스레드라 @unchecked로 안전.
+private final class SpyAnalyticsService: AnalyticsService, @unchecked Sendable {
+    private(set) var events: [AnalyticsEvent] = []
+
+    func log(_ event: AnalyticsEvent) {
+        events.append(event)
+    }
+
+    func log(name: String, parameters: [String: String]) {}
 }
 
 /// `fetchEvents`를 게이트로 붙잡을 수 있는 리포지토리 더블 — 나머지는 InMemory에 위임한다.

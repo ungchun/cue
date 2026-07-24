@@ -257,9 +257,14 @@ final class ScheduleViewModel {
         }
     }
 
-    /// 시트의 저장·취소 콜백에서 호출 — 시트를 닫는다. 저장이면 분석 이벤트 기록.
-    func dismissNewEvent(saved: Bool = false) {
-        if saved { analytics.log(.eventCreated) }
+    /// 시트의 저장·취소·삭제 콜백에서 호출 — 시트를 닫는다. 저장이면 event_created,
+    /// 삭제면 event_deleted 기록(취소는 무기록).
+    func dismissNewEvent(outcome: EventEditOutcome = .canceled) {
+        switch outcome {
+        case .saved: analytics.log(.eventCreated)
+        case .deleted: analytics.log(.eventDeleted)
+        case .canceled: break
+        }
         showingNewEvent = false
     }
 
@@ -271,9 +276,26 @@ final class ScheduleViewModel {
         editingEvent = event
     }
 
-    /// 편집 시트 콜백 — 시트를 닫는다.
-    func dismissEdit() {
+    /// 편집 시트 콜백 — 시트를 닫는다. 저장이면 event_updated, 시트 안 삭제 버튼이면
+    /// event_deleted 기록(취소는 무기록).
+    func dismissEdit(outcome: EventEditOutcome = .canceled) {
+        switch outcome {
+        case .saved: analytics.log(.eventUpdated)
+        case .deleted: analytics.log(.eventDeleted)
+        case .canceled: break
+        }
         editingEvent = nil
+    }
+
+    /// 좌상단 캘린더 버튼 — Apple 캘린더 앱 열기를 기록한다. URL 열기 자체는 뷰의
+    /// `openURL` 담당(SwiftUI 환경 핸들은 뷰 전용).
+    func calendarAppOpened() {
+        analytics.log(.externalAppOpened(app: "calendar"))
+    }
+
+    /// 권한 거부 화면 "설정 열기" — 설정 앱 이동을 기록한다. 열기 자체는 뷰 담당.
+    func permissionSettingsOpened() {
+        analytics.log(.permissionSettingsOpened(kind: "schedule"))
     }
 
     /// 바닥 trigger가 viewport에 들어오면 호출 — 다음 2주를 fetch해 이어 붙인다.
