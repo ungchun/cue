@@ -18,12 +18,14 @@ final class PremiumStore {
     private(set) var products: [PurchasableProduct] = []
 
     private let service: any PurchaseService
+    private let analytics: any AnalyticsService
     private var updatesTask: Task<Void, Never>?
 
     /// 저장 프로퍼티만 세팅하므로 nonisolated — Environment `@Entry` 기본값 등 비격리 컨텍스트에서도
     /// 생성 가능하게 한다(엔타이틀먼트 로드는 `start()`에서 main actor로 수행).
-    nonisolated init(service: any PurchaseService) {
+    nonisolated init(service: any PurchaseService, analytics: any AnalyticsService = DisabledAnalyticsService()) {
         self.service = service
+        self.analytics = analytics
     }
 
     /// 프리뷰·테스트 편의 — 비동기 로드 없이 초기 프리미엄 상태를 즉시 세팅한다.
@@ -35,11 +37,21 @@ final class PremiumStore {
     /// 앱 시작 시 1회 — 상품 로드 + 현재 엔타이틀먼트 반영 + 변경 스트림 구독.
     func start() async {
         products = await service.loadProducts()
+        // 서비스는 로드 실패 시 빈 배열 폴백 — 페이월이 placeholder 가격으로 뜨는 상황을 기록한다.
+        if products.isEmpty {
+            analytics.log(.productsLoadFailed)
+        }
         await refresh()
         updatesTask = Task { [weak self] in
             guard let stream = self?.service.entitlementUpdates() else { return }
             for await ids in stream {
-                self?.isPremium = PremiumEntitlement.isPremium(entitledProductIDs: ids)
+                guard let self else { return }
+                let premium = PremiumEntitlement.isPremium(entitledProductIDs: ids)
+                // 갱신·환불 스트림은 같은 판정을 반복 방출할 수 있다 — 실제 변화만 기록.
+                if premium != self.isPremium {
+                    self.analytics.log(.entitlementChanged(premium: premium))
+                }
+                self.isPremium = premium
             }
         }
     }
@@ -58,10 +70,11 @@ final class PremiumStore {
         return outcome
     }
 
-    /// 이전 구매 복원.
+    /// 이전 구매 복원 — 복원 후 프리미엄 확인 여부를 결과로 기록한다.
     func restore() async {
         await service.restore()
         await refresh()
+        analytics.log(.restoreResult(outcome: isPremium ? "success" : "failure"))
     }
 
     /// 특정 상품의 가격 표시 문자열(로드된 경우).

@@ -64,6 +64,7 @@ struct PremiumPaywallView: View {
         .background(alignment: .topLeading) { echo }
         .overlay(alignment: .topTrailing) {
             Button {
+                dependencies.analytics.log(.paywallDismissed)
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
@@ -212,6 +213,7 @@ struct PremiumPaywallView: View {
     /// 플랜 라디오 카드 — 선택 시 테두리 강조. 가격은 StoreKit 연결 전 placeholder.
     private func planCard(_ plan: Plan, title: LocalizedStringKey, price: String, unit: LocalizedStringKey, badge: LocalizedStringKey?) -> some View {
         Button {
+            dependencies.analytics.log(.planSelected(plan: plan.analyticsName))
             selectedPlan = plan
         } label: {
             HStack {
@@ -291,9 +293,15 @@ struct PremiumPaywallView: View {
             HStack(spacing: Spacing.sm) {
                 Button("Restore") { Task { await restore() } }
                 Text("·")
-                Button("Terms of Use") { openURL(termsURL) }
+                Button("Terms of Use") {
+                    dependencies.analytics.log(.termsTapped)
+                    openURL(termsURL)
+                }
                 Text("·")
-                Button("Privacy Policy") { openURL(privacyURL) }
+                Button("Privacy Policy") {
+                    dependencies.analytics.log(.privacyTapped)
+                    openURL(privacyURL)
+                }
             }
             .font(.caption2)
             .foregroundStyle(.secondary)

@@ -13,11 +13,13 @@ struct SettingsViewModelTests {
     /// 인메모리 저장소를 주입한 ViewModel을 만든다. `Dependencies`는 struct(var 필드)라
     /// `.preview`에서 AppSettings 관련 use case 둘만 갈아끼운다.
     private func makeViewModel(
-        repository: InMemoryAppSettingsRepository
+        repository: InMemoryAppSettingsRepository,
+        analytics: SpyAnalyticsService? = nil
     ) -> SettingsViewModel {
         var dependencies = Dependencies.preview
         dependencies.fetchAppSettings = FetchAppSettingsUseCase(repository: repository)
         dependencies.saveAppSettings = SaveAppSettingsUseCase(repository: repository)
+        if let analytics { dependencies.analytics = analytics }
         return SettingsViewModel(dependencies: dependencies)
     }
 
@@ -323,6 +325,165 @@ struct SettingsViewModelTests {
 
         #expect(await service.refreshLayoutCount == 2)
     }
+
+    // MARK: - 분석 이벤트
+
+    /// 화면 모드 변경은 displayModeChanged를 기록한다.
+    @Test func setColorSchemeLogsDisplayModeChanged() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setColorScheme(.dark)
+
+        #expect(analytics.events == [.displayModeChanged(mode: "dark")])
+    }
+
+    /// 시작 탭 변경은 startTabChanged를 기록한다.
+    @Test func setStartTabLogsStartTabChanged() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setStartTabID("focus")
+
+        #expect(analytics.events == [.startTabChanged(tab: "focus")])
+    }
+
+    /// 집중 종료 소리 토글은 focusEndSoundToggled를 기록한다.
+    @Test func setFocusEndSoundLogsToggle() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setFocusEndSound(true)
+
+        #expect(analytics.events == [.focusEndSoundToggled(on: true)])
+    }
+
+    /// 항상 표시 메모/일정 항목 토글은 liveItemToggled를 kind별로 기록한다 —
+    /// 값이 실제로 바뀔 때만(같은 값 재설정은 무기록).
+    @Test func liveItemTogglesLogKindEvents() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setLiveAlwaysOnMemo(false)      // 기본 true → 변경
+        await viewModel.setLiveAlwaysOnSchedule(true)   // 기본 true → 동일 값, 무기록
+        await viewModel.setLiveAlwaysOnSchedule(false)
+
+        #expect(analytics.events == [
+            .liveItemToggled(kind: "memo", on: false),
+            .liveItemToggled(kind: "schedule", on: false),
+        ])
+    }
+
+    /// 항상 표시 할일 항목은 값이 바뀔 때만 liveItemToggled(kind: "tasks")를 기록한다 —
+    /// 범위 변경 시 뷰가 setLiveAlwaysOnReminder(true)를 재호출해도 중복 기록되지 않는다.
+    @Test func setLiveAlwaysOnReminderLogsOnlyOnChange() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setLiveAlwaysOnReminder(true)   // 기본 true → 동일 값, 무기록
+        await viewModel.setLiveAlwaysOnReminder(false)
+        await viewModel.setLiveAlwaysOnReminder(true)
+
+        #expect(analytics.events == [
+            .liveItemToggled(kind: "tasks", on: false),
+            .liveItemToggled(kind: "tasks", on: true),
+        ])
+    }
+
+    /// 항상 표시 할일 범위 변경은 liveScopeChanged를 기록한다.
+    @Test func setLiveAlwaysOnReminderScopeLogsScopeChanged() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setLiveAlwaysOnReminderScopeID("today")
+
+        #expect(analytics.events == [.liveScopeChanged(scope: "today")])
+    }
+
+    /// 할일 탭 기본 화면 변경은 tasksDefaultViewChanged를 기록한다.
+    @Test func setTasksDefaultScopeLogsDefaultViewChanged() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setTasksDefaultScopeID("scheduled")
+
+        #expect(analytics.events == [.tasksDefaultViewChanged(view: "scheduled")])
+    }
+
+    /// 캘린더 표시/숨김 토글과 "모두 표시"는 kind: "calendar"로 기록한다.
+    @Test func calendarVisibilityChangesLogEvents() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setCalendarVisible("work", false)
+        await viewModel.showAllCalendars()
+
+        #expect(analytics.events == [
+            .calendarVisibilityToggled(kind: "calendar", on: false),
+            .calendarShowAllTapped(kind: "calendar"),
+        ])
+    }
+
+    /// 미리알림 리스트 표시/숨김 토글과 "모두 표시"는 kind: "reminder_list"로 기록한다.
+    @Test func reminderListVisibilityChangesLogEvents() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setReminderListVisible("home", false)
+        await viewModel.showAllReminderLists()
+
+        #expect(analytics.events == [
+            .calendarVisibilityToggled(kind: "reminder_list", on: false),
+            .calendarShowAllTapped(kind: "reminder_list"),
+        ])
+    }
+
+    /// 메모 LA 색 변경은 liveColorChanged를 kind별로 기록한다 —
+    /// 화면 진입 시 같은 값으로 재저장되는 seed 경로는 무기록.
+    @Test func memoColorChangesLogOnlyWhenValueDiffers() async {
+        let memoRepo = InMemoryMemoRepository(
+            memo: Memo(text: "x", colorHex: "#000000", textColorHex: "#FFFFFF")
+        )
+        let analytics = SpyAnalyticsService()
+        var deps = Dependencies.preview
+        deps.fetchMemo = FetchMemoUseCase(repository: memoRepo)
+        deps.saveMemo = SaveMemoUseCase(repository: memoRepo)
+        deps.analytics = analytics
+        let viewModel = SettingsViewModel(dependencies: deps)
+        await viewModel.onAppear()
+
+        await viewModel.setMemoColor("#000000")         // seed 재저장 — 무기록
+        await viewModel.setMemoTextColor("#FFFFFF")     // seed 재저장 — 무기록
+        await viewModel.setMemoColor("#34C759")
+        await viewModel.setMemoTextColor("#FFCC00")
+
+        #expect(analytics.events == [
+            .liveColorChanged(kind: "background"),
+            .liveColorChanged(kind: "font"),
+        ])
+    }
+}
+
+// MARK: - 분석 이벤트 기록용 더블
+
+/// `log(_:)`가 동기라 actor를 못 쓴다 — 테스트는 MainActor 단일 스레드라 @unchecked로 안전.
+private final class SpyAnalyticsService: AnalyticsService, @unchecked Sendable {
+    private(set) var events: [AnalyticsEvent] = []
+
+    func log(_ event: AnalyticsEvent) {
+        events.append(event)
+    }
+
+    func log(name: String, parameters: [String: String]) {}
 }
 
 // MARK: - refreshLayout 기록용 더블 — 나머지 호출은 무시한다.

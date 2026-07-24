@@ -12,6 +12,8 @@ struct SettingsView: View {
     @Environment(\.requestReview) private var requestReview
     @Environment(\.toastCenter) private var toastCenter
     @Environment(\.premiumStore) private var premiumStore
+    @Environment(\.dependencies) private var dependencies
+    @Environment(\.openURL) private var openURL
 
     /// 유료(Premium) 전용 설정 게이트 — 실제 구매 엔타이틀먼트(`PremiumStore`)를 반응형으로 따른다.
     private var isPremiumUser: Bool { premiumStore.isPremium }
@@ -100,6 +102,7 @@ struct SettingsView: View {
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
                 Button {
+                    dependencies.analytics.log(.live24hGuideOpened)
                     shows24HourSheet = true
                 } label: {
                     chevronRowLabel("Use 24 Hours")
@@ -133,10 +136,10 @@ struct SettingsView: View {
                         Text(size.label).tag(size)
                     }
                 }
-                premiumGated {
+                premiumGated(feature: "live_color") {
                     ColorPicker("Live Background Color", selection: $memoBackgroundColor, supportsOpacity: false)
                 }
-                premiumGated {
+                premiumGated(feature: "live_color") {
                     ColorPicker("Live Font Color", selection: $memoFontColor, supportsOpacity: false)
                 }
                 // 켜기는 Premium 전용 — 바인딩 setter가 가로채 Premium 토스트만 띄운다(끄기는 항상 허용).
@@ -195,11 +198,16 @@ struct SettingsView: View {
 
             Section {
                 Button {
+                    dependencies.analytics.log(.reviewRequested)
                     requestReview()
                 } label: {
                     chevronRowLabel("Leave a Review")
                 }
-                Link(destination: SupportLinks.feedbackMailtoURL) {
+                // Link는 탭 액션 훅이 없어 Button + openURL로 — 동작은 동일하고 탭을 기록한다.
+                Button {
+                    dependencies.analytics.log(.feedbackTapped)
+                    openURL(SupportLinks.feedbackMailtoURL)
+                } label: {
                     chevronRowLabel("Send Feedback")
                 }
                 // 버전 — "버전 1.0.0" 형태로 왼쪽 정렬(값을 오른쪽으로 밀지 않는다).
@@ -430,10 +438,16 @@ struct SettingsView: View {
         )
     }
 
+    /// 무료 사용자가 Premium 게이트에 걸렸다 — 토스트 표시 + 어떤 기능이 유인인지 기록.
+    private func showPremiumGate(feature: String) {
+        dependencies.analytics.log(.premiumGateHit(feature: feature))
+        toastCenter.show("Premium")
+    }
+
     /// Premium 전용 행 게이트 — 무료 사용자는 컨트롤 조작을 가로채 "Premium" 토스트만 띄운다.
     /// 잠금 표시 없이 평소처럼 보이되, 탭이 컨트롤에 닿기 전에 오버레이가 가로챈다.
     @ViewBuilder
-    private func premiumGated(@ViewBuilder _ content: () -> some View) -> some View {
+    private func premiumGated(feature: String, @ViewBuilder _ content: () -> some View) -> some View {
         content()
             // 컨트롤 자체를 비활성화해 확실히 막고(스와치 탭 포함), 탭은 오버레이가 받아 토스트만.
             .disabled(!isPremiumUser)
@@ -441,7 +455,7 @@ struct SettingsView: View {
                 if !isPremiumUser {
                     Color.clear
                         .contentShape(Rectangle())
-                        .onTapGesture { toastCenter.show("Premium") }
+                        .onTapGesture { showPremiumGate(feature: feature) }
                 }
             }
     }
@@ -452,7 +466,7 @@ struct SettingsView: View {
             get: { viewModel.settings.liveAlwaysOn },
             set: { newValue in
                 guard isPremiumUser || !newValue else {
-                    toastCenter.show("Premium")
+                    showPremiumGate(feature: "always_on")
                     return
                 }
                 Task { await viewModel.setLiveAlwaysOn(newValue) }
@@ -467,7 +481,7 @@ struct SettingsView: View {
             get: { viewModel.settings.memoShowsCalendar },
             set: { newValue in
                 guard isPremiumUser || !newValue else {
-                    toastCenter.show("Premium")
+                    showPremiumGate(feature: "show_calendar_memo")
                     return
                 }
                 Task { await viewModel.setMemoShowsCalendar(newValue) }
@@ -480,7 +494,7 @@ struct SettingsView: View {
             get: { viewModel.settings.scheduleShowsCalendar },
             set: { newValue in
                 guard isPremiumUser || !newValue else {
-                    toastCenter.show("Premium")
+                    showPremiumGate(feature: "show_calendar_schedule")
                     return
                 }
                 Task { await viewModel.setScheduleShowsCalendar(newValue) }
@@ -493,7 +507,7 @@ struct SettingsView: View {
             get: { viewModel.settings.reminderShowsCalendar },
             set: { newValue in
                 guard isPremiumUser || !newValue else {
-                    toastCenter.show("Premium")
+                    showPremiumGate(feature: "show_calendar_tasks")
                     return
                 }
                 Task { await viewModel.setReminderShowsCalendar(newValue) }

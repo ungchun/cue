@@ -75,12 +75,17 @@ struct RootView: View {
         // 누른 뒤에도 플래그를 다시 켜 알림이 재표시된다(업데이트 전엔 앱 사용 불가).
         .alert("Update Required", isPresented: $isUpdateRequired) {
             Button("OK") {
+                dependencies.analytics.log(.forcedUpdateTapped)
                 openURL(appStoreURL)
                 // alert 닫힘이 바인딩을 false로 되돌린 **뒤에** 다시 켜야 재표시된다.
                 Task { @MainActor in isUpdateRequired = true }
             }
         } message: {
             Text("Please update to the latest version.")
+        }
+        // 강제 업데이트 알럿 노출 기록 — OK 후 재표시 루프도 각각 한 번의 노출로 센다.
+        .onChange(of: isUpdateRequired) { _, shown in
+            if shown { dependencies.analytics.log(.forcedUpdatePrompted) }
         }
         .task {
             let version = Bundle.main

@@ -35,7 +35,7 @@ struct CompositionRoot {
             analytics.log(name: name, parameters: parameters)
         }
 
-        self.premiumStore = PremiumStore(service: StoreKitPurchaseService())
+        self.premiumStore = PremiumStore(service: StoreKitPurchaseService(), analytics: analytics)
         self.modelContainer = container
         self.dependencies = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),

@@ -12,6 +12,7 @@ import SwiftUI
 struct Live24HourGuideView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.dependencies) private var dependencies
 
     var body: some View {
         NavigationStack {
@@ -50,6 +51,7 @@ struct Live24HourGuideView: View {
     /// 앞의 아이콘은 실제 단축어 앱 아이콘 에셋.
     private var shortcutsButton: some View {
         Button {
+            dependencies.analytics.log(.externalAppOpened(app: "shortcuts"))
             openURL(URL(string: "shortcuts://")!)
         } label: {
             HStack(spacing: Spacing.sm) {
