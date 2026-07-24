@@ -68,8 +68,21 @@ final class FocusViewModel {
     /// 프리미엄 여부의 반응형 소스 — 세션 추가 게이트를 호출 시점에 판정한다(구매 즉시 반영).
     private let premiumStore: PremiumStore
 
-    init(dependencies: Dependencies, premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService())) {
+    /// 알람 권한 확보 시도 후 허용 여부 반환 — AlarmKit은 시스템·기기 전용이라 테스트에서 주입해 대체한다.
+    private let requestAlarmAuthorization: () async -> Bool
+
+    init(
+        dependencies: Dependencies,
+        premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService()),
+        requestAlarmAuthorization: (() async -> Bool)? = nil
+    ) {
         self.premiumStore = premiumStore
+        self.requestAlarmAuthorization = requestAlarmAuthorization ?? {
+            if AlarmManager.shared.authorizationState == .notDetermined {
+                _ = try? await AlarmManager.shared.requestAuthorization()
+            }
+            return AlarmManager.shared.authorizationState == .authorized
+        }
         self.fetchFocusSessions = dependencies.fetchFocusSessions
         self.saveFocusSessions = dependencies.saveFocusSessions
         self.fetchSelectedFocusSessionID = dependencies.fetchSelectedFocusSessionID
@@ -131,17 +144,18 @@ final class FocusViewModel {
         ).save()
 
         isTransitioning = true
-        analytics.log(.focusStarted)
         beginPhase(.focus, cycle: 1, duration: settings.focusDuration, totalCycles: settings.totalCycles)
         startObserving()
         Task {
-            await ensureAuthorized()
-            guard AlarmManager.shared.authorizationState == .authorized else {
+            guard await requestAlarmAuthorization() else {
                 // 권한 거부 — 낙관적 상태를 되돌린다(인앱 타이머만 도는 상황 방지).
                 FocusAlarmPlan.clear()
                 clearActive()
+                analytics.log(.focusPermissionDenied)
                 return
             }
+            // 시작 확정(권한 획득) 후에만 기록 — 거부 롤백이 "시작"으로 집계되는 것 방지.
+            analytics.log(.focusStarted)
             let scheduled = await FocusAlarmScheduling.schedule(phase: .focus, cycle: 1)
             // 예약 완료 전에 사용자가 종료했으면 방금 만든 알람을 되돌린다(고아 알람 방지).
             guard isActive else { FocusAlarmScheduling.cancelAll(); return }
@@ -152,6 +166,16 @@ final class FocusViewModel {
 
     func stopSession() {
         analytics.log(.focusEnded(source: "app"))
+        tearDownSession()
+    }
+
+    /// 마지막 단계가 끝나 세션이 자연 완주됨 — 수동 종료(focusEnded)와 구분해 focusCompleted로 기록.
+    private func completeSession() {
+        analytics.log(.focusCompleted)
+        tearDownSession()
+    }
+
+    private func tearDownSession() {
         cancelAllFocusAlarms()
         FocusAlarmPlan.clear()
         clearActive()
@@ -195,7 +219,7 @@ final class FocusViewModel {
         // 취소~새 예약 사이에 alarmUpdates·refresh가 "없음"을 채택해 세션을 꺼버리지 않게 잠근다.
         isTransitioning = true
         cancelAllFocusAlarms()
-        guard let next else { stopSession(); return }
+        guard let next else { completeSession(); return }
         let nextPhase: FocusPhase = next.phase == .focus ? .focus : .rest
         let duration = (next.phase == .focus ? plan?.focusDuration : plan?.restDuration) ?? phaseDuration
         beginPhase(nextPhase, cycle: next.cycle, duration: duration, totalCycles: total)
@@ -222,12 +246,6 @@ final class FocusViewModel {
     }
 
     // MARK: - AlarmKit 관찰/동기화
-
-    private func ensureAuthorized() async {
-        if AlarmManager.shared.authorizationState == .notDetermined {
-            _ = try? await AlarmManager.shared.requestAuthorization()
-        }
-    }
 
     private func startObserving() {
         updatesTask?.cancel()
@@ -345,7 +363,10 @@ final class FocusViewModel {
     /// 무료 한도(1개)를 넘는 추가는 `nil` — 호출처(에디터 시트)가 Premium 토스트를 띄운다.
     @discardableResult
     func addSession(title: String, settings: FocusSettings, colorHex: String) -> FocusSession? {
-        guard premiumStore.isPremium || sessions.count < Self.freeSessionLimit else { return nil }
+        guard premiumStore.isPremium || sessions.count < Self.freeSessionLimit else {
+            analytics.log(.focusSessionLimitReached)
+            return nil
+        }
         let new = FocusSession(id: UUID(), title: title, settings: settings, colorHex: colorHex)
         sessions.append(new)
         analytics.log(.focusSessionCreated)
@@ -379,7 +400,9 @@ final class FocusViewModel {
         Task { await saveSelectedFocusSessionID(id) }
     }
 
+    /// 목록에서 사용자가 고른 선택만 여기로 온다 — onAppear의 프로그램적 복원은 이 경로를 타지 않는다.
     func selectSession(id: UUID) {
+        analytics.log(.focusSessionSelected)
         selectedSessionID = id
         persistSelectedID(id)
     }

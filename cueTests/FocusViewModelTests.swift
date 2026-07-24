@@ -15,14 +15,15 @@ struct FocusViewModelTests {
     /// 인스턴스가 공유해야 하므로 외부 주입을 허용한다.
     private func makeDependencies(
         focusSessionsRepository: InMemoryFocusSessionsRepository = InMemoryFocusSessionsRepository(),
-        appSettings: AppSettings = .default
+        appSettings: AppSettings = .default,
+        analytics: SpyAnalyticsService? = nil
     ) -> (Dependencies, InMemoryFocusSessionsRepository) {
         let itemRepository = InMemoryItemRepository()
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
         let reminderSortRepository = InMemoryReminderSortRepository()
         let eventsRepository = InMemoryEventsRepository(access: .granted)
         let appSettingsRepository = InMemoryAppSettingsRepository(storage: appSettings)
-        let deps = Dependencies(
+        var deps = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
             addItem: AddItemUseCase(repository: itemRepository),
             deleteItem: DeleteItemUseCase(repository: itemRepository),
@@ -61,6 +62,7 @@ struct FocusViewModelTests {
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)
         )
+        if let analytics { deps.analytics = analytics }
         return (deps, focusSessionsRepository)
     }
 
@@ -284,6 +286,109 @@ struct FocusViewModelTests {
         #expect(storedAfterDelete == nil)
     }
 
+    // MARK: - 분석 이벤트
+
+    /// 시작은 권한 확인이 끝나기 전에 기록되지 않는다 — 거부 롤백이 "시작"으로 집계되는 것 방지.
+    /// 권한이 거부되면 focusStarted 대신 focusPermissionDenied가 남고 상태는 idle로 돌아간다.
+    @Test func deniedAuthorizationLogsPermissionDeniedWithoutFocusStarted() async {
+        let analytics = SpyAnalyticsService()
+        let (deps, _) = makeDependencies(analytics: analytics)
+        let viewModel = FocusViewModel(
+            dependencies: deps,
+            premiumStore: PremiumStore(previewIsPremium: true),
+            requestAlarmAuthorization: { false }
+        )
+
+        viewModel.start()
+        #expect(analytics.events.isEmpty)   // 권한 확인 전 낙관 발화 금지
+        for _ in 0..<10 { await Task.yield() }
+
+        #expect(analytics.events == [.focusPermissionDenied])
+        #expect(viewModel.isActive == false)
+    }
+
+    /// 권한이 확보되면 그때 focusStarted가 기록된다.
+    @Test func grantedAuthorizationLogsFocusStarted() async {
+        let analytics = SpyAnalyticsService()
+        let (deps, _) = makeDependencies(analytics: analytics)
+        let viewModel = FocusViewModel(
+            dependencies: deps,
+            premiumStore: PremiumStore(previewIsPremium: true),
+            requestAlarmAuthorization: { true }
+        )
+
+        viewModel.start()
+        for _ in 0..<10 { await Task.yield() }
+
+        #expect(analytics.events.contains(.focusStarted))
+        #expect(!analytics.events.contains(.focusPermissionDenied))
+        viewModel.stopSession()
+    }
+
+    /// 마지막 단계에서 다음 단계가 없어 세션이 끝나면 자연 완주 — focusEnded가 아니라 focusCompleted.
+    @Test func finishingLastPhaseLogsFocusCompletedNotEnded() {
+        let analytics = SpyAnalyticsService()
+        let (deps, _) = makeDependencies(analytics: analytics)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
+
+        // advance는 App Group의 FocusAlarmPlan을 우선 읽는다 — 다른 테스트·이전 실행의 잔존 플랜을
+        // 지워야 VM 기본 상태(focus·cycle 1/1)가 그대로 쓰여 skip이 곧 마지막 단계 종료가 된다.
+        FocusAlarmPlan.clear()
+        viewModel.skip()
+
+        #expect(analytics.events == [.focusSkipped, .focusCompleted])
+    }
+
+    /// 수동 End 버튼(stopSession)은 focusEnded(source: "app")만 남긴다.
+    @Test func manualStopLogsFocusEnded() {
+        let analytics = SpyAnalyticsService()
+        let (deps, _) = makeDependencies(analytics: analytics)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
+
+        viewModel.stopSession()
+
+        #expect(analytics.events == [.focusEnded(source: "app")])
+        #expect(!analytics.events.contains(.focusCompleted))
+    }
+
+    /// 무료 한도로 추가가 nil을 반환하는 경로에서 focusSessionLimitReached가 남는다.
+    @Test func blockedSessionAddLogsLimitReached() {
+        let analytics = SpyAnalyticsService()
+        let (deps, _) = makeDependencies(analytics: analytics)
+        let viewModel = FocusViewModel(dependencies: deps)   // 기본 무료
+
+        viewModel.addSession(title: "첫 세션", settings: .default, colorHex: "#FF3B30")
+        viewModel.addSession(title: "둘째 세션", settings: .default, colorHex: "#FF9500")
+
+        #expect(analytics.events == [.focusSessionCreated, .focusSessionLimitReached])
+    }
+
+    /// 목록에서 사용자가 세션을 고르면 focusSessionSelected가 남는다.
+    @Test func selectSessionLogsFocusSessionSelected() {
+        let analytics = SpyAnalyticsService()
+        let (deps, _) = makeDependencies(analytics: analytics)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
+        let added = viewModel.addSession(title: "독서", settings: .default, colorHex: "#FF3B30")!
+
+        viewModel.selectSession(id: added.id)
+
+        #expect(analytics.events.contains(.focusSessionSelected))
+    }
+
+    /// onAppear의 프로그램적 선택 복원은 사용자 선택이 아니다 — focusSessionSelected를 남기지 않는다.
+    @Test func onAppearRestorationDoesNotLogSessionSelected() async {
+        let session = FocusSession(id: UUID(), title: "집중", settings: .default, colorHex: "#FF3B30")
+        let repo = InMemoryFocusSessionsRepository(sessions: [session], selectedID: nil)
+        let analytics = SpyAnalyticsService()
+        let (deps, _) = makeDependencies(focusSessionsRepository: repo, analytics: analytics)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.selectedSessionID == session.id)
+        #expect(!analytics.events.contains(.focusSessionSelected))
+    }
+
     // MARK: - 알람 목록 변화 채택 게이트
 
     /// 진행 중 + 전환 아님 + 현재 알람이 목록에서 사라짐 → 재채택해야 한다
@@ -325,4 +430,17 @@ struct FocusViewModelTests {
             isActive: true, isTransitioning: false, currentAlarmID: nil, alarmIDs: []
         ) == false)
     }
+}
+
+// MARK: - 분석 이벤트 기록용 더블
+
+/// `log(_:)`가 동기라 actor를 못 쓴다 — 테스트는 MainActor 단일 스레드라 @unchecked로 안전.
+private final class SpyAnalyticsService: AnalyticsService, @unchecked Sendable {
+    private(set) var events: [AnalyticsEvent] = []
+
+    func log(_ event: AnalyticsEvent) {
+        events.append(event)
+    }
+
+    func log(name: String, parameters: [String: String]) {}
 }
