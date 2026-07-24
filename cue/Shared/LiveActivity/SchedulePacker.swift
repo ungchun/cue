@@ -103,11 +103,11 @@ enum ScheduleMetrics {
     /// 날짜 헤더 ↔ 첫 이벤트 간격.
     static let headerGap: CGFloat = Spacing.xxs         // 2
 
-    /// 인접 행 간격 — 행 종류에 따라 다르다. 종일 캡슐은 배경 경계가 그대로 보여 2로 딱
-    /// 붙이고, 시간 일정이 끼는 인접은 폰트 리딩(투명 여백)이 이미 보이므로 4를 준다.
-    /// 뷰(ScheduleDayView)의 행별 상단 패딩과 반드시 동기.
+    /// 인접 행 간격 — 행 종류에 따라 다르다. 종일 캡슐끼리는 배경 경계가 그대로 보여 3
+    /// (디자인 결정, 토큰 2/4 사이 값), 시간 일정이 끼는 인접은 폰트 리딩(투명 여백)이
+    /// 이미 보이므로 2. 뷰(ScheduleDayView)의 행별 상단 패딩과 반드시 동기.
     static func rowGap(previous: LiveEventItem, next: LiveEventItem) -> CGFloat {
-        previous.isAllDay && next.isAllDay ? Spacing.xxs : Spacing.xs
+        previous.isAllDay && next.isAllDay ? 3 : Spacing.xxs
     }
 
     /// 줄높이는 **xSmall 콘텐츠 크기로 고정해** 읽는다 — iOS 26의 표준(.large) 타입 램프가
