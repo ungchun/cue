@@ -40,6 +40,11 @@ struct ReminderView: View {
     // 새 입력 행에서 ⓘ를 눌렀을 때, 이어지는 포커스 해제로 자동 add가 일어나지 않도록 한 번 억제한다.
     @State private var suppressNewRowAutoSubmit = false
 
+    // 새 항목 저장이 진행 중인지 — 입력칸은 add가 낙관 삽입을 마친 **뒤에** 비우므로
+    // (텍스트가 사라지는 공백 구간 제거), 그 사이 return/포커스 해제로 같은 텍스트가
+    // 두 번 제출되는 걸 막는다.
+    @State private var pendingNewSubmission = false
+
     // 체크 → 0.5초 정지 → 토글 적용. 그 사이 동그라미는 채워진 체크마크로 보인다.
     // 대기 중 다시 탭하면 취소(iOS 미리알림과 동일).
     @State private var pendingCompletionIDs: Set<String> = []
@@ -1110,6 +1115,7 @@ struct ReminderView: View {
         let originalMemo = reminder.notes ?? ""
         let memo = editingMemo
 
+        blinkLog("flushInlineEdit: 편집 종료(행이 읽기 모드로 전환) id=\(reminder.id)")
         editingReminderID = nil
         editTitleFocused = false
         editMemoFocused = false
@@ -1177,6 +1183,7 @@ struct ReminderView: View {
         let originalMemo = previous.notes ?? ""
         guard !trimmed.isEmpty,
               trimmed != previous.title || snapshot.memo != originalMemo else { return }
+        blinkLog("backgroundCommit: 편집 백그라운드 커밋 id=\(previous.id)")
         Task {
             await viewModel.update(
                 reminderID: previous.id, title: trimmed, notes: snapshot.memo,
@@ -1192,6 +1199,7 @@ struct ReminderView: View {
         let originalMemo = reminder.notes ?? ""
         let memo = editingMemo
 
+        blinkLog("commitInlineEdit: 편집 종료(행이 읽기 모드로 전환) id=\(reminder.id)")
         editingReminderID = nil
         editTitleFocused = false
         editMemoFocused = false
@@ -1263,6 +1271,7 @@ struct ReminderView: View {
     /// 새 입력 행을 마감한다 — 포커스가 빠질 때 자동 호출. 제목이 비어 있으면 무시한다.
     /// `.all` 모드에서 active 섹션이 있으면 그 listID로, 아니면 ViewModel의 default 매칭.
     private func submitNewReminder() {
+        guard !pendingNewSubmission else { return }
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let targetID = activeNewRowListID
         guard !trimmed.isEmpty else {
@@ -1270,25 +1279,42 @@ struct ReminderView: View {
             return
         }
         let memo = newMemo
-        clearNewRow()
-        activeNewRowListID = nil
-        Task { await viewModel.add(title: trimmed, notes: memo, toListID: targetID) }
+        blinkLog("submitNewReminder: 제출 title='\(trimmed)' (입력칸은 낙관 삽입 후 클리어)")
+        // 입력칸은 여기서 비우지 않는다 — add가 낙관 삽입을 마치고 돌아온 직후 비워,
+        // 입력 텍스트가 사라지고 새 행이 나타나기까지의 공백(EventKit 저장 왕복)을 없앤다.
+        pendingNewSubmission = true
+        Task {
+            await viewModel.add(title: trimmed, notes: memo, toListID: targetID)
+            blinkLog("submitNewReminder: 낙관 삽입 완료 → 입력칸 클리어")
+            clearNewRow()
+            activeNewRowListID = nil
+            pendingNewSubmission = false
+        }
+    }
+
+    /// 깜빡임 진단용 임시 로그 — ViewModel 쪽 [blink] 로그와 같은 시계로 단계 공백을 잰다.
+    private func blinkLog(_ message: String) {
+        print(String(format: "[blink %.3f] View %@", Date().timeIntervalSince1970, message))
     }
 
     /// 세부사항 시트(생성) 완료 — Draft를 풀어 add 호출하고 입력 행을 비운다.
     private func saveNewReminder(draft: ReminderDetailSheet.Draft) {
+        guard !pendingNewSubmission else { return }
         let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let memo = draft.memo
         let targetID = activeNewRowListID
-        clearNewRow()
-        activeNewRowListID = nil
+        // submitNewReminder와 동일 — 입력칸은 낙관 삽입이 화면에 실린 뒤 비운다.
+        pendingNewSubmission = true
         Task {
             await viewModel.add(
                 title: trimmed, notes: memo,
                 dueDate: draft.dueDate, includesTime: draft.includesTime,
                 toListID: targetID
             )
+            clearNewRow()
+            activeNewRowListID = nil
+            pendingNewSubmission = false
         }
     }
 

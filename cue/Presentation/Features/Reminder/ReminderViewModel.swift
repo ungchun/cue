@@ -138,13 +138,33 @@ final class ReminderViewModel {
         guard access == .granted, hasLoaded else { return }
         // 자기 쓰기 직후(억제 창 이내)의 에코 신호는 무시 — 자기 쓰기는 이미 reloadReminders로
         // 반영했고, 여기서 또 reload하면 포커스 이동 중 remount로 커서가 끊긴다.
-        guard now() >= suppressObserveUntil else { return }
+        guard now() >= suppressObserveUntil else {
+            blinkLog("외부 변경 신호: 억제 창 이내 → 무시")
+            return
+        }
+        blinkLog("외부 변경 신호: 억제 창 밖 → 전체 reload 진행")
         await reload(showsIndicator: false)
     }
 
     /// 자기 쓰기 에코 억제 창을 연다 — 이후 짧은 시간 동안 외부 변경 신호를 무시한다.
     /// EventKit이 쓰기 알림을 (동기 완료 뒤) 살짝 늦게 쏘므로 넉넉히 둔다.
     private static let selfWriteSuppressWindow: TimeInterval = 2
+
+    /// 억제 창은 쓰기 **시작** 시점에 연다 — EventKit은 save 직후(재조회 완료 전)에 에코를
+    /// 되쏘므로, 재조회 뒤에 열면 에코가 창이 열리기 전에 통과해 불필요한 전체 reload를
+    /// 유발한다(실기기 로그로 확인). `reloadReminders`가 완료 시 다시 열어 창을 연장한다.
+    private func openSelfWriteSuppressWindow() {
+        suppressObserveUntil = now().addingTimeInterval(Self.selfWriteSuppressWindow)
+    }
+
+    /// 낙관 반영 뒤의 조용한 재조회를 백그라운드로 돌린다 — add/update가 재조회를 기다리지
+    /// 않고 반환해야, 뷰가 "행이 목록에 실린 직후" 입력칸을 비워 텍스트 공백 구간이 없다.
+    /// 실패하면 에러를 알리고, 다음 외부 신호/진입 시 재조회로 자연 복구된다.
+    private func reconcileInBackground() {
+        Task {
+            do { try await reloadReminders() } catch { errorMessage = error.localizedDescription }
+        }
+    }
 
     /// 동그라미 버튼 액션 — 라이브 액티비티 토글.
     /// 활성이면 즉시 종료. 아니면 현재 selection 제목 + visible reminders 스냅샷으로 시작.
@@ -250,7 +270,11 @@ final class ReminderViewModel {
     /// 항목을 다시 가져오고, 활성 LA가 있으면 새 스냅샷으로 갱신한다.
     /// 완료·추가·수정·삭제 등 데이터 변경 경로의 공통 마무리.
     private func reloadReminders() async throws {
+        let beforeIDs = visibleReminders.map(\.id)
+        blinkLog("reloadReminders: fetch 시작 (visible=\(beforeIDs.count))")
         allReminders = try await fetchRemindersUseCase()
+        let afterIDs = visibleReminders.map(\.id)
+        blinkLog("reloadReminders: fetch 완료 → visible=\(afterIDs.count), id변화=\(beforeIDs == afterIDs ? "동일" : "다름 \(beforeIDs) → \(afterIDs)")")
         // 자기 쓰기 완료 — 잠깐 동안 EventKit이 되쏘는 외부 변경 에코를 무시한다.
         suppressObserveUntil = now().addingTimeInterval(Self.selfWriteSuppressWindow)
         await refreshLiveActivityIfActive()
@@ -706,8 +730,12 @@ final class ReminderViewModel {
         if showsIndicator { isLoading = true }
         defer { if showsIndicator { isLoading = false } }
         do {
+            let beforeIDs = visibleReminders.map(\.id)
+            blinkLog("reload(전체): 시작 indicator=\(showsIndicator), visible=\(beforeIDs.count)")
             lists = try await fetchListsUseCase()
             allReminders = try await fetchRemindersUseCase()
+            let afterIDs = visibleReminders.map(\.id)
+            blinkLog("reload(전체): fetch 완료 → visible=\(afterIDs.count), id변화=\(beforeIDs == afterIDs ? "동일" : "다름 \(beforeIDs) → \(afterIDs)")")
             hiddenReminderListIDs = await fetchAppSettings().hiddenReminderListIDs
             await resolveInitialSelectionIfNeeded()
             // 현재 스코프(오늘·개별 리스트)의 정렬 설정을 적재 — 진입 시 저장된 정렬 복원.
@@ -784,6 +812,8 @@ final class ReminderViewModel {
             errorMessage = String(localized: "Select a list first.")
             return
         }
+        blinkLog("add: 저장 시작 title='\(title)'")
+        openSelfWriteSuppressWindow()
         do {
             let created = try await addReminderUseCase(
                 title: title,
@@ -792,9 +822,10 @@ final class ReminderViewModel {
                 includesTime: includesTime,
                 listID: listID
             )
+            blinkLog("add: EventKit 저장 반환 id=\(created.id)")
             applyOptimistically(created)
             analytics.log(.reminderCreated)
-            try await reloadReminders()
+            reconcileInBackground()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -807,9 +838,16 @@ final class ReminderViewModel {
     private func applyOptimistically(_ reminder: Reminder) {
         if let index = allReminders.firstIndex(where: { $0.id == reminder.id }) {
             allReminders[index] = reminder
+            blinkLog("낙관 반영: 치환 id=\(reminder.id), visible=\(visibleReminders.count)")
         } else {
             allReminders.append(reminder)
+            blinkLog("낙관 반영: 삽입 id=\(reminder.id), visible에 포함=\(visibleReminders.contains { $0.id == reminder.id })")
         }
+    }
+
+    /// 깜빡임 진단용 임시 로그 — ms 단위 epoch 타임스탬프로 단계 간 공백을 잰다.
+    private func blinkLog(_ message: String) {
+        print(String(format: "[blink %.3f] VM %@", Date().timeIntervalSince1970, message))
     }
 
     /// 새 미리알림이 어느 리스트로 저장될지 결정한다.
@@ -830,6 +868,20 @@ final class ReminderViewModel {
         dueDate: Date? = nil,
         includesTime: Bool = false
     ) async {
+        blinkLog("update: 저장 시작 id=\(reminderID) title='\(title)'")
+        // 저장 확정 전 선반영 — 편집 종료로 행이 읽기 모드로 바뀌는 순간 옛 값이 저장 왕복
+        // 시간만큼 보이는 플래시를 없앤다. UseCase와 같은 정규화(trim·notes)를 적용하고,
+        // 무효 입력(빈 제목)은 선반영하지 않는다(UseCase가 던지는 검증과 일치).
+        // 실패 시엔 백그라운드 reconcile이 저장소 원본으로 되돌린다.
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty, var current = allReminders.first(where: { $0.id == reminderID }) {
+            current.title = trimmed
+            current.notes = ReminderNotes.normalized(notes)
+            current.dueDate = dueDate
+            current.includesTime = includesTime
+            applyOptimistically(current)
+        }
+        openSelfWriteSuppressWindow()
         do {
             let updated = try await updateReminderUseCase(
                 reminderID: reminderID,
@@ -838,11 +890,14 @@ final class ReminderViewModel {
                 dueDate: dueDate,
                 includesTime: includesTime
             )
+            blinkLog("update: EventKit 저장 반환 id=\(updated.id)")
             applyOptimistically(updated)
             analytics.log(.reminderUpdated)
-            try await reloadReminders()
+            reconcileInBackground()
         } catch {
             errorMessage = error.localizedDescription
+            // 선반영을 저장소 원본으로 롤백.
+            reconcileInBackground()
         }
     }
 

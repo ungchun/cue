@@ -398,6 +398,95 @@ struct ReminderViewModelTests {
         #expect(viewModel.allReminders.first { $0.id == "1" }?.title == "새 제목")
     }
 
+    /// add는 낙관 반영까지만 하고 **재조회를 기다리지 않고 반환**해야 한다 — 뷰가 "새 행이
+    /// 목록에 실린 직후" 입력칸을 비울 수 있어야 텍스트가 사라지는 공백 구간이 없다.
+    @Test func addReturnsWithoutAwaitingReconcileFetch() async throws {
+        @MainActor final class Flag { var isSet = false }
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+        await viewModel.onAppear()
+
+        await repo.closeGate()   // reconcile fetch를 붙잡는다.
+        let finished = Flag()
+        let task = Task {
+            await viewModel.add(title: "새 항목", toListID: listA.id)
+            finished.isSet = true
+        }
+
+        var reloadInFlight = false
+        for _ in 0..<200 {
+            if await repo.isFetchWaiting { reloadInFlight = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(reloadInFlight)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        // 재조회가 게이트에 붙잡혀 있어도 add는 이미 반환됐어야 한다.
+        #expect(finished.isSet)
+
+        await repo.releaseFetch()
+        await task.value
+    }
+
+    /// update는 저장소 반환 **전에** 새 값을 선반영해야 한다 — 편집 종료로 행이 읽기 모드로
+    /// 바뀌는 순간 옛 제목이 저장 왕복 시간만큼 보이는 플래시를 없애는 계약.
+    @Test func updateAppliesNewValuesBeforeRepositoryReturns() async throws {
+        let base = InMemoryRemindersRepository(
+            access: .granted, lists: [listA],
+            reminders: [reminder(id: "1", title: "옛 제목", listID: "A")]
+        )
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+        await viewModel.onAppear()
+
+        await repo.closeUpdateGate()   // EventKit 쓰기 자체를 붙잡는다.
+        let task = Task { await viewModel.update(reminderID: "1", title: "새 제목", notes: nil) }
+
+        var updateInFlight = false
+        for _ in 0..<200 {
+            if await repo.isUpdateWaiting { updateInFlight = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(updateInFlight)
+        // 저장이 아직 안 끝났는데도 로컬 제목은 이미 새 값이어야 한다.
+        #expect(viewModel.allReminders.first { $0.id == "1" }?.title == "새 제목")
+
+        await repo.releaseUpdate()
+        await task.value
+        #expect(viewModel.allReminders.first { $0.id == "1" }?.title == "새 제목")
+    }
+
+    /// 억제 창은 쓰기 **시작** 시점에 열려야 한다 — EventKit은 save 직후(재조회 완료 전)에
+    /// 에코를 되쏘므로, 재조회 뒤에 열면 에코가 창이 열리기 전에 통과해 전체 reload를 유발한다.
+    @Test func echoArrivingDuringAddDoesNotTriggerExtraReload() async throws {
+        let clock = TestClock(Date(timeIntervalSince1970: 1_000_000))
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(remindersRepository: repo),
+            now: { clock.now }
+        )
+        await viewModel.onAppear()
+        let baseline = await repo.fetchCount
+
+        await repo.closeGate()
+        let task = Task { await viewModel.add(title: "새 항목", toListID: listA.id) }
+        var reloadInFlight = false
+        for _ in 0..<200 {
+            if await repo.isFetchWaiting { reloadInFlight = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(reloadInFlight)
+
+        // 저장 직후·재조회 완료 전에 도착한 에코 — 추가 reload(fetch)를 만들면 안 된다.
+        await base.emitChange()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        #expect(await repo.fetchCount == baseline + 1)
+
+        await repo.releaseFetch()
+        await task.value
+    }
+
     /// 자기 쓰기(add) 직후 억제 창 이내에 온 외부 변경 에코는 추가 reload를 유발하지 않는다 —
     /// 인라인 편집→새 행 포커스 이동 중 remount로 커서가 끊기던 문제를 막는다. 창 밖의 진짜
     /// 외부 변경은 정상 reload된다.
@@ -411,8 +500,16 @@ struct ReminderViewModelTests {
         )
         await viewModel.onAppear()
 
-        await viewModel.add(title: "새 항목", toListID: listA.id)   // 자기 쓰기 → reloadReminders 1회 + 억제 창 open
-        let afterAdd = await repo.fetchCount
+        let beforeAdd = await repo.fetchCount
+        await viewModel.add(title: "새 항목", toListID: listA.id)   // 자기 쓰기 → 억제 창 open + 백그라운드 reconcile 1회
+        // reconcile은 add 반환 후 백그라운드로 돌므로, 완료(fetch +1)까지 bounded 대기.
+        var afterAdd = beforeAdd
+        for _ in 0..<200 {
+            afterAdd = await repo.fetchCount
+            if afterAdd >= beforeAdd + 1 { break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(afterAdd == beforeAdd + 1)
 
         // 억제 창 이내 에코 → 무시.
         await base.emitChange()
@@ -1728,6 +1825,10 @@ private actor GatedRemindersRepository: RemindersRepository {
     private(set) var isFetchWaiting = false
     private(set) var fetchCount = 0
     private var waiters: [CheckedContinuation<Void, Never>] = []
+    // update 쓰기를 붙잡는 게이트 — "저장소 반환 전 선반영" 계약의 관측점.
+    private var updateGateClosed = false
+    private(set) var isUpdateWaiting = false
+    private var updateWaiters: [CheckedContinuation<Void, Never>] = []
 
     init(_ base: InMemoryRemindersRepository) { self.base = base }
 
@@ -1737,6 +1838,13 @@ private actor GatedRemindersRepository: RemindersRepository {
         isFetchWaiting = false
         for waiter in waiters { waiter.resume() }
         waiters = []
+    }
+    func closeUpdateGate() { updateGateClosed = true }
+    func releaseUpdate() {
+        updateGateClosed = false
+        isUpdateWaiting = false
+        for waiter in updateWaiters { waiter.resume() }
+        updateWaiters = []
     }
 
     nonisolated func changes() -> AsyncStream<Void> { base.changes() }
@@ -1765,7 +1873,11 @@ private actor GatedRemindersRepository: RemindersRepository {
     func updateReminder(
         reminderID: String, title: String, notes: String?, dueDate: Date?, includesTime: Bool
     ) async throws -> Reminder {
-        try await base.updateReminder(
+        if updateGateClosed {
+            isUpdateWaiting = true
+            await withCheckedContinuation { updateWaiters.append($0) }
+        }
+        return try await base.updateReminder(
             reminderID: reminderID, title: title, notes: notes, dueDate: dueDate, includesTime: includesTime
         )
     }
