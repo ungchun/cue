@@ -30,6 +30,8 @@ struct CompleteReminderIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         // EventKit 완료가 성공한 경우에만 LA에서 제거 — 실패 시 화면-시스템 불일치 방지.
         guard completeReminder(id: reminderID) else { return .result() }
+        // 본앱 스키마(reminderCompleted(source:))와 이름·파라미터를 맞춘다 — 익스텐션 프로세스에선 no-op.
+        LiveActivityAnalyticsBridge.log?("reminder_completed", ["source": "live_activity"])
         await removeFromLiveActivity(id: reminderID)
         return .result()
     }

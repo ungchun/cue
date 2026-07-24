@@ -57,6 +57,7 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
         // staleDate는 기존 값 보존 — 월 이동이 신선도 정책을 바꾸면 안 된다.
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
+        logShift()
     }
 
     private func shiftSchedule() async {
@@ -65,6 +66,7 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
         state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
+        logShift()
     }
 
     private func shiftReminder() async {
@@ -73,5 +75,14 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
         state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
+        logShift()
+    }
+
+    /// LA 업데이트가 실제로 일어난 경우에만 호출 — `targetRaw`가 그대로 kind가 된다.
+    private func logShift() {
+        LiveActivityAnalyticsBridge.log?(
+            "live_calendar_shifted",
+            ["kind": targetRaw, "direction": delta < 0 ? "previous" : "next"]
+        )
     }
 }

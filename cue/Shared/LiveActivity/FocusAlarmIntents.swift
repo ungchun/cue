@@ -33,7 +33,9 @@ struct FocusAlarmAdvanceIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         guard let phase = FocusAlarmMetadata.Phase(rawValue: nextPhaseRaw) else { return .result() }
         // 설정은 App Group의 FocusAlarmPlan에서 읽는다(메인 앱이 세션 시작 시 저장).
-        _ = await FocusAlarmScheduling.schedule(phase: phase, cycle: nextCycle)
+        if await FocusAlarmScheduling.schedule(phase: phase, cycle: nextCycle) != nil {
+            LiveActivityAnalyticsBridge.log?("focus_phase_advanced", ["source": "live_activity"])
+        }
         return .result()
     }
 }
@@ -45,7 +47,10 @@ struct FocusAlarmPauseIntent: LiveActivityIntent {
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }
     func perform() async throws -> some IntentResult {
-        if let id = UUID(uuidString: alarmID) { try? AlarmManager.shared.pause(id: id) }
+        // pause 성공 시에만 로깅 — `(try?) != nil` 패턴은 CompleteReminderIntent.completeReminder 전례.
+        if let id = UUID(uuidString: alarmID), (try? AlarmManager.shared.pause(id: id)) != nil {
+            LiveActivityAnalyticsBridge.log?("focus_paused", ["source": "live_activity"])
+        }
         return .result()
     }
 }
@@ -57,7 +62,9 @@ struct FocusAlarmResumeIntent: LiveActivityIntent {
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }
     func perform() async throws -> some IntentResult {
-        if let id = UUID(uuidString: alarmID) { try? AlarmManager.shared.resume(id: id) }
+        if let id = UUID(uuidString: alarmID), (try? AlarmManager.shared.resume(id: id)) != nil {
+            LiveActivityAnalyticsBridge.log?("focus_resumed", ["source": "live_activity"])
+        }
         return .result()
     }
 }
@@ -69,7 +76,9 @@ struct FocusAlarmStopIntent: LiveActivityIntent {
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }
     func perform() async throws -> some IntentResult {
-        if let id = UUID(uuidString: alarmID) { try? AlarmManager.shared.cancel(id: id) }
+        if let id = UUID(uuidString: alarmID), (try? AlarmManager.shared.cancel(id: id)) != nil {
+            LiveActivityAnalyticsBridge.log?("focus_ended", ["source": "live_activity"])
+        }
         return .result()
     }
 }
