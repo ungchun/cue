@@ -456,6 +456,47 @@ struct ReminderViewModelTests {
         #expect(viewModel.allReminders.first { $0.id == "1" }?.title == "새 제목")
     }
 
+    /// 리스트 애니메이션은 **제거 경로(완료 체크·삭제)에서만** 발동한다 — add까지 id 배열
+    /// 변화로 애니메이션하면 새 행이 250ms 페이드-인되며 "사라졌다 나타나는" 깜빡임으로
+    /// 보인다(실기기 확인). 뷰는 이 틱을 `.animation(value:)`에 걸어 삽입은 즉시 그린다.
+    @Test func addDoesNotBumpListAnimationTick() async {
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(lists: [listA]))
+        await viewModel.onAppear()
+        let initial = viewModel.listAnimationTick
+
+        await viewModel.add(title: "새 항목")
+
+        #expect(viewModel.listAnimationTick == initial)
+    }
+
+    /// 완료 토글은 행 제거(또는 해제 시 복귀)를 애니메이션해야 하므로 틱을 올린다.
+    @Test func toggleBumpsListAnimationTick() async {
+        let target = reminder(id: "1", listID: "A")
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA], reminders: [target]
+        ))
+        await viewModel.onAppear()
+        let initial = viewModel.listAnimationTick
+
+        await viewModel.toggle(target)
+
+        #expect(viewModel.listAnimationTick == initial + 1)
+    }
+
+    /// 삭제도 행 제거 애니메이션 경로 — 틱을 올린다.
+    @Test func deleteBumpsListAnimationTick() async {
+        let target = reminder(id: "1", listID: "A")
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA], reminders: [target]
+        ))
+        await viewModel.onAppear()
+        let initial = viewModel.listAnimationTick
+
+        await viewModel.delete(target)
+
+        #expect(viewModel.listAnimationTick == initial + 1)
+    }
+
     /// 억제 창은 쓰기 **시작** 시점에 열려야 한다 — EventKit은 save 직후(재조회 완료 전)에
     /// 에코를 되쏘므로, 재조회 뒤에 열면 에코가 창이 열리기 전에 통과해 전체 reload를 유발한다.
     @Test func echoArrivingDuringAddDoesNotTriggerExtraReload() async throws {

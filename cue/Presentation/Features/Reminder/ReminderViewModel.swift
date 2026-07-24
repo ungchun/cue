@@ -73,6 +73,12 @@ final class ReminderViewModel {
     /// 전체·예정은 이 캐시를 쓰지 않는다(고정 정렬).
     private var sortSettingsByScope: [String: ReminderSortSettings] = [:]
 
+    /// 리스트 행 애니메이션 트리거 — **제거 경로(완료 체크·삭제)에서만** 증가한다.
+    /// 뷰가 `.animation(value:)`에 id 배열 대신 이 틱을 걸어, 행 제거는 부드럽게
+    /// 애니메이션하고 **삽입(add)은 즉시** 그린다 — 새 행이 페이드-인되며 "사라졌다
+    /// 나타나는" 저장 깜빡임으로 보이는 걸 막는다(Apple 미리알림도 삽입은 즉시).
+    private(set) var listAnimationTick = 0
+
     /// 라이브 액티비티 활성 상태 — 동그라미 버튼의 시각 상태 + 토글 분기에 사용.
     /// 사용자가 시스템 UI에서 종료한 경우 sync는 미흡(추후 service `isActive(_:)` query
     /// 추가 시 보강). 우선은 단순 로컬 토글.
@@ -269,10 +275,14 @@ final class ReminderViewModel {
 
     /// 항목을 다시 가져오고, 활성 LA가 있으면 새 스냅샷으로 갱신한다.
     /// 완료·추가·수정·삭제 등 데이터 변경 경로의 공통 마무리.
-    private func reloadReminders() async throws {
+    /// `animatingRowChanges`가 true면 배열 교체 **직후·같은 동기 구간**에서 애니메이션 틱을
+    /// 올린다 — 이후 await(LA·스냅샷) 중 렌더가 끼어들면 틱과 배열 변경이 다른 렌더로 갈라져
+    /// 애니메이션이 걸리지 않으므로, 호출부(toggle/delete)에서 올리면 안 된다.
+    private func reloadReminders(animatingRowChanges: Bool = false) async throws {
         let beforeIDs = visibleReminders.map(\.id)
         blinkLog("reloadReminders: fetch 시작 (visible=\(beforeIDs.count))")
         allReminders = try await fetchRemindersUseCase()
+        if animatingRowChanges { listAnimationTick += 1 }
         let afterIDs = visibleReminders.map(\.id)
         blinkLog("reloadReminders: fetch 완료 → visible=\(afterIDs.count), id변화=\(beforeIDs == afterIDs ? "동일" : "다름 \(beforeIDs) → \(afterIDs)")")
         // 자기 쓰기 완료 — 잠깐 동안 EventKit이 되쏘는 외부 변경 에코를 무시한다.
@@ -795,7 +805,8 @@ final class ReminderViewModel {
             } else {
                 analytics.log(.reminderUncompleted)
             }
-            try await reloadReminders()
+            // 행 제거(해제 시 복귀)를 애니메이션 — 틱은 배열 교체와 같은 동기 구간에서 올라간다.
+            try await reloadReminders(animatingRowChanges: true)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -906,7 +917,7 @@ final class ReminderViewModel {
         do {
             try await deleteReminderUseCase(reminderID: reminder.id)
             analytics.log(.reminderDeleted)
-            try await reloadReminders()
+            try await reloadReminders(animatingRowChanges: true)
         } catch {
             errorMessage = error.localizedDescription
         }

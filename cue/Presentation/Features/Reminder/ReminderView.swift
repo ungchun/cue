@@ -376,7 +376,10 @@ struct ReminderView: View {
         // 시스템 기본 row 최소 높이(44pt)를 0으로 깎아 row가 컨텐츠 자체 높이로 줄어든다.
         // horizontal inset은 시스템 기본 유지 — `.listRowInsets`처럼 좌우까지 강제하지 않는다.
         .environment(\.defaultMinListRowHeight, Spacing.zero)
-        .animation(.easeInOut(duration: 0.25), value: viewModel.visibleReminders.map(\.id))
+        // 제거 경로(완료 체크·삭제)에서만 행을 애니메이션한다 — id 배열을 값으로 걸면
+        // add의 새 행 삽입까지 250ms 페이드-인되어 "사라졌다 나타나는" 저장 깜빡임으로
+        // 보인다. VM이 제거 경로에서만 올리는 틱을 값으로 걸어 삽입은 즉시 그린다.
+        .animation(.easeInOut(duration: 0.25), value: viewModel.listAnimationTick)
         .onScrollGeometryChange(for: Bool.self) { geometry in
             geometry.contentOffset.y > 40
         } action: { _, newValue in
