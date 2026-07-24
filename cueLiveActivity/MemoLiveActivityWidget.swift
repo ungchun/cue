@@ -78,6 +78,9 @@ struct MemoLiveActivityWidget: Widget {
                     eventDots: state.monthEventDots
                 )
                 .frame(maxWidth: .infinity)
+                // 일정 LA와 동일한 클램프 — 6주 달의 자연 높이가 fixedSize를 타고 예산을
+                // 밀어올려 하단이 잘리는 것을 막는다(ScheduleLiveActivityWidget 참고).
+                .frame(height: ScheduleMetrics.columnMax)
                 // 반쪽에선 44가 과해 한 단계 줄인다(설정 배율은 그대로 곱해짐).
                 bigText(state.text, size: 32 * memoSizeScale(), color: color)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

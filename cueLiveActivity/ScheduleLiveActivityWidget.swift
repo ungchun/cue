@@ -74,6 +74,12 @@ private struct ScheduleLockScreenView: View {
                     eventDots: monthEventDots
                 )
                 .frame(maxWidth: .infinity)
+                // 달력 높이를 예산으로 **클램프** — 아래 `.fixedSize(vertical:)`는 자식의 자연
+                // 높이를 그대로 취하므로, 6주 달(자연 높이 157pt+)이 상한 없이 전체를 예산
+                // (columnMax) 위로 밀어올려 시스템이 하단을 잘라냈다(31일 줄 잘림). 고정 높이를
+                // 주면 주 행들의 maxHeight .infinity가 유계 공간 분배로 동작해 6주 달은 행이
+                // 살짝 조밀해질 뿐 총높이 ≤ 160pt가 보장된다.
+                .frame(height: ScheduleMetrics.columnMax)
                 Divider()
                 column(SchedulePacker.packSingleColumn(days))
             } else {
