@@ -371,6 +371,7 @@ final class ReminderViewModel {
         settings.manualOrder = ids
         sortSettingsByScope[key] = settings
         await saveSortSettingsUseCase(settings, scope: key)
+        analytics.log(.reminderReordered)
     }
 
     /// SwiftUI `RangeReplaceableCollection.move(fromOffsets:toOffset:)`와 같은 의미를
@@ -394,6 +395,11 @@ final class ReminderViewModel {
         mutate(&settings.preference)
         sortSettingsByScope[key] = settings
         await saveSortSettingsUseCase(settings, scope: key)
+        // 정렬 메뉴 선택만 이 경로를 탄다 — 드래그의 수동 전환은 `.reminderReordered`로 따로 센다.
+        analytics.log(.reminderSortChanged(
+            key: settings.preference.field.rawValue,
+            order: settings.preference.direction.rawValue
+        ))
     }
 
     /// 현재 스코프의 정렬 설정을 fetch해 캐시에 채운다(이미 있으면 건너뜀).
@@ -586,6 +592,7 @@ final class ReminderViewModel {
             errorMessage = error.localizedDescription
             return
         }
+        analytics.log(.reminderMovedToList)
 
         // 대상 리스트 수동 순서 — 이동 전 대상 섹션 순서에 드랍 위치로 삽입.
         let targetKey = Self.listScopeKey(listID)
@@ -626,6 +633,7 @@ final class ReminderViewModel {
         settings.manualOrder = ids
         sortSettingsByScope[key] = settings
         await saveSortSettingsUseCase(settings, scope: key)
+        analytics.log(.reminderReordered)
     }
 
     /// 리스트별 미완료 항목 수 — 리스트 선택 메뉴 옆 카운트 표기용.
@@ -738,19 +746,27 @@ final class ReminderViewModel {
     func select(_ list: ReminderList) {
         selection = .list(list.id)
         loadSortSettingsInBackground()
+        // 사용자 선택 경로에서만 기록 — 초기 적재의 프로그램적 selection은 여길 안 탄다.
+        // 개별 리스트 id는 수집하지 않는다 — 스코프 종류만.
+        analytics.log(.reminderScopeSelected(scope: "list"))
     }
 
     /// 시스템 필터(오늘/예정/전체)로 전환한다. 사용자 리스트 selection은 해제된다.
     func selectFilter(_ filter: SystemFilter) {
         selection = .systemFilter(filter)
         loadSortSettingsInBackground()
+        analytics.log(.reminderScopeSelected(scope: filter.rawValue))
     }
 
     func toggle(_ reminder: Reminder) async {
         do {
             try await toggleCompletionUseCase(reminder)
-            // 완료로 바뀌는 방향만 기록 — 체크 해제는 완료 취소라 세지 않는다.
-            if !reminder.isCompleted { analytics.log(.reminderCompleted(source: "app")) }
+            // 방향별로 구분 기록 — 완료는 채널(source)까지, 해제는 앱에서만 가능하니 무파라미터.
+            if !reminder.isCompleted {
+                analytics.log(.reminderCompleted(source: "app"))
+            } else {
+                analytics.log(.reminderUncompleted)
+            }
             try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
@@ -809,6 +825,7 @@ final class ReminderViewModel {
                 dueDate: dueDate,
                 includesTime: includesTime
             )
+            analytics.log(.reminderUpdated)
             try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
@@ -819,6 +836,7 @@ final class ReminderViewModel {
     func delete(_ reminder: Reminder) async {
         do {
             try await deleteReminderUseCase(reminderID: reminder.id)
+            analytics.log(.reminderDeleted)
             try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
@@ -829,6 +847,7 @@ final class ReminderViewModel {
     func addList(title: String, colorHex: String?) async {
         do {
             let newID = try await addReminderListUseCase(title: title, colorHex: colorHex)
+            analytics.log(.reminderListCreated)
             lists = try await fetchListsUseCase()
             selection = .list(newID)
         } catch {
@@ -840,6 +859,7 @@ final class ReminderViewModel {
     func updateList(listID: String, title: String, colorHex: String?) async {
         do {
             try await updateReminderListUseCase(listID: listID, title: title, colorHex: colorHex)
+            analytics.log(.reminderListUpdated)
             lists = try await fetchListsUseCase()
         } catch {
             errorMessage = error.localizedDescription
@@ -851,6 +871,7 @@ final class ReminderViewModel {
     func deleteList(listID: String) async {
         do {
             try await deleteReminderListUseCase(listID: listID)
+            analytics.log(.reminderListDeleted)
             lists = try await fetchListsUseCase()
             allReminders = try await fetchRemindersUseCase()
             if selectedListID == listID {
@@ -859,5 +880,22 @@ final class ReminderViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 옵션 메뉴의 "완료된 항목 보기" 토글 — 상태 전환 + 결과 상태 기록.
+    /// (뷰가 `showsCompleted`를 직접 뒤집는 대신 이 메서드를 거쳐 로깅을 한곳에 모은다.)
+    func toggleShowsCompleted() {
+        showsCompleted.toggle()
+        analytics.log(.reminderShowCompletedToggled(on: showsCompleted))
+    }
+
+    /// 좌상단 "미리 알림" 버튼 — 외부 앱 점프 직전에 뷰가 호출하는 로깅 훅.
+    func logRemindersAppOpened() {
+        analytics.log(.externalAppOpened(app: "reminders"))
+    }
+
+    /// 접근 거부 화면의 "설정 열기" — 설정 앱 이동 직전에 뷰가 호출하는 로깅 훅.
+    func logPermissionSettingsOpened() {
+        analytics.log(.permissionSettingsOpened(kind: "reminder"))
     }
 }

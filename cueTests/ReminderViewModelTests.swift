@@ -20,7 +20,8 @@ struct ReminderViewModelTests {
         reminders: [Reminder] = [],
         sortSettings: [String: ReminderSortSettings] = [:],
         liveActivityService: any LiveActivityService = DisabledLiveActivityService(),
-        appSettings: AppSettings = .default
+        appSettings: AppSettings = .default,
+        analytics: (any AnalyticsService)? = nil
     ) -> Dependencies {
         makeDependencies(
             remindersRepository: InMemoryRemindersRepository(
@@ -28,7 +29,8 @@ struct ReminderViewModelTests {
             ),
             sortSettings: sortSettings,
             liveActivityService: liveActivityService,
-            appSettings: appSettings
+            appSettings: appSettings,
+            analytics: analytics
         )
     }
 
@@ -45,7 +47,8 @@ struct ReminderViewModelTests {
         remindersRepository: any RemindersRepository,
         sortSettings: [String: ReminderSortSettings] = [:],
         liveActivityService: any LiveActivityService = DisabledLiveActivityService(),
-        appSettings: AppSettings = .default
+        appSettings: AppSettings = .default,
+        analytics: (any AnalyticsService)? = nil
     ) -> Dependencies {
         let reminderSortRepository = InMemoryReminderSortRepository(storage: sortSettings)
         let itemRepository = InMemoryItemRepository()
@@ -94,6 +97,7 @@ struct ReminderViewModelTests {
         // 항상 미결정이라 프리페치가 무조건 건너뛰게 된다.
         dependencies.currentRemindersAccess = CurrentRemindersAccessUseCase(repository: remindersRepository)
         dependencies.moveReminder = MoveReminderUseCase(repository: remindersRepository)
+        if let analytics { dependencies.analytics = analytics }
         return dependencies
     }
 
@@ -338,6 +342,60 @@ struct ReminderViewModelTests {
         #expect(viewModel.isLoading == false)
 
         await repo.releaseFetch()
+    }
+
+    /// 저장(add)은 재조회(fetch round-trip)가 끝나기 **전에** 이미 목록에 항목을 낙관적으로
+    /// 반영해야 한다 — 재조회 공백(EventKit 수백 ms) 동안 행이 비어 보이는 깜빡임 제거의 계약.
+    @Test func addAppliesOptimisticallyBeforeRefetchCompletes() async throws {
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+        await viewModel.onAppear()
+
+        // add 뒤의 reconcile fetch를 게이트로 붙잡아 "재조회 진행 중" 순간을 관측.
+        await repo.closeGate()
+        let task = Task { await viewModel.add(title: "새 항목", toListID: listA.id) }
+
+        var reloadInFlight = false
+        for _ in 0..<200 {
+            if await repo.isFetchWaiting { reloadInFlight = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(reloadInFlight)
+        // 재조회가 아직 안 끝났는데도 새 항목이 이미 화면 목록에 있어야 한다.
+        #expect(viewModel.allReminders.contains { $0.title == "새 항목" })
+
+        await repo.releaseFetch()
+        await task.value
+        #expect(viewModel.allReminders.contains { $0.title == "새 항목" })
+    }
+
+    /// 수정(update)도 재조회 완료 전에 해당 항목이 로컬에서 새 값으로 치환돼 있어야 한다 —
+    /// 편집 종료 직후 옛 제목이 잠깐 보였다 바뀌는 플래시 제거의 계약.
+    @Test func updateAppliesOptimisticallyBeforeRefetchCompletes() async throws {
+        let base = InMemoryRemindersRepository(
+            access: .granted, lists: [listA],
+            reminders: [reminder(id: "1", title: "옛 제목", listID: "A")]
+        )
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+        await viewModel.onAppear()
+
+        await repo.closeGate()
+        let task = Task { await viewModel.update(reminderID: "1", title: "새 제목", notes: nil) }
+
+        var reloadInFlight = false
+        for _ in 0..<200 {
+            if await repo.isFetchWaiting { reloadInFlight = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(reloadInFlight)
+        // 재조회가 아직 안 끝났는데도 제목이 이미 새 값이어야 한다(같은 id, in-place).
+        #expect(viewModel.allReminders.first { $0.id == "1" }?.title == "새 제목")
+
+        await repo.releaseFetch()
+        await task.value
+        #expect(viewModel.allReminders.first { $0.id == "1" }?.title == "새 제목")
     }
 
     /// 자기 쓰기(add) 직후 억제 창 이내에 온 외부 변경 에코는 추가 reload를 유발하지 않는다 —
@@ -1379,6 +1437,279 @@ struct ReminderViewModelTests {
         #expect(saved.preference.field == .manual)
         #expect(saved.manualOrder == ["2", "3", "1"])
     }
+
+    // MARK: - 애널리틱스
+
+    /// 스파이를 배선한 ViewModel — 애널리틱스 테스트 공통 조립.
+    private func makeAnalyticsViewModel(
+        lists: [ReminderList],
+        reminders: [Reminder] = []
+    ) async -> (ReminderViewModel, SpyAnalyticsService) {
+        let analytics = SpyAnalyticsService()
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: lists, reminders: reminders, analytics: analytics
+        ))
+        await viewModel.onAppear()
+        return (viewModel, analytics)
+    }
+
+    /// 첫 적재·초기 selection 해석 같은 프로그램적 경로는 아무 이벤트도 남기지 않는다.
+    @Test func initialLoadLogsNoAnalyticsEvents() async {
+        let (_, analytics) = await makeAnalyticsViewModel(
+            lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        )
+
+        #expect(analytics.events.isEmpty)
+    }
+
+    /// 완료 방향 토글은 `.reminderCompleted(source: "app")` — 기존 로깅 회귀 방지.
+    @Test func completingReminderLogsCompletedWithAppSource() async {
+        let target = reminder(id: "1", isCompleted: false, listID: "A")
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA], reminders: [target])
+
+        await viewModel.toggle(target)
+
+        #expect(analytics.events == [.reminderCompleted(source: "app")])
+    }
+
+    /// 체크 해제(완료 → 미완료) 방향은 `.reminderUncompleted`.
+    @Test func uncompletingReminderLogsUncompleted() async {
+        let target = reminder(id: "1", isCompleted: true, listID: "A")
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA], reminders: [target])
+
+        await viewModel.toggle(target)
+
+        #expect(analytics.events == [.reminderUncompleted])
+    }
+
+    /// add 성공 시 `.reminderCreated` — 기존 로깅 회귀 방지.
+    @Test func addingReminderLogsCreated() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        await viewModel.add(title: "새 미리알림")
+
+        #expect(analytics.events == [.reminderCreated])
+    }
+
+    /// update 성공 시 `.reminderUpdated`.
+    @Test func updatingReminderLogsUpdated() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(
+            lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        )
+
+        await viewModel.update(reminderID: "1", title: "새 제목", notes: nil)
+
+        #expect(analytics.events == [.reminderUpdated])
+    }
+
+    /// delete 성공 시 `.reminderDeleted`.
+    @Test func deletingReminderLogsDeleted() async {
+        let target = reminder(id: "1", listID: "A")
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA], reminders: [target])
+
+        await viewModel.delete(target)
+
+        #expect(analytics.events == [.reminderDeleted])
+    }
+
+    /// 단일 리스트 드래그 재배열은 `.reminderReordered` — 정렬 변경 이벤트가 아니다.
+    @Test func draggingWithinListLogsReordered() async {
+        let now = Date()
+        let (viewModel, analytics) = await makeAnalyticsViewModel(
+            lists: [listA],
+            reminders: [
+                reminder(id: "a", creationDate: now.addingTimeInterval(10), listID: "A"),
+                reminder(id: "b", creationDate: now.addingTimeInterval(20), listID: "A"),
+            ]
+        )
+        viewModel.select(listA)
+
+        await viewModel.moveReminders(fromOffsets: IndexSet(integer: 1), toOffset: 0)
+
+        #expect(analytics.events == [.reminderScopeSelected(scope: "list"), .reminderReordered])
+    }
+
+    /// 스코프 없는 모드(전체)에선 moveReminders가 no-op — 이벤트도 없어야 한다.
+    @Test func draggingWithoutSortScopeLogsNothing() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(
+            lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        )
+        viewModel.selectFilter(.all)
+
+        await viewModel.moveReminders(fromOffsets: IndexSet(integer: 0), toOffset: 1)
+
+        #expect(analytics.events == [.reminderScopeSelected(scope: "all")])
+    }
+
+    /// 전체 모드 섹션 간 이동은 `.reminderMovedToList`.
+    @Test func movingReminderAcrossListsLogsMovedToList() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(
+            lists: [listA, listB],
+            reminders: [reminder(id: "1", listID: "A")]
+        )
+        viewModel.selectFilter(.all)
+
+        await viewModel.moveReminder(reminderID: "1", toListID: "B", toOffset: 0)
+
+        #expect(analytics.events == [.reminderScopeSelected(scope: "all"), .reminderMovedToList])
+    }
+
+    /// 전체 모드에서 같은 섹션 안 드랍은 이동이 아니라 재배열 — `.reminderReordered`.
+    @Test func droppingWithinSameSectionLogsReordered() async {
+        let now = Date()
+        let (viewModel, analytics) = await makeAnalyticsViewModel(
+            lists: [listA],
+            reminders: [
+                reminder(id: "1", creationDate: now.addingTimeInterval(10), listID: "A"),
+                reminder(id: "2", creationDate: now.addingTimeInterval(20), listID: "A"),
+            ]
+        )
+        viewModel.selectFilter(.all)
+
+        await viewModel.moveReminder(reminderID: "1", toListID: "A", toOffset: 2)
+
+        #expect(analytics.events == [.reminderScopeSelected(scope: "all"), .reminderReordered])
+    }
+
+    /// 정렬 기준 변경 — 결과 기준/방향의 rawValue가 파라미터로 남는다.
+    @Test func changingSortFieldLogsSortChanged() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(
+            lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        )
+        viewModel.select(listA)
+
+        await viewModel.selectSortField(.dueDate)
+
+        #expect(analytics.events == [
+            .reminderScopeSelected(scope: "list"),
+            .reminderSortChanged(key: "dueDate", order: "ascending"),
+        ])
+    }
+
+    /// 정렬 방향 변경도 같은 이벤트 — 바뀐 방향이 order로 남는다.
+    @Test func changingSortDirectionLogsSortChanged() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(
+            lists: [listA], reminders: [reminder(id: "1", listID: "A")]
+        )
+        viewModel.select(listA)
+
+        await viewModel.selectSortDirection(.descending)
+
+        #expect(analytics.events == [
+            .reminderScopeSelected(scope: "list"),
+            .reminderSortChanged(key: "manual", order: "descending"),
+        ])
+    }
+
+    /// 고정 정렬 스코프(예정)에선 정렬 변경이 no-op — 이벤트도 없다.
+    @Test func changingSortInFixedScopeLogsNothing() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+        viewModel.selectFilter(.scheduled)
+
+        await viewModel.selectSortField(.dueDate)
+
+        #expect(analytics.events == [.reminderScopeSelected(scope: "scheduled")])
+    }
+
+    /// 완료된 항목 보기 토글 — 켤 때 on: true, 끌 때 on: false.
+    @Test func togglingShowsCompletedLogsState() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        viewModel.toggleShowsCompleted()
+        #expect(viewModel.showsCompleted == true)
+        viewModel.toggleShowsCompleted()
+        #expect(viewModel.showsCompleted == false)
+
+        #expect(analytics.events == [
+            .reminderShowCompletedToggled(on: true),
+            .reminderShowCompletedToggled(on: false),
+        ])
+    }
+
+    /// 리스트 생성 성공 시 `.reminderListCreated`. (생성 직후 자동 전환은 프로그램적 selection —
+    /// scope 이벤트를 남기지 않는다.)
+    @Test func addingListLogsListCreated() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        await viewModel.addList(title: "사이드", colorHex: nil)
+
+        #expect(analytics.events == [.reminderListCreated])
+    }
+
+    /// 리스트 생성 실패(빈 제목)엔 이벤트가 없다.
+    @Test func failedAddListLogsNothing() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        await viewModel.addList(title: "   ", colorHex: nil)
+
+        #expect(analytics.events.isEmpty)
+    }
+
+    /// 리스트 수정 성공 시 `.reminderListUpdated`.
+    @Test func updatingListLogsListUpdated() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        await viewModel.updateList(listID: "A", title: "새 이름", colorHex: nil)
+
+        #expect(analytics.events == [.reminderListUpdated])
+    }
+
+    /// 리스트 삭제 성공 시 `.reminderListDeleted`.
+    @Test func deletingListLogsListDeleted() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA, listB])
+
+        await viewModel.deleteList(listID: "B")
+
+        #expect(analytics.events == [.reminderListDeleted])
+    }
+
+    /// 사용자 리스트 선택은 scope "list"로 남는다(개별 리스트 id는 수집하지 않는다).
+    @Test func selectingListLogsScopeSelected() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA, listB])
+
+        viewModel.select(listB)
+
+        #expect(analytics.events == [.reminderScopeSelected(scope: "list")])
+    }
+
+    /// 시스템 필터 선택은 필터 식별자(rawValue)가 scope로 남는다.
+    @Test func selectingSystemFilterLogsScopeIdentifier() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        viewModel.selectFilter(.today)
+
+        #expect(analytics.events == [.reminderScopeSelected(scope: "today")])
+    }
+
+    /// 좌상단 "미리 알림" 버튼 — 외부 앱 열기 이벤트(뷰가 openURL 직전에 호출).
+    @Test func openingRemindersAppLogsExternalAppOpened() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        viewModel.logRemindersAppOpened()
+
+        #expect(analytics.events == [.externalAppOpened(app: "reminders")])
+    }
+
+    /// 접근 거부 화면의 "설정 열기" — 권한 설정 이동 이벤트.
+    @Test func openingPermissionSettingsLogsReminderKind() async {
+        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
+
+        viewModel.logPermissionSettingsOpened()
+
+        #expect(analytics.events == [.permissionSettingsOpened(kind: "reminder")])
+    }
+}
+
+// MARK: - 애널리틱스 스파이
+
+private final class SpyAnalyticsService: AnalyticsService, @unchecked Sendable {
+    private(set) var events: [AnalyticsEvent] = []
+
+    func log(_ event: AnalyticsEvent) {
+        events.append(event)
+    }
+
+    func log(name: String, parameters: [String: String]) {}
 }
 
 /// `fetchReminders`를 게이트로 붙잡을 수 있는 리포지토리 더블 — 나머지는 InMemory에 위임한다.

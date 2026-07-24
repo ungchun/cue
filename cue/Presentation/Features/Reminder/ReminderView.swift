@@ -151,6 +151,7 @@ struct ReminderView: View {
     private var openRemindersAppButton: some View {
         Button {
             if let url = URL(string: "x-apple-reminderkit://") {
+                viewModel.logRemindersAppOpened()
                 openURL(url)
             }
         } label: {
@@ -200,7 +201,7 @@ struct ReminderView: View {
             // 오늘/예정은 마감일 필터라 완료 항목 매핑이 모호 — 토글 자체를 숨겨 혼동을 줄인다.
             if canToggleCompleted {
                 Button {
-                    viewModel.showsCompleted.toggle()
+                    viewModel.toggleShowsCompleted()
                 } label: {
                     Label(
                         viewModel.showsCompleted ? "Hide Completed" : "Show Completed",
@@ -335,6 +336,7 @@ struct ReminderView: View {
         } actions: {
             Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
+                    viewModel.logPermissionSettingsOpened()
                     UIApplication.shared.open(url)
                 }
             }
