@@ -20,7 +20,8 @@ struct ScheduleLiveActivityWidget: Widget {
                 calendarMonthOffset: context.state.calendarMonthOffset,
                 monthEventDots: context.state.monthEventDots
             )
-            .padding(ScheduleMetrics.outerPadding)
+            .padding(.vertical, ScheduleMetrics.outerPadding)
+            .padding(.horizontal, ScheduleMetrics.outerHorizontalPadding)
             // iOS 26 잠금화면 LA는 표준(.large) 타입 램프 자체가 커져(caption1 줄높이
             // 실측 16.3 vs 이전 14.3) 예산 136pt에 행이 몇 개 못 들어간다. 레퍼런스급
             // 밀도(~11pt 렌더)를 위해 타입 스케일을 xSmall로 고정 — 패커 줄높이 추정도
