@@ -112,11 +112,8 @@ enum ScheduleMetrics {
     static var timeLine: CGFloat {
         UIFont.preferredFont(forTextStyle: .caption2, compatibleWith: defaultTraits).lineHeight
     }
-    /// 날짜 헤더 폰트 크기 — caption2 하한(11pt)보다 작게 쓰라는 디자인 결정이라
-    /// 텍스트 스타일 대신 고정 크기를 예외적으로 쓴다. 뷰(ScheduleDayView)와 동기.
-    static let headerFontSize: CGFloat = 10
-    /// 날짜 헤더 줄높이 — 같은 폰트 메트릭으로 추정=렌더 유지.
-    static var header: CGFloat { UIFont.systemFont(ofSize: headerFontSize).lineHeight }
+    /// 날짜 헤더는 caption2(11pt)로 렌더 — 뷰(ScheduleDayView)와 동기.
+    static var header: CGFloat { timeLine }
     static func eventHeight(_ event: LiveEventItem) -> CGFloat {
         // 별도 글리프 마진 없음 — preferredFont 줄높이가 이미 한글 시스템 폰트의 큰 줄박스
         // (11pt→15.1)를 반영한 렌더 실측이라, 마진을 더하면 예산만 이중으로 깎인다.

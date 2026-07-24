@@ -147,8 +147,8 @@ private struct ScheduleDayView: View {
         VStack(alignment: .leading, spacing: ScheduleMetrics.rowGap) {
             if let label = chunk.label {
                 Text(label)
-                    // 헤더는 caption2 하한(11pt)보다 작게 — 고정 10pt(디자인 결정, 패커 header와 동기).
-                    .font(.system(size: ScheduleMetrics.headerFontSize, weight: .semibold))
+                    // 헤더를 이벤트 제목보다 한 단계 작게 — 패커의 header 추정(caption2)과 동기.
+                    .font(.caption2.weight(.semibold))
                     // 오늘만 강조, 그 외 날짜는 옅게. 앱이 심은 라벨과 같은 로케일 키로 비교.
                     .foregroundStyle(label == String(localized: "Today") ? Color.primary : Color.secondary)
             }
