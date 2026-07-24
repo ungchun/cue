@@ -95,8 +95,9 @@ enum ScheduleMetrics {
     static let columnGap: CGFloat = Spacing.md          // 16
     /// 컬럼 내 날짜 묶음 사이 간격 — 160pt 예산에 한 줄이라도 더 들어가게 조밀하게.
     static let dayGap: CGFloat = Spacing.xs             // 4
-    /// 헤더↔이벤트 / 이벤트 사이 간격.
-    static let rowGap: CGFloat = Spacing.xs             // 4
+    /// 헤더↔이벤트 / 이벤트 사이 간격 — 한글 줄박스가 커서(caption2 하한 11pt도 15.1pt)
+    /// 텍스트로는 더 못 줄이므로 크롬에서 회수한다.
+    static let rowGap: CGFloat = Spacing.xxs            // 2
 
     /// 줄높이는 **xSmall 콘텐츠 크기로 고정해** 읽는다 — iOS 26의 표준(.large) 타입 램프가
     /// 커져(caption1 실측 16.3, 이전 14.3) 잠금화면 예산 136pt에 행이 몇 개 못 들어간다.
@@ -111,15 +112,12 @@ enum ScheduleMetrics {
     }
     /// 날짜 헤더는 caption2로 렌더 — 뷰(ScheduleDayView)와 동기.
     static var header: CGFloat { timeLine }
-    /// CJK·이모지 제목은 SF 추정보다 줄이 ~2pt 크게 렌더된다 — 이벤트당 안전 마진.
-    /// 없으면 딱 맞게 채운 열이 실렌더에서 1~2pt 넘쳐 마지막 줄이 잘릴 수 있다.
-    static let glyphMargin: CGFloat = Spacing.xxs
-
     static func eventHeight(_ event: LiveEventItem) -> CGFloat {
-        let base = event.isAllDay
+        // 별도 글리프 마진 없음 — preferredFont 줄높이가 이미 한글 시스템 폰트의 큰 줄박스
+        // (11pt→15.1)를 반영한 렌더 실측이라, 마진을 더하면 예산만 이중으로 깎인다.
+        event.isAllDay
             ? titleLine + Spacing.xxs * 2   // 캡슐 상하 패딩(2) — 뷰(ScheduleEventRow)와 동기
             : titleLine + timeLine          // 제목 + 시간 두 줄(간격 없음)
-        return base + glyphMargin
     }
 
     /// 160pt(시스템 최대) − 상하 패딩.
