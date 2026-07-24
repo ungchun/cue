@@ -151,7 +151,7 @@ final class FocusViewModel {
     }
 
     func stopSession() {
-        analytics.log(.focusEnded)
+        analytics.log(.focusEnded(source: "app"))
         cancelAllFocusAlarms()
         FocusAlarmPlan.clear()
         clearActive()
@@ -159,7 +159,7 @@ final class FocusViewModel {
 
     func pause() {
         guard isActive, !isPaused else { return }
-        analytics.log(.focusPaused)
+        analytics.log(.focusPaused(source: "app"))
         isPaused = true
         if let fire = fireDate { frozenRemaining = max(0, fire.timeIntervalSinceNow) }
         remaining = frozenRemaining
@@ -169,7 +169,7 @@ final class FocusViewModel {
 
     func resume() {
         guard isActive, isPaused else { return }
-        analytics.log(.focusResumed)
+        analytics.log(.focusResumed(source: "app"))
         isPaused = false
         fireDate = Date().addingTimeInterval(frozenRemaining)
         remaining = frozenRemaining

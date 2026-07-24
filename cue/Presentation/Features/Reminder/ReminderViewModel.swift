@@ -750,7 +750,7 @@ final class ReminderViewModel {
         do {
             try await toggleCompletionUseCase(reminder)
             // 완료로 바뀌는 방향만 기록 — 체크 해제는 완료 취소라 세지 않는다.
-            if !reminder.isCompleted { analytics.log(.reminderCompleted) }
+            if !reminder.isCompleted { analytics.log(.reminderCompleted(source: "app")) }
             try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
