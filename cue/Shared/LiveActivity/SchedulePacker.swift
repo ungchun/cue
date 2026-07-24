@@ -97,9 +97,9 @@ enum ScheduleMetrics {
     static let columnGap: CGFloat = Spacing.smd         // 12
     /// 컬럼 내 날짜 묶음 사이 간격 — 160pt 예산에 한 줄이라도 더 들어가게 조밀하게.
     static let dayGap: CGFloat = Spacing.xs             // 4
-    /// 헤더↔이벤트 / 이벤트 사이 간격 — 한글 줄박스가 커서(caption2 하한 11pt도 15.1pt)
-    /// 텍스트로는 더 못 줄이므로 크롬에서 회수한다.
-    static let rowGap: CGFloat = Spacing.xxs            // 2
+    /// 헤더↔이벤트 / 이벤트 사이 간격 — 0. 한글 폰트 리딩(글자 위아래 투명 여백 ~2pt씩)만으로
+    /// 시각적 분리가 충분하다(잉크 기준 ~4.5pt로 보임).
+    static let rowGap: CGFloat = Spacing.zero
 
     /// 줄높이는 **xSmall 콘텐츠 크기로 고정해** 읽는다 — iOS 26의 표준(.large) 타입 램프가
     /// 커져(caption1 실측 16.3, 이전 14.3) 잠금화면 예산 136pt에 행이 몇 개 못 들어간다.
