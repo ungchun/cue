@@ -114,7 +114,8 @@ private struct ScheduleDayView: View {
         VStack(alignment: .leading, spacing: ScheduleMetrics.rowGap) {
             if let label = chunk.label {
                 Text(label)
-                    .font(.caption.weight(.semibold))
+                    // 헤더를 이벤트 제목보다 한 단계 작게 — 패커의 header 추정(caption2)과 동기.
+                    .font(.caption2.weight(.semibold))
                     // 오늘만 강조, 그 외 날짜는 옅게. 앱이 심은 라벨과 같은 로케일 키로 비교.
                     .foregroundStyle(label == String(localized: "Today") ? Color.primary : Color.secondary)
             }
@@ -135,17 +136,16 @@ private struct ScheduleEventRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(color)
                 .lineLimit(1)
-                // 캡슐 패딩 축소 — 세로는 패커의 eventHeight(allDay)와 반드시 동기.
+                // 캡슐 세로 패딩 없음(글리프 내부 여백으로 충분) — 패커 eventHeight(allDay)와 동기.
                 .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xxs)
                 .background(Capsule().fill(color.opacity(0.18)))
         } else {
             HStack(alignment: .center, spacing: Spacing.xs) {
                 RoundedRectangle(cornerRadius: Spacing.xxs)
                     .fill(color)
-                    .frame(width: Spacing.xs)
+                    .frame(width: Spacing.xxs)
                     .frame(maxHeight: .infinity)
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                VStack(alignment: .leading, spacing: Spacing.zero) {
                     Text(event.title)
                         // 행이 조밀해진 만큼 제목 굵기를 한 단계 올려 가독성 유지.
                         .font(.caption.weight(.semibold))

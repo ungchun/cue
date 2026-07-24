@@ -100,12 +100,13 @@ enum ScheduleMetrics {
 
     static var titleLine: CGFloat { UIFont.preferredFont(forTextStyle: .caption1).lineHeight }
     static var timeLine: CGFloat { UIFont.preferredFont(forTextStyle: .caption2).lineHeight }
-    static var header: CGFloat { titleLine }
+    /// 날짜 헤더는 caption2로 렌더 — 뷰(ScheduleDayView)와 동기.
+    static var header: CGFloat { timeLine }
 
     static func eventHeight(_ event: LiveEventItem) -> CGFloat {
         event.isAllDay
-            ? titleLine + Spacing.xxs * 2          // 캡슐 상하 패딩 — 뷰(ScheduleEventRow)와 동기
-            : titleLine + Spacing.xxs + timeLine   // 제목 + 시간 두 줄
+            ? titleLine                 // 캡슐 상하 패딩 없음 — 뷰(ScheduleEventRow)와 동기
+            : titleLine + timeLine      // 제목 + 시간 두 줄(간격 없음)
     }
 
     /// 160pt(시스템 최대) − 상하 패딩.
