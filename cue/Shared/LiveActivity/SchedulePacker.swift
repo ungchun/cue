@@ -105,8 +105,8 @@ enum ScheduleMetrics {
 
     static func eventHeight(_ event: LiveEventItem) -> CGFloat {
         event.isAllDay
-            ? titleLine                 // 캡슐 상하 패딩 없음 — 뷰(ScheduleEventRow)와 동기
-            : titleLine + timeLine      // 제목 + 시간 두 줄(간격 없음)
+            ? titleLine + Spacing.xxs * 2   // 캡슐 상하 패딩(2) — 뷰(ScheduleEventRow)와 동기
+            : titleLine + timeLine          // 제목 + 시간 두 줄(간격 없음)
     }
 
     /// 160pt(시스템 최대) − 상하 패딩.

@@ -136,8 +136,11 @@ private struct ScheduleEventRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(color)
                 .lineLimit(1)
-                // 캡슐 세로 패딩 없음(글리프 내부 여백으로 충분) — 패커 eventHeight(allDay)와 동기.
                 .padding(.horizontal, Spacing.sm)
+                // 세로 패딩만 얇게(2) — 패커 eventHeight(allDay)와 동기.
+                .padding(.vertical, Spacing.xxs)
+                // 캡슐이 컬럼 가로를 꽉 채우고 텍스트는 가운데 정렬.
+                .frame(maxWidth: .infinity)
                 .background(Capsule().fill(color.opacity(0.18)))
         } else {
             HStack(alignment: .center, spacing: Spacing.xs) {
