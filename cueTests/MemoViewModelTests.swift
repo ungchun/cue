@@ -15,7 +15,8 @@ struct MemoViewModelTests {
     private func makeViewModel(
         memo: Memo = .default,
         quotaRepository: InMemoryLiveActivationQuotaRepository = InMemoryLiveActivationQuotaRepository(),
-        isPremium: Bool = false
+        isPremium: Bool = false,
+        analytics: SpyAnalyticsService? = nil
     ) -> (MemoViewModel, InMemoryMemoRepository, RecordingMemoLiveActivity) {
         let repo = InMemoryMemoRepository(memo: memo)
         let service = RecordingMemoLiveActivity()
@@ -25,6 +26,7 @@ struct MemoViewModelTests {
         deps.startMemoLiveActivity = StartMemoLiveActivityUseCase(service: service)
         deps.endMemoLiveActivity = EndMemoLiveActivityUseCase(service: service)
         deps.consumeLiveActivation = ConsumeLiveActivationUseCase(repository: quotaRepository)
+        if let analytics { deps.analytics = analytics }
         let viewModel = MemoViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: isPremium))
         return (viewModel, repo, service)
     }
@@ -258,6 +260,71 @@ struct MemoViewModelTests {
         #expect(await repo.fetch().colorHex == "#000000")
     }
 
+    // MARK: - 분석 (memoSaved / memoCleared)
+
+    /// 지우기(x) 버튼 경로 — 내용이 있던 메모가 빈 문자열이 되면 `.memoCleared` 1회.
+    @Test func clearingTextLogsMemoCleared() async {
+        let analytics = SpyAnalyticsService()
+        let (viewModel, _, _) = makeViewModel(
+            memo: Memo(text: "할 일", colorHex: "#FF3B30"),
+            analytics: analytics
+        )
+        await viewModel.onAppear()
+
+        await viewModel.setText("")
+
+        #expect(analytics.events == [.memoCleared])
+    }
+
+    /// 빈 메모 → 내용 있음 전환에 `.memoSaved` 1회 — 지우기 로깅이 이 경로를 깨지 않아야 한다.
+    @Test func typingIntoEmptyMemoLogsMemoSavedOnce() async {
+        let analytics = SpyAnalyticsService()
+        let (viewModel, _, _) = makeViewModel(analytics: analytics)
+
+        await viewModel.setText("새 메모")
+        await viewModel.setText("새 메모 이어서")
+
+        #expect(analytics.events == [.memoSaved])
+    }
+
+    /// 내용 → 내용 변경은 아무것도 로깅하지 않는다.
+    @Test func editingNonEmptyTextLogsNothing() async {
+        let analytics = SpyAnalyticsService()
+        let (viewModel, _, _) = makeViewModel(
+            memo: Memo(text: "처음", colorHex: "#FF3B30"),
+            analytics: analytics
+        )
+        await viewModel.onAppear()
+
+        await viewModel.setText("바뀐 메모")
+
+        #expect(analytics.events.isEmpty)
+    }
+
+    /// 빈 → 빈은 아무것도 로깅하지 않는다 — 빈 메모에서 지우기를 눌러도 신호가 아니다.
+    @Test func clearingAlreadyEmptyMemoLogsNothing() async {
+        let analytics = SpyAnalyticsService()
+        let (viewModel, _, _) = makeViewModel(analytics: analytics)
+
+        await viewModel.setText("")
+
+        #expect(analytics.events.isEmpty)
+    }
+
+    /// 공백만 남기는 것도 지우기다 — trim 기준은 `.memoSaved`와 대칭.
+    @Test func replacingTextWithWhitespaceLogsMemoCleared() async {
+        let analytics = SpyAnalyticsService()
+        let (viewModel, _, _) = makeViewModel(
+            memo: Memo(text: "할 일", colorHex: "#FF3B30"),
+            analytics: analytics
+        )
+        await viewModel.onAppear()
+
+        await viewModel.setText("   ")
+
+        #expect(analytics.events == [.memoCleared])
+    }
+
     // MARK: - 활성 중 텍스트 변경
 
     @Test func clearingTextWhileActiveEndsLiveActivity() async {
@@ -284,6 +351,19 @@ struct MemoViewModelTests {
         #expect(await service.startMemoCalls.last?.text == "바뀐 메모")
         #expect(viewModel.liveActivityActive == true)
     }
+}
+
+// MARK: - 분석 이벤트 기록용 더블
+
+/// `log(_:)`가 동기라 actor를 못 쓴다 — 테스트는 MainActor 단일 스레드라 @unchecked로 안전.
+private final class SpyAnalyticsService: AnalyticsService, @unchecked Sendable {
+    private(set) var events: [AnalyticsEvent] = []
+
+    func log(_ event: AnalyticsEvent) {
+        events.append(event)
+    }
+
+    func log(name: String, parameters: [String: String]) {}
 }
 
 // MARK: - 메모 LA 호출 기록용 더블

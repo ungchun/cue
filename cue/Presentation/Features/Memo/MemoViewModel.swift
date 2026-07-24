@@ -63,14 +63,18 @@ final class MemoViewModel {
     static var maxTextLength: Int { StartMemoLiveActivityUseCase.maxTextLength }
 
     /// 텍스트 변경 — 상한(120자)으로 잘라 저장하고, LA가 떠 있으면 반영.
-    /// 분석은 키 입력마다가 아니라 "빈 메모 → 내용 있음" 전환에 1회만 — 새 메모 작성 신호.
+    /// 분석은 키 입력마다가 아니라 빈↔내용 전환에 1회만 — "빈 → 내용"은 새 메모 작성
+    /// 신호(`memoSaved`), "내용 → 빈"은 지우기 신호(`memoCleared`). 빈 → 빈은 무음.
     func setText(_ text: String) async {
         let capped = String(text.prefix(Self.maxTextLength))
         let wasEmpty = memo.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let isEmpty = capped.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         memo.text = capped
         await saveMemoUseCase(memo)
-        if wasEmpty, !capped.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if wasEmpty, !isEmpty {
             analytics.log(.memoSaved)
+        } else if !wasEmpty, isEmpty {
+            analytics.log(.memoCleared)
         }
         await refreshLiveActivityIfActive()
     }
