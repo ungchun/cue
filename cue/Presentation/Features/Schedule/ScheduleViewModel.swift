@@ -203,6 +203,11 @@ final class ScheduleViewModel {
     /// 활성이면 종료. 아니면 `eventsByDay`의 모든 이벤트를 use case로 보내 게시한다 — 다가오는
     /// 일정이 없으면 use case가 `false`를 반환해 LA를 띄우지 않는다(날짜 그룹·라벨·캡은 use case가 처리).
     /// 무료 하루 한도를 먼저 소비 — `.denied`면 기존 LA를 건드리지 않는다(뷰가 Premium 토스트).
+    // ⚠️ 임시 mock 프리뷰 — true면 라이브 버튼이 실제 일정 대신 mock 케이스를 순회 게시한다
+    // (누를 때마다 다음 케이스, 첫 일정 제목에 [n/총 이름] 태그). 눈 검증 후 파일과 함께 제거.
+    static let usesLiveActivityMockCases = true
+    private var mockCaseIndex = 0
+
     @discardableResult
     func toggleLiveActivity() async -> LiveActivationVerdict? {
         let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
@@ -215,6 +220,21 @@ final class ScheduleViewModel {
         if liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false
+        }
+        if Self.usesLiveActivityMockCases {
+            let cases = ScheduleLiveActivityMockCases.all(now: now())
+            let mockCase = cases[mockCaseIndex % cases.count]
+            mockCaseIndex += 1
+            do {
+                // 빈 케이스는 use case가 false를 반환해 LA가 안 뜬다 — "없음" 동작도 그대로 검증.
+                liveActivityActive = try await startLiveActivityUseCase(
+                    events: mockCase.events, weekEvents: []
+                )
+            } catch {
+                errorMessage = String(localized: "Couldn't start Live Activity.")
+                return nil
+            }
+            return verdict
         }
         do {
             liveActivityActive = try await startLiveActivityUseCase(
