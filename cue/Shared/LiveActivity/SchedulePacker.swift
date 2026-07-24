@@ -98,11 +98,11 @@ enum ScheduleMetrics {
     /// 헤더↔이벤트 / 이벤트 사이 간격.
     static let rowGap: CGFloat = Spacing.xs             // 4
 
-    /// 줄높이는 **기본(large) 콘텐츠 크기로 고정해** 읽는다 — 위젯 익스텐션 프로세스의
-    /// `preferredFont`는 기기 글자 크기가 기본이어도 부풀려진 값(실측 16.3/15.1)을 돌려줘,
-    /// 실제 렌더(≈14.3/13.1 스케일)보다 행을 크게 추정 → 패커가 예산을 30~40pt 남기고도
-    /// 조기 마감해 뒷날 일정이 통째로 잘렸다(실기기 진단 오버레이로 확정).
-    private static let defaultTraits = UITraitCollection(preferredContentSizeCategory: .large)
+    /// 줄높이는 **xSmall 콘텐츠 크기로 고정해** 읽는다 — iOS 26의 표준(.large) 타입 램프가
+    /// 커져(caption1 실측 16.3, 이전 14.3) 잠금화면 예산 136pt에 행이 몇 개 못 들어간다.
+    /// 뷰가 `.dynamicTypeSize(.xSmall)`로 렌더를 고정하므로, 추정도 같은 카테고리로 고정해
+    /// 추정=렌더를 유지한다(어긋나면 조기 마감·잘림이 재발 — 실기기 진단 오버레이로 확정한 이력).
+    private static let defaultTraits = UITraitCollection(preferredContentSizeCategory: .extraSmall)
     static var titleLine: CGFloat {
         UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: defaultTraits).lineHeight
     }

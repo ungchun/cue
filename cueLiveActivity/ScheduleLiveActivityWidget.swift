@@ -20,6 +20,11 @@ struct ScheduleLiveActivityWidget: Widget {
                 monthEventDots: context.state.monthEventDots
             )
             .padding(ScheduleMetrics.outerPadding)
+            // iOS 26 잠금화면 LA는 표준(.large) 타입 램프 자체가 커져(caption1 줄높이
+            // 실측 16.3 vs 이전 14.3) 예산 136pt에 행이 몇 개 못 들어간다. 레퍼런스급
+            // 밀도(~11pt 렌더)를 위해 타입 스케일을 xSmall로 고정 — 패커 줄높이 추정도
+            // 같은 카테고리로 고정해(ScheduleMetrics) 추정=렌더를 유지한다.
+            .dynamicTypeSize(.xSmall)
         } dynamicIsland: { context in
             DynamicIsland {
                 // 꾸욱 눌렀을 때 — 좌상단 월 · 우상단 "오늘 일정" 카운트 · 하단 이번 주 캘린더.
