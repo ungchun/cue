@@ -93,8 +93,8 @@ enum ScheduleMetrics {
     static let outerPadding: CGFloat = Spacing.smd      // 12
     /// 두 열 사이 간격.
     static let columnGap: CGFloat = Spacing.md          // 16
-    /// 컬럼 내 날짜 묶음 사이 간격.
-    static let dayGap: CGFloat = Spacing.sm             // 8
+    /// 컬럼 내 날짜 묶음 사이 간격 — 160pt 예산에 한 줄이라도 더 들어가게 조밀하게.
+    static let dayGap: CGFloat = Spacing.xs             // 4
     /// 헤더↔이벤트 / 이벤트 사이 간격.
     static let rowGap: CGFloat = Spacing.xs             // 4
 
@@ -104,7 +104,7 @@ enum ScheduleMetrics {
 
     static func eventHeight(_ event: LiveEventItem) -> CGFloat {
         event.isAllDay
-            ? titleLine + Spacing.xs * 2           // 캡슐 상하 패딩
+            ? titleLine + Spacing.xxs * 2          // 캡슐 상하 패딩 — 뷰(ScheduleEventRow)와 동기
             : titleLine + Spacing.xxs + timeLine   // 제목 + 시간 두 줄
     }
 

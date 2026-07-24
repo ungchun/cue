@@ -135,8 +135,9 @@ private struct ScheduleEventRow: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(color)
                 .lineLimit(1)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.xs)
+                // 캡슐 패딩 축소 — 세로는 패커의 eventHeight(allDay)와 반드시 동기.
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, Spacing.xxs)
                 .background(Capsule().fill(color.opacity(0.18)))
         } else {
             HStack(alignment: .center, spacing: Spacing.xs) {
@@ -146,7 +147,8 @@ private struct ScheduleEventRow: View {
                     .frame(maxHeight: .infinity)
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(event.title)
-                        .font(.caption.weight(.medium))
+                        // 행이 조밀해진 만큼 제목 굵기를 한 단계 올려 가독성 유지.
+                        .font(.caption.weight(.semibold))
                         .lineLimit(1)
                     Text(timeText)
                         .font(.caption2)
