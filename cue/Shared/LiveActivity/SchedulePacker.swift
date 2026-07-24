@@ -89,9 +89,8 @@ enum SchedulePacker {
 /// 잘라 **총높이 ≤ 160pt가 보장**된다. caption/caption2 + 좁은 간격 기준 컬럼당 시간 이벤트
 /// 3개(종일은 더) 정도 들어간다.
 enum ScheduleMetrics {
-    /// 위젯 상하좌우 패딩 — 디자인 결정으로 토큰(12/16) 사이 값을 직접 쓴다.
-    /// 이 값이 바뀌면 columnMax(높이 예산)가 자동으로 따라간다.
-    static let outerPadding: CGFloat = 14
+    /// 위젯 상하좌우 패딩 — 이 값이 바뀌면 columnMax(높이 예산)가 자동으로 따라간다.
+    static let outerPadding: CGFloat = Spacing.md       // 16
     /// 두 열 사이 간격.
     static let columnGap: CGFloat = Spacing.md          // 16
     /// 컬럼 내 날짜 묶음 사이 간격 — 160pt 예산에 한 줄이라도 더 들어가게 조밀하게.
