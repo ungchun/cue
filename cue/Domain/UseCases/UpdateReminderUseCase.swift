@@ -13,18 +13,20 @@ struct UpdateReminderUseCase: Sendable {
         self.repository = repository
     }
 
+    /// 갱신된 항목을 돌려준다 — 같은 id를 로컬에서 in-place 치환하기 위함(add와 같은 계약).
+    @discardableResult
     func callAsFunction(
         reminderID: String,
         title: String,
         notes: String?,
         dueDate: Date? = nil,
         includesTime: Bool = false
-    ) async throws {
+    ) async throws -> Reminder {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw DomainError.validation(String(localized: "Please enter a title."))
         }
-        try await repository.updateReminder(
+        return try await repository.updateReminder(
             reminderID: reminderID,
             title: trimmed,
             notes: ReminderNotes.normalized(notes),

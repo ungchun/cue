@@ -63,13 +63,14 @@ actor EventKitRemindersRepository: RemindersRepository {
         try store.save(reminder, commit: true)
     }
 
+    @discardableResult
     func addReminder(
         title: String,
         notes: String?,
         dueDate: Date?,
         includesTime: Bool,
         toListID listID: String
-    ) async throws {
+    ) async throws -> Reminder {
         guard let calendar = store.calendars(for: .reminder)
             .first(where: { $0.calendarIdentifier == listID }) else {
             throw DomainError.notFound
@@ -90,15 +91,19 @@ actor EventKitRemindersRepository: RemindersRepository {
             }
         }
         try store.save(reminder, commit: true)
+        // 저장 직후의 EKReminder는 실제 id(calendarItemIdentifier)·creationDate를 갖는다 —
+        // 호출자가 재조회 없이 곧장 로컬 목록에 꽂을 수 있는 완성 엔티티로 돌려준다.
+        return ReminderMapper.toReminder(reminder)
     }
 
+    @discardableResult
     func updateReminder(
         reminderID: String,
         title: String,
         notes: String?,
         dueDate: Date?,
         includesTime: Bool
-    ) async throws {
+    ) async throws -> Reminder {
         guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
             throw DomainError.notFound
         }
@@ -120,6 +125,7 @@ actor EventKitRemindersRepository: RemindersRepository {
             reminder.dueDateComponents = nil
         }
         try store.save(reminder, commit: true)
+        return ReminderMapper.toReminder(reminder)
     }
 
     func deleteReminder(reminderID: String) async throws {

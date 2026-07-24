@@ -785,17 +785,30 @@ final class ReminderViewModel {
             return
         }
         do {
-            try await addReminderUseCase(
+            let created = try await addReminderUseCase(
                 title: title,
                 notes: notes,
                 dueDate: dueDate,
                 includesTime: includesTime,
                 listID: listID
             )
+            applyOptimistically(created)
             analytics.log(.reminderCreated)
             try await reloadReminders()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 낙관적 로컬 반영 — 방금 저장/갱신된 항목을 재조회를 기다리지 않고 목록에 즉시
+    /// 삽입(신규)·치환(같은 id)한다. EventKit 재조회 round-trip(수백 ms) 동안 행이
+    /// 사라지거나 옛 값이 보이는 깜빡임을 없앤다(Apple 미리알림과 같은 감각). 뒤따르는
+    /// `reloadReminders`는 같은 데이터를 다시 받아 화면 변화 없는 조용한 reconcile이 된다.
+    private func applyOptimistically(_ reminder: Reminder) {
+        if let index = allReminders.firstIndex(where: { $0.id == reminder.id }) {
+            allReminders[index] = reminder
+        } else {
+            allReminders.append(reminder)
         }
     }
 
@@ -818,13 +831,14 @@ final class ReminderViewModel {
         includesTime: Bool = false
     ) async {
         do {
-            try await updateReminderUseCase(
+            let updated = try await updateReminderUseCase(
                 reminderID: reminderID,
                 title: title,
                 notes: notes,
                 dueDate: dueDate,
                 includesTime: includesTime
             )
+            applyOptimistically(updated)
             analytics.log(.reminderUpdated)
             try await reloadReminders()
         } catch {

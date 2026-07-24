@@ -63,36 +63,38 @@ actor InMemoryRemindersRepository: RemindersRepository {
         reminders[index].isCompleted = completed
     }
 
+    @discardableResult
     func addReminder(
         title: String,
         notes: String?,
         dueDate: Date?,
         includesTime: Bool,
         toListID listID: String
-    ) async throws {
+    ) async throws -> Reminder {
         guard lists.contains(where: { $0.id == listID }) else {
             throw DomainError.notFound
         }
-        reminders.append(
-            Reminder(
-                id: UUID().uuidString,
-                title: title,
-                isCompleted: false,
-                notes: notes,
-                dueDate: dueDate,
-                includesTime: includesTime,
-                listID: listID
-            )
+        let created = Reminder(
+            id: UUID().uuidString,
+            title: title,
+            isCompleted: false,
+            notes: notes,
+            dueDate: dueDate,
+            includesTime: includesTime,
+            listID: listID
         )
+        reminders.append(created)
+        return created
     }
 
+    @discardableResult
     func updateReminder(
         reminderID: String,
         title: String,
         notes: String?,
         dueDate: Date?,
         includesTime: Bool
-    ) async throws {
+    ) async throws -> Reminder {
         guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
             throw DomainError.notFound
         }
@@ -100,6 +102,7 @@ actor InMemoryRemindersRepository: RemindersRepository {
         reminders[index].notes = notes
         reminders[index].dueDate = dueDate
         reminders[index].includesTime = includesTime
+        return reminders[index]
     }
 
     func moveReminder(reminderID: String, toListID listID: String) async throws {

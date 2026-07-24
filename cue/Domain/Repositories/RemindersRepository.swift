@@ -21,25 +21,30 @@ protocol RemindersRepository: Sendable {
     func fetchReminders() async throws -> [Reminder]
     /// 항목의 완료 상태를 설정한다.
     func setCompleted(_ completed: Bool, reminderID: String) async throws
-    /// 리스트에 새 항목을 추가한다. `notes`가 nil이면 메모 없이 만든다.
+    /// 리스트에 새 항목을 추가하고, 저장된 항목(실제 id 포함)을 돌려준다 — 호출자가 재조회를
+    /// 기다리지 않고 로컬 목록에 즉시 반영(낙관적 갱신)할 수 있게. 저장 시 행 깜빡임 제거의 근간.
+    /// `notes`가 nil이면 메모 없이 만든다.
     /// `dueDate`가 nil이면 마감일 없이, `includesTime`이 false면 시간 없는(종일) 마감으로 만든다.
+    @discardableResult
     func addReminder(
         title: String,
         notes: String?,
         dueDate: Date?,
         includesTime: Bool,
         toListID listID: String
-    ) async throws
-    /// 기존 항목의 제목·메모·마감일을 갱신한다.
+    ) async throws -> Reminder
+    /// 기존 항목의 제목·메모·마감일을 갱신하고, 갱신된 항목을 돌려준다 — 같은 id의 항목을
+    /// 로컬에서 in-place 치환하기 위함(add와 같은 낙관적 갱신 계약).
     /// `notes`가 nil이면 메모를 비우고, `dueDate`가 nil이면 마감일을 지운다.
     /// `includesTime`은 종일/시각 구분을 결정한다 (시각이면 EventKit 알람도 함께 갱신).
+    @discardableResult
     func updateReminder(
         reminderID: String,
         title: String,
         notes: String?,
         dueDate: Date?,
         includesTime: Bool
-    ) async throws
+    ) async throws -> Reminder
     /// 항목을 삭제한다.
     func deleteReminder(reminderID: String) async throws
     /// 항목을 다른 리스트로 옮긴다 (전체 탭 섹션 간 드래그). EventKit에선 calendar 교체.

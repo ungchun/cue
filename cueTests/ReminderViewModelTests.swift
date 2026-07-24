@@ -1753,16 +1753,18 @@ private actor GatedRemindersRepository: RemindersRepository {
     func setCompleted(_ completed: Bool, reminderID: String) async throws {
         try await base.setCompleted(completed, reminderID: reminderID)
     }
+    @discardableResult
     func addReminder(
         title: String, notes: String?, dueDate: Date?, includesTime: Bool, toListID listID: String
-    ) async throws {
+    ) async throws -> Reminder {
         try await base.addReminder(
             title: title, notes: notes, dueDate: dueDate, includesTime: includesTime, toListID: listID
         )
     }
+    @discardableResult
     func updateReminder(
         reminderID: String, title: String, notes: String?, dueDate: Date?, includesTime: Bool
-    ) async throws {
+    ) async throws -> Reminder {
         try await base.updateReminder(
             reminderID: reminderID, title: title, notes: notes, dueDate: dueDate, includesTime: includesTime
         )

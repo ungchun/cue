@@ -13,18 +13,21 @@ struct AddReminderUseCase: Sendable {
         self.repository = repository
     }
 
+    /// 저장된 항목(실제 id 포함)을 돌려준다 — ViewModel이 재조회를 기다리지 않고
+    /// 로컬 목록에 즉시(낙관적으로) 반영해 저장 시 행 깜빡임을 없앤다.
+    @discardableResult
     func callAsFunction(
         title: String,
         notes: String? = nil,
         dueDate: Date? = nil,
         includesTime: Bool = false,
         listID: String
-    ) async throws {
+    ) async throws -> Reminder {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             throw DomainError.validation(String(localized: "Please enter a title."))
         }
-        try await repository.addReminder(
+        return try await repository.addReminder(
             title: trimmed,
             notes: ReminderNotes.normalized(notes),
             dueDate: dueDate,

@@ -95,6 +95,34 @@ struct RemindersUseCaseTests {
         #expect(reminders.first?.title == "공백")
     }
 
+    /// add는 저장된 항목을 돌려준다 — ViewModel이 재조회를 기다리지 않고 실제 id로
+    /// 로컬 목록에 즉시(낙관적으로) 삽입하기 위한 계약. 저장 시 행 깜빡임 제거의 근간.
+    @Test func addReminderReturnsCreatedReminder() async throws {
+        let repository = makeRepository()
+
+        let created = try await AddReminderUseCase(repository: repository)(
+            title: "  새 항목  ", listID: "L1"
+        )
+
+        #expect(created.title == "새 항목")
+        #expect(created.listID == "L1")
+        let stored = try await FetchRemindersUseCase(repository: repository)()
+        #expect(stored.contains { $0.id == created.id })
+    }
+
+    /// update도 갱신된 항목을 돌려준다 — 같은 id의 항목을 로컬에서 in-place 치환하기 위함.
+    @Test func updateReminderReturnsUpdatedReminder() async throws {
+        let repository = makeRepository(reminders: [makeReminder()])
+
+        let updated = try await UpdateReminderUseCase(repository: repository)(
+            reminderID: "R1", title: "  수정됨  ", notes: "메모"
+        )
+
+        #expect(updated.id == "R1")
+        #expect(updated.title == "수정됨")
+        #expect(updated.notes == "메모")
+    }
+
     @Test func addReminderWithBlankTitleThrows() async {
         let repository = makeRepository()
 
