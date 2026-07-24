@@ -98,13 +98,6 @@ private struct ScheduleLockScreenView: View {
         // 캘린더 모드에선 일정이 적어도 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다.
         .frame(minHeight: showsCalendar ? ScheduleMetrics.columnMax : nil, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
-        // ⚠️ 임시 진단 오버레이 — 실린 일수/이벤트 수와 열별 추정 높이를 카드에 직접 표시.
-        // 고정 크기 폰트는 디자인 규칙 위반이지만 진단 후 즉시 제거한다.
-        .overlay(alignment: .bottomTrailing) {
-            Text(SchedulePacker.debugSummary(days))
-                .font(.system(size: 7))
-                .foregroundStyle(.red)
-        }
     }
 
     @ViewBuilder

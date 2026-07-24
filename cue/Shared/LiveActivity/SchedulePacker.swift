@@ -123,31 +123,3 @@ enum ScheduleMetrics {
     /// 160pt(시스템 최대) − 상하 패딩.
     static var columnMax: CGFloat { 160 - outerPadding * 2 }
 }
-
-extension SchedulePacker {
-    /// ⚠️ 임시 진단 — 잠금화면 카드에 패킹 산술을 그대로 노출하기 위한 요약.
-    /// (며칠/몇 개가 실렸는지 · 각 열 추정 사용 높이 · 예산 · 줄높이) 원인 확정 후 제거한다.
-    static func debugSummary(_ days: [LiveScheduleDay]) -> String {
-        let (left, right) = pack(days)
-        let m = ScheduleMetrics.self
-        return "\(days.count)d/\(days.flatMap(\.events).count)e"
-            + " L\(Int(columnHeight(left))) R\(Int(columnHeight(right)))"
-            + " max\(Int(m.columnMax))"
-            + String(format: " t%.1f s%.1f", m.titleLine, m.timeLine)
-            + " g\(Int(m.dayGap))"
-    }
-
-    /// 임시 진단용 — 패킹 결과 한 열의 추정 사용 높이(패커와 같은 산술).
-    private static func columnHeight(_ chunks: [DayChunk]) -> CGFloat {
-        var used: CGFloat = 0
-        for (index, chunk) in chunks.enumerated() {
-            if index > 0 || chunks.first?.label == nil { used += used > 0 ? ScheduleMetrics.dayGap : 0 }
-            if chunk.label != nil { used += ScheduleMetrics.header + ScheduleMetrics.rowGap }
-            for (eventIndex, event) in chunk.events.enumerated() {
-                if eventIndex > 0 { used += ScheduleMetrics.rowGap }
-                used += ScheduleMetrics.eventHeight(event)
-            }
-        }
-        return used
-    }
-}
