@@ -182,8 +182,8 @@ private struct ScheduleEventRow: View {
                     .frame(width: Spacing.xxs)
                     .frame(maxHeight: .infinity)
                     // 줄박스에는 글자 위아래 투명 여백(리딩)이 포함돼 막대가 글자보다
-                    // 길어 보인다 — 위아래를 살짝 인셋해 보이는 글자 높이에 맞춘다.
-                    .padding(.vertical, Spacing.xxs)
+                    // 길어 보인다 — 위아래를 인셋해 보이는 글자 높이에 맞춘다.
+                    .padding(.vertical, Spacing.xs)
                 VStack(alignment: .leading, spacing: Spacing.zero) {
                     Text(event.title)
                         // 행이 조밀해진 만큼 제목 굵기를 한 단계 올려 가독성 유지.
