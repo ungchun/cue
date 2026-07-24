@@ -456,6 +456,44 @@ struct ReminderViewModelTests {
         #expect(viewModel.allReminders.first { $0.id == "1" }?.title == "새 제목")
     }
 
+    /// 비행 중이던 **오래된 재조회가 늦게 착지해도** 그 사이의 낙관 반영을 덮어쓰지 않는다 —
+    /// 빠른 연속 저장 시 첫 add의 reconcile(둘째 항목이 없는 스냅샷)이 둘째 add의 낙관 삽입
+    /// 뒤에 착지하면 항목이 잠깐 사라졌다 재등장하는 깜빡임이 재발하므로, 낡은 결과는 폐기한다.
+    @Test func staleReconcileDoesNotClobberNewerOptimisticInsert() async throws {
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA])
+        let repo = GatedRemindersRepository(base)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repo))
+        await viewModel.onAppear()
+        let baseline = await repo.fetchCount
+
+        await repo.closeGate()
+        await viewModel.add(title: "첫", toListID: listA.id)
+        // 첫 add의 reconcile이 (둘째가 없는) 스냅샷을 뜨고 게이트에 붙잡힐 때까지.
+        var firstInFlight = false
+        for _ in 0..<200 {
+            if await repo.fetchCount >= baseline + 1, await repo.isFetchWaiting {
+                firstInFlight = true; break
+            }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(firstInFlight)
+
+        await viewModel.add(title: "둘", toListID: listA.id)   // 낙관 삽입: 첫+둘
+        #expect(viewModel.allReminders.contains { $0.title == "둘" })
+
+        // 오래된(둘이 없는) 첫 reconcile만 착지시킨다 — 낡은 결과는 폐기돼야 한다.
+        await repo.releaseNextFetch()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        #expect(viewModel.allReminders.contains { $0.title == "둘" })
+        #expect(viewModel.allReminders.contains { $0.title == "첫" })
+
+        // 남은 최신 reconcile까지 착지 — 최종 상태도 둘 다 유지.
+        await repo.releaseFetch()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        #expect(viewModel.allReminders.contains { $0.title == "둘" })
+        #expect(viewModel.allReminders.contains { $0.title == "첫" })
+    }
+
     /// 리스트 애니메이션은 **제거 경로(완료 체크·삭제)에서만** 발동한다 — add까지 id 배열
     /// 변화로 애니메이션하면 새 행이 250ms 페이드-인되며 "사라졌다 나타나는" 깜빡임으로
     /// 보인다(실기기 확인). 뷰는 이 틱을 `.animation(value:)`에 걸어 삽입은 즉시 그린다.
@@ -1880,6 +1918,13 @@ private actor GatedRemindersRepository: RemindersRepository {
         for waiter in waiters { waiter.resume() }
         waiters = []
     }
+    /// 붙잡힌 fetch 중 **가장 먼저 진입한 하나만** 풀어준다 — 스테일 착지 순서를 결정적으로
+    /// 재현하기 위함(게이트는 닫힌 채 유지).
+    func releaseNextFetch() {
+        guard !waiters.isEmpty else { return }
+        waiters.removeFirst().resume()
+        isFetchWaiting = !waiters.isEmpty
+    }
     func closeUpdateGate() { updateGateClosed = true }
     func releaseUpdate() {
         updateGateClosed = false
@@ -1893,11 +1938,15 @@ private actor GatedRemindersRepository: RemindersRepository {
     func fetchLists() async throws -> [ReminderList] { try await base.fetchLists() }
     func fetchReminders() async throws -> [Reminder] {
         fetchCount += 1
+        // 실제 EventKit처럼 **호출 시점의 상태**를 스냅샷으로 뜬 뒤 지연시킨다 — 게이트에
+        // 붙잡힌 동안 일어난 쓰기는 이 결과에 반영되지 않아, "오래된 fetch가 늦게 착지"하는
+        // 스테일 시나리오를 재현할 수 있다.
+        let snapshot = try await base.fetchReminders()
         if gateClosed {
             isFetchWaiting = true
             await withCheckedContinuation { waiters.append($0) }
         }
-        return try await base.fetchReminders()
+        return snapshot
     }
     func setCompleted(_ completed: Bool, reminderID: String) async throws {
         try await base.setCompleted(completed, reminderID: reminderID)

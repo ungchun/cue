@@ -73,6 +73,12 @@ final class ReminderViewModel {
     /// 전체·예정은 이 캐시를 쓰지 않는다(고정 정렬).
     private var sortSettingsByScope: [String: ReminderSortSettings] = [:]
 
+    /// 로컬 데이터 세대 — 낙관 반영·쓰기 성공 시마다 증가한다. 재조회는 시작 시점의 세대를
+    /// 캡처하고, 착지 시 세대가 달라져 있으면 결과를 폐기한다 — 비행 중이던 오래된 fetch가
+    /// 늦게 착지해 최신 로컬 상태(방금 삽입한 항목, 방금 지운 행)를 과거로 되짚는 것을 막는다.
+    /// 폐기해도 유실은 없다: 세대를 올린 쓰기 자신의 재조회가 더 신선한 결과를 가져온다.
+    private var dataGeneration = 0
+
     /// 리스트 행 애니메이션 트리거 — **제거 경로(완료 체크·삭제)에서만** 증가한다.
     /// 뷰가 `.animation(value:)`에 id 배열 대신 이 틱을 걸어, 행 제거는 부드럽게
     /// 애니메이션하고 **삽입(add)은 즉시** 그린다 — 새 행이 페이드-인되며 "사라졌다
@@ -275,7 +281,12 @@ final class ReminderViewModel {
     /// 올린다 — 이후 await(LA·스냅샷) 중 렌더가 끼어들면 틱과 배열 변경이 다른 렌더로 갈라져
     /// 애니메이션이 걸리지 않으므로, 호출부(toggle/delete)에서 올리면 안 된다.
     private func reloadReminders(animatingRowChanges: Bool = false) async throws {
-        allReminders = try await fetchRemindersUseCase()
+        let generation = dataGeneration
+        let fetched = try await fetchRemindersUseCase()
+        // 비행 중 새 쓰기·낙관 반영이 있었으면 이 결과는 낡았다 — 폐기하고, 세대를 올린
+        // 쓰기 자신의 재조회가 최신 상태를 싣고 오도록 맡긴다(스냅샷 저장·LA 갱신도 그쪽에서).
+        guard generation == dataGeneration else { return }
+        allReminders = fetched
         if animatingRowChanges { listAnimationTick += 1 }
         // 자기 쓰기 완료 — 잠깐 동안 EventKit이 되쏘는 외부 변경 에코를 무시한다.
         suppressObserveUntil = now().addingTimeInterval(Self.selfWriteSuppressWindow)
@@ -614,6 +625,8 @@ final class ReminderViewModel {
         }
         do {
             try await moveReminderUseCase(reminderID: reminderID, toListID: listID)
+            // 쓰기 성공 — 이동 전 상태를 든 낡은 재조회가 늦게 착지해도 폐기되게.
+            dataGeneration += 1
         } catch {
             errorMessage = error.localizedDescription
             return
@@ -732,8 +745,13 @@ final class ReminderViewModel {
         if showsIndicator { isLoading = true }
         defer { if showsIndicator { isLoading = false } }
         do {
-            lists = try await fetchListsUseCase()
-            allReminders = try await fetchRemindersUseCase()
+            let generation = dataGeneration
+            let fetchedLists = try await fetchListsUseCase()
+            let fetchedReminders = try await fetchRemindersUseCase()
+            // 비행 중 자기 쓰기가 있었으면 이 외부 reload 결과는 낡았다 — 그 쓰기의 재조회에 맡긴다.
+            guard generation == dataGeneration else { return }
+            lists = fetchedLists
+            allReminders = fetchedReminders
             hiddenReminderListIDs = await fetchAppSettings().hiddenReminderListIDs
             await resolveInitialSelectionIfNeeded()
             // 현재 스코프(오늘·개별 리스트)의 정렬 설정을 적재 — 진입 시 저장된 정렬 복원.
@@ -793,6 +811,8 @@ final class ReminderViewModel {
             } else {
                 analytics.log(.reminderUncompleted)
             }
+            // 쓰기 성공 — 이보다 먼저 출발한(토글 전 상태를 든) 재조회가 늦게 착지해도 폐기되게.
+            dataGeneration += 1
             // 행 제거(해제 시 복귀)를 애니메이션 — 틱은 배열 교체와 같은 동기 구간에서 올라간다.
             try await reloadReminders(animatingRowChanges: true)
         } catch {
@@ -833,6 +853,7 @@ final class ReminderViewModel {
     /// 사라지거나 옛 값이 보이는 깜빡임을 없앤다(Apple 미리알림과 같은 감각). 뒤따르는
     /// `reloadReminders`는 같은 데이터를 다시 받아 화면 변화 없는 조용한 reconcile이 된다.
     private func applyOptimistically(_ reminder: Reminder) {
+        dataGeneration += 1
         if let index = allReminders.firstIndex(where: { $0.id == reminder.id }) {
             allReminders[index] = reminder
         } else {
@@ -894,6 +915,8 @@ final class ReminderViewModel {
         do {
             try await deleteReminderUseCase(reminderID: reminder.id)
             analytics.log(.reminderDeleted)
+            // 쓰기 성공 — 삭제 전 상태를 든 낡은 재조회가 지운 행을 부활시키지 못하게.
+            dataGeneration += 1
             try await reloadReminders(animatingRowChanges: true)
         } catch {
             errorMessage = error.localizedDescription

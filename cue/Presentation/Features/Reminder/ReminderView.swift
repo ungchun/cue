@@ -1281,11 +1281,19 @@ struct ReminderView: View {
         let memo = newMemo
         // 입력칸은 여기서 비우지 않는다 — add가 낙관 삽입을 마치고 돌아온 직후 비워,
         // 입력 텍스트가 사라지고 새 행이 나타나기까지의 공백(EventKit 저장 왕복)을 없앤다.
+        // 완료 시엔 제출 당시 상태 그대로일 때만 되돌린다: 대기 중 사용자가 이어 친 새 입력을
+        // 지우거나, 그 사이 활성화된 다른 섹션의 입력 행을 placeholder로 강등시키지 않는다.
+        let rowTitleAtSubmit = newTitle
+        let rowMemoAtSubmit = newMemo
         pendingNewSubmission = true
         Task {
             await viewModel.add(title: trimmed, notes: memo, toListID: targetID)
-            clearNewRow()
-            activeNewRowListID = nil
+            if newTitle == rowTitleAtSubmit, newMemo == rowMemoAtSubmit {
+                clearNewRow()
+            }
+            if activeNewRowListID == targetID {
+                activeNewRowListID = nil
+            }
             pendingNewSubmission = false
         }
     }
@@ -1297,7 +1305,10 @@ struct ReminderView: View {
         guard !trimmed.isEmpty else { return }
         let memo = draft.memo
         let targetID = activeNewRowListID
-        // submitNewReminder와 동일 — 입력칸은 낙관 삽입이 화면에 실린 뒤 비운다.
+        // submitNewReminder와 동일 — 입력칸은 낙관 삽입이 화면에 실린 뒤, 제출 당시
+        // 상태 그대로일 때만 비운다(대기 중 새 입력·다른 섹션 활성화 보호).
+        let rowTitleAtSubmit = newTitle
+        let rowMemoAtSubmit = newMemo
         pendingNewSubmission = true
         Task {
             await viewModel.add(
@@ -1305,8 +1316,12 @@ struct ReminderView: View {
                 dueDate: draft.dueDate, includesTime: draft.includesTime,
                 toListID: targetID
             )
-            clearNewRow()
-            activeNewRowListID = nil
+            if newTitle == rowTitleAtSubmit, newMemo == rowMemoAtSubmit {
+                clearNewRow()
+            }
+            if activeNewRowListID == targetID {
+                activeNewRowListID = nil
+            }
             pendingNewSubmission = false
         }
     }
