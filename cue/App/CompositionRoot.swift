@@ -35,7 +35,15 @@ struct CompositionRoot {
             analytics.log(name: name, parameters: parameters)
         }
 
-        self.premiumStore = PremiumStore(service: StoreKitPurchaseService(), analytics: analytics)
+        // ⚠️ 임시 테스트 오버라이드 — StoreKit Testing 인증서 만료로 로컬 결제 검증이 막혀 있어,
+        // 연간 상품이 이미 엔타이틀된 더블을 꽂아 무조건 프리미엄으로 동작시킨다.
+        // 판정 로직·테스트는 건드리지 않는 조립 지점 한 줄 스위치. **출시 전 반드시 아래
+        // StoreKitPurchaseService 라인으로 되돌릴 것.**
+        self.premiumStore = PremiumStore(
+            service: DisabledPurchaseService(entitled: [PremiumProduct.yearly.id]),
+            analytics: analytics
+        )
+        // self.premiumStore = PremiumStore(service: StoreKitPurchaseService(), analytics: analytics)
         self.modelContainer = container
         self.dependencies = Dependencies(
             fetchItems: FetchItemsUseCase(repository: itemRepository),
