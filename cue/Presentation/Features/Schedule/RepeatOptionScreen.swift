@@ -163,7 +163,7 @@ struct RepeatOptionScreen: View {
     /// 숫자(일자·월) 다중 선택 그리드 — 선택된 칸은 primary 원형 배경으로 반전.
     private func numberGrid(
         range: ClosedRange<Int>, columns: Int, selected: Set<Int>,
-        label: (Int) -> String = { "\($0)" }, toggle: @escaping (Int) -> Void
+        label: @escaping (Int) -> String = { "\($0)" }, toggle: @escaping (Int) -> Void
     ) -> some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: columns), spacing: Spacing.sm) {
             ForEach(Array(range), id: \.self) { value in
