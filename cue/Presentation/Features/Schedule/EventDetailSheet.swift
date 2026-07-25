@@ -225,7 +225,10 @@ struct EventDetailSheet: View {
         NavigationLink {
             RepeatOptionScreen(recurrence: $draft.recurrence)
         } label: {
+            // Apple 캘린더 요약 행과 동일 — 본문보다 작고 옅게.
             Text("Repeat: \(recurrenceSummary)")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
     }
 
