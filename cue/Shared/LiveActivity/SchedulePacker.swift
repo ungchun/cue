@@ -105,13 +105,12 @@ enum ScheduleMetrics {
 
     /// 인접 행 간격 — 행 종류 조합별로 다르다. 뷰(ScheduleDayView)의 행별 상단 패딩과 반드시 동기.
     /// - 캡슐↔캡슐 4: 배경 경계가 그대로 보여 간격이 곧 시각 간격.
-    /// - 캡슐↔시간 2: 캡슐 경계는 선명하고 시간 쪽 리딩은 얇아 중간값.
-    /// - 시간↔시간 0: 양쪽 폰트 리딩(투명 여백)만으로 충분.
+    /// - 캡슐↔시간 4: 캡슐 경계가 선명해 넉넉히.
+    /// - 시간↔시간 2: 폰트 리딩(투명 여백) 위에 살짝 더.
     static func rowGap(previous: LiveEventItem, next: LiveEventItem) -> CGFloat {
         switch (previous.isAllDay, next.isAllDay) {
-        case (true, true): return Spacing.xs
-        case (false, false): return Spacing.zero
-        default: return Spacing.xxs
+        case (false, false): return Spacing.xxs
+        default: return Spacing.xs
         }
     }
 

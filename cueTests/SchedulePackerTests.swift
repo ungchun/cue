@@ -25,15 +25,15 @@ struct SchedulePackerTests {
     }
 
     /// 행 종류 조합별 간격 계약 — 뷰(ScheduleDayView.topGap)와 패커가 공유하는 규칙.
-    /// 캡슐끼리 4(배경 경계가 곧 시각 간격), 캡슐↔시간 2, 시간끼리 0(폰트 리딩만).
+    /// 캡슐이 끼면 4(배경 경계가 곧 시각 간격), 시간끼리는 2(폰트 리딩 위에 살짝 더).
     @Test func rowGapDependsOnAdjacentRowKinds() {
         let capsule = day(id: "a", label: "오늘", count: 1, allDay: true).events[0]
         let timed = day(id: "t", label: "오늘", count: 1).events[0]
 
         #expect(ScheduleMetrics.rowGap(previous: capsule, next: capsule) == Spacing.xs)
-        #expect(ScheduleMetrics.rowGap(previous: capsule, next: timed) == Spacing.xxs)
-        #expect(ScheduleMetrics.rowGap(previous: timed, next: capsule) == Spacing.xxs)
-        #expect(ScheduleMetrics.rowGap(previous: timed, next: timed) == Spacing.zero)
+        #expect(ScheduleMetrics.rowGap(previous: capsule, next: timed) == Spacing.xs)
+        #expect(ScheduleMetrics.rowGap(previous: timed, next: capsule) == Spacing.xs)
+        #expect(ScheduleMetrics.rowGap(previous: timed, next: timed) == Spacing.xxs)
     }
 
     /// 종일 캡슐만으로도 패킹이 정상 동작한다 — 조합별 간격 도입 후 회귀 방지.
