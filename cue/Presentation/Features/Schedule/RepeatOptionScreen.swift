@@ -5,59 +5,32 @@
 
 import SwiftUI
 
-/// 반복 옵션 화면 — Apple 캘린더의 "반복" 화면을 따른다: 프리셋 목록 + 사용자 설정
-/// (빈도·간격·요일/일자/월 지정) + 반복 종료(안 함/날짜).
+/// 반복 "사용자화" 상세 화면 — Apple 캘린더의 사용자화 화면을 따른다:
+/// 빈도(매일/매주/매월/매년) + 간격 + 빈도별 지정(매주=요일, 매월=날짜/조건, 매년=월/조건).
 ///
-/// `EventDetailSheet`에서 NavigationLink로 진입한다. 우리 편집기로 표현 못 하는
-/// 규칙(`.foreign`)이면 목록 대신 보존 안내만 보여준다 — 잘못 덮어쓰는 것보다 낫다.
+/// 프리셋·반복 종료는 메인 시트(EventDetailSheet)의 반복 섹션이 담당한다.
+/// 우리 편집기로 표현 못 하는 규칙(`.foreign`)이면 보존 안내만 보여준다.
 struct RepeatOptionScreen: View {
     @Binding var recurrence: EventEditDraft.Recurrence
-    @Binding var recurrenceEnd: EventEditDraft.RecurrenceEnd
-    /// 반복 종료 날짜의 기본값 기준 — 이벤트 시작일.
-    let eventStart: Date
 
     private let calendar = Calendar.current
 
     var body: some View {
         List {
-            if recurrence == .foreign {
+            if case .custom(let rule) = recurrence {
+                customSection(rule)
+            } else {
                 Section {
                     Text("This repeat rule can't be edited here and will be kept as is.")
                         .foregroundStyle(.secondary)
                 }
-            } else {
-                presetSection
-                if case .custom(let rule) = recurrence {
-                    customSection(rule)
-                }
-                if recurrence != EventEditDraft.Recurrence.none {
-                    endSection
-                }
             }
         }
-        .navigationTitle("Repeat")
+        .navigationTitle("Custom")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - 프리셋
-
-    private var presetSection: some View {
-        Section {
-            ForEach(EventEditDraft.Recurrence.presets, id: \.self) { preset in
-                checkRow(presetLabel(preset), checked: recurrence == preset) {
-                    recurrence = preset
-                }
-            }
-            checkRow(String(localized: "Custom"), checked: recurrence.isCustom) {
-                if !recurrence.isCustom {
-                    // 사용자 설정 진입 기본값 — 매주 1회(Apple과 동일한 출발점).
-                    recurrence = .custom(.init(frequency: .weekly, interval: 1))
-                }
-            }
-        }
-    }
-
-    // MARK: - 사용자 설정
+    // MARK: - 사용자화 편집
 
     @ViewBuilder
     private func customSection(_ rule: EventEditDraft.CustomRule) -> some View {
@@ -69,7 +42,7 @@ struct RepeatOptionScreen: View {
                 Text("Every Year").tag(EventEditDraft.CustomRule.Frequency.yearly)
             }
             Stepper(value: customBinding.interval, in: 1...99) {
-                Text(intervalLabel(rule))
+                Text(rule.intervalText)
             }
         }
 
@@ -88,7 +61,7 @@ struct RepeatOptionScreen: View {
                 Text("If none are selected, the start date's weekday is used.")
             }
         case .monthly:
-            // "다음 순서로"(서수 요일)가 켜지면 일자 그리드는 숨긴다 — Apple과 동일한 배타 모드.
+            // "조건 지정…"(서수 요일)이 켜지면 일자 그리드는 숨긴다 — Apple과 동일한 배타 모드.
             ordinalSection(rule)
             if rule.ordinal == nil {
                 Section {
@@ -111,7 +84,7 @@ struct RepeatOptionScreen: View {
         }
     }
 
-    /// 서수 요일("N째 X요일") — Apple 캘린더의 "다음 순서로" 스위치 + 서수·요일 휠.
+    /// 서수 요일("N째 X요일") — Apple 캘린더의 "조건 지정…" 스위치 + 서수·요일 휠.
     @ViewBuilder
     private func ordinalSection(_ rule: EventEditDraft.CustomRule) -> some View {
         Section {
@@ -120,7 +93,7 @@ struct RepeatOptionScreen: View {
                 HStack(spacing: Spacing.zero) {
                     Picker("", selection: ordinalBinding) {
                         ForEach(Self.ordinals, id: \.self) { value in
-                            Text(ordinalLabel(value)).tag(value)
+                            Text(EventEditDraft.CustomRule.ordinalLabel(value)).tag(value)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -141,88 +114,6 @@ struct RepeatOptionScreen: View {
 
     /// Apple과 동일한 서수 목록 — 첫째…다섯째 + 마지막(-1).
     private static let ordinals = [1, 2, 3, 4, 5, -1]
-
-    private func ordinalLabel(_ value: Int) -> String {
-        switch value {
-        case 1: String(localized: "First")
-        case 2: String(localized: "Second")
-        case 3: String(localized: "Third")
-        case 4: String(localized: "Fourth")
-        case 5: String(localized: "Fifth")
-        default: String(localized: "Last")
-        }
-    }
-
-    /// 스위치 켜면 기본값(첫째 + 로케일 주 시작 요일), 끄면 서수 지정 해제.
-    private var ordinalEnabledBinding: Binding<Bool> {
-        Binding(
-            get: { customBinding.wrappedValue.ordinal != nil },
-            set: { isOn in
-                var rule = customBinding.wrappedValue
-                rule.ordinal = isOn ? 1 : nil
-                rule.ordinalWeekday = isOn ? calendar.firstWeekday : nil
-                customBinding.wrappedValue = rule
-            }
-        )
-    }
-
-    private var ordinalBinding: Binding<Int> {
-        Binding(
-            get: { customBinding.wrappedValue.ordinal ?? 1 },
-            set: { value in
-                var rule = customBinding.wrappedValue
-                rule.ordinal = value
-                customBinding.wrappedValue = rule
-            }
-        )
-    }
-
-    private var ordinalWeekdayBinding: Binding<Int> {
-        Binding(
-            get: { customBinding.wrappedValue.ordinalWeekday ?? calendar.firstWeekday },
-            set: { value in
-                var rule = customBinding.wrappedValue
-                rule.ordinalWeekday = value
-                customBinding.wrappedValue = rule
-            }
-        )
-    }
-
-    // MARK: - 반복 종료
-
-    private var endSection: some View {
-        Section("End Repeat") {
-            checkRow(String(localized: "Never"), checked: recurrenceEnd == .never) {
-                recurrenceEnd = .never
-            }
-            checkRow(String(localized: "On Date"), checked: isOnDate) {
-                if !isOnDate { recurrenceEnd = .onDate(defaultEndDate) }
-            }
-            if case .onDate(let date) = recurrenceEnd {
-                DatePicker(
-                    "",
-                    selection: Binding(
-                        get: { date },
-                        set: { recurrenceEnd = .onDate($0) }
-                    ),
-                    in: eventStart...,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-            }
-        }
-    }
-
-    private var isOnDate: Bool {
-        if case .onDate = recurrenceEnd { return true }
-        return false
-    }
-
-    /// 종료 날짜 기본값 — 시작일 + 1개월(바로 지난 날짜가 나오지 않게).
-    private var defaultEndDate: Date {
-        calendar.date(byAdding: .month, value: 1, to: eventStart) ?? eventStart
-    }
 
     // MARK: - 구성 요소
 
@@ -274,7 +165,7 @@ struct RepeatOptionScreen: View {
         Binding(
             get: {
                 if case .custom(let rule) = recurrence { return rule }
-                return .init(frequency: .weekly, interval: 1)
+                return .init(frequency: .daily, interval: 1)
             },
             set: { recurrence = .custom($0) }
         )
@@ -290,6 +181,41 @@ struct RepeatOptionScreen: View {
         customBinding.wrappedValue = rule
     }
 
+    /// 스위치 켜면 기본값(첫째 + 로케일 주 시작 요일), 끄면 서수 지정 해제.
+    private var ordinalEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { customBinding.wrappedValue.ordinal != nil },
+            set: { isOn in
+                var rule = customBinding.wrappedValue
+                rule.ordinal = isOn ? 1 : nil
+                rule.ordinalWeekday = isOn ? calendar.firstWeekday : nil
+                customBinding.wrappedValue = rule
+            }
+        )
+    }
+
+    private var ordinalBinding: Binding<Int> {
+        Binding(
+            get: { customBinding.wrappedValue.ordinal ?? 1 },
+            set: { value in
+                var rule = customBinding.wrappedValue
+                rule.ordinal = value
+                customBinding.wrappedValue = rule
+            }
+        )
+    }
+
+    private var ordinalWeekdayBinding: Binding<Int> {
+        Binding(
+            get: { customBinding.wrappedValue.ordinalWeekday ?? calendar.firstWeekday },
+            set: { value in
+                var rule = customBinding.wrappedValue
+                rule.ordinalWeekday = value
+                customBinding.wrappedValue = rule
+            }
+        )
+    }
+
     /// 로케일 주 시작 요일부터 도는 1…7(EKWeekday raw) 순서.
     private var orderedWeekdays: [Int] {
         let first = calendar.firstWeekday
@@ -299,25 +225,71 @@ struct RepeatOptionScreen: View {
     private func monthLabel(_ month: Int) -> String {
         calendar.shortMonthSymbols[month - 1]
     }
+}
 
-    private func presetLabel(_ preset: EventEditDraft.Recurrence) -> String {
-        switch preset {
-        case .none: String(localized: "Never")
-        case .daily: String(localized: "Every Day")
-        case .weekly: String(localized: "Every Week")
-        case .biweekly: String(localized: "Every 2 Weeks")
-        case .monthly: String(localized: "Every Month")
-        case .yearly: String(localized: "Every Year")
-        case .custom, .foreign: String(localized: "Custom")
+// MARK: - 요약·라벨 텍스트
+
+extension EventEditDraft.CustomRule {
+    /// 서수 라벨 — 사용자화 휠과 요약("첫째 월요일")이 공유한다.
+    static func ordinalLabel(_ value: Int) -> String {
+        switch value {
+        case 1: String(localized: "First")
+        case 2: String(localized: "Second")
+        case 3: String(localized: "Third")
+        case 4: String(localized: "Fourth")
+        case 5: String(localized: "Fifth")
+        default: String(localized: "Last")
         }
     }
 
-    private func intervalLabel(_ rule: EventEditDraft.CustomRule) -> String {
-        switch rule.frequency {
-        case .daily: String(localized: "Every \(rule.interval) days")
-        case .weekly: String(localized: "Every \(rule.interval) weeks")
-        case .monthly: String(localized: "Every \(rule.interval) months")
-        case .yearly: String(localized: "Every \(rule.interval) years")
+    /// 간격 문구 — "2주마다" 류. 간격 1이면 "매주" 류 프리셋 문구.
+    var intervalText: String {
+        if interval == 1 {
+            return switch frequency {
+            case .daily: String(localized: "Every Day")
+            case .weekly: String(localized: "Every Week")
+            case .monthly: String(localized: "Every Month")
+            case .yearly: String(localized: "Every Year")
+            }
         }
+        return switch frequency {
+        case .daily: String(localized: "Every \(interval) days")
+        case .weekly: String(localized: "Every \(interval) weeks")
+        case .monthly: String(localized: "Every \(interval) months")
+        case .yearly: String(localized: "Every \(interval) years")
+        }
+    }
+
+    /// 메인 시트 요약 — "매년 7월, 8월 및 12월" / "매월 첫째 월요일" / "매주 월요일 및 수요일".
+    var summaryText: String {
+        let calendar = Calendar.current
+        var parts = [intervalText]
+        switch frequency {
+        case .daily:
+            break
+        case .weekly:
+            if !weekdays.isEmpty {
+                parts.append(Self.joinedList(weekdays.sorted().map { calendar.weekdaySymbols[$0 - 1] }))
+            }
+        case .monthly:
+            if let ordinal, let ordinalWeekday {
+                parts.append("\(Self.ordinalLabel(ordinal)) \(calendar.weekdaySymbols[ordinalWeekday - 1])")
+            } else if !monthDays.isEmpty {
+                parts.append(Self.joinedList(monthDays.sorted().map(String.init)))
+            }
+        case .yearly:
+            if !months.isEmpty {
+                parts.append(Self.joinedList(months.sorted().map { calendar.monthSymbols[$0 - 1] }))
+            }
+            if let ordinal, let ordinalWeekday {
+                parts.append("\(Self.ordinalLabel(ordinal)) \(calendar.weekdaySymbols[ordinalWeekday - 1])")
+            }
+        }
+        return parts.joined(separator: " ")
+    }
+
+    /// 로케일 열거 조인 — ko "7월, 8월 및 12월", en "July, August, and December".
+    private static func joinedList(_ items: [String]) -> String {
+        ListFormatter.localizedString(byJoining: items)
     }
 }
