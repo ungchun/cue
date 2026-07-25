@@ -25,9 +25,9 @@ struct MemoLiveActivityWidget: Widget {
             lockScreen(context.state)
                 .padding(.horizontal, showsCalendar() ? Spacing.md : Spacing.lg)
                 .padding(.vertical, showsCalendar() ? Spacing.sm : Spacing.lg)
-                // 시스템 글래스(블러) 재질 배경 — 일정 LA와 동일한 반투명 카드 톤(전 LA 통일).
-                // 사용자 색은 글자색(textColorHex)으로만 드러난다.
-                .activityBackgroundTint(.clear)
+                // 메모만 글래스 통일에서 제외 — "사용자 색 카드"가 메모 LA의 컨셉이라
+                // 배경을 사용자 지정 색으로 칠한다(일정·할일·뽀모도로는 .clear 글래스).
+                .activityBackgroundTint(cardColor(context.state.colorHex))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
@@ -113,6 +113,11 @@ struct MemoLiveActivityWidget: Widget {
             // 1줄 짧은 메모는 기본 크기 그대로, 여러 줄로 길어져도 0.5배까지만 줄어 너무
             // 작아지지 않게 — "1줄은 크고 멀티라인은 작은" 편차를 줄인다.
             .minimumScaleFactor(0.5)
+    }
+
+    /// 카드 배경 색 — 사용자 지정 hex. 비었거나 파싱 실패면 시스템 accent.
+    private func cardColor(_ hex: String) -> Color {
+        Color(hex: hex) ?? .accentColor
     }
 
     /// 카드 글자 색 — 사용자 지정 hex. 비었거나 파싱 실패면 흰색(기존 동작).
