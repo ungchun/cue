@@ -19,6 +19,8 @@ struct EventEditDraft: Equatable {
     private(set) var start: Date
     private(set) var end: Date
     var recurrence: Recurrence
+    /// 반복 종료 — `.never` 또는 특정 날짜. `.foreign` 규칙에선 무시(원본 보존).
+    var recurrenceEnd: RecurrenceEnd
     var alarm: Alarm
     var urlString: String
     var notes: String
@@ -34,7 +36,8 @@ struct EventEditDraft: Equatable {
         return EventEditDraft(
             title: "", location: "", isAllDay: false,
             start: start, end: start.addingTimeInterval(3600),
-            recurrence: .none, alarm: .none, urlString: "", notes: "", calendarID: nil
+            recurrence: .none, recurrenceEnd: .never,
+            alarm: .none, urlString: "", notes: "", calendarID: nil
         )
     }
 
@@ -46,6 +49,7 @@ struct EventEditDraft: Equatable {
         start = event.startDate
         end = event.endDate
         recurrence = Recurrence(rules: event.recurrenceRules)
+        recurrenceEnd = RecurrenceEnd(rules: event.recurrenceRules)
         alarm = Alarm(alarms: event.alarms)
         urlString = event.url?.absoluteString ?? ""
         notes = event.notes ?? ""
@@ -54,7 +58,8 @@ struct EventEditDraft: Equatable {
 
     private init(
         title: String, location: String, isAllDay: Bool, start: Date, end: Date,
-        recurrence: Recurrence, alarm: Alarm, urlString: String, notes: String, calendarID: String?
+        recurrence: Recurrence, recurrenceEnd: RecurrenceEnd,
+        alarm: Alarm, urlString: String, notes: String, calendarID: String?
     ) {
         self.title = title
         self.location = location
@@ -62,6 +67,7 @@ struct EventEditDraft: Equatable {
         self.start = start
         self.end = end
         self.recurrence = recurrence
+        self.recurrenceEnd = recurrenceEnd
         self.alarm = alarm
         self.urlString = urlString
         self.notes = notes
@@ -95,9 +101,9 @@ struct EventEditDraft: Equatable {
         event.startDate = start
         event.endDate = end
 
-        if recurrence != .custom {
+        if recurrence != .foreign {
             (event.recurrenceRules ?? []).forEach(event.removeRecurrenceRule)
-            if let rule = recurrence.rule() { event.addRecurrenceRule(rule) }
+            if let rule = recurrence.rule(endingOn: recurrenceEnd) { event.addRecurrenceRule(rule) }
         }
         if alarm != .custom {
             (event.alarms ?? []).forEach(event.removeAlarm)
@@ -112,24 +118,57 @@ struct EventEditDraft: Equatable {
 
     // MARK: - 반복 옵션
 
-    /// Apple 캘린더 반복 프리셋 — 그 밖의 규칙은 `.custom`(표시·보존 전용).
-    enum Recurrence: Hashable {
-        case none, daily, weekly, biweekly, monthly, yearly, custom
+    /// 반복 종료 — Apple 캘린더의 "반복 종료: 안 함 / 날짜"와 동일.
+    /// (횟수 종료는 EventKit엔 있지만 Apple 편집 UI에 없어 `.foreign` 보존으로만 다룬다.)
+    enum RecurrenceEnd: Hashable {
+        case never
+        case onDate(Date)
 
-        /// 선택 메뉴에 노출하는 프리셋 — custom은 기존 규칙 표시용이라 제외.
+        init(rules: [EKRecurrenceRule]?) {
+            if let date = rules?.first?.recurrenceEnd?.endDate {
+                self = .onDate(date)
+            } else {
+                self = .never
+            }
+        }
+
+        var recurrenceEnd: EKRecurrenceEnd? {
+            switch self {
+            case .never: nil
+            case .onDate(let date): EKRecurrenceEnd(end: date)
+            }
+        }
+    }
+
+    /// 반복 옵션 — Apple 캘린더 프리셋 + 사용자 설정(빈도·간격·요일/일자/월 지정).
+    /// 우리 편집기로도 표현 못 하는 규칙(횟수 종료, setPositions, 복수 규칙 등)은
+    /// `.foreign` — 표시만 하고 저장 시 원본을 보존한다.
+    enum Recurrence: Hashable {
+        case none, daily, weekly, biweekly, monthly, yearly
+        case custom(CustomRule)
+        case foreign
+
+        /// 선택 목록에 노출하는 프리셋.
         static var presets: [Recurrence] { [.none, .daily, .weekly, .biweekly, .monthly, .yearly] }
+
+        var isCustom: Bool {
+            if case .custom = self { return true }
+            return false
+        }
 
         init(rules: [EKRecurrenceRule]?) {
             guard let rule = rules?.first else {
                 self = .none
                 return
             }
-            // 프리셋은 단일 규칙 + 부가 조건 없음(요일/일자 지정 없음)일 때만.
-            let isPlain = rules?.count == 1
-                && rule.daysOfTheWeek == nil && rule.daysOfTheMonth == nil
-                && rule.monthsOfTheYear == nil && rule.setPositions == nil
+            guard let custom = CustomRule(rules: rules) else {
+                self = .foreign
+                return
+            }
+            // 부가 지정 없는 순수 빈도+간격이면 프리셋으로 승격.
+            let isPlain = custom.weekdays.isEmpty && custom.monthDays.isEmpty && custom.months.isEmpty
             guard isPlain else {
-                self = .custom
+                self = .custom(custom)
                 return
             }
             switch (rule.frequency, rule.interval) {
@@ -138,21 +177,117 @@ struct EventEditDraft: Equatable {
             case (.weekly, 2): self = .biweekly
             case (.monthly, 1): self = .monthly
             case (.yearly, 1): self = .yearly
-            default: self = .custom
+            default: self = .custom(custom)
             }
         }
 
-        /// 프리셋의 EKRecurrenceRule. `.none`/`.custom`은 nil — custom은 "건드리지 말라"는 신호.
-        func rule() -> EKRecurrenceRule? {
-            let make = { EKRecurrenceRule(recurrenceWith: $0, interval: $1, end: nil) }
+        /// 이 옵션의 EKRecurrenceRule(반복 종료 포함). `.none`/`.foreign`은 nil —
+        /// foreign은 "기존 규칙을 건드리지 말라"는 신호(apply가 분기).
+        func rule(endingOn end: RecurrenceEnd) -> EKRecurrenceRule? {
+            let make = { EKRecurrenceRule(recurrenceWith: $0, interval: $1, end: end.recurrenceEnd) }
             switch self {
-            case .none, .custom: return nil
+            case .none, .foreign: return nil
             case .daily: return make(.daily, 1)
             case .weekly: return make(.weekly, 1)
             case .biweekly: return make(.weekly, 2)
             case .monthly: return make(.monthly, 1)
             case .yearly: return make(.yearly, 1)
+            case .custom(let custom): return custom.rule(end: end.recurrenceEnd)
             }
+        }
+    }
+
+    /// 사용자 설정 반복 — Apple 캘린더 "사용자화"의 부분집합: 빈도·간격에 더해
+    /// 매주는 요일, 매월은 일자, 매년은 월을 지정할 수 있다.
+    struct CustomRule: Hashable {
+        enum Frequency: Hashable, CaseIterable {
+            case daily, weekly, monthly, yearly
+
+            var ekFrequency: EKRecurrenceFrequency {
+                switch self {
+                case .daily: .daily
+                case .weekly: .weekly
+                case .monthly: .monthly
+                case .yearly: .yearly
+                }
+            }
+        }
+
+        var frequency: Frequency
+        var interval: Int
+        /// 매주 반복의 요일(EKWeekday rawValue 1=일 … 7=토). 비면 시작일 요일을 따른다.
+        var weekdays: Set<Int> = []
+        /// 매월 반복의 일자(1…31). 비면 시작일 일자를 따른다.
+        var monthDays: Set<Int> = []
+        /// 매년 반복의 월(1…12). 비면 시작일 월을 따른다.
+        var months: Set<Int> = []
+
+        /// 표현 가능한 규칙이면 파싱, 아니면 nil(→ `.foreign`).
+        /// 불가 조건: 복수 규칙 · 횟수 종료 · setPositions/주차·연중일 지정 ·
+        /// 빈도와 안 맞는 지정 · 음수 일자("마지막 날") · 주차 붙은 요일("첫째 월요일").
+        init?(rules: [EKRecurrenceRule]?) {
+            guard let rules, rules.count == 1, let rule = rules.first else { return nil }
+            guard rule.recurrenceEnd?.occurrenceCount ?? 0 == 0,
+                  rule.setPositions == nil, rule.weeksOfTheYear == nil, rule.daysOfTheYear == nil
+            else { return nil }
+
+            let frequency: Frequency
+            switch rule.frequency {
+            case .daily: frequency = .daily
+            case .weekly: frequency = .weekly
+            case .monthly: frequency = .monthly
+            case .yearly: frequency = .yearly
+            @unknown default: return nil
+            }
+
+            var weekdays: Set<Int> = []
+            if let days = rule.daysOfTheWeek {
+                guard frequency == .weekly, days.allSatisfy({ $0.weekNumber == 0 }) else { return nil }
+                weekdays = Set(days.map { $0.dayOfTheWeek.rawValue })
+            }
+            var monthDays: Set<Int> = []
+            if let days = rule.daysOfTheMonth {
+                guard frequency == .monthly, days.allSatisfy({ $0.intValue >= 1 }) else { return nil }
+                monthDays = Set(days.map(\.intValue))
+            }
+            var months: Set<Int> = []
+            if let list = rule.monthsOfTheYear {
+                guard frequency == .yearly else { return nil }
+                months = Set(list.map(\.intValue))
+            }
+
+            self.frequency = frequency
+            self.interval = max(1, rule.interval)
+            self.weekdays = weekdays
+            self.monthDays = monthDays
+            self.months = months
+        }
+
+        init(frequency: Frequency, interval: Int,
+             weekdays: Set<Int> = [], monthDays: Set<Int> = [], months: Set<Int> = []) {
+            self.frequency = frequency
+            self.interval = interval
+            self.weekdays = weekdays
+            self.monthDays = monthDays
+            self.months = months
+        }
+
+        func rule(end: EKRecurrenceEnd?) -> EKRecurrenceRule {
+            EKRecurrenceRule(
+                recurrenceWith: frequency.ekFrequency,
+                interval: interval,
+                daysOfTheWeek: frequency == .weekly && !weekdays.isEmpty
+                    ? weekdays.sorted().compactMap { EKWeekday(rawValue: $0).map { EKRecurrenceDayOfWeek($0) } }
+                    : nil,
+                daysOfTheMonth: frequency == .monthly && !monthDays.isEmpty
+                    ? monthDays.sorted().map(NSNumber.init(value:))
+                    : nil,
+                monthsOfTheYear: frequency == .yearly && !months.isEmpty
+                    ? months.sorted().map(NSNumber.init(value:))
+                    : nil,
+                weeksOfTheYear: nil, daysOfTheYear: nil, setPositions: nil,
+                end: end
+            )
         }
     }
 

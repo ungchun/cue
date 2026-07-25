@@ -69,21 +69,81 @@ struct EventEditDraftTests {
         #expect(EventEditDraft.Recurrence(rules: [rule(.weekly, 2)]) == .biweekly)
         #expect(EventEditDraft.Recurrence(rules: [rule(.monthly, 1)]) == .monthly)
         #expect(EventEditDraft.Recurrence(rules: [rule(.yearly, 1)]) == .yearly)
-        // 프리셋 밖(3주마다·요일 지정 등)은 custom — 저장 시 기존 규칙을 건드리지 않는다.
-        #expect(EventEditDraft.Recurrence(rules: [rule(.weekly, 3)]) == .custom)
+        // 프리셋 밖이지만 표현 가능한 규칙(3주마다)은 편집 가능한 custom 페이로드로.
+        #expect(EventEditDraft.Recurrence(rules: [rule(.weekly, 3)])
+                == .custom(.init(frequency: .weekly, interval: 3)))
     }
 
     @Test func recurrenceOptionProducesRules() throws {
-        #expect(EventEditDraft.Recurrence.none.rule() == nil)
-        #expect(EventEditDraft.Recurrence.custom.rule() == nil)   // custom은 규칙 생성 없음(보존 신호)
+        #expect(EventEditDraft.Recurrence.none.rule(endingOn: .never) == nil)
+        #expect(EventEditDraft.Recurrence.foreign.rule(endingOn: .never) == nil)   // 보존 신호
 
-        let biweekly = try #require(EventEditDraft.Recurrence.biweekly.rule())
+        let biweekly = try #require(EventEditDraft.Recurrence.biweekly.rule(endingOn: .never))
         #expect(biweekly.frequency == .weekly)
         #expect(biweekly.interval == 2)
 
-        let yearly = try #require(EventEditDraft.Recurrence.yearly.rule())
+        let yearly = try #require(EventEditDraft.Recurrence.yearly.rule(endingOn: .never))
         #expect(yearly.frequency == .yearly)
         #expect(yearly.interval == 1)
+    }
+
+    /// 사용자 설정 규칙 왕복 — 매주(요일 지정)·매월(일자)·매년(월) 편집 지원.
+    @Test func customRuleRoundTripsThroughEventKit() {
+        let weekly = EventEditDraft.Recurrence.custom(
+            .init(frequency: .weekly, interval: 2, weekdays: [2, 4])   // 월·수
+        )
+        let weeklyRule = weekly.rule(endingOn: .never)!
+        #expect(EventEditDraft.Recurrence(rules: [weeklyRule]) == weekly)
+
+        let monthly = EventEditDraft.Recurrence.custom(
+            .init(frequency: .monthly, interval: 1, monthDays: [1, 15])
+        )
+        let monthlyRule = monthly.rule(endingOn: .never)!
+        #expect(EventEditDraft.Recurrence(rules: [monthlyRule]) == monthly)
+
+        let yearly = EventEditDraft.Recurrence.custom(
+            .init(frequency: .yearly, interval: 1, months: [3, 9])
+        )
+        let yearlyRule = yearly.rule(endingOn: .never)!
+        #expect(EventEditDraft.Recurrence(rules: [yearlyRule]) == yearly)
+    }
+
+    /// 반복 종료 날짜는 읽고 · 저장 시 그대로 되싣는다 — 프리셋 재구성 때 유실 금지.
+    @Test func recurrenceEndDateSurvivesReadAndApply() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        let until = date(2026, 12, 31)
+        event.addRecurrenceRule(EKRecurrenceRule(
+            recurrenceWith: .weekly, interval: 1, end: EKRecurrenceEnd(end: until)
+        ))
+
+        var draft = EventEditDraft(event: event)
+        #expect(draft.recurrence == .weekly)
+        #expect(draft.recurrenceEnd == .onDate(until))
+
+        draft.title = "제목만 변경"
+        draft.apply(to: event)
+
+        #expect(event.recurrenceRules?.first?.frequency == .weekly)
+        #expect(event.recurrenceRules?.first?.recurrenceEnd?.endDate == until)
+    }
+
+    /// 우리 편집기로 표현 불가한 규칙(횟수 종료·setPositions 등)은 foreign — 저장 시 보존.
+    @Test func unrepresentableRulesAreForeignAndPreserved() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.addRecurrenceRule(EKRecurrenceRule(
+            recurrenceWith: .weekly, interval: 1, end: EKRecurrenceEnd(occurrenceCount: 5)
+        ))
+        var draft = EventEditDraft(event: event)
+        #expect(draft.recurrence == .foreign)
+
+        draft.title = "바뀐 제목"
+        draft.apply(to: event)
+
+        #expect(event.recurrenceRules?.first?.recurrenceEnd?.occurrenceCount == 5)   // 보존
     }
 
     // MARK: - 알림 옵션 ↔ 상대 오프셋
@@ -154,8 +214,9 @@ struct EventEditDraftTests {
         #expect(event.recurrenceRules?.first?.frequency == .daily)
     }
 
-    /// custom 반복·알림은 기존 값을 보존한다 — 사용자가 안 건드린 고급 설정 파괴 금지.
-    @Test func applyingCustomOptionsPreservesExistingRulesAndAlarms() {
+    /// 요일 지정 매주 규칙은 편집 가능한 custom으로 읽히고, 그대로 저장해도 내용이 유지된다.
+    /// 프리셋 밖 알림(-7분)은 custom 표시 + 저장 시 보존.
+    @Test func weekdaySpecificRuleIsEditableCustomAndSurvivesApply() {
         let store = EKEventStore()
         let event = EKEvent(eventStore: store)
         let exotic = EKRecurrenceRule(
@@ -167,14 +228,15 @@ struct EventEditDraftTests {
         event.addRecurrenceRule(exotic)
         event.addAlarm(EKAlarm(relativeOffset: -420))
         var draft = EventEditDraft(event: event)
-        #expect(draft.recurrence == .custom)
+        #expect(draft.recurrence == .custom(.init(frequency: .weekly, interval: 3, weekdays: [EKWeekday.monday.rawValue])))
         #expect(draft.alarm == .custom)
 
         draft.title = "바뀐 제목"
         draft.apply(to: event)
 
-        #expect(event.recurrenceRules?.first?.interval == 3)                 // 보존
-        #expect(event.alarms?.map(\.relativeOffset) == [-420])               // 보존
+        #expect(event.recurrenceRules?.first?.interval == 3)                              // 유지
+        #expect(event.recurrenceRules?.first?.daysOfTheWeek?.map(\.dayOfTheWeek) == [.monday])
+        #expect(event.alarms?.map(\.relativeOffset) == [-420])                            // 보존
     }
 
     /// custom → 프리셋으로 바꾸면 기존 규칙·알림을 교체한다.

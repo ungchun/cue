@@ -169,19 +169,22 @@ struct EventDetailSheet: View {
         Binding(get: { draft.end }, set: { draft.setEnd($0) })
     }
 
+    /// 반복 — 프리셋 + 사용자 설정(빈도·간격·요일 등) + 반복 종료가 있는 전용 화면으로 진입.
     private var recurrencePicker: some View {
-        Picker("Repeat", selection: $draft.recurrence) {
-            ForEach(recurrenceOptions, id: \.self) { option in
-                Text(label(for: option)).tag(option)
+        NavigationLink {
+            RepeatOptionScreen(
+                recurrence: $draft.recurrence,
+                recurrenceEnd: $draft.recurrenceEnd,
+                eventStart: draft.start
+            )
+        } label: {
+            HStack {
+                Text("Repeat")
+                Spacer()
+                Text(label(for: draft.recurrence))
+                    .foregroundStyle(.secondary)
             }
         }
-    }
-
-    /// 현재 값이 프리셋 밖(custom)이면 그 항목도 노출 — 안 그러면 Picker가 선택을 잃는다.
-    private var recurrenceOptions: [EventEditDraft.Recurrence] {
-        draft.recurrence == .custom
-            ? EventEditDraft.Recurrence.presets + [.custom]
-            : EventEditDraft.Recurrence.presets
     }
 
     private var alarmPicker: some View {
@@ -222,7 +225,7 @@ struct EventDetailSheet: View {
         case .biweekly: String(localized: "Every 2 Weeks")
         case .monthly: String(localized: "Every Month")
         case .yearly: String(localized: "Every Year")
-        case .custom: String(localized: "Custom")
+        case .custom, .foreign: String(localized: "Custom")
         }
     }
 
