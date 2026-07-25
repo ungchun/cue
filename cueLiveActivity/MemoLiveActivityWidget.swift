@@ -115,11 +115,6 @@ struct MemoLiveActivityWidget: Widget {
             .minimumScaleFactor(0.5)
     }
 
-    /// 카드 배경 색 — 사용자 지정 hex. 비었거나 파싱 실패면 시스템 accent.
-    private func cardColor(_ hex: String) -> Color {
-        Color(hex: hex) ?? .accentColor
-    }
-
     /// 카드 글자 색 — 사용자 지정 hex. 비었거나 파싱 실패면 흰색(기존 동작).
     private func textColor(_ hex: String) -> Color {
         Color(hex: hex) ?? .white
