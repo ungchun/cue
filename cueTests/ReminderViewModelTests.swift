@@ -329,7 +329,7 @@ struct ReminderViewModelTests {
 
         // 외부 변경 발생 — 다음 fetchReminders를 게이트로 붙잡아 reload를 진행 중 상태로 고정.
         try await base.addReminder(
-            title: "외부", notes: nil, dueDate: nil, includesTime: false, toListID: listA.id
+            title: "외부", notes: nil, dueDate: nil, includesTime: false, recurrence: nil, toListID: listA.id
         )
         await repo.closeGate()
         await base.emitChange()
