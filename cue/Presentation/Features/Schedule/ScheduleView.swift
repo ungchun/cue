@@ -9,10 +9,11 @@ import UIKit
 
 /// 일정 탭 화면 — "타임라인" 헤더 + 우상단 신규 이벤트 + 버튼 + 향후 30일치 이벤트 리스트.
 ///
-/// 이벤트는 일정 있는 날만 섹션으로 묶여 표시된다(`DayGroup` 단위). 신규 입력은
-/// `EKEventEditViewController`(iOS 캘린더 네이티브 시트)가 처리한다.
+/// 이벤트는 일정 있는 날만 섹션으로 묶여 표시된다(`DayGroup` 단위). 신규 입력·편집은
+/// 자체 시트(`EventDetailSheet`)가 처리한다 — 시스템 EKEventEditViewController는 iOS 17+
+/// OOP 렌더 때문에 스와이프 닫기가 안 돼 교체했다.
 ///
-/// `eventStore`는 화면 진입 시 한 번 만들어 warm-up하고 `EventEditSheet`에 그대로
+/// `eventStore`는 화면 진입 시 한 번 만들어 warm-up하고 `EventDetailSheet`에 그대로
 /// 주입한다 — 시트 안에서 새 store를 만들면 캘린더 목록·기본 캘린더 조회가 시트 표시
 /// 시점에 처음 일어나 데이터가 한 박자 늦게 채워지고 시스템 로그가 무더기로 찍힌다.
 struct ScheduleView: View {
@@ -81,13 +82,13 @@ struct ScheduleView: View {
             warmUpEventStore()
         }
         .sheet(isPresented: $viewModel.showingNewEvent) {
-            EventEditSheetContainer(
+            EventDetailSheet(
                 eventStore: eventStore,
                 onCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
             )
         }
         .sheet(item: $viewModel.editingEvent) { event in
-            EventEditSheetContainer(
+            EventDetailSheet(
                 eventStore: eventStore,
                 editingEventID: event.id,
                 onCompletion: { outcome in viewModel.dismissEdit(outcome: outcome) }
