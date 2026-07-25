@@ -24,7 +24,8 @@ struct FocusAlarmLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: AlarmAttributes<FocusAlarmMetadata>.self) { context in
             lockScreen(context: context)
-                .activityBackgroundTint(.black)
+                // 시스템 글래스(블러) 재질 배경 — 일정 LA와 동일한 반투명 카드 톤(전 LA 통일).
+                .activityBackgroundTint(.clear)
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             let tint = context.attributes.tintColor

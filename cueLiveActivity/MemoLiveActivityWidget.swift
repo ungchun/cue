@@ -25,7 +25,9 @@ struct MemoLiveActivityWidget: Widget {
             lockScreen(context.state)
                 .padding(.horizontal, showsCalendar() ? Spacing.md : Spacing.lg)
                 .padding(.vertical, showsCalendar() ? Spacing.sm : Spacing.lg)
-                .activityBackgroundTint(cardColor(context.state.colorHex))
+                // 시스템 글래스(블러) 재질 배경 — 일정 LA와 동일한 반투명 카드 톤(전 LA 통일).
+                // 사용자 색은 글자색(textColorHex)으로만 드러난다.
+                .activityBackgroundTint(.clear)
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {

@@ -17,6 +17,8 @@ struct ReminderLiveActivityWidget: Widget {
         ActivityConfiguration(for: ReminderLiveActivityAttributes.self) { context in
             ReminderLockScreenView(state: context.state)
                 .padding(Spacing.md)
+                // 시스템 글래스(블러) 재질 배경 — 일정 LA와 동일한 반투명 카드 톤(전 LA 통일).
+                .activityBackgroundTint(.clear)
         } dynamicIsland: { context in
             DynamicIsland {
                 // 꾸욱 눌렀을 때 — 좌상단 월 · 우상단 "오늘 할일" 카운트 · 하단 이번 주 캘린더.

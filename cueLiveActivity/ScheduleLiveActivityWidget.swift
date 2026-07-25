@@ -26,6 +26,9 @@ struct ScheduleLiveActivityWidget: Widget {
             // 밀도(~11pt 렌더)를 위해 타입 스케일을 xSmall로 고정 — 패커 줄높이 추정도
             // 같은 카테고리로 고정해(ScheduleMetrics) 추정=렌더를 유지한다.
             .dynamicTypeSize(.xSmall)
+            // 배경을 시스템 글래스(블러) 재질로 — 기본값(nil)은 iOS 17+에서 거의 불투명한
+            // 검정으로 렌더된다. .clear는 틴트 없이 재질만 남겨 반투명 카드가 된다.
+            .activityBackgroundTint(.clear)
         } dynamicIsland: { context in
             DynamicIsland {
                 // 꾸욱 눌렀을 때 — 좌상단 월 · 우상단 "오늘 일정" 카운트 · 하단 이번 주 캘린더.
