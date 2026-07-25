@@ -166,7 +166,8 @@ struct EventEditDraft: Equatable {
                 return
             }
             // 부가 지정 없는 순수 빈도+간격이면 프리셋으로 승격.
-            let isPlain = custom.weekdays.isEmpty && custom.monthDays.isEmpty && custom.months.isEmpty
+            let isPlain = custom.weekdays.isEmpty && custom.monthDays.isEmpty
+                && custom.months.isEmpty && custom.ordinal == nil
             guard isPlain else {
                 self = .custom(custom)
                 return
@@ -217,18 +218,23 @@ struct EventEditDraft: Equatable {
         var interval: Int
         /// 매주 반복의 요일(EKWeekday rawValue 1=일 … 7=토). 비면 시작일 요일을 따른다.
         var weekdays: Set<Int> = []
-        /// 매월 반복의 일자(1…31). 비면 시작일 일자를 따른다.
+        /// 매월 반복의 일자(1…31). 비면 시작일 일자를 따른다. `ordinal` 지정 시 무시.
         var monthDays: Set<Int> = []
         /// 매년 반복의 월(1…12). 비면 시작일 월을 따른다.
         var months: Set<Int> = []
+        /// 서수 요일 지정(Apple "다음 순서로") — 1…5 = 첫째…다섯째, -1 = 마지막.
+        /// 매월·매년에서만 의미. `ordinalWeekday`와 항상 짝으로 쓴다.
+        var ordinal: Int?
+        /// 서수 요일의 요일(EKWeekday rawValue).
+        var ordinalWeekday: Int?
 
         /// 표현 가능한 규칙이면 파싱, 아니면 nil(→ `.foreign`).
-        /// 불가 조건: 복수 규칙 · 횟수 종료 · setPositions/주차·연중일 지정 ·
-        /// 빈도와 안 맞는 지정 · 음수 일자("마지막 날") · 주차 붙은 요일("첫째 월요일").
+        /// 불가 조건: 복수 규칙 · 횟수 종료 · 주차·연중일 지정 · 빈도와 안 맞는 지정 ·
+        /// 음수 일자("마지막 날") · 복수 setPositions.
         init?(rules: [EKRecurrenceRule]?) {
             guard let rules, rules.count == 1, let rule = rules.first else { return nil }
             guard rule.recurrenceEnd?.occurrenceCount ?? 0 == 0,
-                  rule.setPositions == nil, rule.weeksOfTheYear == nil, rule.daysOfTheYear == nil
+                  rule.weeksOfTheYear == nil, rule.daysOfTheYear == nil
             else { return nil }
 
             let frequency: Frequency
@@ -241,9 +247,27 @@ struct EventEditDraft: Equatable {
             }
 
             var weekdays: Set<Int> = []
-            if let days = rule.daysOfTheWeek {
-                guard frequency == .weekly, days.allSatisfy({ $0.weekNumber == 0 }) else { return nil }
-                weekdays = Set(days.map { $0.dayOfTheWeek.rawValue })
+            var ordinal: Int?
+            var ordinalWeekday: Int?
+            if let positions = rule.setPositions {
+                // setPositions 인코딩 — "매월/매년 N째 X요일". 단일 서수 + 단일 요일만 지원.
+                guard positions.count == 1, frequency == .monthly || frequency == .yearly,
+                      let days = rule.daysOfTheWeek, days.count == 1, days[0].weekNumber == 0,
+                      rule.daysOfTheMonth == nil
+                else { return nil }
+                ordinal = positions[0].intValue
+                ordinalWeekday = days[0].dayOfTheWeek.rawValue
+            } else if let days = rule.daysOfTheWeek {
+                if frequency == .weekly, days.allSatisfy({ $0.weekNumber == 0 }) {
+                    weekdays = Set(days.map { $0.dayOfTheWeek.rawValue })
+                } else if frequency == .monthly, days.count == 1, days[0].weekNumber != 0,
+                          rule.daysOfTheMonth == nil {
+                    // weekNumber 인코딩 — 같은 의미의 또 다른 표현("둘째 화요일").
+                    ordinal = days[0].weekNumber
+                    ordinalWeekday = days[0].dayOfTheWeek.rawValue
+                } else {
+                    return nil
+                }
             }
             var monthDays: Set<Int> = []
             if let days = rule.daysOfTheMonth {
@@ -261,31 +285,46 @@ struct EventEditDraft: Equatable {
             self.weekdays = weekdays
             self.monthDays = monthDays
             self.months = months
+            self.ordinal = ordinal
+            self.ordinalWeekday = ordinalWeekday
         }
 
         init(frequency: Frequency, interval: Int,
-             weekdays: Set<Int> = [], monthDays: Set<Int> = [], months: Set<Int> = []) {
+             weekdays: Set<Int> = [], monthDays: Set<Int> = [], months: Set<Int> = [],
+             ordinal: Int? = nil, ordinalWeekday: Int? = nil) {
             self.frequency = frequency
             self.interval = interval
             self.weekdays = weekdays
             self.monthDays = monthDays
             self.months = months
+            self.ordinal = ordinal
+            self.ordinalWeekday = ordinalWeekday
         }
 
         func rule(end: EKRecurrenceEnd?) -> EKRecurrenceRule {
-            EKRecurrenceRule(
+            // 서수 요일("N째 X요일")은 setPositions로 인코딩 — 매월·매년 공통이고
+            // Apple 캘린더가 쓰는 방식과 같다. 이때 일자 지정(monthDays)은 무시.
+            let usesOrdinal = (frequency == .monthly || frequency == .yearly)
+                && ordinal != nil && ordinalWeekday != nil
+            let ordinalDays = ordinalWeekday
+                .flatMap(EKWeekday.init(rawValue:))
+                .map { [EKRecurrenceDayOfWeek($0)] }
+            return EKRecurrenceRule(
                 recurrenceWith: frequency.ekFrequency,
                 interval: interval,
-                daysOfTheWeek: frequency == .weekly && !weekdays.isEmpty
-                    ? weekdays.sorted().compactMap { EKWeekday(rawValue: $0).map { EKRecurrenceDayOfWeek($0) } }
-                    : nil,
-                daysOfTheMonth: frequency == .monthly && !monthDays.isEmpty
+                daysOfTheWeek: usesOrdinal
+                    ? ordinalDays
+                    : (frequency == .weekly && !weekdays.isEmpty
+                        ? weekdays.sorted().compactMap { EKWeekday(rawValue: $0).map { EKRecurrenceDayOfWeek($0) } }
+                        : nil),
+                daysOfTheMonth: !usesOrdinal && frequency == .monthly && !monthDays.isEmpty
                     ? monthDays.sorted().map(NSNumber.init(value:))
                     : nil,
                 monthsOfTheYear: frequency == .yearly && !months.isEmpty
                     ? months.sorted().map(NSNumber.init(value:))
                     : nil,
-                weeksOfTheYear: nil, daysOfTheYear: nil, setPositions: nil,
+                weeksOfTheYear: nil, daysOfTheYear: nil,
+                setPositions: usesOrdinal ? ordinal.map { [NSNumber(value: $0)] } : nil,
                 end: end
             )
         }

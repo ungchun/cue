@@ -130,6 +130,39 @@ struct EventEditDraftTests {
         #expect(event.recurrenceRules?.first?.recurrenceEnd?.endDate == until)
     }
 
+    /// 서수 요일 지정(매월 첫째 월요일 · 매년 3월 마지막 금요일) 왕복 — Apple "다음 순서로".
+    @Test func ordinalWeekdayRuleRoundTrips() {
+        let firstMonday = EventEditDraft.Recurrence.custom(
+            .init(frequency: .monthly, interval: 1,
+                  ordinal: 1, ordinalWeekday: EKWeekday.monday.rawValue)
+        )
+        let monthlyRule = firstMonday.rule(endingOn: .never)!
+        #expect(monthlyRule.daysOfTheWeek?.map(\.dayOfTheWeek) == [.monday])
+        #expect(monthlyRule.setPositions == [1])
+        #expect(EventEditDraft.Recurrence(rules: [monthlyRule]) == firstMonday)
+
+        let lastFridayOfMarch = EventEditDraft.Recurrence.custom(
+            .init(frequency: .yearly, interval: 1, months: [3],
+                  ordinal: -1, ordinalWeekday: EKWeekday.friday.rawValue)
+        )
+        let yearlyRule = lastFridayOfMarch.rule(endingOn: .never)!
+        #expect(EventEditDraft.Recurrence(rules: [yearlyRule]) == lastFridayOfMarch)
+    }
+
+    /// weekNumber 방식으로 인코딩된 기존 규칙(월간 둘째 화요일)도 서수 편집으로 읽힌다.
+    @Test func weekNumberEncodedOrdinalRuleIsReadable() {
+        let rule = EKRecurrenceRule(
+            recurrenceWith: .monthly, interval: 1,
+            daysOfTheWeek: [EKRecurrenceDayOfWeek(.tuesday, weekNumber: 2)],
+            daysOfTheMonth: nil, monthsOfTheYear: nil, weeksOfTheYear: nil,
+            daysOfTheYear: nil, setPositions: nil, end: nil
+        )
+
+        #expect(EventEditDraft.Recurrence(rules: [rule])
+                == .custom(.init(frequency: .monthly, interval: 1,
+                                 ordinal: 2, ordinalWeekday: EKWeekday.tuesday.rawValue)))
+    }
+
     /// 우리 편집기로 표현 불가한 규칙(횟수 종료·setPositions 등)은 foreign — 저장 시 보존.
     @Test func unrepresentableRulesAreForeignAndPreserved() {
         let store = EKEventStore()

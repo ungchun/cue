@@ -88,12 +88,16 @@ struct RepeatOptionScreen: View {
                 Text("If none are selected, the start date's weekday is used.")
             }
         case .monthly:
-            Section {
-                numberGrid(range: 1...31, columns: 7, selected: rule.monthDays) { day in
-                    toggleMembership(\.monthDays, day)
+            // "다음 순서로"(서수 요일)가 켜지면 일자 그리드는 숨긴다 — Apple과 동일한 배타 모드.
+            ordinalSection(rule)
+            if rule.ordinal == nil {
+                Section {
+                    numberGrid(range: 1...31, columns: 7, selected: rule.monthDays) { day in
+                        toggleMembership(\.monthDays, day)
+                    }
+                } footer: {
+                    Text("If none are selected, the start date's day is used.")
                 }
-            } footer: {
-                Text("If none are selected, the start date's day is used.")
             }
         case .yearly:
             Section {
@@ -103,7 +107,85 @@ struct RepeatOptionScreen: View {
             } footer: {
                 Text("If none are selected, the start date's month is used.")
             }
+            ordinalSection(rule)
         }
+    }
+
+    /// 서수 요일("N째 X요일") — Apple 캘린더의 "다음 순서로" 스위치 + 서수·요일 휠.
+    @ViewBuilder
+    private func ordinalSection(_ rule: EventEditDraft.CustomRule) -> some View {
+        Section {
+            Toggle("On the...", isOn: ordinalEnabledBinding)
+            if rule.ordinal != nil {
+                HStack(spacing: Spacing.zero) {
+                    Picker("", selection: ordinalBinding) {
+                        ForEach(Self.ordinals, id: \.self) { value in
+                            Text(ordinalLabel(value)).tag(value)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                    Picker("", selection: ordinalWeekdayBinding) {
+                        ForEach(1...7, id: \.self) { weekday in
+                            Text(calendar.weekdaySymbols[weekday - 1]).tag(weekday)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                }
+                // 휠 두 개를 나란히 — 시스템 휠 기본 높이 근사(토큰 밖 치수, 디자인 의도값).
+                .frame(height: 160)
+            }
+        }
+    }
+
+    /// Apple과 동일한 서수 목록 — 첫째…다섯째 + 마지막(-1).
+    private static let ordinals = [1, 2, 3, 4, 5, -1]
+
+    private func ordinalLabel(_ value: Int) -> String {
+        switch value {
+        case 1: String(localized: "First")
+        case 2: String(localized: "Second")
+        case 3: String(localized: "Third")
+        case 4: String(localized: "Fourth")
+        case 5: String(localized: "Fifth")
+        default: String(localized: "Last")
+        }
+    }
+
+    /// 스위치 켜면 기본값(첫째 + 로케일 주 시작 요일), 끄면 서수 지정 해제.
+    private var ordinalEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { customBinding.wrappedValue.ordinal != nil },
+            set: { isOn in
+                var rule = customBinding.wrappedValue
+                rule.ordinal = isOn ? 1 : nil
+                rule.ordinalWeekday = isOn ? calendar.firstWeekday : nil
+                customBinding.wrappedValue = rule
+            }
+        )
+    }
+
+    private var ordinalBinding: Binding<Int> {
+        Binding(
+            get: { customBinding.wrappedValue.ordinal ?? 1 },
+            set: { value in
+                var rule = customBinding.wrappedValue
+                rule.ordinal = value
+                customBinding.wrappedValue = rule
+            }
+        )
+    }
+
+    private var ordinalWeekdayBinding: Binding<Int> {
+        Binding(
+            get: { customBinding.wrappedValue.ordinalWeekday ?? calendar.firstWeekday },
+            set: { value in
+                var rule = customBinding.wrappedValue
+                rule.ordinalWeekday = value
+                customBinding.wrappedValue = rule
+            }
+        )
     }
 
     // MARK: - 반복 종료
