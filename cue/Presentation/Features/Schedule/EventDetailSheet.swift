@@ -225,17 +225,7 @@ struct EventDetailSheet: View {
         case .biweekly: String(localized: "Every 2 Weeks")
         case .monthly: String(localized: "Every Month")
         case .yearly: String(localized: "Every Year")
-        case .foreign: String(localized: "Custom")
-        case .custom(let rule):
-            // 상세 지정이 있어도 요약은 빈도 기준 — 반복 화면의 체크 위치와 일치시킨다.
-            switch rule.frequency {
-            case .daily: String(localized: "Every Day")
-            case .weekly: rule.interval == 2
-                ? String(localized: "Every 2 Weeks")
-                : String(localized: "Every Week")
-            case .monthly: String(localized: "Every Month")
-            case .yearly: String(localized: "Every Year")
-            }
+        case .custom, .foreign: String(localized: "Custom")
         }
     }
 
