@@ -69,6 +69,7 @@ actor InMemoryRemindersRepository: RemindersRepository {
         notes: String?,
         dueDate: Date?,
         includesTime: Bool,
+        recurrence: RecurrenceRule?,
         toListID listID: String
     ) async throws -> Reminder {
         guard lists.contains(where: { $0.id == listID }) else {
@@ -81,6 +82,7 @@ actor InMemoryRemindersRepository: RemindersRepository {
             notes: notes,
             dueDate: dueDate,
             includesTime: includesTime,
+            recurrence: dueDate != nil ? recurrence : nil,   // 반복은 마감일 전제(EventKit 동일)
             listID: listID
         )
         reminders.append(created)
@@ -93,7 +95,8 @@ actor InMemoryRemindersRepository: RemindersRepository {
         title: String,
         notes: String?,
         dueDate: Date?,
-        includesTime: Bool
+        includesTime: Bool,
+        recurrence: RecurrenceRule?
     ) async throws -> Reminder {
         guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
             throw DomainError.notFound
@@ -102,6 +105,7 @@ actor InMemoryRemindersRepository: RemindersRepository {
         reminders[index].notes = notes
         reminders[index].dueDate = dueDate
         reminders[index].includesTime = includesTime
+        reminders[index].recurrence = dueDate != nil ? recurrence : nil
         return reminders[index]
     }
 

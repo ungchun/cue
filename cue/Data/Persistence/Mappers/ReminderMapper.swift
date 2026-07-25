@@ -31,8 +31,7 @@ enum ReminderMapper {
     /// `EKReminder` → 도메인 `Reminder`
     /// `includesTime`은 `dueDateComponents`에 시·분이 들어 있는지로 판단한다 —
     /// 시·분이 비어 있으면 EventKit이 종일 마감으로 취급한다.
-    /// `recurrence`는 `recurrenceRules` 배열의 **첫 규칙**만 frequency·interval만 매핑한다.
-    /// daysOfWeek 등 풍부한 표현은 다음 사이클에서.
+    /// `recurrence`는 `recurrenceRules` 배열의 **첫 규칙**을 매핑한다.
     static func toReminder(_ reminder: EKReminder) -> Reminder {
         Reminder(
             id: reminder.calendarItemIdentifier,
@@ -47,8 +46,11 @@ enum ReminderMapper {
         )
     }
 
-    /// `EKRecurrenceRule` → 도메인 `RecurrenceRule`. frequency·interval만 매핑.
-    private static func toRecurrence(_ rule: EKRecurrenceRule?) -> RecurrenceRule? {
+    /// `EKRecurrenceRule` → 도메인 `RecurrenceRule`.
+    /// 요일/일자/월/서수 요일(setPositions·weekNumber 두 인코딩)·종료 날짜까지 매핑한다.
+    /// 표현 못 하는 부가 조건(횟수 종료·연중 주차 등)은 **빈도·간격만으로 단순화** —
+    /// nil로 잃는 것보다 낫고, 저장 시 그 단순화 형태로 재기록된다(문서화된 손실).
+    static func toRecurrence(_ rule: EKRecurrenceRule?) -> RecurrenceRule? {
         guard let rule else { return nil }
         let frequency: RecurrenceFrequency
         switch rule.frequency {
@@ -58,6 +60,84 @@ enum ReminderMapper {
         case .yearly: frequency = .yearly
         @unknown default: return nil
         }
-        return RecurrenceRule(frequency: frequency, interval: rule.interval)
+        let fallback = RecurrenceRule(frequency: frequency, interval: rule.interval)
+
+        // 횟수 종료는 도메인에 없다 — 단순화 폴백.
+        if let end = rule.recurrenceEnd, end.endDate == nil { return fallback }
+        let endDate = rule.recurrenceEnd?.endDate
+
+        var weekdays: Set<Int> = []
+        var ordinal: Int?
+        var ordinalWeekday: Int?
+        if let positions = rule.setPositions {
+            guard positions.count == 1, frequency == .monthly || frequency == .yearly,
+                  let days = rule.daysOfTheWeek, days.count == 1, days[0].weekNumber == 0,
+                  rule.daysOfTheMonth == nil
+            else { return fallback }
+            ordinal = positions[0].intValue
+            ordinalWeekday = days[0].dayOfTheWeek.rawValue
+        } else if let days = rule.daysOfTheWeek {
+            if frequency == .weekly, days.allSatisfy({ $0.weekNumber == 0 }) {
+                weekdays = Set(days.map { $0.dayOfTheWeek.rawValue })
+            } else if frequency == .monthly, days.count == 1, days[0].weekNumber != 0,
+                      rule.daysOfTheMonth == nil {
+                ordinal = days[0].weekNumber
+                ordinalWeekday = days[0].dayOfTheWeek.rawValue
+            } else {
+                return fallback
+            }
+        }
+        var monthDays: Set<Int> = []
+        if let days = rule.daysOfTheMonth {
+            guard frequency == .monthly, days.allSatisfy({ $0.intValue >= 1 }) else { return fallback }
+            monthDays = Set(days.map(\.intValue))
+        }
+        var months: Set<Int> = []
+        if let list = rule.monthsOfTheYear {
+            guard frequency == .yearly else { return fallback }
+            months = Set(list.map(\.intValue))
+        }
+
+        return RecurrenceRule(
+            frequency: frequency, interval: rule.interval,
+            weekdays: weekdays, monthDays: monthDays, months: months,
+            ordinal: ordinal, ordinalWeekday: ordinalWeekday, endDate: endDate
+        )
+    }
+
+    /// 도메인 `RecurrenceRule` → `EKRecurrenceRule`. 서수 요일은 setPositions로 인코딩
+    /// (Apple 캘린더·미리 알림과 같은 방식), 종료 날짜는 recurrenceEnd로.
+    static func toEKRecurrenceRule(_ rule: RecurrenceRule?) -> EKRecurrenceRule? {
+        guard let rule else { return nil }
+        let frequency: EKRecurrenceFrequency
+        switch rule.frequency {
+        case .daily: frequency = .daily
+        case .weekly: frequency = .weekly
+        case .monthly: frequency = .monthly
+        case .yearly: frequency = .yearly
+        }
+        let usesOrdinal = (rule.frequency == .monthly || rule.frequency == .yearly)
+            && rule.ordinal != nil && rule.ordinalWeekday != nil
+        let ordinalDays = rule.ordinalWeekday
+            .flatMap(EKWeekday.init(rawValue:))
+            .map { [EKRecurrenceDayOfWeek($0)] }
+        return EKRecurrenceRule(
+            recurrenceWith: frequency,
+            interval: rule.interval,
+            daysOfTheWeek: usesOrdinal
+                ? ordinalDays
+                : (rule.frequency == .weekly && !rule.weekdays.isEmpty
+                    ? rule.weekdays.sorted().compactMap { EKWeekday(rawValue: $0).map { EKRecurrenceDayOfWeek($0) } }
+                    : nil),
+            daysOfTheMonth: !usesOrdinal && rule.frequency == .monthly && !rule.monthDays.isEmpty
+                ? rule.monthDays.sorted().map(NSNumber.init(value:))
+                : nil,
+            monthsOfTheYear: rule.frequency == .yearly && !rule.months.isEmpty
+                ? rule.months.sorted().map(NSNumber.init(value:))
+                : nil,
+            weeksOfTheYear: nil, daysOfTheYear: nil,
+            setPositions: usesOrdinal ? rule.ordinal.map { [NSNumber(value: $0)] } : nil,
+            end: rule.endDate.map(EKRecurrenceEnd.init(end:))
+        )
     }
 }

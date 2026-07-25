@@ -825,6 +825,7 @@ final class ReminderViewModel {
         notes: String? = nil,
         dueDate: Date? = nil,
         includesTime: Bool = false,
+        recurrence: RecurrenceRule? = nil,
         toListID: String? = nil
     ) async {
         guard let listID = toListID ?? resolveTargetListID() else {
@@ -838,6 +839,7 @@ final class ReminderViewModel {
                 notes: notes,
                 dueDate: dueDate,
                 includesTime: includesTime,
+                recurrence: recurrence,
                 listID: listID
             )
             applyOptimistically(created)
@@ -877,7 +879,8 @@ final class ReminderViewModel {
         title: String,
         notes: String?,
         dueDate: Date? = nil,
-        includesTime: Bool = false
+        includesTime: Bool = false,
+        recurrence: RecurrenceRule? = nil
     ) async {
         // 저장 확정 전 선반영 — 편집 종료로 행이 읽기 모드로 바뀌는 순간 옛 값이 저장 왕복
         // 시간만큼 보이는 플래시를 없앤다. UseCase와 같은 정규화(trim·notes)를 적용하고,
@@ -889,6 +892,7 @@ final class ReminderViewModel {
             current.notes = ReminderNotes.normalized(notes)
             current.dueDate = dueDate
             current.includesTime = includesTime
+            current.recurrence = dueDate != nil ? recurrence : nil
             applyOptimistically(current)
         }
         openSelfWriteSuppressWindow()
@@ -898,7 +902,8 @@ final class ReminderViewModel {
                 title: title,
                 notes: notes,
                 dueDate: dueDate,
-                includesTime: includesTime
+                includesTime: includesTime,
+                recurrence: recurrence
             )
             applyOptimistically(updated)
             analytics.log(.reminderUpdated)

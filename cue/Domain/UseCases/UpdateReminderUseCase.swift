@@ -20,7 +20,8 @@ struct UpdateReminderUseCase: Sendable {
         title: String,
         notes: String?,
         dueDate: Date? = nil,
-        includesTime: Bool = false
+        includesTime: Bool = false,
+        recurrence: RecurrenceRule? = nil
     ) async throws -> Reminder {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -31,7 +32,9 @@ struct UpdateReminderUseCase: Sendable {
             title: trimmed,
             notes: ReminderNotes.normalized(notes),
             dueDate: dueDate,
-            includesTime: includesTime
+            includesTime: includesTime,
+            // 반복은 마감일 전제 — 날짜가 빠지면 함께 지워 도메인 불변식을 지킨다.
+            recurrence: dueDate != nil ? recurrence : nil
         )
     }
 }

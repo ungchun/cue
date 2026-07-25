@@ -20,6 +20,8 @@ struct ReminderDetailSheet: View {
         var memo: String
         var dueDate: Date?
         var includesTime: Bool
+        /// 반복 규칙 — 날짜가 켜져 있고 반복을 골랐을 때만 non-nil.
+        var recurrence: RecurrenceRule?
     }
 
     @State private var title: String
@@ -27,6 +29,8 @@ struct ReminderDetailSheet: View {
     @State private var hasDate: Bool
     @State private var hasTime: Bool
     @State private var dueDate: Date
+    @State private var recurrence: EventEditDraft.Recurrence
+    @State private var recurrenceEnd: EventEditDraft.RecurrenceEnd
     @State private var expanded: PickerKind?
     @State private var pressedKind: PickerKind?
     @State private var showingDiscardConfirmation = false
@@ -39,6 +43,8 @@ struct ReminderDetailSheet: View {
     private let initialMemo: String
     private let initialDueDate: Date?
     private let initialIncludesTime: Bool
+    private let initialRecurrence: EventEditDraft.Recurrence
+    private let initialRecurrenceEnd: EventEditDraft.RecurrenceEnd
 
     /// 어떤 인라인 피커가 펼쳐졌는지 — 둘 다 켜져도 동시에 펼치진 않는다.
     private enum PickerKind { case date, time }
@@ -66,6 +72,7 @@ struct ReminderDetailSheet: View {
         memo: String = "",
         dueDate: Date? = nil,
         includesTime: Bool = false,
+        recurrence: RecurrenceRule? = nil,
         onComplete: @escaping (Draft) -> Void
     ) {
         _title = State(initialValue: title)
@@ -73,12 +80,17 @@ struct ReminderDetailSheet: View {
         _hasDate = State(initialValue: dueDate != nil)
         _hasTime = State(initialValue: dueDate != nil && includesTime)
         _dueDate = State(initialValue: dueDate ?? Date())
+        // 반복 — 도메인 규칙을 이벤트 시트와 공용하는 편집 모델로 변환해 편집한다.
+        _recurrence = State(initialValue: .init(reminderRule: recurrence))
+        _recurrenceEnd = State(initialValue: .init(reminderRule: recurrence))
         // 처음 들어왔을 때 펼침은 닫아둔다 — iOS 미리알림과 동일하게 사용자가 탭해서 펼친다.
         _expanded = State(initialValue: nil)
         self.initialTitle = title
         self.initialMemo = memo
         self.initialDueDate = dueDate
         self.initialIncludesTime = includesTime
+        self.initialRecurrence = .init(reminderRule: recurrence)
+        self.initialRecurrenceEnd = .init(reminderRule: recurrence)
         self.onComplete = onComplete
     }
 
@@ -89,6 +101,8 @@ struct ReminderDetailSheet: View {
         let currentDate: Date? = hasDate ? dueDate : nil
         if currentDate != initialDueDate { return true }
         if hasTime != initialIncludesTime { return true }
+        if recurrence != initialRecurrence { return true }
+        if recurrenceEnd != initialRecurrenceEnd { return true }
         return false
     }
 
@@ -141,6 +155,18 @@ struct ReminderDetailSheet: View {
                             Spacer()
                         }
                         .listRowInsets(EdgeInsets())
+                    }
+                }
+
+                // 반복 — 날짜가 켜져 있을 때만(Apple 미리 알림과 동일). 반복 종료는
+                // 반복이 실제로 설정됐을 때만 RepeatRows가 노출한다.
+                if hasDate {
+                    Section {
+                        RepeatRows(
+                            recurrence: $recurrence,
+                            recurrenceEnd: $recurrenceEnd,
+                            anchorDate: dueDate
+                        )
                     }
                 }
             }
@@ -330,7 +356,9 @@ struct ReminderDetailSheet: View {
             title: title,
             memo: memo,
             dueDate: hasDate ? dueDate : nil,
-            includesTime: hasTime
+            includesTime: hasTime,
+            // 반복은 날짜 전제 — 날짜를 끄면 함께 버린다.
+            recurrence: hasDate ? recurrence.reminderRule(endingOn: recurrenceEnd) : nil
         ))
         dismiss()
     }

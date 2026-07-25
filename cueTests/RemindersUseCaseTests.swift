@@ -77,6 +77,46 @@ struct RemindersUseCaseTests {
         #expect(updated.first?.isCompleted == false)
     }
 
+    /// 반복은 마감일과 함께 저장된다 — 세부사항 시트의 반복 선택이 도메인까지 관통.
+    @Test func addReminderStoresRecurrenceWithDueDate() async throws {
+        let repository = makeRepository()
+        let rule = RecurrenceRule(frequency: .weekly, weekdays: [2, 4], endDate: Date(timeIntervalSince1970: 1_800_000_000))
+
+        let created = try await AddReminderUseCase(repository: repository)(
+            title: "반복 항목", dueDate: Date(), recurrence: rule, listID: "L1"
+        )
+
+        #expect(created.recurrence == rule)
+    }
+
+    /// 반복은 마감일 전제 — 날짜 없이 들어오면 무시한다(도메인 불변식).
+    @Test func addReminderDropsRecurrenceWithoutDueDate() async throws {
+        let repository = makeRepository()
+
+        let created = try await AddReminderUseCase(repository: repository)(
+            title: "항목", dueDate: nil, recurrence: RecurrenceRule(frequency: .daily), listID: "L1"
+        )
+
+        #expect(created.recurrence == nil)
+    }
+
+    /// update는 반복을 교체·제거할 수 있다 — nil이면 반복 해제.
+    @Test func updateReminderReplacesAndClearsRecurrence() async throws {
+        let repository = makeRepository(reminders: [makeReminder()])
+        let id = try await FetchRemindersUseCase(repository: repository)().first!.id
+
+        let updated = try await UpdateReminderUseCase(repository: repository)(
+            reminderID: id, title: "제목", notes: nil,
+            dueDate: Date(), recurrence: RecurrenceRule(frequency: .monthly, monthDays: [1, 15])
+        )
+        #expect(updated.recurrence == RecurrenceRule(frequency: .monthly, monthDays: [1, 15]))
+
+        let cleared = try await UpdateReminderUseCase(repository: repository)(
+            reminderID: id, title: "제목", notes: nil, dueDate: Date(), recurrence: nil
+        )
+        #expect(cleared.recurrence == nil)
+    }
+
     @Test func addReminderInsertsIntoList() async throws {
         let repository = makeRepository()
 

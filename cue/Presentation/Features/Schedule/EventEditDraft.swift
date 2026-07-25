@@ -420,3 +420,92 @@ struct EventEditDraft: Equatable {
         }
     }
 }
+
+// MARK: - 할일(Reminder) 도메인 브리지
+
+/// 할일 세부사항 시트가 같은 반복 편집 UI(RepeatOptionScreen 등)를 재사용하기 위한
+/// 변환 — 도메인 `RecurrenceRule`(EventKit 무지) ↔ 편집 UI 모델.
+extension EventEditDraft.Recurrence {
+    /// 도메인 규칙 → UI 모델. 부가 지정 없는 프리셋 동치는 프리셋으로 접는다.
+    init(reminderRule rule: RecurrenceRule?) {
+        guard let rule else {
+            self = .none
+            return
+        }
+        let custom = EventEditDraft.CustomRule(
+            frequency: .init(domain: rule.frequency),
+            interval: rule.interval,
+            weekdays: rule.weekdays, monthDays: rule.monthDays, months: rule.months,
+            ordinal: rule.ordinal, ordinalWeekday: rule.ordinalWeekday
+        )
+        let isPlain = custom.weekdays.isEmpty && custom.monthDays.isEmpty
+            && custom.months.isEmpty && custom.ordinal == nil
+        guard isPlain else {
+            self = .custom(custom)
+            return
+        }
+        switch (custom.frequency, custom.interval) {
+        case (.daily, 1): self = .daily
+        case (.weekly, 1): self = .weekly
+        case (.weekly, 2): self = .biweekly
+        case (.monthly, 1): self = .monthly
+        case (.yearly, 1): self = .yearly
+        default: self = .custom(custom)
+        }
+    }
+
+    /// UI 모델 + 반복 종료 → 도메인 규칙. 안 함(none)·foreign은 nil.
+    func reminderRule(endingOn end: EventEditDraft.RecurrenceEnd) -> RecurrenceRule? {
+        let endDate: Date? = {
+            if case .onDate(let date) = end { return date }
+            return nil
+        }()
+        switch self {
+        case .none, .foreign: return nil
+        case .daily: return RecurrenceRule(frequency: .daily, endDate: endDate)
+        case .weekly: return RecurrenceRule(frequency: .weekly, endDate: endDate)
+        case .biweekly: return RecurrenceRule(frequency: .weekly, interval: 2, endDate: endDate)
+        case .monthly: return RecurrenceRule(frequency: .monthly, endDate: endDate)
+        case .yearly: return RecurrenceRule(frequency: .yearly, endDate: endDate)
+        case .custom(let rule):
+            return RecurrenceRule(
+                frequency: rule.frequency.domain,
+                interval: rule.interval,
+                weekdays: rule.weekdays, monthDays: rule.monthDays, months: rule.months,
+                ordinal: rule.ordinal, ordinalWeekday: rule.ordinalWeekday,
+                endDate: endDate
+            )
+        }
+    }
+}
+
+extension EventEditDraft.RecurrenceEnd {
+    /// 도메인 규칙의 endDate → UI의 반복 종료.
+    init(reminderRule rule: RecurrenceRule?) {
+        if let date = rule?.endDate {
+            self = .onDate(date)
+        } else {
+            self = .never
+        }
+    }
+}
+
+extension EventEditDraft.CustomRule.Frequency {
+    init(domain frequency: RecurrenceFrequency) {
+        switch frequency {
+        case .daily: self = .daily
+        case .weekly: self = .weekly
+        case .monthly: self = .monthly
+        case .yearly: self = .yearly
+        }
+    }
+
+    var domain: RecurrenceFrequency {
+        switch self {
+        case .daily: .daily
+        case .weekly: .weekly
+        case .monthly: .monthly
+        case .yearly: .yearly
+        }
+    }
+}

@@ -21,6 +21,7 @@ struct AddReminderUseCase: Sendable {
         notes: String? = nil,
         dueDate: Date? = nil,
         includesTime: Bool = false,
+        recurrence: RecurrenceRule? = nil,
         listID: String
     ) async throws -> Reminder {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -32,6 +33,8 @@ struct AddReminderUseCase: Sendable {
             notes: ReminderNotes.normalized(notes),
             dueDate: dueDate,
             includesTime: includesTime,
+            // 반복은 마감일 전제 — 날짜가 없으면 무시(도메인 불변식).
+            recurrence: dueDate != nil ? recurrence : nil,
             toListID: listID
         )
     }

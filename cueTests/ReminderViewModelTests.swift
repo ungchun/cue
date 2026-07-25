@@ -305,6 +305,7 @@ struct ReminderViewModelTests {
         try await repo.addReminder(
             title: "외부 추가", notes: nil,
             dueDate: nil, includesTime: false,
+            recurrence: nil,
             toListID: listA.id
         )
         await repo.emitChange()
@@ -1953,22 +1954,26 @@ private actor GatedRemindersRepository: RemindersRepository {
     }
     @discardableResult
     func addReminder(
-        title: String, notes: String?, dueDate: Date?, includesTime: Bool, toListID listID: String
+        title: String, notes: String?, dueDate: Date?, includesTime: Bool,
+        recurrence: RecurrenceRule?, toListID listID: String
     ) async throws -> Reminder {
         try await base.addReminder(
-            title: title, notes: notes, dueDate: dueDate, includesTime: includesTime, toListID: listID
+            title: title, notes: notes, dueDate: dueDate, includesTime: includesTime,
+            recurrence: recurrence, toListID: listID
         )
     }
     @discardableResult
     func updateReminder(
-        reminderID: String, title: String, notes: String?, dueDate: Date?, includesTime: Bool
+        reminderID: String, title: String, notes: String?, dueDate: Date?, includesTime: Bool,
+        recurrence: RecurrenceRule?
     ) async throws -> Reminder {
         if updateGateClosed {
             isUpdateWaiting = true
             await withCheckedContinuation { updateWaiters.append($0) }
         }
         return try await base.updateReminder(
-            reminderID: reminderID, title: title, notes: notes, dueDate: dueDate, includesTime: includesTime
+            reminderID: reminderID, title: title, notes: notes, dueDate: dueDate,
+            includesTime: includesTime, recurrence: recurrence
         )
     }
     func deleteReminder(reminderID: String) async throws { try await base.deleteReminder(reminderID: reminderID) }

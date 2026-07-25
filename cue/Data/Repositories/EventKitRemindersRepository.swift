@@ -69,6 +69,7 @@ actor EventKitRemindersRepository: RemindersRepository {
         notes: String?,
         dueDate: Date?,
         includesTime: Bool,
+        recurrence: RecurrenceRule?,
         toListID listID: String
     ) async throws -> Reminder {
         guard let calendar = store.calendars(for: .reminder)
@@ -79,6 +80,10 @@ actor EventKitRemindersRepository: RemindersRepository {
         reminder.title = title
         reminder.notes = notes
         reminder.calendar = calendar
+        // 반복은 마감일이 있을 때만 — EventKit 반복 미리알림은 마감일 기준으로 전개된다.
+        if dueDate != nil, let rule = ReminderMapper.toEKRecurrenceRule(recurrence) {
+            reminder.addRecurrenceRule(rule)
+        }
         if let dueDate {
             // 시간이 없으면 [년·월·일]만 — EventKit은 이를 "종일" 마감으로 본다.
             let fields: Set<Calendar.Component> = includesTime
@@ -102,13 +107,19 @@ actor EventKitRemindersRepository: RemindersRepository {
         title: String,
         notes: String?,
         dueDate: Date?,
-        includesTime: Bool
+        includesTime: Bool,
+        recurrence: RecurrenceRule?
     ) async throws -> Reminder {
         guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
             throw DomainError.notFound
         }
         reminder.title = title
         reminder.notes = notes
+        // 기존 규칙을 걷어내고 도메인 규칙으로 교체 — nil이면 반복 제거. 마감일 없으면 무의미.
+        (reminder.recurrenceRules ?? []).forEach(reminder.removeRecurrenceRule)
+        if dueDate != nil, let rule = ReminderMapper.toEKRecurrenceRule(recurrence) {
+            reminder.addRecurrenceRule(rule)
+        }
         // 기존 알람을 모두 떼고, 시간 포함이면 새로 단다 — 마감일 변경 시 알람 시각도 같이 바뀌어야 함.
         if let alarms = reminder.alarms {
             for alarm in alarms { reminder.removeAlarm(alarm) }

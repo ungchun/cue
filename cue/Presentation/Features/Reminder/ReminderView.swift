@@ -110,7 +110,8 @@ struct ReminderView: View {
                     title: reminder.title,
                     memo: reminder.notes ?? "",
                     dueDate: reminder.dueDate,
-                    includesTime: reminder.includesTime
+                    includesTime: reminder.includesTime,
+                    recurrence: reminder.recurrence
                 ) { draft in
                     saveEdit(reminderID: reminder.id, draft: draft)
                 }
@@ -1314,6 +1315,7 @@ struct ReminderView: View {
             await viewModel.add(
                 title: trimmed, notes: memo,
                 dueDate: draft.dueDate, includesTime: draft.includesTime,
+                recurrence: draft.recurrence,
                 toListID: targetID
             )
             if newTitle == rowTitleAtSubmit, newMemo == rowMemoAtSubmit {
@@ -1336,7 +1338,8 @@ struct ReminderView: View {
                 title: trimmed,
                 notes: draft.memo,
                 dueDate: draft.dueDate,
-                includesTime: draft.includesTime
+                includesTime: draft.includesTime,
+                recurrence: draft.recurrence
             )
         }
     }

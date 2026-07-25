@@ -75,26 +75,13 @@ struct EventDetailSheet: View {
                 }
 
                 // 반복 — Apple 캘린더와 동일 구성: 메뉴 피커(안 함…사용자화) +
-                // 사용자화면 요약 행(상세 화면 진입) + 반복 종료(안 함/날짜).
+                // 사용자화면 요약 행(상세 화면 진입) + 반복 종료(안 함/날짜). 할일 시트와 공용 행.
                 Section {
-                    repeatMenuRow
-                    if isCustomRecurrence {
-                        repeatSummaryRow
-                    }
-                    if showsEndRepeat {
-                        endRepeatRow
-                        if case .onDate(let date) = draft.recurrenceEnd {
-                            DatePicker(
-                                "On Date",
-                                selection: Binding(
-                                    get: { date },
-                                    set: { draft.recurrenceEnd = .onDate($0) }
-                                ),
-                                in: draft.start...,
-                                displayedComponents: .date
-                            )
-                        }
-                    }
+                    RepeatRows(
+                        recurrence: $draft.recurrence,
+                        recurrenceEnd: $draft.recurrenceEnd,
+                        anchorDate: draft.start
+                    )
                 }
 
                 if !calendars.isEmpty {
@@ -237,74 +224,6 @@ struct EventDetailSheet: View {
         Binding(get: { draft.end }, set: { draft.setEnd($0) })
     }
 
-    /// 반복 메뉴 — 프리셋 + 사용자화. 사용자화의 tag는 현재 custom 값 그대로 써서
-    /// 상세를 어떻게 편집해도 메뉴 선택이 유지된다.
-    private var repeatMenuRow: some View {
-        Picker("Repeat", selection: $draft.recurrence) {
-            ForEach(repeatMenuOptions, id: \.self) { option in
-                Text(label(for: option)).tag(option)
-            }
-        }
-    }
-
-    private var repeatMenuOptions: [EventEditDraft.Recurrence] {
-        var options = EventEditDraft.Recurrence.presets
-        switch draft.recurrence {
-        case .custom, .foreign:
-            options.append(draft.recurrence)
-        default:
-            // 메뉴에서 사용자화를 고르면 이 기본값(매일 1회)에서 시작 — Apple과 동일.
-            options.append(.custom(.init(frequency: .daily, interval: 1)))
-        }
-        return options
-    }
-
-    private var isCustomRecurrence: Bool {
-        switch draft.recurrence {
-        case .custom, .foreign: true
-        default: false
-        }
-    }
-
-    /// "반복: 매년 7월, 8월 및 12월 ›" — 사용자화 요약 + 상세 화면 진입.
-    private var repeatSummaryRow: some View {
-        NavigationLink {
-            RepeatOptionScreen(recurrence: $draft.recurrence)
-        } label: {
-            // Apple 캘린더 요약 행과 동일 — 본문보다 작고 옅게.
-            Text("Repeat: \(recurrenceSummary)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var recurrenceSummary: String {
-        if case .custom(let rule) = draft.recurrence { return rule.summaryText }
-        return String(localized: "Custom")
-    }
-
-    /// 반복 종료 — foreign은 원본 보존이라 노출하지 않는다.
-    private var showsEndRepeat: Bool {
-        switch draft.recurrence {
-        case .none, .foreign: false
-        default: true
-        }
-    }
-
-    private var endRepeatRow: some View {
-        Picker("End Repeat", selection: $draft.recurrenceEnd) {
-            Text("Never").tag(EventEditDraft.RecurrenceEnd.never)
-            Text("On Date").tag(onDateTag)
-        }
-    }
-
-    /// "날짜" 항목의 tag — 이미 날짜면 현재 값(선택 유지), 아니면 기본값(시작+1개월).
-    private var onDateTag: EventEditDraft.RecurrenceEnd {
-        if case .onDate = draft.recurrenceEnd { return draft.recurrenceEnd }
-        let base = Calendar.current.date(byAdding: .month, value: 1, to: draft.start) ?? draft.start
-        return .onDate(base)
-    }
-
     private var alarmPicker: some View {
         Picker("Alert", selection: $draft.alarm) {
             ForEach(alarmOptions, id: \.self) { option in
@@ -334,18 +253,6 @@ struct EventDetailSheet: View {
     }
 
     // MARK: - 라벨
-
-    private func label(for option: EventEditDraft.Recurrence) -> String {
-        switch option {
-        case .none: String(localized: "Never")
-        case .daily: String(localized: "Every Day")
-        case .weekly: String(localized: "Every Week")
-        case .biweekly: String(localized: "Every 2 Weeks")
-        case .monthly: String(localized: "Every Month")
-        case .yearly: String(localized: "Every Year")
-        case .custom, .foreign: String(localized: "Custom")
-        }
-    }
 
     private func label(for option: EventEditDraft.Alarm) -> String {
         switch option {

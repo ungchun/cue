@@ -25,25 +25,29 @@ protocol RemindersRepository: Sendable {
     /// 기다리지 않고 로컬 목록에 즉시 반영(낙관적 갱신)할 수 있게. 저장 시 행 깜빡임 제거의 근간.
     /// `notes`가 nil이면 메모 없이 만든다.
     /// `dueDate`가 nil이면 마감일 없이, `includesTime`이 false면 시간 없는(종일) 마감으로 만든다.
+    /// `recurrence`는 마감일이 있을 때만 의미가 있다(반복은 마감일 기준으로 전개).
     @discardableResult
     func addReminder(
         title: String,
         notes: String?,
         dueDate: Date?,
         includesTime: Bool,
+        recurrence: RecurrenceRule?,
         toListID listID: String
     ) async throws -> Reminder
     /// 기존 항목의 제목·메모·마감일을 갱신하고, 갱신된 항목을 돌려준다 — 같은 id의 항목을
     /// 로컬에서 in-place 치환하기 위함(add와 같은 낙관적 갱신 계약).
     /// `notes`가 nil이면 메모를 비우고, `dueDate`가 nil이면 마감일을 지운다.
     /// `includesTime`은 종일/시각 구분을 결정한다 (시각이면 EventKit 알람도 함께 갱신).
+    /// `recurrence`가 nil이면 반복을 지운다.
     @discardableResult
     func updateReminder(
         reminderID: String,
         title: String,
         notes: String?,
         dueDate: Date?,
-        includesTime: Bool
+        includesTime: Bool,
+        recurrence: RecurrenceRule?
     ) async throws -> Reminder
     /// 항목을 삭제한다.
     func deleteReminder(reminderID: String) async throws
