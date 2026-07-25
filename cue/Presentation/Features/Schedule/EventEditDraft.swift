@@ -48,8 +48,11 @@ struct EventEditDraft: Equatable {
         title = event.title ?? ""
         location = Location(event: event)
         isAllDay = event.isAllDay
-        start = event.startDate
-        end = event.endDate
+        // startDate/endDate는 암시적 언래핑(Date!) — 저장소에서 온 이벤트는 항상 있지만,
+        // 방어적으로 폴백해 손상 데이터에서도 크래시하지 않게 한다.
+        let fallbackStart = event.startDate ?? Date()
+        start = fallbackStart
+        end = event.endDate ?? fallbackStart.addingTimeInterval(3600)
         recurrence = Recurrence(rules: event.recurrenceRules)
         recurrenceEnd = RecurrenceEnd(rules: event.recurrenceRules)
         alarm = Alarm(alarms: event.alarms)

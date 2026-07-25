@@ -167,6 +167,8 @@ struct EventEditDraftTests {
     @Test func unrepresentableRulesAreForeignAndPreserved() {
         let store = EKEventStore()
         let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
         event.addRecurrenceRule(EKRecurrenceRule(
             recurrenceWith: .weekly, interval: 1, end: EKRecurrenceEnd(occurrenceCount: 5)
         ))
@@ -252,6 +254,8 @@ struct EventEditDraftTests {
     @Test func weekdaySpecificRuleIsEditableCustomAndSurvivesApply() {
         let store = EKEventStore()
         let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
         let exotic = EKRecurrenceRule(
             recurrenceWith: .weekly, interval: 3,
             daysOfTheWeek: [EKRecurrenceDayOfWeek(.monday)],
@@ -276,6 +280,8 @@ struct EventEditDraftTests {
     @Test func switchingAwayFromCustomReplacesRulesAndAlarms() {
         let store = EKEventStore()
         let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
         event.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: .weekly, interval: 3, end: nil))
         event.addAlarm(EKAlarm(relativeOffset: -420))
         var draft = EventEditDraft(event: event)
@@ -315,6 +321,8 @@ struct EventEditDraftTests {
     @Test func clearingLocationRemovesBothRepresentations() {
         let store = EKEventStore()
         let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
         event.location = "어딘가"
         var draft = EventEditDraft(event: event)
         draft.title = "제목"
