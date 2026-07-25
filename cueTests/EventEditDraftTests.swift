@@ -216,7 +216,7 @@ struct EventEditDraftTests {
         let draft = EventEditDraft(event: event)
 
         #expect(draft.title == "회의")
-        #expect(draft.location == "3층")
+        #expect(draft.location == EventEditDraft.Location(title: "3층"))
         #expect(draft.start == date(2026, 7, 25, 10, 0))
         #expect(draft.end == date(2026, 7, 25, 11, 0))
         #expect(draft.notes == "자료 지참")
@@ -231,7 +231,7 @@ struct EventEditDraftTests {
         let event = EKEvent(eventStore: store)
         var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
         draft.title = "  점심  "
-        draft.location = ""
+        draft.location = nil
         draft.notes = ""
         draft.urlString = "https://cue.app"
         draft.alarm = .minutesBefore(15)
@@ -288,6 +288,42 @@ struct EventEditDraftTests {
         #expect(event.recurrenceRules?.first?.frequency == .monthly)
         #expect(event.recurrenceRules?.first?.interval == 1)
         #expect(event.alarms == nil || event.alarms?.isEmpty == true)
+    }
+
+    /// 지도에서 고른 위치(제목+주소+좌표)는 구조화 위치로 저장되고 다시 읽힌다.
+    @Test func structuredLocationRoundTripsThroughEvent() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
+        draft.title = "회의"
+        draft.location = EventEditDraft.Location(
+            title: "개봉역", address: "대한민국 서울특별시 구로구 경인로40길 47",
+            latitude: 37.4944, longitude: 126.8586
+        )
+
+        draft.apply(to: event)
+
+        // location 문자열은 "제목\n주소", 구조화 위치엔 좌표가 실린다.
+        #expect(event.location == "개봉역\n대한민국 서울특별시 구로구 경인로40길 47")
+        #expect(event.structuredLocation?.geoLocation?.coordinate.latitude == 37.4944)
+
+        let reread = EventEditDraft(event: event)
+        #expect(reread.location == draft.location)
+    }
+
+    /// 위치 제거 시 문자열·구조화 위치 모두 지운다.
+    @Test func clearingLocationRemovesBothRepresentations() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.location = "어딘가"
+        var draft = EventEditDraft(event: event)
+        draft.title = "제목"
+
+        draft.location = nil
+        draft.apply(to: event)
+
+        #expect(event.location == nil)
+        #expect(event.structuredLocation == nil)
     }
 
     /// 종일 전환 시 시각 성분과 무관하게 isAllDay만 반영 — 날짜는 그대로.

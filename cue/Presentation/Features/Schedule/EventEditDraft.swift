@@ -3,6 +3,7 @@
 //  cue / Presentation
 //
 
+import CoreLocation
 import EventKit
 import Foundation
 
@@ -14,7 +15,8 @@ import Foundation
 /// 저장 시 **기존 값을 보존**한다 — 우리 폼이 못 그리는 고급 설정을 파괴하지 않기 위해.
 struct EventEditDraft: Equatable {
     var title: String
-    var location: String
+    /// 위치 — 지도 검색으로 고른 구조화 위치(제목·주소·좌표) 또는 직접 입력 문자열. nil = 없음.
+    var location: Location?
     var isAllDay: Bool
     private(set) var start: Date
     private(set) var end: Date
@@ -34,7 +36,7 @@ struct EventEditDraft: Equatable {
         let hourFloor = calendar.dateInterval(of: .hour, for: now)?.start ?? now
         let start = hourFloor == now ? now : calendar.date(byAdding: .hour, value: 1, to: hourFloor) ?? now
         return EventEditDraft(
-            title: "", location: "", isAllDay: false,
+            title: "", location: nil, isAllDay: false,
             start: start, end: start.addingTimeInterval(3600),
             recurrence: .none, recurrenceEnd: .never,
             alarm: .none, urlString: "", notes: "", calendarID: nil
@@ -44,7 +46,7 @@ struct EventEditDraft: Equatable {
     /// 기존 이벤트 스냅샷 — 편집 모드 초기값.
     init(event: EKEvent) {
         title = event.title ?? ""
-        location = event.location ?? ""
+        location = Location(event: event)
         isAllDay = event.isAllDay
         start = event.startDate
         end = event.endDate
@@ -57,7 +59,7 @@ struct EventEditDraft: Equatable {
     }
 
     private init(
-        title: String, location: String, isAllDay: Bool, start: Date, end: Date,
+        title: String, location: Location?, isAllDay: Bool, start: Date, end: Date,
         recurrence: Recurrence, recurrenceEnd: RecurrenceEnd,
         alarm: Alarm, urlString: String, notes: String, calendarID: String?
     ) {
@@ -94,7 +96,18 @@ struct EventEditDraft: Equatable {
     /// `.custom` 반복·알림은 기존 값을 그대로 둔다 — 보존 계약(위 타입 주석 참고).
     func apply(to event: EKEvent) {
         event.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        event.location = Self.nilIfEmpty(location)
+        if let location {
+            // 구조화 위치(제목\n주소 + 좌표)로 저장 — Apple 캘린더와 같은 표현.
+            let structured = EKStructuredLocation(title: location.displayText)
+            if let latitude = location.latitude, let longitude = location.longitude {
+                structured.geoLocation = CLLocation(latitude: latitude, longitude: longitude)
+            }
+            event.structuredLocation = structured
+            event.location = location.displayText
+        } else {
+            event.structuredLocation = nil
+            event.location = nil
+        }
         event.notes = Self.nilIfEmpty(notes)
         event.url = Self.nilIfEmpty(urlString).flatMap(URL.init(string:))
         event.isAllDay = isAllDay
@@ -114,6 +127,42 @@ struct EventEditDraft: Equatable {
     private static func nilIfEmpty(_ value: String) -> String? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    // MARK: - 위치
+
+    /// 이벤트 위치 — 제목 + (선택) 주소·좌표. `location` 문자열은 "제목\n주소"로 직렬화되고
+    /// 좌표는 `EKStructuredLocation.geoLocation`에 실린다(Apple 캘린더와 같은 표현).
+    struct Location: Hashable {
+        var title: String
+        var address: String?
+        var latitude: Double?
+        var longitude: Double?
+
+        init(title: String, address: String? = nil, latitude: Double? = nil, longitude: Double? = nil) {
+            self.title = title
+            self.address = address
+            self.latitude = latitude
+            self.longitude = longitude
+        }
+
+        /// 기존 이벤트에서 복원 — location 문자열 첫 줄=제목, 나머지=주소, 좌표는 구조화 위치.
+        init?(event: EKEvent) {
+            guard let raw = event.location, !raw.isEmpty else { return nil }
+            let lines = raw.split(separator: "\n", maxSplits: 1).map(String.init)
+            title = lines.first ?? raw
+            address = lines.count > 1 ? lines[1] : nil
+            if let geo = event.structuredLocation?.geoLocation {
+                latitude = geo.coordinate.latitude
+                longitude = geo.coordinate.longitude
+            }
+        }
+
+        /// "제목\n주소" — EKEvent.location 문자열 및 행 표시용.
+        var displayText: String {
+            guard let address, !address.isEmpty else { return title }
+            return "\(title)\n\(address)"
+        }
     }
 
     // MARK: - 반복 옵션

@@ -27,6 +27,7 @@ struct EventDetailSheet: View {
     let onCompletion: (EventEditOutcome) -> Void
 
     @State private var draft: EventEditDraft
+    @State private var showingLocationPicker = false
     @State private var showingDiscardConfirmation = false
     @State private var showingSaveSpanDialog = false
     @State private var showingDeleteConfirmation = false
@@ -62,7 +63,7 @@ struct EventDetailSheet: View {
                 Section {
                     TextField("Title", text: $draft.title, axis: .vertical)
                         .font(.title2.weight(.semibold))
-                    TextField("Location", text: $draft.location)
+                    locationRow
                 }
 
                 Section {
@@ -177,6 +178,51 @@ struct EventDetailSheet: View {
     }
 
     // MARK: - 행 구성
+
+    /// 위치 — 탭하면 위치 검색 시트(현재 위치·지도 검색). 선택되면 제목+주소 표시 + ⓧ로 제거.
+    private var locationRow: some View {
+        HStack {
+            Button {
+                showingLocationPicker = true
+            } label: {
+                if let location = draft.location {
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text(location.title)
+                            .foregroundStyle(.primary)
+                        if let address = location.address {
+                            Text(address)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                } else {
+                    Text("Location")
+                        .foregroundStyle(Color(.placeholderText))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+            }
+            .buttonStyle(.plain)
+
+            if draft.location != nil {
+                Button {
+                    draft.location = nil
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .sheet(isPresented: $showingLocationPicker) {
+            LocationPickerSheet { location in
+                draft.location = location
+            }
+        }
+    }
 
     private var dateComponents: DatePickerComponents {
         draft.isAllDay ? [.date] : [.date, .hourAndMinute]

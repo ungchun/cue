@@ -515,6 +515,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Cue;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Cue needs access to view and create your iOS Calendar events.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cue uses your location to add your current location to an event.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Cue needs access to view and manage your iOS Reminders.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -561,6 +562,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Cue;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Cue needs access to view and create your iOS Calendar events.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Cue uses your location to add your current location to an event.";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Cue needs access to view and manage your iOS Reminders.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
