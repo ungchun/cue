@@ -75,6 +75,8 @@ struct LocationPickerSheet: View {
                     }
                 }
             }
+            // 기본 섹션 간격(~35)이 시트에선 휑하다 — 카드 사이를 조밀하게.
+            .listSectionSpacing(Spacing.smd)
             .searchable(
                 text: $searchText,
                 placement: .navigationBarDrawer(displayMode: .always),
