@@ -113,7 +113,7 @@ struct EventEditDraft: Equatable {
     // MARK: - 반복 옵션
 
     /// Apple 캘린더 반복 프리셋 — 그 밖의 규칙은 `.custom`(표시·보존 전용).
-    enum Recurrence: Equatable {
+    enum Recurrence: Hashable {
         case none, daily, weekly, biweekly, monthly, yearly, custom
 
         /// 선택 메뉴에 노출하는 프리셋 — custom은 기존 규칙 표시용이라 제외.
@@ -159,7 +159,7 @@ struct EventEditDraft: Equatable {
     // MARK: - 알림 옵션
 
     /// Apple 캘린더 알림 프리셋(상대 오프셋) — 그 밖의 값은 `.custom`(표시·보존 전용).
-    enum Alarm: Equatable {
+    enum Alarm: Hashable {
         case none
         case atTime                 // 이벤트 당시(오프셋 0)
         case minutesBefore(Int)     // 프리셋 분 단위만(presetMinutes)
