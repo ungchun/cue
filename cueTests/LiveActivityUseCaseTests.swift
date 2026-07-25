@@ -284,8 +284,10 @@ struct LiveActivityUseCaseTests {
 
         let days = try #require(await service.startScheduleCalls.first).days
         // 로케일 무관 검증 — 코드·테스트가 같은 키를 해석하므로 어느 언어에서든 일치.
+        // 상대 표기는 오늘/내일까지만 — 2일 뒤부터는 날짜 표기(dateLabel).
         #expect(days.map(\.label) == [
-            String(localized: "Today"), String(localized: "Tomorrow"), String(localized: "In 2 days"),
+            String(localized: "Today"), String(localized: "Tomorrow"),
+            StartScheduleLiveActivityUseCase.dateLabel(for: day(2)),
         ])
         #expect(days.map { $0.events.map(\.id) } == [["t1"], ["m1"], ["mo1"]])
         #expect(days.first?.events.first?.calendarColorHex == "#FF0000")
@@ -300,8 +302,8 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: .now)
 
         let label = try #require(await service.startScheduleCalls.first?.days.first?.label)
-        // 3일 뒤는 오늘/내일/모레가 아니라 날짜 형식 — 로케일 무관(공유 규칙과 일치 검증).
-        let relative = [String(localized: "Today"), String(localized: "Tomorrow"), String(localized: "In 2 days")]
+        // 3일 뒤는 오늘/내일이 아니라 날짜 형식 — 로케일 무관(공유 규칙과 일치 검증).
+        let relative = [String(localized: "Today"), String(localized: "Tomorrow")]
         #expect(!relative.contains(label))
         #expect(label == StartScheduleLiveActivityUseCase.dateLabel(for: day3))
     }

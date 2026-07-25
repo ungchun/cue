@@ -7,7 +7,7 @@ import Foundation
 
 /// 일정 스냅샷을 라이브 액티비티로 게시.
 ///
-/// 평탄한 이벤트 목록을 **날짜별로 묶고**(오늘부터), 각 날에 라벨(오늘/내일/모레 또는
+/// 평탄한 이벤트 목록을 **날짜별로 묶고**(오늘부터), 각 날에 라벨(오늘/내일 또는
 /// 한국어 `"7월 28일"` 등 로케일별 표기)을 붙여 `LiveScheduleDay` 배열로 만든다. 종일 이벤트는 그날 위로 정렬한다.
 /// 실제로 2열에 몇 개를 보일지는 위젯이 정하지만, **ActivityKit ContentState ~4KB 한도** 때문에
 /// `maxTotalEvents`로 싣는 총 이벤트 수를 제한한다(초과 시 throw로 LA가 아예 안 뜬다).
@@ -92,14 +92,14 @@ struct StartScheduleLiveActivityUseCase: Sendable {
         return days
     }
 
-    /// 날짜 라벨 — 0/1/2일 차는 오늘/내일/모레, 그 뒤는 로케일별 날짜 표기(`dateLabel`).
+    /// 날짜 라벨 — 오늘/내일만 상대 표기, 2일 뒤부터는 로케일별 날짜 표기(`dateLabel`).
+    /// "모레"류 상대 표기는 언어별로 길이 편차가 커(예: "En 2 días") 날짜가 더 명확하다.
     private static func label(for dayStart: Date, now: Date, calendar: Calendar) -> String {
         let today = calendar.startOfDay(for: now)
         let offset = calendar.dateComponents([.day], from: today, to: dayStart).day ?? 0
         switch offset {
         case 0: return String(localized: "Today")
         case 1: return String(localized: "Tomorrow")
-        case 2: return String(localized: "In 2 days")
         default: return dateLabel(for: dayStart)
         }
     }

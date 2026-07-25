@@ -9,7 +9,7 @@ import WidgetKit
 
 /// 일정 라이브 액티비티 위젯.
 ///
-/// 잠금화면: 날짜 묶음(오늘/내일/모레/날짜)을 2열에 통째로 채워 **들어가는 만큼만**
+/// 잠금화면: 날짜 묶음(오늘/내일/날짜)을 2열에 통째로 채워 **들어가는 만큼만**
 /// 그린다. 종일 이벤트는 색 캡슐(제목만), 시간 이벤트는 좌측 색 막대 + 제목 + 시간(시작—끝).
 struct ScheduleLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
