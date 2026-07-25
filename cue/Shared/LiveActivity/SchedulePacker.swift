@@ -89,8 +89,8 @@ enum SchedulePacker {
 ///
 /// **잠금화면 Live Activity 최대 높이 = 160pt**(시스템이 초과분을 잘라냄, 디바이스 공통).
 /// `columnMax = 160 − 상하 패딩(outerPadding × 2)`로 두면 패커가 컬럼 콘텐츠를 이 값 이하로
-/// 잘라 **총높이 ≤ 160pt가 보장**된다. caption/caption2 + 좁은 간격 기준 컬럼당 시간 이벤트
-/// 3개(종일은 더) 정도 들어간다.
+/// 잘라 **총높이 ≤ 160pt가 보장**된다. xSmall 고정 + 조합별 간격 기준 컬럼당 시간 이벤트
+/// 4개(종일은 더) 정도 들어간다.
 enum ScheduleMetrics {
     /// 위젯 상하 패딩 — 이 값이 바뀌면 columnMax(높이 예산)가 자동으로 따라간다.
     static let outerPadding: CGFloat = Spacing.smd      // 12

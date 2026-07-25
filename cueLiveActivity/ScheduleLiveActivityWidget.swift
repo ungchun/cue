@@ -144,8 +144,8 @@ private struct ScheduleDayView: View {
     let chunk: DayChunk
 
     var body: some View {
-        // 행 간격은 종류별로 달라(캡슐끼리 2, 시간 일정 인접 4) 단일 spacing 대신
-        // 행마다 상단 패딩으로 준다 — 패커의 headerGap/rowGap(previous:next:)와 동기.
+        // 행 간격은 종류 조합별로 달라(캡슐끼리 4·캡슐↔시간 2·시간끼리 0) 단일 spacing
+        // 대신 행마다 상단 패딩으로 준다 — 패커의 headerGap/rowGap(previous:next:)와 동기.
         VStack(alignment: .leading, spacing: Spacing.zero) {
             if let label = chunk.label {
                 Text(label)

@@ -24,6 +24,29 @@ struct SchedulePackerTests {
         return LiveScheduleDay(id: id, label: label, events: events)
     }
 
+    /// 행 종류 조합별 간격 계약 — 뷰(ScheduleDayView.topGap)와 패커가 공유하는 규칙.
+    /// 캡슐끼리 4(배경 경계가 곧 시각 간격), 캡슐↔시간 2, 시간끼리 0(폰트 리딩만).
+    @Test func rowGapDependsOnAdjacentRowKinds() {
+        let capsule = day(id: "a", label: "오늘", count: 1, allDay: true).events[0]
+        let timed = day(id: "t", label: "오늘", count: 1).events[0]
+
+        #expect(ScheduleMetrics.rowGap(previous: capsule, next: capsule) == Spacing.xs)
+        #expect(ScheduleMetrics.rowGap(previous: capsule, next: timed) == Spacing.xxs)
+        #expect(ScheduleMetrics.rowGap(previous: timed, next: capsule) == Spacing.xxs)
+        #expect(ScheduleMetrics.rowGap(previous: timed, next: timed) == Spacing.zero)
+    }
+
+    /// 종일 캡슐만으로도 패킹이 정상 동작한다 — 조합별 간격 도입 후 회귀 방지.
+    @Test func packsAllDayOnlyDays() {
+        let (left, right) = SchedulePacker.pack([
+            day(id: "a", label: "오늘", count: 2, allDay: true),
+            day(id: "b", label: "내일", count: 1, allDay: true),
+        ])
+
+        let placed = (left + right).flatMap { $0.events.map(\.id) }
+        #expect(placed == ["a-0", "a-1", "b-0"])
+    }
+
     @Test func emptyDaysProduceEmptyColumns() {
         let (left, right) = SchedulePacker.pack([])
         #expect(left.isEmpty)
