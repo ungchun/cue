@@ -300,10 +300,25 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: .now)
 
         let label = try #require(await service.startScheduleCalls.first?.days.first?.label)
-        // 3일 뒤는 오늘/내일/모레가 아니라 날짜 형식("4/10 (수)" 류) — 로케일 무관.
+        // 3일 뒤는 오늘/내일/모레가 아니라 날짜 형식 — 로케일 무관(공유 규칙과 일치 검증).
         let relative = [String(localized: "Today"), String(localized: "Tomorrow"), String(localized: "In 2 days")]
         #expect(!relative.contains(label))
-        #expect(label.contains("/"))
+        #expect(label == StartScheduleLiveActivityUseCase.dateLabel(for: day3))
+    }
+
+    /// 먼 날짜 라벨 로케일 계약 — 한국어는 "7월 28일" 자연 표기, 그 외는 로케일 관습 순서.
+    /// 고정 "M/d" 포맷은 일-월 순서 국가(영국 등)에서 날짜 오독을 일으켜 템플릿으로 바꿨다.
+    @Test func dateLabelUsesKoreanNaturalFormAndLocalizedOrderElsewhere() throws {
+        let date = try #require(
+            DateComponents(calendar: Calendar(identifier: .gregorian), year: 2026, month: 7, day: 28).date
+        )
+
+        #expect(StartScheduleLiveActivityUseCase.dateLabel(for: date, locale: Locale(identifier: "ko_KR")) == "7월 28일")
+
+        // 일-월 순서 로케일 — 고정 M/d("7/28")가 아니라 일이 먼저 와야 한다.
+        let gb = StartScheduleLiveActivityUseCase.dateLabel(for: date, locale: Locale(identifier: "en_GB"))
+        #expect(!gb.contains("7/28"))
+        #expect(gb.contains("28"))
     }
 
     @Test func startScheduleCapsTotalEventsForContentStateLimit() async throws {

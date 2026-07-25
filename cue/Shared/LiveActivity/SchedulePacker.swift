@@ -102,14 +102,14 @@ enum ScheduleMetrics {
     static let dayGap: CGFloat = Spacing.xs             // 4
     /// 날짜 헤더 ↔ 첫 이벤트 간격.
     static let headerGap: CGFloat = Spacing.xxs         // 2
+    /// 시간 일정의 제목 줄 ↔ 시간 줄 간격 — 리딩만으론 살짝 붙어 보여 미세 보정(토큰 밖 의도값).
+    static let titleTimeGap: CGFloat = 1.5
 
     /// 인접 행 간격 — 행 종류 조합별로 다르다. 뷰(ScheduleDayView)의 행별 상단 패딩과 반드시 동기.
-    /// - 캡슐↔캡슐 4: 배경 경계가 그대로 보여 간격이 곧 시각 간격.
-    /// - 캡슐↔시간 4: 캡슐 경계가 선명해 넉넉히.
-    /// - 시간↔시간 2: 폰트 리딩(투명 여백) 위에 살짝 더.
+    /// 배경 경계가 선명할수록 넉넉히 — 캡슐끼리 6(토큰 밖 의도값) > 그 외 4.
     static func rowGap(previous: LiveEventItem, next: LiveEventItem) -> CGFloat {
         switch (previous.isAllDay, next.isAllDay) {
-        case (false, false): return Spacing.xxs
+        case (true, true): return 6
         default: return Spacing.xs
         }
     }
@@ -120,16 +120,17 @@ enum ScheduleMetrics {
     /// 추정=렌더를 유지한다(어긋나면 조기 마감·잘림이 재발 — 실기기 진단 오버레이로 확정한 이력).
     private static let defaultTraits = UITraitCollection(preferredContentSizeCategory: .extraSmall)
 
-    /// 이벤트 텍스트(제목·시간·종일 캡슐) 크기 — 시스템 크기 설정과 무관하게 밀도를
+    /// 이벤트 텍스트(제목·종일 캡슐) 크기 — 시스템 크기 설정과 무관하게 밀도를
     /// 보장하려는 디자인 결정으로 고정 크기를 쓴다. 뷰(ScheduleEventRow)와 동기.
-    static let eventFontSize: CGFloat = 12
+    static let eventFontSize: CGFloat = 12.5
+    /// 시간 줄은 제목보다 살짝 작게(12.5/12) — 크기로도 위계를 준다. 뷰와 동기.
+    static let timeFontSize: CGFloat = 12
 
     /// 이벤트 한 줄의 줄높이 — 한글 시스템 폰트의 큰 줄박스가 반영된 실측 기반 값
     /// (caption2 = 11pt의 preferredFont 줄높이)을 크기 비로 스케일한다. `systemFont(ofSize:)`의
     /// lineHeight는 한글 캐스케이드를 반영하지 않아 실렌더보다 작게 나온다(과소추정 = 잘림 위험).
-    static var eventLine: CGFloat { caption2Line * (eventFontSize / 11) }
-    static var titleLine: CGFloat { eventLine }
-    static var timeLine: CGFloat { eventLine }
+    static var titleLine: CGFloat { caption2Line * (eventFontSize / 11) }
+    static var timeLine: CGFloat { caption2Line * (timeFontSize / 11) }
 
     /// 날짜 헤더는 caption2(11pt) 텍스트 스타일 그대로 렌더 — 뷰(ScheduleDayView)와 동기.
     static var header: CGFloat { caption2Line }
@@ -141,8 +142,8 @@ enum ScheduleMetrics {
         // 별도 글리프 마진 없음 — preferredFont 줄높이가 이미 한글 시스템 폰트의 큰 줄박스
         // (11pt→15.1)를 반영한 렌더 실측이라, 마진을 더하면 예산만 이중으로 깎인다.
         event.isAllDay
-            ? titleLine + Spacing.xxs * 2   // 캡슐 상하 패딩(2) — 뷰(ScheduleEventRow)와 동기
-            : titleLine + timeLine          // 제목 + 시간 두 줄(간격 없음)
+            ? titleLine + Spacing.xxs * 2               // 캡슐 상하 패딩(2) — 뷰(ScheduleEventRow)와 동기
+            : titleLine + titleTimeGap + timeLine       // 제목 + 간격(titleTimeGap) + 시간 — 뷰와 동기
     }
 
     /// 160pt(시스템 최대) − 상하 패딩.

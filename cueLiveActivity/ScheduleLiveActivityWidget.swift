@@ -9,7 +9,7 @@ import WidgetKit
 
 /// 일정 라이브 액티비티 위젯.
 ///
-/// 잠금화면: 날짜 묶음(오늘/내일/모레/`"4/10 (수)"`)을 2열에 통째로 채워 **들어가는 만큼만**
+/// 잠금화면: 날짜 묶음(오늘/내일/모레/날짜)을 2열에 통째로 채워 **들어가는 만큼만**
 /// 그린다. 종일 이벤트는 색 캡슐(제목만), 시간 이벤트는 좌측 색 막대 + 제목 + 시간(시작—끝).
 struct ScheduleLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
@@ -117,13 +117,13 @@ private struct ScheduleDayView: View {
     let chunk: DayChunk
 
     var body: some View {
-        // 행 간격은 종류 조합별로 달라(캡슐 인접 4·시간끼리 2) 단일 spacing
+        // 행 간격은 종류 조합별로 달라(캡슐끼리 6·그 외 4) 단일 spacing
         // 대신 행마다 상단 패딩으로 준다 — 패커의 headerGap/rowGap(previous:next:)와 동기.
         VStack(alignment: .leading, spacing: Spacing.zero) {
             if let label = chunk.label {
                 Text(label)
                     // 헤더를 이벤트 제목보다 한 단계 작게 — 패커의 header 추정(caption2)과 동기.
-                    .font(.caption2.weight(.semibold))
+                    .font(.caption2.weight(.medium))
                     // 오늘만 강조, 그 외 날짜는 옅게. 앱이 심은 라벨과 같은 로케일 키로 비교.
                     .foregroundStyle(label == String(localized: "Today") ? Color.primary : Color.secondary)
             }
@@ -151,8 +151,8 @@ private struct ScheduleEventRow: View {
     var body: some View {
         if event.isAllDay {
             Text(event.title)
-                // 이벤트 텍스트는 고정 12pt(디자인 결정) — 패커 eventFontSize와 동기.
-                .font(.system(size: ScheduleMetrics.eventFontSize, weight: .semibold))
+                // 이벤트 텍스트는 고정 12.5pt(디자인 결정) — 패커 eventFontSize와 동기.
+                .font(.system(size: ScheduleMetrics.eventFontSize, weight: .medium))
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .padding(.horizontal, Spacing.sm)
@@ -171,13 +171,14 @@ private struct ScheduleEventRow: View {
                     // 줄박스에는 글자 위아래 투명 여백(리딩)이 포함돼 막대가 글자보다
                     // 길어 보인다 — 위아래를 인셋해 보이는 글자 높이에 맞춘다.
                     .padding(.vertical, Spacing.xxs)
-                VStack(alignment: .leading, spacing: Spacing.zero) {
+                VStack(alignment: .leading, spacing: ScheduleMetrics.titleTimeGap) {
                     Text(event.title)
-                        // 고정 12pt(디자인 결정) — 굵기 semibold로 시간과 위계 구분.
-                        .font(.system(size: ScheduleMetrics.eventFontSize, weight: .semibold))
+                        // 고정 12.5pt(디자인 결정) — 굵기 medium으로 시간과 위계 구분.
+                        .font(.system(size: ScheduleMetrics.eventFontSize, weight: .medium))
                         .lineLimit(1)
                     Text(timeText)
-                        .font(.system(size: ScheduleMetrics.eventFontSize))
+                        // 시간은 제목보다 살짝 작은 12pt — 패커 timeFontSize와 동기.
+                        .font(.system(size: ScheduleMetrics.timeFontSize))
                         .foregroundStyle(color)
                         .lineLimit(1)
                 }

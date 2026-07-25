@@ -8,7 +8,7 @@ import Foundation
 /// 일정 스냅샷을 라이브 액티비티로 게시.
 ///
 /// 평탄한 이벤트 목록을 **날짜별로 묶고**(오늘부터), 각 날에 라벨(오늘/내일/모레 또는
-/// `"4/10 (수)"`)을 붙여 `LiveScheduleDay` 배열로 만든다. 종일 이벤트는 그날 위로 정렬한다.
+/// 한국어 `"7월 28일"` 등 로케일별 표기)을 붙여 `LiveScheduleDay` 배열로 만든다. 종일 이벤트는 그날 위로 정렬한다.
 /// 실제로 2열에 몇 개를 보일지는 위젯이 정하지만, **ActivityKit ContentState ~4KB 한도** 때문에
 /// `maxTotalEvents`로 싣는 총 이벤트 수를 제한한다(초과 시 throw로 LA가 아예 안 뜬다).
 /// `now`는 라벨 계산 기준 — 테스트에서 주입한다.
@@ -92,7 +92,7 @@ struct StartScheduleLiveActivityUseCase: Sendable {
         return days
     }
 
-    /// 날짜 라벨 — 0/1/2일 차는 오늘/내일/모레, 그 뒤는 `"M/d (요일)"`.
+    /// 날짜 라벨 — 0/1/2일 차는 오늘/내일/모레, 그 뒤는 로케일별 날짜 표기(`dateLabel`).
     private static func label(for dayStart: Date, now: Date, calendar: Calendar) -> String {
         let today = calendar.startOfDay(for: now)
         let offset = calendar.dateComponents([.day], from: today, to: dayStart).day ?? 0
@@ -100,17 +100,23 @@ struct StartScheduleLiveActivityUseCase: Sendable {
         case 0: return String(localized: "Today")
         case 1: return String(localized: "Tomorrow")
         case 2: return String(localized: "In 2 days")
-        default: return dateLabelFormatter.string(from: dayStart)
+        default: return dateLabel(for: dayStart)
         }
     }
 
-    /// `"M/d (요일)"` — 숫자 날짜는 컴팩트하게 유지하되 요일·로케일은 기기 설정을 따른다.
-    private static let dateLabelFormatter: DateFormatter = {
+    /// 먼 날짜 라벨 — 한국어는 `"7월 28일"` 자연 표기, 그 외 로케일은 시스템 템플릿(`MdE`)으로
+    /// 월·일 순서를 관습에 맞춘다. 고정 `"M/d"`는 일-월 순서 국가(영국·독일 등)에서 날짜
+    /// 오독을 일으키고, 이슬람력 등 비그레고리력 로케일도 템플릿이 자연스럽게 처리한다.
+    static func dateLabel(for date: Date, locale: Locale = .current) -> String {
         let formatter = DateFormatter()
-        formatter.locale = .current
-        formatter.dateFormat = "M/d (E)"
-        return formatter
-    }()
+        formatter.locale = locale
+        if locale.language.languageCode == .korean {
+            formatter.dateFormat = "M월 d일"
+        } else {
+            formatter.setLocalizedDateFormatFromTemplate("MdE")
+        }
+        return formatter.string(from: date)
+    }
 
     /// 표시용 매핑 — id/title/시각/캘린더 색/종일 여부 + 그 날(dayStart) 기준 시간 문구.
     /// `id`는 EventKit 식별자(50자↑) 대신 **짧은 합성 인덱스**를 받는다 — 위젯은 id를
