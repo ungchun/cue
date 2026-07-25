@@ -163,6 +163,25 @@ struct EventEditDraftTests {
                                  ordinal: 2, ordinalWeekday: EKWeekday.tuesday.rawValue)))
     }
 
+    /// 사용자화가 프리셋과 동치면 프리셋으로 정규화 — 추가 지정 없이 나오면 매일/매주… 상태가 된다.
+    @Test func presetEquivalentCustomNormalizesToPreset() {
+        func custom(_ f: EventEditDraft.CustomRule.Frequency, _ i: Int) -> EventEditDraft.Recurrence {
+            .custom(.init(frequency: f, interval: i))
+        }
+
+        #expect(custom(.daily, 1).normalized == .daily)
+        #expect(custom(.weekly, 1).normalized == .weekly)
+        #expect(custom(.weekly, 2).normalized == .biweekly)
+        #expect(custom(.monthly, 1).normalized == .monthly)
+        #expect(custom(.yearly, 1).normalized == .yearly)
+        // 프리셋 밖 간격·상세 지정은 사용자화 유지.
+        #expect(custom(.weekly, 3).normalized == custom(.weekly, 3))
+        let withDays = EventEditDraft.Recurrence.custom(.init(frequency: .weekly, interval: 1, weekdays: [2]))
+        #expect(withDays.normalized == withDays)
+        #expect(EventEditDraft.Recurrence.weekly.normalized == .weekly)   // 프리셋은 그대로
+        #expect(EventEditDraft.Recurrence.foreign.normalized == .foreign)
+    }
+
     /// 우리 편집기로 표현 불가한 규칙(횟수 종료·setPositions 등)은 foreign — 저장 시 보존.
     @Test func unrepresentableRulesAreForeignAndPreserved() {
         let store = EKEventStore()

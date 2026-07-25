@@ -156,6 +156,23 @@ struct EventEditDraft: Equatable {
             return false
         }
 
+        /// 사용자화가 프리셋과 동치(추가 지정 없는 매일 1·매주 1·매주 2·매월 1·매년 1)면
+        /// 프리셋으로 접는다 — 사용자화 화면에서 그대로 나왔을 때 메뉴가 매일/매주… 로 돌아가게.
+        var normalized: Recurrence {
+            guard case .custom(let rule) = self,
+                  rule.weekdays.isEmpty, rule.monthDays.isEmpty,
+                  rule.months.isEmpty, rule.ordinal == nil
+            else { return self }
+            switch (rule.frequency, rule.interval) {
+            case (.daily, 1): return .daily
+            case (.weekly, 1): return .weekly
+            case (.weekly, 2): return .biweekly
+            case (.monthly, 1): return .monthly
+            case (.yearly, 1): return .yearly
+            default: return self
+            }
+        }
+
         init(rules: [EKRecurrenceRule]?) {
             guard let rule = rules?.first else {
                 self = .none
