@@ -178,8 +178,10 @@ private final class LocationSearchModel: NSObject, MKLocalSearchCompleterDelegat
     }
 
     nonisolated func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        // 파라미터 대신 자기 프로퍼티 접근 — non-Sendable 값을 액터 경계로 보내지 않는다
+        // (콜백은 메인 큐로 오고, self.completer === completer).
         MainActor.assumeIsolated {
-            results = completer.results
+            results = self.completer.results
         }
     }
 
@@ -231,11 +233,13 @@ private final class CurrentLocationModel: NSObject, CLLocationManagerDelegate {
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        // 파라미터 대신 자기 프로퍼티 접근 — non-Sendable 값을 액터 경계로 보내지 않는다
+        // (콜백은 매니저를 만든 메인 런루프로 오고, self.manager === manager).
         MainActor.assumeIsolated {
             guard continuation != nil else { return }
-            switch manager.authorizationStatus {
+            switch self.manager.authorizationStatus {
             case .authorizedWhenInUse, .authorizedAlways:
-                manager.requestLocation()
+                self.manager.requestLocation()
             case .denied, .restricted:
                 finish(.failure(LocationError.denied))
             default:
