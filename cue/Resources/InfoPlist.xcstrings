@@ -240,100 +240,108 @@
       }
     },
     "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Privacy - Location When In Use Usage Description",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "يستخدم Cue موقعك لإضافة موقعك الحالي إلى الحدث."
           }
         },
         "de" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue verwendet deinen Standort, um deinen aktuellen Standort zu einem Ereignis hinzuzufügen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cue uses your location to add your current location to an event."
           }
         },
         "es" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue usa tu ubicación para añadir tu ubicación actual a un evento."
           }
         },
         "fr" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue utilise votre position pour ajouter votre position actuelle à un événement."
           }
         },
         "hi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue आपके वर्तमान स्थान को इवेंट में जोड़ने के लिए आपके स्थान का उपयोग करता है।"
           }
         },
         "id" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue menggunakan lokasi Anda untuk menambahkan lokasi saat ini ke acara."
           }
         },
         "it" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue usa la tua posizione per aggiungere la posizione attuale a un evento."
           }
         },
         "ja" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cueは現在地をイベントに追加するために位置情報を使用します。"
           }
         },
         "ko" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "현재 위치를 이벤트에 추가하기 위해 위치 정보를 사용합니다."
           }
         },
         "ms" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue menggunakan lokasi anda untuk menambah lokasi semasa ke acara."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "O Cue usa sua localização para adicionar a localização atual a um evento."
           }
         },
         "ru" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue использует вашу геопозицию, чтобы добавить текущее местоположение в событие."
           }
         },
         "th" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue ใช้ตำแหน่งของคุณเพื่อเพิ่มตำแหน่งปัจจุบันลงในกิจกรรม"
           }
         },
         "vi" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue dùng vị trí của bạn để thêm vị trí hiện tại vào sự kiện."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue 使用你的位置以将当前位置添加到日程。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
-            "state" : "translated",
+            "state" : "needs_review",
             "value" : "Cue 使用你的位置以將目前位置加入行程。"
           }
         }
