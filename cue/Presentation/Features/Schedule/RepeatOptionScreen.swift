@@ -28,11 +28,6 @@ struct RepeatOptionScreen: View {
         }
         .navigationTitle("Custom")
         .navigationBarTitleDisplayMode(.inline)
-        // 추가 지정 없이 프리셋과 동치인 채로 나가면 프리셋 상태로 되돌린다 —
-        // 메뉴가 "사용자화" 대신 매일/매주/2주마다…를 보이게(요약 행도 사라짐).
-        .onDisappear {
-            recurrence = recurrence.normalized
-        }
     }
 
     // MARK: - 사용자화 편집
