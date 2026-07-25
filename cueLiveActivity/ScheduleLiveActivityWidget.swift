@@ -178,7 +178,8 @@ private struct ScheduleEventRow: View {
     var body: some View {
         if event.isAllDay {
             Text(event.title)
-                .font(.caption.weight(.semibold))
+                // 이벤트 텍스트는 고정 11.5pt(디자인 결정) — 패커 eventFontSize와 동기.
+                .font(.system(size: ScheduleMetrics.eventFontSize, weight: .semibold))
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .padding(.horizontal, Spacing.sm)
@@ -198,11 +199,11 @@ private struct ScheduleEventRow: View {
                     .padding(.vertical, Spacing.xs)
                 VStack(alignment: .leading, spacing: Spacing.zero) {
                     Text(event.title)
-                        // 행이 조밀해진 만큼 제목 굵기를 한 단계 올려 가독성 유지.
-                        .font(.caption.weight(.semibold))
+                        // 고정 11.5pt(디자인 결정) — 굵기 semibold로 시간과 위계 구분.
+                        .font(.system(size: ScheduleMetrics.eventFontSize, weight: .semibold))
                         .lineLimit(1)
                     Text(timeText)
-                        .font(.caption2)
+                        .font(.system(size: ScheduleMetrics.eventFontSize))
                         .foregroundStyle(color)
                         .lineLimit(1)
                 }
