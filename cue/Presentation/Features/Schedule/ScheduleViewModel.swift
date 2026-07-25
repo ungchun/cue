@@ -203,11 +203,6 @@ final class ScheduleViewModel {
     /// 활성이면 종료. 아니면 `eventsByDay`의 모든 이벤트를 use case로 보내 게시한다 — 다가오는
     /// 일정이 없으면 use case가 `false`를 반환해 LA를 띄우지 않는다(날짜 그룹·라벨·캡은 use case가 처리).
     /// 무료 하루 한도를 먼저 소비 — `.denied`면 기존 LA를 건드리지 않는다(뷰가 Premium 토스트).
-    // ⚠️ 임시 mock 브라우징 — true면 게시된 일정 LA 카드 좌우에 ‹ › 셰브런이 떠서
-    // mock 케이스(MockScheduleLiveCases)를 순환 전환할 수 있다. 눈 검증 후 플래그·
-    // MockScheduleLiveCases.swift·위젯 셰브런 오버레이를 함께 제거.
-    static let enablesLiveActivityMockBrowsing = true
-
     @discardableResult
     func toggleLiveActivity() async -> LiveActivationVerdict? {
         let verdict = await consumeLiveActivation(isPremium: premiumStore.isPremium)
@@ -221,9 +216,6 @@ final class ScheduleViewModel {
             await endLiveActivityUseCase()
             liveActivityActive = false
         }
-        // ⚠️ 임시 — 위젯이 이 키를 읽어 mock 전환 셰브런을 보인다. 인덱스는 0부터.
-        SharedAppGroup.defaults.set(Self.enablesLiveActivityMockBrowsing, forKey: MockScheduleLiveCases.modeKey)
-        SharedAppGroup.defaults.set(0, forKey: MockScheduleLiveCases.indexKey)
         do {
             liveActivityActive = try await startLiveActivityUseCase(
                 events: eventsByDay.flatMap(\.events),

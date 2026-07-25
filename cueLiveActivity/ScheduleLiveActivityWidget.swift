@@ -4,7 +4,6 @@
 //
 
 import ActivityKit
-import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -100,32 +99,6 @@ private struct ScheduleLockScreenView: View {
         // 캘린더 모드에선 일정이 적어도 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다.
         .frame(minHeight: showsCalendar ? ScheduleMetrics.columnMax : nil, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
-        // ⚠️ 임시 mock 브라우징 셰브런 — 앱이 modeKey를 켰을 때만 카드 좌우 하단에 떠서
-        // mock 케이스를 순환 전환한다(MockScheduleLiveCases). 눈 검증 후 함께 제거.
-        .overlay(alignment: .bottomLeading) {
-            if showsMockChevrons { mockChevron("chevron.left", delta: -1) }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if showsMockChevrons { mockChevron("chevron.right", delta: 1) }
-        }
-    }
-
-    /// ⚠️ 임시 — mock 브라우징 모드 여부(App Group 미러, 렌더 시점에 읽음).
-    private var showsMockChevrons: Bool {
-        SharedAppGroup.defaults.bool(forKey: MockScheduleLiveCases.modeKey)
-    }
-
-    /// ⚠️ 임시 — 케이스 전환 셰브런(MonthCalendarView 셰브런과 같은 반투명 칩 스타일).
-    private func mockChevron(_ systemName: String, delta: Int) -> some View {
-        Button(intent: ShiftMockScheduleCaseIntent(delta: delta)) {
-            Image(systemName: systemName)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(Spacing.xs)
-                .background(Circle().fill(Color.primary.opacity(0.12)))
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -144,7 +117,7 @@ private struct ScheduleDayView: View {
     let chunk: DayChunk
 
     var body: some View {
-        // 행 간격은 종류 조합별로 달라(캡슐끼리 4·캡슐↔시간 2·시간끼리 0) 단일 spacing
+        // 행 간격은 종류 조합별로 달라(캡슐 인접 4·시간끼리 2) 단일 spacing
         // 대신 행마다 상단 패딩으로 준다 — 패커의 headerGap/rowGap(previous:next:)와 동기.
         VStack(alignment: .leading, spacing: Spacing.zero) {
             if let label = chunk.label {
@@ -178,7 +151,7 @@ private struct ScheduleEventRow: View {
     var body: some View {
         if event.isAllDay {
             Text(event.title)
-                // 이벤트 텍스트는 고정 11.5pt(디자인 결정) — 패커 eventFontSize와 동기.
+                // 이벤트 텍스트는 고정 12pt(디자인 결정) — 패커 eventFontSize와 동기.
                 .font(.system(size: ScheduleMetrics.eventFontSize, weight: .semibold))
                 .foregroundStyle(color)
                 .lineLimit(1)
@@ -190,16 +163,17 @@ private struct ScheduleEventRow: View {
                 .background(Capsule().fill(color.opacity(0.18)))
         } else {
             HStack(alignment: .center, spacing: Spacing.xs) {
-                RoundedRectangle(cornerRadius: Spacing.xxs)
+                // 굵기 2.5는 토큰 밖 의도값 — 2는 얇고 3부터는 둔탁해 중간을 쓴다(디자인 결정).
+                RoundedRectangle(cornerRadius: 1.25)
                     .fill(color)
-                    .frame(width: Spacing.xxs)
+                    .frame(width: 2.5)
                     .frame(maxHeight: .infinity)
                     // 줄박스에는 글자 위아래 투명 여백(리딩)이 포함돼 막대가 글자보다
                     // 길어 보인다 — 위아래를 인셋해 보이는 글자 높이에 맞춘다.
-                    .padding(.vertical, Spacing.xs)
+                    .padding(.vertical, Spacing.xxs)
                 VStack(alignment: .leading, spacing: Spacing.zero) {
                     Text(event.title)
-                        // 고정 11.5pt(디자인 결정) — 굵기 semibold로 시간과 위계 구분.
+                        // 고정 12pt(디자인 결정) — 굵기 semibold로 시간과 위계 구분.
                         .font(.system(size: ScheduleMetrics.eventFontSize, weight: .semibold))
                         .lineLimit(1)
                     Text(timeText)
