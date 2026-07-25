@@ -121,9 +121,9 @@ enum ScheduleMetrics {
     /// 추정=렌더를 유지한다(어긋나면 조기 마감·잘림이 재발 — 실기기 진단 오버레이로 확정한 이력).
     private static let defaultTraits = UITraitCollection(preferredContentSizeCategory: .extraSmall)
 
-    /// 이벤트 텍스트(제목·시간·종일 캡슐) 크기 — 텍스트 스타일 눈금(11/12pt) 사이 값을
-    /// 쓰라는 디자인 결정이라 고정 크기를 예외적으로 쓴다. 뷰(ScheduleEventRow)와 동기.
-    static let eventFontSize: CGFloat = 11.5
+    /// 이벤트 텍스트(제목·시간·종일 캡슐) 크기 — 시스템 크기 설정과 무관하게 밀도를
+    /// 보장하려는 디자인 결정으로 고정 크기를 쓴다. 뷰(ScheduleEventRow)와 동기.
+    static let eventFontSize: CGFloat = 12
 
     /// 이벤트 한 줄의 줄높이 — 한글 시스템 폰트의 큰 줄박스가 반영된 실측 기반 값
     /// (caption2 = 11pt의 preferredFont 줄높이)을 크기 비로 스케일한다. `systemFont(ofSize:)`의
