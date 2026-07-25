@@ -334,7 +334,8 @@ struct EventEditDraftTests {
         #expect(event.structuredLocation == nil)
     }
 
-    /// 종일 전환 시 시각 성분과 무관하게 isAllDay만 반영 — 날짜는 그대로.
+    /// 종일 전환 시 날짜(달력일)는 유지된다 — EventKit이 종일 이벤트의 시각을
+    /// 자정으로 정규화하므로 순간이 아니라 "같은 날"이 계약이다.
     @Test func applyKeepsDatesWhenTogglingAllDay() {
         let store = EKEventStore()
         let event = EKEvent(eventStore: store)
@@ -344,6 +345,6 @@ struct EventEditDraftTests {
         draft.apply(to: event)
 
         #expect(event.isAllDay)
-        #expect(event.startDate == draft.start)
+        #expect(Calendar.current.isDate(event.startDate, inSameDayAs: draft.start))
     }
 }

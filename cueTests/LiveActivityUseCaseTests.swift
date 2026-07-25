@@ -289,7 +289,8 @@ struct LiveActivityUseCaseTests {
             String(localized: "Today"), String(localized: "Tomorrow"),
             StartScheduleLiveActivityUseCase.dateLabel(for: day(2)),
         ])
-        #expect(days.map { $0.events.map(\.id) } == [["t1"], ["m1"], ["mo1"]])
+        // id는 4KB 절약용 합성 인덱스 — 원본 대응은 제목으로 확인한다.
+        #expect(days.map { $0.events.map(\.title) } == [["오늘일정"], ["내일일정"], ["모레일정"]])
         #expect(days.first?.events.first?.calendarColorHex == "#FF0000")
     }
 
@@ -383,10 +384,11 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: [yesterdayAllDay, yesterdayMultiDay, todayUpcoming], now: now)
 
         let days = try #require(await service.startScheduleCalls.first).days
-        let ids = days.flatMap { $0.events.map(\.id) }
-        #expect(!ids.contains("yall"))    // 어제 종일 제외
-        #expect(!ids.contains("ymulti"))  // 어제 시작 멀티데이 제외
-        #expect(ids.contains("t"))        // 오늘 예정 표시
+        // id는 4KB 절약용 합성 인덱스로 바뀌므로 제목으로 판별한다.
+        let titles = days.flatMap { $0.events.map(\.title) }
+        #expect(!titles.contains("어제종일"))    // 어제 종일 제외
+        #expect(!titles.contains("멀티데이"))    // 어제 시작 멀티데이 제외
+        #expect(titles.contains("오늘예정"))     // 오늘 예정 표시
         #expect(days.first?.label == String(localized: "Today"))
     }
 
@@ -425,11 +427,12 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: [ended, ongoing, future, allDay], now: now)
 
         let days = try #require(await service.startScheduleCalls.first).days
-        let ids = days.flatMap { $0.events.map(\.id) }
-        #expect(!ids.contains("ended"))     // 끝난 시간 이벤트 제외
-        #expect(ids.contains("ongoing"))    // 진행 중 유지
-        #expect(ids.contains("future"))     // 예정 유지
-        #expect(ids.contains("allday"))     // 종일은 항상 유지
+        // id는 4KB 절약용 합성 인덱스로 바뀌므로 제목으로 판별한다.
+        let titles = days.flatMap { $0.events.map(\.title) }
+        #expect(!titles.contains("끝남"))     // 끝난 시간 이벤트 제외
+        #expect(titles.contains("진행중"))    // 진행 중 유지
+        #expect(titles.contains("예정"))      // 예정 유지
+        #expect(titles.contains("종일"))      // 종일은 항상 유지
     }
 
     @Test func startScheduleSortsByStartTimeWithinDay() async throws {
@@ -448,7 +451,7 @@ struct LiveActivityUseCaseTests {
         try await StartScheduleLiveActivityUseCase(service: service)(events: events, now: now)
 
         let firstDay = try #require(await service.startScheduleCalls.first?.days.first)
-        #expect(firstDay.events.map(\.id) == ["allday", "timed"])   // 00:00 < 09:00
+        #expect(firstDay.events.map(\.title) == ["종일일정", "시간일정"])   // 00:00 < 09:00
     }
 
     // MARK: - 멀티데이 끌어올림 + timeText 굽기
@@ -468,7 +471,7 @@ struct LiveActivityUseCaseTests {
         let days = try #require(await service.startScheduleCalls.first).days
         #expect(days.first?.label == String(localized: "Today"))                 // 지난 날짜 헤더 아니라 오늘로
         let item = try #require(days.first?.events.first)
-        #expect(item.id == "multi")
+        #expect(item.title == "여러날")
         #expect(item.timeText == String(localized: "In progress"))
     }
 
