@@ -63,7 +63,7 @@ struct OnboardingView: View {
             VStack(spacing: Spacing.smd) {
                 Text(verbatim: "Cue your day.")
                     .font(.system(.largeTitle, design: .rounded).weight(.semibold))
-                Text("One quiet signal for the one thing\nyou must not forget.")
+                Text("One quiet signal for the one thing you must not forget.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -90,7 +90,7 @@ struct OnboardingView: View {
             VStack(spacing: Spacing.smd) {
                 Text("It stays, quietly.")
                     .font(.title2.weight(.semibold))
-                Text("On your Lock Screen and Dynamic Island.\nNot a notification — it never slides away.")
+                Text("On your Lock Screen and Dynamic Island. Not a notification — it never slides away.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -132,7 +132,7 @@ struct OnboardingView: View {
                     .frame(height: 120)
                 Text("Your cue is on.")
                     .font(.title2.weight(.semibold))
-                Text("Lock your phone and see it\nsitting on the Lock Screen.")
+                Text("Lock your phone and see it sitting on the Lock Screen.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -208,13 +208,19 @@ struct OnboardingView: View {
     private var bottomButton: some View {
         if viewModel.page < 2 {
             Button { withAnimation { viewModel.page += 1 } } label: {
-                Text("Continue").frame(maxWidth: .infinity)
+                Text("Continue")
+                    .frame(maxWidth: .infinity)
+                    // tint(.primary) 캡슐은 다크에서 흰 배경 — 라벨을 배경 반전색으로(페이월 CTA 관용구).
+                    .foregroundStyle(Color(.systemBackground))
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
         } else if viewModel.published {
             Button { finish() } label: {
-                Text("Done").frame(maxWidth: .infinity)
+                Text("Done")
+                    .frame(maxWidth: .infinity)
+                    // tint(.primary) 캡슐은 다크에서 흰 배경 — 라벨을 배경 반전색으로(페이월 CTA 관용구).
+                    .foregroundStyle(Color(.systemBackground))
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -223,7 +229,10 @@ struct OnboardingView: View {
                 isTextFieldFocused = false
                 Task { await viewModel.publish() }
             } label: {
-                Text("Show on Lock Screen").frame(maxWidth: .infinity)
+                Text("Show on Lock Screen")
+                    .frame(maxWidth: .infinity)
+                    // tint(.primary) 캡슐은 다크에서 흰 배경 — 라벨을 배경 반전색으로(페이월 CTA 관용구).
+                    .foregroundStyle(Color(.systemBackground))
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
