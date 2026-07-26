@@ -10,7 +10,9 @@ import Foundation
 /// 검사 키는 **앱 시작만으로는 절대 안 써지는** 것들(설정·메모·집중 프리셋·정렬)과,
 /// 시작 프리페치가 쓰는 스냅샷 2종이다 — 스냅샷 경합을 피하려고 이 감지는 RootView
 /// `init`(프리페치 task 시작 전)에서 동기로 읽는다. 하나라도 있으면 기존 사용자.
-struct UserDefaultsPriorInstallRepository: PriorInstallRepository {
+/// `@unchecked Sendable`: `UserDefaults`는 Sendable 표기가 없지만 스레드 안전이
+/// 문서화된 타입이고(Apple), 이 저장소는 읽기 전용이라 안전하다.
+struct UserDefaultsPriorInstallRepository: PriorInstallRepository, @unchecked Sendable {
     private let defaults: UserDefaults
 
     /// 구버전(온보딩 도입 전)이 쓰던 저장 키 — 각 저장소의 storageKey와 동기.
