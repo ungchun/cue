@@ -527,10 +527,10 @@ struct LiveActivityUseCaseTests {
 
     // MARK: - StartSampleLiveActivities (온보딩 목업 3종 게시의 일정·할일)
 
-    /// 온보딩 목업 일정 — 오늘 하루 묶음(종일 1 + 시간 2), 캘린더 **강제 숨김**(false).
-    /// 캘린더는 할일 카드가 담당하고, 일정 카드는 일정 목록만 — 사용자 설정 미러가 켜져
-    /// 있어도(nil이면 미러를 따라가버림) 목업 구성은 결정적이어야 한다.
-    @Test func samplePublishesTodayScheduleWithoutCalendar() async throws {
+    /// 온보딩 목업 일정 — 오늘(종일 1 + 시간 2) + 내일(시간 3)로 2열을 다 채우고,
+    /// 캘린더는 **강제 숨김**(false — 캘린더는 할일 카드 담당, 미러가 켜져 있어도 결정적).
+    /// 색은 여러 캘린더가 섞인 실사용처럼 4종 이상.
+    @Test func samplePublishesTwoDayScheduleWithoutCalendar() async throws {
         let service = RecordingLiveActivityService()
         let useCase = StartSampleLiveActivitiesUseCase(
             startSchedule: StartScheduleLiveActivityUseCase(service: service),
@@ -543,10 +543,11 @@ struct LiveActivityUseCaseTests {
         #expect(calls.count == 1)
         let call = try #require(calls.first)
         #expect(call.showsCalendarOverride == false)
-        #expect(call.days.count == 1)                     // 오늘 하루 묶음만
-        let events = try #require(call.days.first?.events)
-        #expect(events.count == 3)
-        #expect(events.filter(\.isAllDay).count == 1)     // 종일 캡슐 1 + 시간 막대 2 — 두 형태를 다 보여준다
+        #expect(call.days.count == 2)                     // 오늘 + 내일 — 왼쪽·오른쪽 열을 모두 채운다
+        let events = call.days.flatMap(\.events)
+        #expect(events.count == 6)
+        #expect(events.filter(\.isAllDay).count == 1)     // 종일 캡슐 1 + 시간 막대 — 두 형태를 다 보여준다
+        #expect(Set(events.compactMap(\.calendarColorHex)).count >= 4)   // 색 다양성
         #expect(events.allSatisfy { !$0.title.isEmpty })
     }
 

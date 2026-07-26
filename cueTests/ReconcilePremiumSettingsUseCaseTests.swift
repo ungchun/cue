@@ -131,4 +131,97 @@ struct ReconcilePremiumSettingsUseCaseTests {
         #expect(changed == false)
         #expect(await memoRepository.saveCount == 0)
     }
+
+    // MARK: - 접어두기(강등 기록)와 자동 복구
+
+    /// 강등 정리는 "원래 켜져 있었음"을 접어둔다 — 재구독 시 자동 복구의 근거.
+    @Test func demotionRecordsWhichFlagsWereOn() async {
+        var settings = AppSettings.default
+        settings.liveAlwaysOn = true
+        settings.scheduleShowsCalendar = true
+        let (useCase, repository, _) = makeUseCase(settings: settings)
+
+        _ = await useCase(isPremium: false)
+
+        let saved = await repository.fetch()
+        #expect(saved.demotedLiveAlwaysOn == true)
+        #expect(saved.demotedScheduleShowsCalendar == true)
+        #expect(saved.demotedMemoShowsCalendar == false)
+        #expect(saved.demotedReminderShowsCalendar == false)
+    }
+
+    /// 커스텀 메모 색도 접어둔다 — 원래 값 그대로.
+    @Test func demotionRecordsCustomMemoColors() async {
+        let memo = Memo(text: "지금", colorHex: "#FF3B30", textColorHex: "#00FF00")
+        let (useCase, repository, _) = makeUseCase(settings: .default, memo: memo)
+
+        _ = await useCase(isPremium: false)
+
+        let saved = await repository.fetch()
+        #expect(saved.demotedMemoColorHex == "#FF3B30")
+        #expect(saved.demotedMemoTextColorHex == "#00FF00")
+    }
+
+    /// 재구독 확인 시 접어둔 설정을 자동 복구하고 기록을 비운다.
+    @Test func premiumRestoresDemotedFlagsAndClearsRecord() async {
+        var settings = AppSettings.default
+        settings.demotedLiveAlwaysOn = true
+        settings.demotedMemoShowsCalendar = true
+        let (useCase, repository, _) = makeUseCase(settings: settings)
+
+        let changed = await useCase(isPremium: true)
+
+        #expect(changed == true)
+        let saved = await repository.fetch()
+        #expect(saved.liveAlwaysOn == true)
+        #expect(saved.memoShowsCalendar == true)
+        #expect(saved.demotedLiveAlwaysOn == false)
+        #expect(saved.demotedMemoShowsCalendar == false)
+    }
+
+    /// 재구독 확인 시 접어둔 메모 색도 복구하고, 그 사이 편집된 텍스트는 보존한다.
+    @Test func premiumRestoresDemotedMemoColors() async {
+        var settings = AppSettings.default
+        settings.demotedMemoColorHex = "#FF3B30"
+        settings.demotedMemoTextColorHex = "#00FF00"
+        let memo = Memo(text: "그동안 바꾼 텍스트", colorHex: Memo.default.colorHex)
+        let (useCase, repository, memoRepository) = makeUseCase(settings: settings, memo: memo)
+
+        let changed = await useCase(isPremium: true)
+
+        #expect(changed == true)
+        let savedMemo = await memoRepository.fetch()
+        #expect(savedMemo.colorHex == "#FF3B30")
+        #expect(savedMemo.textColorHex == "#00FF00")
+        #expect(savedMemo.text == "그동안 바꾼 텍스트")
+        let savedSettings = await repository.fetch()
+        #expect(savedSettings.demotedMemoColorHex == nil)
+        #expect(savedSettings.demotedMemoTextColorHex == nil)
+    }
+
+    /// 프리미엄인데 접어둔 기록이 없으면 아무것도 하지 않는다(기존 no-op 유지).
+    @Test func premiumWithNoDemotedRecordIsNoOp() async {
+        let (useCase, repository, memoRepository) = makeUseCase(settings: .default)
+
+        let changed = await useCase(isPremium: true)
+
+        #expect(changed == false)
+        #expect(await repository.saveCount == 0)
+        #expect(await memoRepository.saveCount == 0)
+    }
+
+    /// 강등 정리가 두 번 돌아도(이미 꺼진 상태) 접어둔 기록을 덮어쓰지 않는다 —
+    /// 두 번째 실행이 "전부 꺼져 있었음"으로 기록을 지우면 자동 복구가 무산된다.
+    @Test func repeatedDemotionPreservesFoldedRecord() async {
+        var settings = AppSettings.default
+        settings.liveAlwaysOn = true
+        let (useCase, repository, _) = makeUseCase(settings: settings)
+
+        _ = await useCase(isPremium: false)
+        let changedAgain = await useCase(isPremium: false)
+
+        #expect(changedAgain == false)
+        let saved = await repository.fetch()
+        #expect(saved.demotedLiveAlwaysOn == true)
+    }
 }

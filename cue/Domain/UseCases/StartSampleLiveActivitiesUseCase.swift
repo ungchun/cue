@@ -40,38 +40,44 @@ struct StartSampleLiveActivitiesUseCase: Sendable {
         )
     }
 
-    /// 오늘 하루 묶음 — 종일 캡슐 1 + 시간 막대 2로 일정 카드의 두 표시 형태를 다 보여준다.
-    /// 시간 이벤트는 now 이후로 잡아 use case의 "지난 일정 숨김" 필터에 걸리지 않게 한다.
+    /// 오늘(종일 1 + 시간 2) + 내일(시간 3) 여섯 개 — 2열 레이아웃(열당 시간 이벤트 ~3개)을
+    /// 왼쪽·오른쪽 모두 채워 실사용 밀도를 보여준다. 색은 애플 캘린더 팔레트 5종 — 여러
+    /// 캘린더가 섞인 실사용처럼(외부 데이터 hex 예외 경로, 프리뷰 시드와 동일 관례).
+    /// 오늘 시간 이벤트는 **다음 정시**부터 — "오후 3:47" 같은 어중간한 목업 시각 방지.
+    /// (지난 일정 숨김 필터에도 안전 — 다음 정시는 항상 now 이후다.)
     static func sampleEvents(now: Date) -> [CalendarEvent] {
-        let todayStart = Calendar.current.startOfDay(for: now)
+        let calendar = Calendar.current
+        let todayStart = calendar.startOfDay(for: now)
+        let tomorrowStart = todayStart.addingTimeInterval(86_400)
+        let nextHour = calendar.dateInterval(of: .hour, for: now)?.end ?? now.addingTimeInterval(3_600)
+
+        func timed(_ index: Int, start: Date, colorHex: String) -> CalendarEvent {
+            CalendarEvent(
+                id: "cue.sample.event.\(index)",
+                title: String(localized: "Sample event \(index)"),
+                startDate: start,
+                endDate: start.addingTimeInterval(3_600),
+                isAllDay: false,
+                calendarColorHex: colorHex,
+                isReadOnly: true
+            )
+        }
+
         return [
             CalendarEvent(
                 id: "cue.sample.event.allday",
                 title: String(localized: "Sample all-day event"),
                 startDate: todayStart,
-                endDate: todayStart.addingTimeInterval(86_400),
+                endDate: tomorrowStart,
                 isAllDay: true,
-                calendarColorHex: nil,
+                calendarColorHex: "#FF3B30",
                 isReadOnly: true
             ),
-            CalendarEvent(
-                id: "cue.sample.event.1",
-                title: String(localized: "Sample event 1"),
-                startDate: now.addingTimeInterval(3_600),
-                endDate: now.addingTimeInterval(7_200),
-                isAllDay: false,
-                calendarColorHex: nil,
-                isReadOnly: true
-            ),
-            CalendarEvent(
-                id: "cue.sample.event.2",
-                title: String(localized: "Sample event 2"),
-                startDate: now.addingTimeInterval(10_800),
-                endDate: now.addingTimeInterval(14_400),
-                isAllDay: false,
-                calendarColorHex: nil,
-                isReadOnly: true
-            ),
+            timed(1, start: nextHour, colorHex: "#007AFF"),
+            timed(2, start: nextHour.addingTimeInterval(7_200), colorHex: "#34C759"),
+            timed(3, start: tomorrowStart.addingTimeInterval(9 * 3_600), colorHex: "#FF9500"),
+            timed(4, start: tomorrowStart.addingTimeInterval(11.5 * 3_600), colorHex: "#AF52DE"),
+            timed(5, start: tomorrowStart.addingTimeInterval(14 * 3_600), colorHex: "#32ADE6"),
         ]
     }
 

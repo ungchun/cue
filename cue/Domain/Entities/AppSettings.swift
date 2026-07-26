@@ -67,6 +67,20 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// 다음 실행에서 기존 설치 흔적으로 오판해 조용히 완주 처리하지 않고 이어서 보여준다.
     var hasStartedOnboarding: Bool
 
+    // MARK: 강등으로 접어둔 프리미엄 설정 — 재구독 확인 시 자동 복구 후 비운다.
+    // 강등 정리가 파괴적이면(기록 없이 끄기만) 오판·재구독 사용자가 수동으로 다시 켜야 한다.
+    // 인라인 기본값 — memberwise init에 기본 인자로 붙어 기존 생성 호출부가 그대로 컴파일된다.
+
+    /// 강등 정리가 끈 항상 표시 — 원래 켜져 있었음의 기록.
+    var demotedLiveAlwaysOn: Bool = false
+    /// 강등 정리가 끈 캘린더 함께 보기(메모/일정/할일) — 원래 켜져 있었음의 기록.
+    var demotedMemoShowsCalendar: Bool = false
+    var demotedScheduleShowsCalendar: Bool = false
+    var demotedReminderShowsCalendar: Bool = false
+    /// 강등 정리가 되돌린 메모 LA 커스텀 색 — 원래 값의 기록. nil이면 기록 없음.
+    var demotedMemoColorHex: String?
+    var demotedMemoTextColorHex: String?
+
     static let `default` = AppSettings(
         colorScheme: .system,
         startTabID: "memo",
@@ -128,5 +142,15 @@ extension AppSettings {
             ?? fallback.hasCompletedOnboarding
         hasStartedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasStartedOnboarding)
             ?? fallback.hasStartedOnboarding
+        demotedLiveAlwaysOn = try container.decodeIfPresent(Bool.self, forKey: .demotedLiveAlwaysOn)
+            ?? fallback.demotedLiveAlwaysOn
+        demotedMemoShowsCalendar = try container.decodeIfPresent(Bool.self, forKey: .demotedMemoShowsCalendar)
+            ?? fallback.demotedMemoShowsCalendar
+        demotedScheduleShowsCalendar = try container.decodeIfPresent(Bool.self, forKey: .demotedScheduleShowsCalendar)
+            ?? fallback.demotedScheduleShowsCalendar
+        demotedReminderShowsCalendar = try container.decodeIfPresent(Bool.self, forKey: .demotedReminderShowsCalendar)
+            ?? fallback.demotedReminderShowsCalendar
+        demotedMemoColorHex = try container.decodeIfPresent(String.self, forKey: .demotedMemoColorHex)
+        demotedMemoTextColorHex = try container.decodeIfPresent(String.self, forKey: .demotedMemoTextColorHex)
     }
 }

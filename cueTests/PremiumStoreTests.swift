@@ -112,6 +112,47 @@ struct PremiumStoreTests {
         #expect(store.isPremium == false)
     }
 
+    // MARK: - 판정 신뢰도
+
+    /// 조회가 신뢰 불가(nil)면 기존 isPremium을 유지하고 확정 판정도 내리지 않는다 —
+    /// 일시적 조회 실패가 유료 사용자를 강등시키면 안 된다.
+    @Test func refreshWithUnavailableVerdictKeepsPremiumState() async {
+        let service = FakePurchaseService()
+        service.entitled = [Self.monthlyID]
+        let store = PremiumStore(service: service, analytics: SpyAnalyticsService())
+        await store.refresh()
+        #expect(store.isPremium == true)
+
+        service.entitled = nil
+        await store.refresh()
+
+        #expect(store.isPremium == true)
+        #expect(store.confirmedIsPremium == nil)
+    }
+
+    /// 빈 집합(확정 미보유)은 확정 무료 판정 — 강등 정리의 실행 조건이 된다.
+    @Test func refreshWithEmptyEntitlementsConfirmsFree() async {
+        let service = FakePurchaseService()
+        let store = PremiumStore(service: service, analytics: SpyAnalyticsService())
+
+        await store.refresh()
+
+        #expect(store.isPremium == false)
+        #expect(store.confirmedIsPremium == false)
+    }
+
+    /// 보유 확인은 확정 유료 판정 — 접어둔 설정 자동 복구의 실행 조건이 된다.
+    @Test func refreshWithEntitlementsConfirmsPremium() async {
+        let service = FakePurchaseService()
+        service.entitled = [Self.monthlyID]
+        let store = PremiumStore(service: service, analytics: SpyAnalyticsService())
+
+        await store.refresh()
+
+        #expect(store.isPremium == true)
+        #expect(store.confirmedIsPremium == true)
+    }
+
     // MARK: - 복원
 
     /// 복원 후 프리미엄이면 restoreResult(outcome: "success")를 기록한다.
@@ -143,14 +184,15 @@ struct PremiumStoreTests {
 
 private final class FakePurchaseService: PurchaseService, @unchecked Sendable {
     var products: [PurchasableProduct] = []
-    var entitled: Set<String> = []
+    /// nil = 조회 신뢰 불가(서명 검증 실패 등) — 실서비스의 "대답 못 받음"을 흉내낸다.
+    var entitled: Set<String>? = []
     /// entitlementUpdates()가 순서대로 방출할 집합들 — 소진 후 스트림 종료.
     var entitlementUpdatesSequence: [Set<String>] = []
 
     func loadProducts() async -> [PurchasableProduct] { products }
     func purchase(productID: String) async throws -> PurchaseOutcome { .userCancelled }
     func restore() async {}
-    func currentEntitlements() async -> Set<String> { entitled }
+    func currentEntitlements() async -> Set<String>? { entitled }
     func entitlementUpdates() -> AsyncStream<Set<String>> {
         let sequence = entitlementUpdatesSequence
         return AsyncStream { continuation in

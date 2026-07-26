@@ -19287,202 +19287,102 @@
         }
       }
     },
-    "Sample event 1" : {
+    "Sample event %lld" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حدث تجريبي 1"
+            "value" : "حدث تجريبي %lld"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beispieltermin 1"
+            "value" : "Beispieltermin %lld"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Evento de ejemplo 1"
+            "value" : "Evento de ejemplo %lld"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Événement exemple 1"
+            "value" : "Événement exemple %lld"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "उदाहरण इवेंट 1"
+            "value" : "उदाहरण इवेंट %lld"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Acara contoh 1"
+            "value" : "Acara contoh %lld"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Evento di esempio 1"
+            "value" : "Evento di esempio %lld"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サンプル予定 1"
+            "value" : "サンプル予定 %lld"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "예시 일정 1"
+            "value" : "예시 일정 %lld"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Acara contoh 1"
+            "value" : "Acara contoh %lld"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Evento de exemplo 1"
+            "value" : "Evento de exemplo %lld"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Пример события 1"
+            "value" : "Пример события %lld"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "กิจกรรมตัวอย่าง 1"
+            "value" : "กิจกรรมตัวอย่าง %lld"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sự kiện mẫu 1"
+            "value" : "Sự kiện mẫu %lld"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "示例日程 1"
+            "value" : "示例日程 %lld"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "範例行程 1"
-          }
-        }
-      }
-    },
-    "Sample event 2" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "حدث تجريبي 2"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beispieltermin 2"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Evento de ejemplo 2"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Événement exemple 2"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "उदाहरण इवेंट 2"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acara contoh 2"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Evento di esempio 2"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サンプル予定 2"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "예시 일정 2"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acara contoh 2"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Evento de exemplo 2"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Пример события 2"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "กิจกรรมตัวอย่าง 2"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sự kiện mẫu 2"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "示例日程 2"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "範例行程 2"
+            "value" : "範例行程 %lld"
           }
         }
       }
