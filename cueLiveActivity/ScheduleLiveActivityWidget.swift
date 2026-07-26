@@ -4,6 +4,7 @@
 //
 
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -102,6 +103,32 @@ private struct ScheduleLockScreenView: View {
         // 캘린더 모드에선 일정이 적어도 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다.
         .frame(minHeight: showsCalendar ? ScheduleMetrics.columnMax : nil, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
+        // ⚠️ 임시 mock 브라우징 셰브런 — 앱이 modeKey를 켰을 때만 카드 좌우 하단에 떠서
+        // mock 케이스를 순환 전환한다(MockScheduleLiveCases). 눈 검증 후 함께 제거.
+        .overlay(alignment: .bottomLeading) {
+            if showsMockChevrons { mockChevron("chevron.left", delta: -1) }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if showsMockChevrons { mockChevron("chevron.right", delta: 1) }
+        }
+    }
+
+    /// ⚠️ 임시 — mock 브라우징 모드 여부(App Group 미러, 렌더 시점에 읽음).
+    private var showsMockChevrons: Bool {
+        SharedAppGroup.defaults.bool(forKey: MockScheduleLiveCases.modeKey)
+    }
+
+    /// ⚠️ 임시 — 케이스 전환 셰브런(MonthCalendarView 셰브런과 같은 반투명 칩 스타일).
+    private func mockChevron(_ systemName: String, delta: Int) -> some View {
+        Button(intent: ShiftMockScheduleCaseIntent(delta: delta)) {
+            Image(systemName: systemName)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(Spacing.xs)
+                .background(Circle().fill(Color.primary.opacity(0.12)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder

@@ -83,6 +83,7 @@
 				Shared/LiveActivity/LiveReminderItem.swift,
 				Shared/LiveActivity/LiveScheduleDay.swift,
 				Shared/LiveActivity/MemoLiveActivityAttributes.swift,
+				Shared/LiveActivity/MockScheduleLiveCases.swift,
 				Shared/LiveActivity/MonthCalendarGrid.swift,
 				Shared/LiveActivity/ReminderDynamicIsland.swift,
 				Shared/LiveActivity/ReminderLiveActivityAttributes.swift,
