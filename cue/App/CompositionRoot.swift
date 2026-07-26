@@ -93,7 +93,9 @@ struct CompositionRoot {
             analytics: analytics,
             reconcilePremiumSettings: ReconcilePremiumSettingsUseCase(
                 fetch: FetchAppSettingsUseCase(repository: appSettingsRepository),
-                save: SaveAppSettingsUseCase(repository: appSettingsRepository)
+                save: SaveAppSettingsUseCase(repository: appSettingsRepository),
+                fetchMemo: FetchMemoUseCase(repository: memoRepository),
+                saveMemo: SaveMemoUseCase(repository: memoRepository)
             )
         )
     }

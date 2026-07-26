@@ -12,17 +12,33 @@
 struct ReconcilePremiumSettingsUseCase: Sendable {
     private let fetch: FetchAppSettingsUseCase
     private let save: SaveAppSettingsUseCase
+    private let fetchMemo: FetchMemoUseCase
+    private let saveMemo: SaveMemoUseCase
 
-    init(fetch: FetchAppSettingsUseCase, save: SaveAppSettingsUseCase) {
+    init(
+        fetch: FetchAppSettingsUseCase,
+        save: SaveAppSettingsUseCase,
+        fetchMemo: FetchMemoUseCase,
+        saveMemo: SaveMemoUseCase
+    ) {
         self.fetch = fetch
         self.save = save
+        self.fetchMemo = fetchMemo
+        self.saveMemo = saveMemo
     }
 
-    /// 비프리미엄이면 프리미엄 전용 플래그를 정리하고, 실제로 바뀐 경우에만 저장 후 true.
-    /// 프리미엄이거나 켜진 플래그가 없으면 아무것도 하지 않는다(불필요한 write·미러 갱신 방지).
+    /// 비프리미엄이면 프리미엄 전용 잔존값을 정리하고, 실제로 바뀐 경우에만 저장 후 true.
+    /// 프리미엄이거나 바꿀 게 없으면 아무것도 하지 않는다(불필요한 write·미러 갱신 방지).
     @discardableResult
     func callAsFunction(isPremium: Bool) async -> Bool {
         guard !isPremium else { return false }
+        let flagsChanged = await stripPremiumFlags()
+        let memoChanged = await resetMemoColors()
+        return flagsChanged || memoChanged
+    }
+
+    /// 항상표시·캘린더 함께 보기 플래그 정리 — 켜진 게 있을 때만 저장.
+    private func stripPremiumFlags() async -> Bool {
         var settings = await fetch()
         let hadPremiumFlags = settings.liveAlwaysOn
             || settings.memoShowsCalendar
@@ -34,6 +50,20 @@ struct ReconcilePremiumSettingsUseCase: Sendable {
         settings.scheduleShowsCalendar = false
         settings.reminderShowsCalendar = false
         await save(settings)
+        return true
+    }
+
+    /// 메모 LA 커스텀 색(배경·글자) 정리 — 색은 AppSettings가 아닌 Memo에 살아 별도로 되돌린다.
+    /// 텍스트는 무료 기능이자 사용자 데이터라 보존. 이미 기본색이면 저장하지 않는다.
+    private func resetMemoColors() async -> Bool {
+        var memo = await fetchMemo()
+        let fallback = Memo.default
+        guard memo.colorHex != fallback.colorHex || memo.textColorHex != fallback.textColorHex else {
+            return false
+        }
+        memo.colorHex = fallback.colorHex
+        memo.textColorHex = fallback.textColorHex
+        await saveMemo(memo)
         return true
     }
 }

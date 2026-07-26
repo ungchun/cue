@@ -121,9 +121,12 @@ struct Dependencies: Sendable {
     /// 기본값은 인메모리 no-op — 프리뷰·테스트 조립이 실 저장소 없이 동작한다.
     var reconcilePremiumSettings: ReconcilePremiumSettingsUseCase = {
         let repository = InMemoryAppSettingsRepository()
+        let memoRepository = InMemoryMemoRepository()
         return ReconcilePremiumSettingsUseCase(
             fetch: FetchAppSettingsUseCase(repository: repository),
-            save: SaveAppSettingsUseCase(repository: repository)
+            save: SaveAppSettingsUseCase(repository: repository),
+            fetchMemo: FetchMemoUseCase(repository: memoRepository),
+            saveMemo: SaveMemoUseCase(repository: memoRepository)
         )
     }()
 }
