@@ -30,7 +30,8 @@ struct OnboardingView: View {
                 cardPage.tag(1)
                 firstCuePage.tag(2)
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
+            // 인디케이터 점은 숨긴다 — 진행은 스와이프·Continue로 충분하고 화면이 더 조용해진다.
+            .tabViewStyle(.page(indexDisplayMode: .never))
 
             bottomButton
                 .padding(.horizontal, Spacing.lg)
