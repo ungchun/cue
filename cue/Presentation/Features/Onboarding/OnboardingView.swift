@@ -5,11 +5,12 @@
 
 import SwiftUI
 
-/// 첫 실행 온보딩 — 3장: 히어로(잠금화면 일러스트 + 핵심 가치) → 기능 소개 → 첫 큐 띄우기.
+/// 첫 실행 온보딩 — 3장: 신호(Signal Dot) → 실물 카드 → 첫 큐 띄우기.
 ///
-/// 애플식 온보딩 문법을 따른다: 상단 히어로 일러스트 + 큰 볼드 타이틀 + 아이콘 행,
-/// 우상단 ✕ 닫기, 하단 주 버튼 하나. 마지막 장은 설명이 아니라 **첫 큐를 실제로
-/// 띄우게 만드는 것**이 목적 — cue의 아하 모먼트는 앱 안이 아니라 잠금화면에 있다.
+/// 일러스트·기능 나열 대신 cue의 브랜드 언어로 말한다: 무채색, 넉넉한 여백,
+/// 타이포그래피 중심, 그리고 **Signal Dot이 3장을 관통하는 모티프**다 —
+/// 1장에서 점이 켜지고, 2장에서 그 점이 실물 카드가 되고, 3장에서 사용자의
+/// 첫 큐가 된다. 마지막 장은 설명이 아니라 실제 게시 — 아하 모먼트는 잠금화면에 있다.
 /// 권한 요청 없음(메모는 권한이 필요 없어 첫 액션으로 완벽).
 struct OnboardingView: View {
     // ⚠️ 임시 — 눈 검증용: true면 완주 여부와 무관하게 앱을 켤 때마다 온보딩을 띄운다.
@@ -20,17 +21,19 @@ struct OnboardingView: View {
     /// 완료·스킵 공통 마감 — RootView가 커버를 닫고 메모 탭을 새로고침한다.
     let onFinished: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isTextFieldFocused: Bool
+    /// 에코 링 숨쉬기 트리거 — 설정 푸터·페이월 에코와 같은 느린 pulse 루프.
+    @State private var echoPulsing = false
 
     var body: some View {
         VStack(spacing: Spacing.zero) {
             TabView(selection: $viewModel.page) {
-                heroPage.tag(0)
-                featuresPage.tag(1)
+                signalPage.tag(0)
+                cardPage.tag(1)
                 firstCuePage.tag(2)
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
-            .ignoresSafeArea(edges: .top)
 
             bottomButton
                 .padding(.horizontal, Spacing.lg)
@@ -39,175 +42,104 @@ struct OnboardingView: View {
         .background(Color(.systemBackground))
         // 앱 전체와 동일한 무채색 틴트 — fullScreenCover는 루트의 .tint를 상속하지 않는다.
         .tint(.primary)
-        .overlay(alignment: .topTrailing) { closeButton }
-    }
-
-    /// 우상단 ✕ — 어느 장에서든 온보딩을 닫는다(레퍼런스 온보딩들의 공통 문법).
-    private var closeButton: some View {
-        Button { finish() } label: {
-            Image(systemName: "xmark")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(Spacing.smd)
-                .background(Circle().fill(.thinMaterial))
+        .overlay(alignment: .topTrailing) {
+            Button("Skip") { finish() }
+                .font(.callout)
+                .foregroundStyle(.tertiary)
+                .padding(Spacing.lg)
+                .opacity(viewModel.published ? 0 : 1)
         }
-        .buttonStyle(.plain)
-        .padding(.trailing, Spacing.md)
-        .accessibilityLabel(Text("Skip"))
+        .onAppear { echoPulsing = true }
     }
 
-    // MARK: - 1장. 히어로 — 잠금화면 일러스트 + 핵심 가치
+    // MARK: - 1장. 신호 — 점이 켜진다
 
-    private var heroPage: some View {
+    private var signalPage: some View {
         VStack(spacing: Spacing.zero) {
-            heroIllustration
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                Text("Keep one thing in sight.")
-                    .font(.title.weight(.bold))
-                    .frame(maxWidth: .infinity, alignment: .center)
+            Spacer()
+            signalDot(coreDiameter: Spacing.smd, ringBase: 44)
+                .frame(height: 180)
+            Spacer()
+            VStack(spacing: Spacing.smd) {
+                Text(verbatim: "Cue your day.")
+                    .font(.system(.largeTitle, design: .rounded).weight(.semibold))
+                Text("One quiet signal for the one thing\nyou must not forget.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.top, Spacing.xl)
-                featureRow(
-                    icon: "sparkles.rectangle.stack",
-                    title: "Lives on your Lock Screen",
-                    description: "Your cue stays visible — no need to open the app."
-                )
-                featureRow(
-                    icon: "bell.slash",
-                    title: "Not a notification",
-                    description: "It doesn't ring, and it never slides away."
-                )
-                featureRow(
-                    icon: "hand.tap",
-                    title: "One tap to put it up",
-                    description: "Write one line and pin it. That's all."
-                )
-                Spacer(minLength: Spacing.zero)
+                    .lineSpacing(Spacing.xxs)
             }
-            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, Spacing.xxl)
+            Spacer()
         }
     }
 
-    /// 히어로 일러스트 — 그라데이션 배경 위 미니 잠금화면(시계 + 색 캡슐 카드).
-    /// 실제 위젯을 그리진 않고 분위기만 재현한다(시스템 컬러 조합의 그라데이션).
-    private var heroIllustration: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color.indigo, Color.purple],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            VStack(spacing: Spacing.md) {
-                Text(Date.now, format: .dateTime.hour().minute())
-                    .font(.system(.largeTitle, design: .rounded).weight(.medium))
-                    .foregroundStyle(.white.opacity(0.95))
-                mockCard(fill: Color.red, lines: 2)
-                mockCard(fill: Color.black.opacity(0.75), lines: 2)
-                mockCard(fill: Color.white.opacity(0.85), lines: 1)
+    // MARK: - 2장. 실물 카드 — 점이 카드가 된다
+
+    private var cardPage: some View {
+        VStack(spacing: Spacing.zero) {
+            Spacer()
+            // 실물 크기의 메모 LA 카드 — 일러스트가 아니라 잠금화면에 뜨는 그 모습.
+            // 뒤에 옅은 에코 링을 깔아 1장의 점과 같은 존재임을 잇는다.
+            ZStack {
+                echoRings(base: 200, step: 90, opacities: [0.10, 0.06, 0.03])
+                liveCardMock
             }
-            .padding(Spacing.lg)
-            .frame(width: 220)
-            .background(
-                RoundedRectangle(cornerRadius: Spacing.lg + Spacing.sm)
-                    .fill(.white.opacity(0.14))
-            )
-            .padding(.top, Spacing.xxl)
+            .frame(height: 260)
+            Spacer()
+            VStack(spacing: Spacing.smd) {
+                Text("It stays, quietly.")
+                    .font(.title2.weight(.semibold))
+                Text("On your Lock Screen and Dynamic Island.\nNot a notification — it never slides away.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(Spacing.xxs)
+            }
+            .padding(.bottom, Spacing.xxl)
+            Spacer()
         }
-        .frame(height: 380)
-        .clipShape(
-            .rect(bottomLeadingRadius: Spacing.xl, bottomTrailingRadius: Spacing.xl)
-        )
+    }
+
+    /// 메모 LA 카드 실물 재현 — 글래스 재질 + 큰 텍스트(위젯과 같은 인상). 위에 잠금화면
+    /// 시계를 작게 얹어 "잠금화면 위"라는 맥락만 준다.
+    private var liveCardMock: some View {
+        VStack(spacing: Spacing.md) {
+            Text(Date.now, format: .dateTime.hour().minute())
+                .font(.system(.title, design: .rounded).weight(.medium))
+                .foregroundStyle(.tertiary)
+            Text("Pick up milk")
+                .font(.title2.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.lg + Spacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: Spacing.lg)
+                        .fill(.regularMaterial)
+                        .shadow(color: .black.opacity(0.08), radius: 24, y: 8)
+                )
+                .padding(.horizontal, Spacing.xl + Spacing.sm)
+        }
         .accessibilityHidden(true)
     }
 
-    /// 히어로 안 LA 카드 축소판 — 색 배경 + 텍스트 자리 표시 줄.
-    private func mockCard(fill: Color, lines: Int) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            ForEach(0..<lines, id: \.self) { index in
-                Capsule()
-                    .fill(.white.opacity(index == 0 ? 0.7 : 0.45))
-                    .frame(width: index == 0 ? 88 : 132, height: Spacing.sm)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.md)
-        .background(RoundedRectangle(cornerRadius: Spacing.md).fill(fill))
-    }
-
-    // MARK: - 2장. 기능 소개 (애플식 — 큰 좌측 타이틀 + 아이콘 행)
-
-    private var featuresPage: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            Spacer()
-            Text("One app,\nfour signals.")
-                .font(.largeTitle.weight(.bold))
-                .padding(.bottom, Spacing.lg)
-            featureRow(
-                icon: "note.text",
-                title: "Memo",
-                description: "Pin one note in large type."
-            )
-            featureRow(
-                icon: "calendar",
-                title: "Schedule",
-                description: "Today's events, packed onto the Lock Screen."
-            )
-            featureRow(
-                icon: "checklist",
-                title: "Tasks",
-                description: "Check off reminders without unlocking."
-            )
-            featureRow(
-                icon: "timer",
-                title: "Focus",
-                description: "A Pomodoro that stays in sight."
-            )
-            Spacer()
-            Spacer()
-        }
-        .padding(.horizontal, Spacing.xl)
-    }
-
-    /// 아이콘 + 제목 + 설명 행 — 레퍼런스 온보딩들의 공통 행 문법.
-    private func featureRow(
-        icon: String, title: LocalizedStringKey, description: LocalizedStringKey
-    ) -> some View {
-        HStack(alignment: .center, spacing: Spacing.md) {
-            Image(systemName: icon)
-                .font(.title2.weight(.regular))
-                .foregroundStyle(.secondary)
-                .frame(width: 44)
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(title)
-                    .font(.headline)
-                Text(description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: Spacing.zero)
-        }
-    }
-
-    // MARK: - 3장. 첫 큐 띄우기
+    // MARK: - 3장. 첫 큐 — 점이 당신의 큐가 된다
 
     private var firstCuePage: some View {
         VStack(spacing: Spacing.md) {
             Spacer()
             if viewModel.published {
-                Image(systemName: "lock.iphone")
-                    .font(.system(.largeTitle).weight(.light))
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, Spacing.sm)
-                Text("Your cue is live.")
-                    .font(.title.weight(.bold))
-                Text("Now lock your phone and see it on the Lock Screen.")
+                signalDot(coreDiameter: Spacing.sm, ringBase: 36)
+                    .frame(height: 120)
+                Text("Your cue is on.")
+                    .font(.title2.weight(.semibold))
+                Text("Lock your phone and see it\nsitting on the Lock Screen.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.xl)
+                    .lineSpacing(Spacing.xxs)
             } else {
-                Text("Try your first cue")
-                    .font(.title.weight(.bold))
+                Text("Light your first cue")
+                    .font(.title2.weight(.semibold))
                 Text("What must you not forget right now?")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -233,6 +165,41 @@ struct OnboardingView: View {
         .onChange(of: viewModel.page) { _, page in
             if page == 2, !viewModel.published { isTextFieldFocused = true }
         }
+    }
+
+    // MARK: - Signal Dot (브랜드 비주얼 코어 — 점 + 퍼지는 동심원)
+
+    /// 점 + 숨쉬는 동심원 3겹. 설정 푸터·페이월 에코와 같은 느린 pulse, Reduce Motion이면 정적.
+    private func signalDot(coreDiameter: CGFloat, ringBase: CGFloat) -> some View {
+        ZStack {
+            echoRings(base: ringBase, step: ringBase, opacities: [0.25, 0.15, 0.08])
+            Circle()
+                .fill(Color.primary)
+                .frame(width: coreDiameter, height: coreDiameter)
+        }
+        .accessibilityHidden(true)
+    }
+
+    /// 동심원 스트로크 링 3겹 — 링마다 시차를 둔 숨쉬기 루프. 순수 장식.
+    private func echoRings(base: CGFloat, step: CGFloat, opacities: [Double]) -> some View {
+        ZStack {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .strokeBorder(Color.primary.opacity(opacities[index]), lineWidth: 1)
+                    .frame(width: base + CGFloat(index) * step, height: base + CGFloat(index) * step)
+                    .scaleEffect(echoPulsing && !reduceMotion ? 1.1 : 1)
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            : .easeInOut(duration: 3)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.3),
+                        value: echoPulsing
+                    )
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     // MARK: - 하단 주 버튼 (화면당 Primary 하나)
