@@ -266,6 +266,9 @@ struct OnboardingView: View {
                             .lineLimit(3)
                             .focused($isTextFieldFocused)
                             .submitLabel(.done)
+                            // 밑줄과 같은 폭으로 제한 — 긴 입력이 밑줄 밖으로 퍼지지 않고
+                            // 그 폭 안에서 줄바꿈된다(3줄 초과분은 필드가 내부 스크롤).
+                            .frame(maxWidth: 240)
                         Rectangle()
                             .fill(viewModel.canPublish ? Color.primary : Color.secondary.opacity(0.3))
                             .frame(height: 1)
