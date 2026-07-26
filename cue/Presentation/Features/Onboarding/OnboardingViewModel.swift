@@ -40,7 +40,11 @@ final class OnboardingViewModel {
     @ObservationIgnored private let fetchAppSettingsUseCase: FetchAppSettingsUseCase
     @ObservationIgnored private let saveAppSettingsUseCase: SaveAppSettingsUseCase
 
-    init(dependencies: Dependencies) {
+    /// 무료/프리미엄 분기(재시청 데모 게시)용 — 게시 시점에 읽는다.
+    @ObservationIgnored private let premiumStore: PremiumStore
+
+    init(dependencies: Dependencies, premiumStore: PremiumStore) {
+        self.premiumStore = premiumStore
         fetchMemoUseCase = dependencies.fetchMemo
         saveMemoUseCase = dependencies.saveMemo
         startMemoLiveActivityUseCase = dependencies.startMemoLiveActivity
@@ -58,6 +62,13 @@ final class OnboardingViewModel {
     /// 첫 큐가 실제로 게시됐는지 — true면 3장이 "이제 화면을 잠가보세요" 안내로 전환.
     private(set) var published = false
 
+    /// 재시청(설정 "온보딩 다시 보기") 진입 여부 — `reset()`이 켠다. 첫 실행은 false.
+    @ObservationIgnored private var isReplay = false
+
+    /// 이번 게시가 placeholder 데모였는지(무료 재시청) — true면 RootView가 메모 LA를
+    /// 채택하지 않는다. 채택하면 메모 탭 편집이 쿼터 없이 LA를 갱신하는 우회가 열린다.
+    private(set) var publishedDemo = false
+
     /// 게시 버튼 활성 기준 — 공백만으로는 게시 불가(빈 신호는 의미가 없다).
     var canPublish: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -72,26 +83,38 @@ final class OnboardingViewModel {
         guard !trimmed.isEmpty else { return }
         // 색은 기존 메모 것을 보존 — 온보딩은 텍스트만 만들고 커스터마이징은 설정의 영역.
         var memo = await fetchMemoUseCase()
-        memo.text = trimmed
-        await saveMemoUseCase(memo)
+        let isDemo = isReplay && !premiumStore.isPremium
+        if isDemo {
+            // 무료 재시청 — 입력을 실제 메모로 저장하지도 잠금화면에 싣지도 않는다.
+            // 저장·게시하면 하루 1회 쿼터를 재시청으로 우회하는 구멍이 된다. 메모 카드는
+            // 메모 탭 placeholder 문구로 데모만 보여준다(첫 실행·프리미엄은 기존 그대로).
+            memo.text = String(localized: "What to remember?")
+        } else {
+            memo.text = trimmed
+            await saveMemoUseCase(memo)
+        }
         do {
             try await startMemoLiveActivityUseCase(memo)
             published = true
+            publishedDemo = isDemo
             // 주인공(첫 큐)이 떠야 조연도 뜬다 — 메모 실패 시 예시만 남는 잠금화면 방지.
-            // 정리는 Done이 아니라 **다음 포그라운드 복귀**(RootView)에서 — Done을 바로
-            // 눌러도 다음 잠금에서 3카드 장면을 최소 한 번 보게 하기 위함.
+            // 정리는 Done이 아니라 **다음 앱 실행**(RootView)에서 — Done을 바로 눌러도
+            // 이번 세션 동안 3카드 장면이 유지되게 하기 위함.
             await startSampleLiveActivitiesUseCase()
         } catch {
             published = false
         }
     }
 
-    /// 재시청(설정 "온보딩 다시 보기") 진입 직전 호출 — 진행 상태를 처음으로 되돌린다.
+    /// 재시청(설정 "온보딩 다시 보기") 진입 직전 호출 — 진행 상태를 처음으로 되돌리고
+    /// 재시청 표식을 켠다(무료 사용자의 데모 게시 분기 근거). 첫 실행 경로는 부르지 않는다.
     /// 지난 시청의 입력·"게시 완료" 화면이 그대로 다시 열리지 않게.
     func reset() {
         page = 0
         text = ""
         published = false
+        publishedDemo = false
+        isReplay = true
     }
 
     /// 표시 직전 시작 마커 저장 — 중단 후 재실행 시 이어서 보여주기 위한 근거.

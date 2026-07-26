@@ -48,7 +48,7 @@ struct RootView: View {
         _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
-        _onboardingViewModel = State(initialValue: OnboardingViewModel(dependencies: dependencies))
+        _onboardingViewModel = State(initialValue: OnboardingViewModel(dependencies: dependencies, premiumStore: premiumStore))
         hadPriorInstall = dependencies.detectPriorInstall()
     }
 
@@ -180,7 +180,9 @@ struct RootView: View {
                 showsOnboarding = false
                 Task {
                     await memoViewModel.onAppear()
-                    if onboardingViewModel.published {
+                    // 데모 게시(무료 재시청의 placeholder 카드)는 채택하지 않는다 — 저장 메모와
+                    // 다른 내용이고, 채택하면 메모 탭 편집이 쿼터 없이 LA를 갱신하는 우회가 열린다.
+                    if onboardingViewModel.published, !onboardingViewModel.publishedDemo {
                         memoViewModel.adoptExternalLiveActivity()
                     }
                     await settingsViewModel.onAppear()
