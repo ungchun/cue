@@ -119,11 +119,12 @@ struct OnboardingView: View {
                 Text(Date.now, format: .dateTime.hour().minute())
                     .font(.system(.title2, design: .rounded).weight(.medium))
                     .foregroundStyle(.tertiary)
-                // 메모 — 큰 텍스트 카드(첫 큐 예시만 실제 문구)
-                Text("Pick up milk")
-                    .font(.headline)
+                // 메모 — 큰 텍스트 자리의 스켈레톤(가운데 정렬, 다른 카드와 동일 문법)
+                Capsule()
+                    .fill(Color.secondary.opacity(0.35))
+                    .frame(width: 128, height: Spacing.sm)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.md)
+                    .padding(.vertical, Spacing.md + Spacing.xs)
                     .glassEffect(.regular, in: .rect(cornerRadius: Spacing.md))
                 // 일정 — 왼쪽 실제 월간 캘린더("캘린더 함께 보기" 레이아웃) + 스켈레톤 이벤트 행
                 HStack(spacing: Spacing.smd) {
