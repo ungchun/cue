@@ -115,14 +115,19 @@ actor EventKitRemindersRepository: RemindersRepository {
         }
         reminder.title = title
         reminder.notes = notes
-        // 기존 규칙을 걷어내고 도메인 규칙으로 교체 — nil이면 반복 제거. 마감일 없으면 무의미.
-        (reminder.recurrenceRules ?? []).forEach(reminder.removeRecurrenceRule)
-        if dueDate != nil, let rule = ReminderMapper.toEKRecurrenceRule(recurrence) {
-            reminder.addRecurrenceRule(rule)
+        // 반복은 **실제로 바뀌었을 때만** 재기록 — 동치면 그대로 둬서 도메인이 표현 못 하는
+        // 원본 세부(횟수 종료 등)를 깎지 않는다(미리알림 앱에서 만든 규칙 보존).
+        let effectiveRecurrence = dueDate != nil ? recurrence : nil
+        if !ReminderMapper.isEquivalentRecurrence(reminder.recurrenceRules?.first, to: effectiveRecurrence) {
+            (reminder.recurrenceRules ?? []).forEach(reminder.removeRecurrenceRule)
+            if let rule = ReminderMapper.toEKRecurrenceRule(effectiveRecurrence) {
+                reminder.addRecurrenceRule(rule)
+            }
         }
-        // 기존 알람을 모두 떼고, 시간 포함이면 새로 단다 — 마감일 변경 시 알람 시각도 같이 바뀌어야 함.
-        if let alarms = reminder.alarms {
-            for alarm in alarms { reminder.removeAlarm(alarm) }
+        // 알람은 cue가 관리하는 **마감 시각 절대 알람만** 떼고 다시 단다 — 사용자가 미리알림
+        // 앱에서 단 위치·상대·추가 알람은 보존(마감일 변경 시 마감 알람 시각만 따라간다).
+        for alarm in (reminder.alarms ?? []) where ReminderMapper.isCueManagedDueAlarm(alarm) {
+            reminder.removeAlarm(alarm)
         }
         if let dueDate {
             let fields: Set<Calendar.Component> = includesTime

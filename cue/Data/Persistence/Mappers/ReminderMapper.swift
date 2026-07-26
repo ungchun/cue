@@ -46,6 +46,21 @@ enum ReminderMapper {
         )
     }
 
+    /// cue가 관리하는 알람인지 — **마감 시각 절대 알람(위치 없음)**만 해당한다.
+    /// 그 외(위치·상대 오프셋·위치 붙은 절대)는 사용자가 미리알림 앱에서 단 것일 수 있어
+    /// 편집 저장 시 보존한다 — 일정 편집의 `.custom` 알림 보존과 같은 계약.
+    static func isCueManagedDueAlarm(_ alarm: EKAlarm) -> Bool {
+        alarm.absoluteDate != nil && alarm.structuredLocation == nil
+    }
+
+    /// 기존 EK 규칙과 도메인 규칙의 동치 판정 — 동치면 저장 시 재기록하지 않아, 도메인이
+    /// 표현 못 하는 원본 세부(횟수 종료 등)가 깎이지 않는다(일정 `.foreign` 보존과 같은 계약).
+    /// 판정 기준: 기존 규칙을 도메인으로 읽었을 때 편집 결과와 같은가 — 시트가 반복을
+    /// 안 건드렸으면 읽은 값을 그대로 돌려주므로 항상 동치가 된다.
+    static func isEquivalentRecurrence(_ existing: EKRecurrenceRule?, to domain: RecurrenceRule?) -> Bool {
+        toRecurrence(existing) == domain
+    }
+
     /// `EKRecurrenceRule` → 도메인 `RecurrenceRule`.
     /// 요일/일자/월/서수 요일(setPositions·weekNumber 두 인코딩)·종료 날짜까지 매핑한다.
     /// 표현 못 하는 부가 조건(횟수 종료·연중 주차 등)은 **빈도·간격만으로 단순화** —
