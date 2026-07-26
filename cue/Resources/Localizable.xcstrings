@@ -11910,7 +11910,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "静かに、ずっとそこに。"
+            "value" : "静かに、ずっとそこに"
           }
         },
         "ko" : {
@@ -11952,13 +11952,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "安静地，一直都在。"
+            "value" : "安静地，一直都在"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "安靜地，一直都在。"
+            "value" : "安靜地，一直都在"
           }
         }
       }
@@ -13627,7 +13627,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "画面をロックして、ロック画面に表示されているのを確かめてください。"
+            "value" : "画面をロックして、ロック画面に表示されているのを確かめてください"
           }
         },
         "ko" : {
@@ -13669,13 +13669,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "锁上手机，在锁定屏幕上看看它。"
+            "value" : "锁上手机，在锁定屏幕上看看它"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鎖定手機，在鎖定畫面上看看它。"
+            "value" : "鎖定手機，在鎖定畫面上看看它"
           }
         }
       }
@@ -16727,7 +16727,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ロック画面に。通知ではないから、消えません。"
+            "value" : "ロック画面に。通知ではないから、消えません"
           }
         },
         "ko" : {
@@ -16769,13 +16769,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在你的锁定屏幕上。不是通知，不会滑走消失。"
+            "value" : "在你的锁定屏幕上。不是通知，不会滑走消失"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在你的鎖定畫面上。不是通知，不會滑走消失。"
+            "value" : "在你的鎖定畫面上。不是通知，不會滑走消失"
           }
         }
       }
@@ -16827,7 +16827,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "忘れてはいけないひとつのための、静かなシグナル。"
+            "value" : "忘れてはいけないひとつのための、静かなシグナル"
           }
         },
         "ko" : {
@@ -16869,13 +16869,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一个安静的信号，提醒你此刻不能忘的那件事。"
+            "value" : "一个安静的信号，提醒你此刻不能忘的那件事"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一個安靜的信號，提醒你此刻不能忘的那件事。"
+            "value" : "一個安靜的信號，提醒你此刻不能忘的那件事"
           }
         }
       }
