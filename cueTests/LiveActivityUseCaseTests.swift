@@ -525,6 +525,64 @@ struct LiveActivityUseCaseTests {
         #expect(await service.refreshLayoutCount == 1)
     }
 
+    // MARK: - StartSampleLiveActivities (온보딩 목업 3종 게시의 일정·할일)
+
+    /// 온보딩 목업 일정 — 오늘 하루 묶음(종일 1 + 시간 2), 월간 캘린더 강제 표시.
+    /// 설정 미러를 건드리지 않고 캘린더가 보이려면 오버라이드가 반드시 true여야 한다.
+    @Test func samplePublishesTodayScheduleWithCalendarOverride() async throws {
+        let service = RecordingLiveActivityService()
+        let useCase = StartSampleLiveActivitiesUseCase(
+            startSchedule: StartScheduleLiveActivityUseCase(service: service),
+            startReminder: StartReminderLiveActivityUseCase(service: service)
+        )
+
+        await useCase(now: Date(timeIntervalSince1970: 1_784_000_000))
+
+        let calls = await service.startScheduleCalls
+        #expect(calls.count == 1)
+        let call = try #require(calls.first)
+        #expect(call.showsCalendarOverride == true)
+        #expect(call.days.count == 1)                     // 오늘 하루 묶음만
+        let events = try #require(call.days.first?.events)
+        #expect(events.count == 3)
+        #expect(events.filter(\.isAllDay).count == 1)     // 종일 캡슐 1 + 시간 막대 2 — 두 형태를 다 보여준다
+        #expect(events.allSatisfy { !$0.title.isEmpty })
+    }
+
+    /// 온보딩 목업 할일 — 예시 6개, 합성 id(EventKit 식별자와 절대 안 겹침 → 체크 인텐트가
+    /// 자연히 no-op), 오늘 카운트 6.
+    @Test func samplePublishesSixTasksWithSyntheticIDs() async throws {
+        let service = RecordingLiveActivityService()
+        let useCase = StartSampleLiveActivitiesUseCase(
+            startSchedule: StartScheduleLiveActivityUseCase(service: service),
+            startReminder: StartReminderLiveActivityUseCase(service: service)
+        )
+
+        await useCase(now: Date(timeIntervalSince1970: 1_784_000_000))
+
+        let calls = await service.startReminderCalls
+        #expect(calls.count == 1)
+        let call = try #require(calls.first)
+        #expect(call.items.count == 6)
+        #expect(call.items.allSatisfy { $0.id.hasPrefix(StartSampleLiveActivitiesUseCase.sampleReminderIDPrefix) })
+        #expect(call.items.allSatisfy { !$0.title.isEmpty })
+        #expect(call.remaining == 0)
+        #expect(call.todayCount == 6)
+    }
+
+    /// 일정 게시가 실패해도 할일 목업은 게시된다 — 목업은 조연이라 best-effort로 삼킨다.
+    @Test func sampleStillPublishesTasksWhenScheduleFails() async {
+        let service = ScheduleFailingLiveActivityService()
+        let useCase = StartSampleLiveActivitiesUseCase(
+            startSchedule: StartScheduleLiveActivityUseCase(service: service),
+            startReminder: StartReminderLiveActivityUseCase(service: service)
+        )
+
+        await useCase(now: Date(timeIntervalSince1970: 1_784_000_000))
+
+        #expect(await service.startReminderCount == 1)
+    }
+
     // MARK: - Helpers
 
     private func reminder(id: String, title: String, listID: String = "list-1", isCompleted: Bool = false, dueDate: Date? = nil) -> Reminder {
@@ -605,4 +663,33 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     func refreshLayout() async {
         refreshLayoutCount += 1
     }
+}
+
+/// startSchedule만 throw하는 실패 주입 더블 — 목업 use case의 best-effort 검증용.
+private final actor ScheduleFailingLiveActivityService: LiveActivityService {
+    var isEnabled: Bool { true }
+
+    private(set) var startReminderCount = 0
+
+    func startReminder(
+        listTitle: String,
+        items: [LiveReminderItem],
+        remaining: Int,
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots]
+    ) async throws {
+        startReminderCount += 1
+    }
+
+    func endReminder() async {}
+
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
+        throw DomainError.validation("test")
+    }
+
+    func endSchedule() async {}
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
+    func endMemo() async {}
+    func sync() async {}
+    func refreshLayout() async {}
 }
