@@ -93,7 +93,12 @@ final class FocusViewModel {
 
     var selectedSession: FocusSession? {
         guard let id = selectedSessionID else { return nil }
-        return sessions.first(where: { $0.id == id })
+        guard let session = sessions.first(where: { $0.id == id }) else { return nil }
+        // 강등 staleness 방어 — 선택 게이트(selectSession·restoreSelection)를 통과한 뒤 강등돼
+        // 한도 밖 id가 남아 있어도, 실행(start)·표시가 읽는 이 지점에서 첫 세션으로 떨어뜨린다.
+        // selectedSessionID 저장값은 건드리지 않는다(재구독 시 원복).
+        guard isUsable(sessionID: id) else { return sessions.first }
+        return session
     }
 
     var displayedSettings: FocusSettings {

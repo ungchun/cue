@@ -258,6 +258,25 @@ struct FocusViewModelTests {
         #expect(await repo.fetchSelectedSessionID() == second.id)
     }
 
+    /// 강등 staleness 방어 — 선택 게이트를 통과한 뒤 강등돼 selectedSessionID가 한도 밖에
+    /// 남아 있어도, 실행·표시가 읽는 selectedSession은 첫 세션으로 떨어진다
+    /// (start()가 프리미엄 세션 설정으로 실행되는 우회를 막는다).
+    @Test func freeUserStaleSelectionResolvesToFirstSession() async {
+        let premiumSettings = FocusSettings(focusDuration: 45 * 60, restDuration: 10 * 60, isRepeating: false, cycleCount: 1)
+        let first = FocusSession(id: UUID(), title: "A", settings: .default, colorHex: "#FF3B30")
+        let second = FocusSession(id: UUID(), title: "B", settings: premiumSettings, colorHex: "#FF9500")
+        let repo = InMemoryFocusSessionsRepository(sessions: [first, second], selectedID: first.id)
+        let (deps, _) = makeDependencies(focusSessionsRepository: repo)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: false))
+        await viewModel.onAppear()
+
+        // 프리미엄 시절 선택이 남은 상태를 직접 재현 — 복원·선택 게이트를 거치지 않은 stale 값.
+        viewModel.selectedSessionID = second.id
+
+        #expect(viewModel.selectedSession?.id == first.id)
+        #expect(viewModel.displayedSettings == FocusSettings.default)
+    }
+
     // MARK: - 선택 영속화 / 복원
 
     /// 저장된 selectedID가 sessions에 그대로 존재하면 그 세션이 복원된다 —

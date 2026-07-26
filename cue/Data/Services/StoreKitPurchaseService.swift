@@ -87,11 +87,22 @@ struct StoreKitPurchaseService: PurchaseService {
                 ids.insert(transaction.productID)
             }
         }
-        // 검증 실패만 있고 확인된 보유가 없으면 "미보유 확정"이 아니라 "판정 불가" —
-        // 일시적 검증 실패(인증서·시계 문제 등)로 유료 사용자를 강등시키지 않는다.
-        // 트랜잭션이 아예 없으면 StoreKit의 확정 답변(미보유)이다.
-        if ids.isEmpty, sawUnverified { return nil }
-        return ids
+        return Self.entitlementSnapshot(verifiedIDs: ids, sawUnverified: sawUnverified)
+    }
+
+    /// 스냅샷 판정 — "확정"과 "판정 불가"를 가르는 정책. 뒤집히면 유료 사용자를 강등시키는
+    /// 가장 위험한 한 줄이라 순수 함수로 분리해 테스트로 고정한다(EntitlementSnapshotTests).
+    ///
+    /// - 검증 실패만 있고 확인 보유가 없으면 nil(판정 불가) — 일시적 검증 실패(인증서·시계
+    ///   문제 등)로 유료 사용자를 강등시키지 않는다.
+    /// - 트랜잭션이 아예 없으면(0개) 빈 집합 = **확정 미보유**로 취급한다. 알려진 트레이드오프:
+    ///   App Store 로그아웃·기기 복원 직후 등 "응답 부재"도 0개로 와서 오강등될 수 있으나,
+    ///   0개를 판정 불가로 바꾸면 만료·신규 무료 사용자(정당한 0개)의 강등 정리가 영영 안 돈다.
+    ///   로컬에선 둘을 구분할 수 없어 확정 쪽을 택하되, 오강등은 접어두기(demoted*) 기록 덕에
+    ///   재로그인·재확인 시 자동 복구된다(파괴 아님 — ReconcilePremiumSettingsUseCase).
+    static func entitlementSnapshot(verifiedIDs: Set<String>, sawUnverified: Bool) -> Set<String>? {
+        if verifiedIDs.isEmpty, sawUnverified { return nil }
+        return verifiedIDs
     }
 
     func entitlementUpdates() -> AsyncStream<Set<String>> {
