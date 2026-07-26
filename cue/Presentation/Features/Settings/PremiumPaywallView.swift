@@ -270,19 +270,6 @@ struct PremiumPaywallView: View {
         premiumStore.trialDays(for: selectedPlan.product)
     }
 
-    /// 트라이얼 고지의 갱신 가격 문구 — "₩19,000 / yr". 카드와 같은 가격 소스·폴백을 쓴다.
-    /// lifetime은 트라이얼이 없어 도달하지 않는다.
-    private var selectedRenewalPriceText: String {
-        switch selectedPlan {
-        case .monthly:
-            (premiumStore.displayPrice(for: .monthly) ?? "₩2,900") + " " + String(localized: "/ mo")
-        case .yearly:
-            (premiumStore.displayPrice(for: .yearly) ?? "₩19,000") + " " + String(localized: "/ yr")
-        case .lifetime:
-            premiumStore.displayPrice(for: .lifetime) ?? "₩44,000"
-        }
-    }
-
     private var footer: some View {
         VStack(spacing: Spacing.sm) {
             Button {
@@ -317,7 +304,8 @@ struct PremiumPaywallView: View {
             // 일반 구독(자동 갱신) / 평생(1회 결제 — 자동 갱신 오고지 금지).
             Group {
                 if let days = selectedTrialDays {
-                    Text("\(days) days free, then \(selectedRenewalPriceText) · Cancel during the trial and pay nothing")
+                    // 갱신 가격은 바로 위 플랜 카드에 있어 고지에선 생략 — 문구를 간결하게.
+                    Text("\(days) days free, then auto-renews · Cancel during the trial and pay nothing")
                 } else if selectedPlan == .lifetime {
                     Text("One-time purchase · Yours forever")
                 } else {

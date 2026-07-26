@@ -7,102 +7,102 @@
     " " : {
 
     },
-    "%lld days free, then %@ · Cancel during the trial and pay nothing" : {
+    "%lld days free, then auto-renews · Cancel during the trial and pay nothing" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld أيام مجانًا، ثم %2$@ مع تجديد تلقائي · ألغِ أثناء الفترة التجريبية ولن تدفع شيئًا"
+            "value" : "%lld أيام مجانًا، ثم يتجدد تلقائيًا · ألغِ خلال الفترة التجريبية ولن تدفع شيئًا"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld Tage gratis, danach %2$@ (autom. Verlängerung) · Bei Kündigung in der Testphase keine Kosten"
+            "value" : "%lld Tage kostenlos, danach automatische Verlängerung · Bei Kündigung im Testzeitraum entstehen keine Kosten"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld días gratis, luego %2$@ con renovación automática · Cancela durante la prueba y no pagas nada"
+            "value" : "%lld días gratis, luego se renueva automáticamente · Cancela durante la prueba y no pagarás nada"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld jours gratuits, puis %2$@ (renouvellement auto) · Annulez pendant l'essai et ne payez rien"
+            "value" : "%lld jours gratuits, puis renouvellement automatique · Annulez pendant l'essai et ne payez rien"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld दिन मुफ़्त, फिर %2$@ पर स्वतः नवीनीकरण · ट्रायल के दौरान रद्द करें और कुछ न चुकाएँ"
+            "value" : "%lld दिन मुफ़्त, फिर स्वतः नवीनीकरण · ट्रायल के दौरान रद्द करें, कुछ नहीं देना होगा"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gratis %1$lld hari, lalu %2$@ diperpanjang otomatis · Batalkan selama masa coba dan tidak bayar apa pun"
+            "value" : "Gratis %lld hari, lalu diperpanjang otomatis · Batalkan selama masa coba tanpa dikenai biaya"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld giorni gratis, poi %2$@ con rinnovo automatico · Annulla durante la prova e non paghi nulla"
+            "value" : "%lld giorni gratis, poi rinnovo automatico · Annulla durante la prova e non paghi nulla"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld日間無料、その後 %2$@ で自動更新 · 無料期間中の解約なら請求なし"
+            "value" : "%lld日間無料、その後自動更新 · 体験中に解約すれば請求されません"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld일 무료, 이후 %2$@ 자동 갱신 · 체험 중 취소하면 결제되지 않습니다"
+            "value" : "%lld일 무료, 이후 자동 갱신 · 체험 중 취소하면 결제되지 않아요"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Percuma %1$lld hari, kemudian %2$@ diperbaharui secara automatik · Batal semasa percubaan dan tidak perlu bayar"
+            "value" : "Percuma %lld hari, kemudian diperbaharui secara automatik · Batalkan semasa percubaan tanpa sebarang bayaran"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld dias grátis, depois %2$@ com renovação automática · Cancele durante o teste e não pague nada"
+            "value" : "%lld dias grátis, depois renova automaticamente · Cancele durante o teste e não pague nada"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld дн. бесплатно, затем %2$@ с автопродлением · Отмените во время пробного периода — платить не придётся"
+            "value" : "%lld дней бесплатно, затем автопродление · Отмените во время пробного периода — платить не придётся"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ฟรี %1$lld วัน จากนั้น %2$@ ต่ออายุอัตโนมัติ · ยกเลิกระหว่างทดลองใช้ไม่เสียเงิน"
+            "value" : "ฟรี %lld วัน จากนั้นต่ออายุอัตโนมัติ · ยกเลิกระหว่างทดลองใช้ได้โดยไม่มีค่าใช้จ่าย"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Miễn phí %1$lld ngày, sau đó %2$@ tự động gia hạn · Hủy trong thời gian dùng thử sẽ không mất phí"
+            "value" : "Miễn phí %lld ngày, sau đó tự động gia hạn · Hủy trong thời gian dùng thử sẽ không bị tính phí"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "免费试用 %1$lld 天，之后按 %2$@ 自动续订 · 试用期内取消不收费"
+            "value" : "%lld天免费，之后自动续订 · 试用期内取消不会收费"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "免費試用 %1$lld 天，之後按 %2$@ 自動續訂 · 試用期內取消不收費"
+            "value" : "%lld天免費，之後自動續訂 · 試用期內取消不會收費"
           }
         }
       }
