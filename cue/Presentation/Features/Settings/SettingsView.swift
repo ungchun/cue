@@ -335,7 +335,8 @@ struct SettingsView: View {
             // 태그라인이 워드마크 역할(브랜드 이름이 이 줄에만 있다) — 굵고 둥근 톤이 주인공.
             // headline 기본 굵기(semibold) 그대로 — bold는 리스트 콘텐츠와 경쟁하고,
             // medium은 아래 footnote와 대비가 뭉개진다. 17/13pt + 굵기 + 색 3축 대비.
-            Text(verbatim: "Cue your day.")
+            // 마침표 없음 — 아래 줄과 표기 통일(UI 라벨 관례). 스토어 메타데이터의 문장형 표기와는 별개.
+            Text(verbatim: "Cue your day")
                 .font(.headline)
                 .fontDesign(.rounded)
                 .foregroundStyle(.secondary)
