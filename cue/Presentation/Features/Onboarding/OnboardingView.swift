@@ -79,6 +79,9 @@ struct OnboardingView: View {
             visual()
                 .frame(height: 340)
             copy()
+                // 비주얼(카드 스택이 존을 꽉 채우는 2장)과 문구 사이 숨 쉴 간격 —
+                // 존 안쪽 패딩이라 세 장의 문구 시작 위치는 여전히 같다.
+                .padding(.top, Spacing.lg)
                 .padding(.horizontal, Spacing.xl)
                 .frame(height: 150, alignment: .top)
             Spacer(minLength: Spacing.zero)
@@ -241,19 +244,19 @@ struct OnboardingView: View {
 
     // MARK: - 3장. 첫 큐 — 점이 당신의 큐가 된다
 
+    /// 3장은 공통 골격을 쓰지 않는다 — 비주얼 없이 질문·입력을 화면 상단에 올려,
+    /// 키보드가 올라와도 여유 있게 보인다(키보드가 하단을 300pt쯤 차지).
     private var firstCuePage: some View {
-        pageLayout {
-            // 3장에도 점을 유지 — 점이 사용자의 큐가 된다는 서사의 연속.
-            signalDot(coreDiameter: Spacing.sm, rippleDiameter: 64)
-        } copy: {
+        VStack(spacing: Spacing.zero) {
+            Color.clear.frame(height: 120)
             if viewModel.published {
                 Text("Lock your phone and see it sitting on the Lock Screen.")
                     .font(.title2.weight(.semibold))
                     .multilineTextAlignment(.center)
                     .lineSpacing(Spacing.xxs)
-                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, Spacing.xl)
             } else {
-                VStack(spacing: Spacing.md) {
+                VStack(spacing: Spacing.lg) {
                     // 질문이 곧 제목 — 별도 타이틀 없이 바로 입력으로.
                     Text("What must you not forget right now?")
                         .font(.title2.weight(.semibold))
@@ -271,11 +274,20 @@ struct OnboardingView: View {
                             .frame(maxWidth: 240)
                     }
                 }
+                .padding(.horizontal, Spacing.xl)
             }
+            Spacer(minLength: Spacing.zero)
         }
-        // 3장에 도착하면 바로 입력 포커스 — 타이핑까지의 마찰을 없앤다.
+        // 배경 탭 → 키보드 내림(입력 필드 자체 탭은 필드가 우선 처리).
+        .contentShape(Rectangle())
+        .onTapGesture { isTextFieldFocused = false }
+        // 3장 도착 시 바로 입력 포커스, 다른 장으로 넘어가면 키보드 내림.
         .onChange(of: viewModel.page) { _, page in
-            if page == 2, !viewModel.published { isTextFieldFocused = true }
+            if page == 2 {
+                if !viewModel.published { isTextFieldFocused = true }
+            } else {
+                isTextFieldFocused = false
+            }
         }
     }
 
