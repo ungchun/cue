@@ -83,6 +83,10 @@ struct ReminderViewModelTests {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            startSampleLiveActivities: StartSampleLiveActivitiesUseCase(
+                startSchedule: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+                startReminder: StartReminderLiveActivityUseCase(service: DisabledLiveActivityService())
+            ),
             fetchMemo: FetchMemoUseCase(repository: InMemoryMemoRepository()),
             saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
@@ -288,6 +292,10 @@ struct ReminderViewModelTests {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: DisabledLiveActivityService()),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+            startSampleLiveActivities: StartSampleLiveActivitiesUseCase(
+                startSchedule: StartScheduleLiveActivityUseCase(service: DisabledLiveActivityService()),
+                startReminder: StartReminderLiveActivityUseCase(service: DisabledLiveActivityService())
+            ),
             fetchMemo: FetchMemoUseCase(repository: InMemoryMemoRepository()),
             saveMemo: SaveMemoUseCase(repository: InMemoryMemoRepository()),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: DisabledLiveActivityService()),
