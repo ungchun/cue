@@ -92,6 +92,7 @@ enum AnalyticsEvent: Equatable, Sendable {
     case forcedUpdateTapped
     case reviewRequested
     case feedbackTapped
+    case onboardingReplayTapped
     case externalAppOpened(app: String)
     case permissionSettingsOpened(kind: String)
 
@@ -162,6 +163,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .forcedUpdateTapped: "forced_update_tapped"
         case .reviewRequested: "review_requested"
         case .feedbackTapped: "feedback_tapped"
+        case .onboardingReplayTapped: "onboarding_replay_tapped"
         case .externalAppOpened: "external_app_opened"
         case .permissionSettingsOpened: "permission_settings_opened"
         }

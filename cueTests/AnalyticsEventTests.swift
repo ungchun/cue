@@ -101,6 +101,7 @@ struct AnalyticsEventTests {
         #expect(AnalyticsEvent.forcedUpdateTapped.name == "forced_update_tapped")
         #expect(AnalyticsEvent.reviewRequested.name == "review_requested")
         #expect(AnalyticsEvent.feedbackTapped.name == "feedback_tapped")
+        #expect(AnalyticsEvent.onboardingReplayTapped.name == "onboarding_replay_tapped")
         #expect(AnalyticsEvent.externalAppOpened(app: "calendar").name == "external_app_opened")
         #expect(AnalyticsEvent.permissionSettingsOpened(kind: "reminder").name
                 == "permission_settings_opened")

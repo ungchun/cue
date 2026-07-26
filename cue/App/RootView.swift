@@ -177,6 +177,9 @@ struct RootView: View {
                         memoViewModel.adoptExternalLiveActivity()
                     }
                     await settingsViewModel.onAppear()
+                    // 4) 항상 표시 재게시 — 재시청(설정) 경로에서 예시 게시가 실사용 일정·할일
+                    //    LA를 대체했다가 방금 정리됐을 수 있다. 첫 실행 경로에선 기본 off라 no-op.
+                    await startAlwaysOnActivities(settingsViewModel.settings)
                 }
             }
         }
@@ -248,7 +251,12 @@ struct RootView: View {
         case .focus: FocusView(viewModel: focusViewModel)
         case .reminder: ReminderView(viewModel: reminderViewModel)
         case .schedule: ScheduleView(viewModel: scheduleViewModel)
-        case .settings: SettingsView(viewModel: settingsViewModel)
+        case .settings:
+            // 온보딩 다시 보기 — 첫 실행과 같은 커버를 재사용하되 진행 상태만 초기화한다.
+            SettingsView(viewModel: settingsViewModel) {
+                onboardingViewModel.reset()
+                showsOnboarding = true
+            }
         }
     }
 }
