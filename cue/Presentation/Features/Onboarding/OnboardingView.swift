@@ -128,8 +128,9 @@ struct OnboardingView: View {
                 miniMonthCalendar
                 Divider()
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    skeletonEventRow(bar: .blue, titleWidth: 72, timeWidth: 48)
-                    skeletonEventRow(bar: .purple, titleWidth: 56, timeWidth: 40)
+                    skeletonEventRow(titleWidth: 76, timeWidth: 52)
+                    skeletonEventRow(titleWidth: 60, timeWidth: 44)
+                    skeletonEventRow(titleWidth: 84, timeWidth: 48)
                 }
                 Spacer(minLength: Spacing.zero)
             }
@@ -137,10 +138,10 @@ struct OnboardingView: View {
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.smd)
             .background(mockCardBackground)
-            // 할일 — 리스트 색 동그라미 + 스켈레톤 막대
+            // 할일 — 체크 동그라미 + 스켈레톤 막대(무채색)
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                skeletonTaskRow(color: .orange, barWidth: 96)
-                skeletonTaskRow(color: .green, barWidth: 64)
+                skeletonTaskRow(barWidth: 96)
+                skeletonTaskRow(barWidth: 64)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.md)
@@ -213,28 +214,28 @@ struct OnboardingView: View {
         return .primary
     }
 
-    /// 일정 행 스켈레톤 — 캘린더 색 막대 + 제목·시간 자리 막대.
-    private func skeletonEventRow(bar: Color, titleWidth: CGFloat, timeWidth: CGFloat) -> some View {
+    /// 일정 행 스켈레톤 — 색 막대 + 제목·시간 자리 막대(무채색 — 형태만 보여준다).
+    private func skeletonEventRow(titleWidth: CGFloat, timeWidth: CGFloat) -> some View {
         HStack(spacing: Spacing.sm) {
             RoundedRectangle(cornerRadius: 1.25)
-                .fill(bar)
+                .fill(Color.secondary.opacity(0.6))
                 .frame(width: 2.5, height: 20)
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 Capsule()
                     .fill(Color.secondary.opacity(0.35))
                     .frame(width: titleWidth, height: 6)
                 Capsule()
-                    .fill(bar.opacity(0.5))
+                    .fill(Color.secondary.opacity(0.2))
                     .frame(width: timeWidth, height: 5)
             }
         }
     }
 
-    /// 할일 행 스켈레톤 — 리스트 색 체크 동그라미 + 제목 자리 막대.
-    private func skeletonTaskRow(color: Color, barWidth: CGFloat) -> some View {
+    /// 할일 행 스켈레톤 — 체크 동그라미 + 제목 자리 막대(무채색).
+    private func skeletonTaskRow(barWidth: CGFloat) -> some View {
         HStack(spacing: Spacing.sm) {
             Circle()
-                .strokeBorder(color, lineWidth: 1.5)
+                .strokeBorder(Color.secondary.opacity(0.6), lineWidth: 1.5)
                 .frame(width: 16, height: 16)
             Capsule()
                 .fill(Color.secondary.opacity(0.35))
@@ -244,11 +245,11 @@ struct OnboardingView: View {
 
     // MARK: - 3장. 첫 큐 — 점이 당신의 큐가 된다
 
-    /// 3장은 공통 골격을 쓰지 않는다 — 비주얼 없이 질문·입력을 화면 상단에 올려,
-    /// 키보드가 올라와도 여유 있게 보인다(키보드가 하단을 300pt쯤 차지).
+    /// 3장은 공통 골격을 쓰지 않는다 — 질문·입력을 세로 중앙에 두고, 키보드가 올라오면
+    /// safe area가 줄며 중앙이 자연스럽게 위로 밀린다(키보드 회피는 시스템에 맡김).
     private var firstCuePage: some View {
         VStack(spacing: Spacing.zero) {
-            Color.clear.frame(height: 120)
+            Spacer(minLength: Spacing.zero)
             if viewModel.published {
                 Text("Lock your phone and see it sitting on the Lock Screen.")
                     .font(.title2.weight(.semibold))
@@ -375,12 +376,14 @@ private struct RippleRings: View {
                     Circle()
                         .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1.5)
                         .frame(width: diameter, height: diameter)
-                        .scaleEffect(expanding ? 2.6 : 0.3)
-                        .opacity(expanding ? 0 : 0.9)
+                        // 시작 스케일은 가운데 점 뒤에 숨는 크기 — 루프가 되감길 때
+                        // 링이 보이는 크기로 "팍" 생겨나지 않고 점에서 배어나온다.
+                        .scaleEffect(expanding ? 2.6 : 0.12)
+                        .opacity(expanding ? 0 : 0.7)
                         .animation(
-                            .easeOut(duration: 2.7)
+                            .linear(duration: 3.0)
                                 .repeatForever(autoreverses: false)
-                                .delay(Double(index) * 0.9),
+                                .delay(Double(index) * 1.0),
                             value: expanding
                         )
                 }
