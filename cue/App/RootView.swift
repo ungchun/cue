@@ -147,11 +147,9 @@ struct RootView: View {
             }
             // 첫 실행 온보딩 — 완주했으면 없음, 기존 사용자는 조용히 완주 처리(업데이트로
             // 온보딩이 처음 생겨도 잘 쓰던 사람에겐 안 띄운다), 신규 설치만 표시.
-            // [임시] 온보딩 검증용 — 매 실행 무조건 표시. 확인 끝나면 아래 원래 판정으로 원복:
-            // switch OnboardingViewModel.launchDecision(
-            //     settings: settingsViewModel.settings, hasPriorInstall: hadPriorInstall
-            // ) {
-            switch OnboardingLaunchDecision.show {
+            switch OnboardingViewModel.launchDecision(
+                settings: settingsViewModel.settings, hasPriorInstall: hadPriorInstall
+            ) {
             case .show:
                 // 강제 업데이트 알림이 우선 — 업데이트가 필요하면 온보딩을 띄우지 않는다.
                 if !isUpdateRequired {
