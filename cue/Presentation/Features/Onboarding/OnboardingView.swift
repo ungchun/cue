@@ -248,7 +248,7 @@ struct OnboardingView: View {
         VStack(spacing: Spacing.zero) {
             Spacer(minLength: Spacing.zero)
             if viewModel.published {
-                Text("Lock your phone and see it sitting on the Lock Screen.")
+                Text("See it sitting on your Lock Screen.")
                     .font(.title2.weight(.semibold))
                     .multilineTextAlignment(.center)
                     .lineSpacing(Spacing.xxs)
