@@ -11,9 +11,26 @@ import Observation
 /// 첫 큐 게시는 **쿼터를 소비하지 않는다** — 온보딩이 무료 하루 한도를 갉아먹으면
 /// 첫날 경험이 나빠지므로, `MemoViewModel.toggleLiveActivity`와 달리
 /// `consumeLiveActivation` 없이 use case를 직접 호출한다.
+/// 앱 시작 시 온보딩 처리 — 표시 / 조용한 완주 처리(기존 사용자 마이그레이션) / 없음.
+enum OnboardingLaunchDecision: Equatable {
+    case show
+    case markCompletedSilently
+    case none
+}
+
 @MainActor
 @Observable
 final class OnboardingViewModel {
+
+    /// 앱 시작 시 온보딩 표시 판정 — 한 번이라도 완주(스킵 포함)했으면 다시 안 뜬다.
+    /// 미완주여도 구버전 저장물이 있는 **기존 사용자**는 업데이트 직후 온보딩 없이
+    /// 조용히 완주 처리한다(잘 쓰던 사람에게 소개 화면을 끼얹지 않는다).
+    nonisolated static func launchDecision(
+        settings: AppSettings, hasPriorInstall: Bool
+    ) -> OnboardingLaunchDecision {
+        guard !settings.hasCompletedOnboarding else { return .none }
+        return hasPriorInstall ? .markCompletedSilently : .show
+    }
     @ObservationIgnored private let fetchMemoUseCase: FetchMemoUseCase
     @ObservationIgnored private let saveMemoUseCase: SaveMemoUseCase
     @ObservationIgnored private let startMemoLiveActivityUseCase: StartMemoLiveActivityUseCase

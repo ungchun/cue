@@ -13,10 +13,6 @@ import SwiftUI
 /// 첫 큐가 된다. 마지막 장은 설명이 아니라 실제 게시 — 아하 모먼트는 잠금화면에 있다.
 /// 권한 요청 없음(메모는 권한이 필요 없어 첫 액션으로 완벽).
 struct OnboardingView: View {
-    // ⚠️ 임시 — 눈 검증용: true면 완주 여부와 무관하게 앱을 켤 때마다 온보딩을 띄운다.
-    // 검증 끝나면 false로 바꾼다(완주 플래그 기반 1회 표시로 전환).
-    static let alwaysShowsForReview = true
-
     @State var viewModel: OnboardingViewModel
     /// 완료·스킵 공통 마감 — RootView가 커버를 닫고 메모 탭을 새로고침한다.
     let onFinished: () -> Void

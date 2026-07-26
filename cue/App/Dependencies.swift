@@ -78,6 +78,11 @@ struct Dependencies: Sendable {
     /// 앱 시작 시 호출 — 원격 최소 버전과 비교해 강제 업데이트 블로커 표시 여부 판정.
     var checkForcedUpdate: CheckForcedUpdateUseCase
 
+    /// 기존 설치 흔적 감지 — 온보딩 도입 업데이트에서 기존 사용자에게 온보딩을 건너뛰기 위함.
+    /// 기본값은 "흔적 없음"(프리뷰 = 신규 설치 취급) — 실 배선은 `CompositionRoot`에서.
+    var detectPriorInstall: DetectPriorInstallUseCase =
+        .init(repository: InMemoryPriorInstallRepository())
+
     // MARK: - 앱 전역 설정
 
     /// 앱 전역 설정(화면 모드 등) 영속화 — 설정 탭 진입 시 fetch, 항목 변경 직후 save.

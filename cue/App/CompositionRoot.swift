@@ -76,6 +76,7 @@ struct CompositionRoot {
             // Keychain 저장 — 앱 삭제·재설치로 무료 한도(첫날 2회·이후 1회)를 리셋하는 우회를 막는다.
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: KeychainLiveActivationQuotaRepository()),
             checkForcedUpdate: CheckForcedUpdateUseCase(service: FirebaseAppUpdatePolicyService()),
+            detectPriorInstall: DetectPriorInstallUseCase(repository: UserDefaultsPriorInstallRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository),
             // 앱 시작 프리페치용 프롬프트-없는 권한 조회 + 첫 페인트 스냅샷 캐시.

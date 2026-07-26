@@ -23,9 +23,12 @@ struct RootView: View {
     @State private var memoViewModel: MemoViewModel
     /// 전역 설정의 단일 소유자 — 설정 탭이 편집하고, 여기서 화면 모드를 앱 전체에 적용한다.
     @State private var settingsViewModel: SettingsViewModel
-    /// 첫 실행 온보딩 — 설정 로드 후 완주 여부로 표시 결정(눈 검증 중엔 매 실행 표시).
+    /// 첫 실행 온보딩 — 설정 로드 후 완주 여부·기존 설치 여부로 표시 결정.
     @State private var onboardingViewModel: OnboardingViewModel
     @State private var showsOnboarding = false
+    /// 기존 설치 흔적 — init에서 동기로 읽는다(프리페치 task가 스냅샷을 저장하기 **전**이어야
+    /// 신규 설치가 기존 사용자로 오판되지 않는다).
+    private let hadPriorInstall: Bool
     /// 앱 전반 토스트 코디네이터 — 여기서 소유해 환경으로 주입하고, 상단 오버레이를 부착한다.
     @State private var toastCenter = ToastCenter()
 
@@ -40,6 +43,7 @@ struct RootView: View {
         _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
         _onboardingViewModel = State(initialValue: OnboardingViewModel(dependencies: dependencies))
+        hadPriorInstall = dependencies.detectPriorInstall()
     }
 
     var body: some View {
@@ -88,8 +92,20 @@ struct RootView: View {
             Text("Please update to the latest version.")
         }
         // 강제 업데이트 알럿 노출 기록 — OK 후 재표시 루프도 각각 한 번의 노출로 센다.
+        // 온보딩 커버가 떠 있으면 **알림이 우선**: 같은 뷰의 동시 presentation은 하나가
+        // 조용히 버려지므로, 커버를 내리고 커버 dismiss 후 알림을 다시 켠다.
         .onChange(of: isUpdateRequired) { _, shown in
-            if shown { dependencies.analytics.log(.forcedUpdatePrompted) }
+            guard shown else { return }
+            if showsOnboarding {
+                showsOnboarding = false
+                isUpdateRequired = false
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(700))
+                    isUpdateRequired = true
+                }
+                return
+            }
+            dependencies.analytics.log(.forcedUpdatePrompted)
         }
         .task {
             let version = Bundle.main
@@ -110,9 +126,19 @@ struct RootView: View {
             if let startTab = AppTab(rawValue: settingsViewModel.settings.startTabID) {
                 selectedTab = startTab
             }
-            // 첫 실행 온보딩 — 완주 전이면 표시. (⚠️ 임시: 눈 검증 플래그가 켜져 있으면 매 실행 표시.)
-            showsOnboarding = OnboardingView.alwaysShowsForReview
-                || !settingsViewModel.settings.hasCompletedOnboarding
+            // 첫 실행 온보딩 — 완주했으면 없음, 기존 사용자는 조용히 완주 처리(업데이트로
+            // 온보딩이 처음 생겨도 잘 쓰던 사람에겐 안 띄운다), 신규 설치만 표시.
+            switch OnboardingViewModel.launchDecision(
+                settings: settingsViewModel.settings, hasPriorInstall: hadPriorInstall
+            ) {
+            case .show:
+                // 강제 업데이트 알림이 우선 — 업데이트가 필요하면 온보딩을 띄우지 않는다.
+                if !isUpdateRequired { showsOnboarding = true }
+            case .markCompletedSilently:
+                await onboardingViewModel.finish()
+            case .none:
+                break
+            }
             await startAlwaysOnActivities(settingsViewModel.settings)
         }
         // 첫 실행 온보딩 — 전체 화면. 완료·스킵 시 커버를 닫고, 온보딩이 첫 큐(메모)를

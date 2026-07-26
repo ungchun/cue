@@ -95,6 +95,26 @@ struct OnboardingViewModelTests {
         #expect(viewModel.published == false)
     }
 
+    // MARK: - launchDecision (앱 시작 시 온보딩 표시 판정)
+
+    /// 이미 완주했으면 아무것도 안 한다 — 한 번 본 사람에겐 다시 안 뜬다.
+    @Test func launchDecisionIsNoneWhenCompleted() {
+        var settings = AppSettings.default
+        settings.hasCompletedOnboarding = true
+        #expect(OnboardingViewModel.launchDecision(settings: settings, hasPriorInstall: false) == .none)
+        #expect(OnboardingViewModel.launchDecision(settings: settings, hasPriorInstall: true) == .none)
+    }
+
+    /// 미완주 + 기존 설치 흔적 = 업데이트로 넘어온 기존 사용자 — 온보딩 없이 조용히 완주 처리.
+    @Test func launchDecisionMigratesExistingUserSilently() {
+        #expect(OnboardingViewModel.launchDecision(settings: .default, hasPriorInstall: true) == .markCompletedSilently)
+    }
+
+    /// 미완주 + 흔적 없음 = 진짜 신규 설치 — 온보딩 표시.
+    @Test func launchDecisionShowsForFreshInstall() {
+        #expect(OnboardingViewModel.launchDecision(settings: .default, hasPriorInstall: false) == .show)
+    }
+
     // MARK: - finish (완료/스킵 공통)
 
     /// 완료·스킵 시 완주 플래그를 저장한다 — 다른 설정 값은 건드리지 않는다.
