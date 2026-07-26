@@ -277,11 +277,10 @@ struct FocusViewModelTests {
         let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
         let only = viewModel.addSession(title: "유일", settings: .default, colorHex: "#FF3B30")!
         viewModel.selectSession(id: only.id)
-        await Task.yield()
 
         viewModel.deleteSession(id: only.id)
-        await Task.yield()
-        await Task.yield()
+        // yield 타이밍 의존 대신 영속화 체인 완료를 명시적으로 대기 — 순서 보장 검증.
+        await viewModel.flushPersistence()
 
         let storedAfterDelete = await repo.fetchSelectedSessionID()
         #expect(storedAfterDelete == nil)

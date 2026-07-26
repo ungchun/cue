@@ -391,13 +391,30 @@ final class FocusViewModel {
         persist()
     }
 
+    /// 영속화 직렬 체인 — 쓰기마다 독립 Task를 던지면 실행 순서가 보장되지 않아
+    /// "선택 저장"이 나중에 온 "선택 해제(nil) 저장"을 덮을 수 있다(선택 직후 삭제 레이스).
+    /// 이전 쓰기를 await한 뒤 다음 쓰기를 실행해 호출 순서 = 저장 순서를 보장한다.
+    @ObservationIgnored private var persistChain: Task<Void, Never>?
+
+    private func enqueuePersist(_ operation: @escaping @Sendable () async -> Void) {
+        persistChain = Task { [previous = persistChain] in
+            await previous?.value
+            await operation()
+        }
+    }
+
+    /// 테스트용 — 지금까지 쌓인 영속화가 전부 끝날 때까지 대기(yield 타이밍 의존 제거).
+    func flushPersistence() async {
+        await persistChain?.value
+    }
+
     private func persist() {
         let snapshot = sessions
-        Task { await saveFocusSessions(snapshot) }
+        enqueuePersist { [saveFocusSessions] in await saveFocusSessions(snapshot) }
     }
 
     private func persistSelectedID(_ id: UUID?) {
-        Task { await saveSelectedFocusSessionID(id) }
+        enqueuePersist { [saveSelectedFocusSessionID] in await saveSelectedFocusSessionID(id) }
     }
 
     /// 목록에서 사용자가 고른 선택만 여기로 온다 — onAppear의 프로그램적 복원은 이 경로를 타지 않는다.
