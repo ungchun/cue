@@ -112,17 +112,17 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.md)
                 .background(mockCardBackground)
-            // 일정 — 왼쪽 미니 캘린더("캘린더 함께 보기" 레이아웃) + 스켈레톤 이벤트 행
+            // 일정 — 왼쪽 실제 월간 캘린더("캘린더 함께 보기" 레이아웃) + 스켈레톤 이벤트 행
             HStack(spacing: Spacing.smd) {
-                miniCalendarSkeleton
+                miniMonthCalendar
                 Divider()
-                    .frame(height: 52)
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     skeletonEventRow(bar: .blue, titleWidth: 72, timeWidth: 48)
                     skeletonEventRow(bar: .purple, titleWidth: 56, timeWidth: 40)
                 }
                 Spacer(minLength: Spacing.zero)
             }
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.smd)
             .background(mockCardBackground)
@@ -146,20 +146,60 @@ struct OnboardingView: View {
             .shadow(color: .black.opacity(0.06), radius: 16, y: 6)
     }
 
-    /// 미니 월간 캘린더 스켈레톤 — 4×5 점 그리드 + 오늘 강조 점 하나.
-    private var miniCalendarSkeleton: some View {
-        VStack(spacing: Spacing.xs) {
-            ForEach(0..<4, id: \.self) { row in
-                HStack(spacing: Spacing.xs) {
-                    ForEach(0..<5, id: \.self) { col in
-                        Circle()
-                            // 가운데쯤 한 점만 진하게 — 오늘.
-                            .fill(row == 1 && col == 2 ? Color.primary : Color.secondary.opacity(0.3))
-                            .frame(width: 4, height: 4)
+    /// 미니 월간 캘린더 — 이번 달을 실제로 그린다(공유 `MonthCalendarGrid` 재사용,
+    /// 위젯 캘린더의 축소판). 일=빨강·토=옅게, 오늘은 채운 원으로 반전 강조.
+    private var miniMonthCalendar: some View {
+        let grid = MonthCalendarGrid(now: .now, monthOffset: 0)
+        return VStack(spacing: Spacing.xxs) {
+            HStack(spacing: Spacing.zero) {
+                ForEach(Array(grid.weekdaySymbols.enumerated()), id: \.offset) { column, symbol in
+                    Text(symbol)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(weekdayColor(grid: grid, column: column).opacity(0.6))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            ForEach(Array(grid.weeks.enumerated()), id: \.offset) { _, week in
+                HStack(spacing: Spacing.zero) {
+                    ForEach(Array(week.enumerated()), id: \.offset) { column, day in
+                        miniDayCell(grid: grid, day: day, column: column)
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }
         }
+        .frame(width: 132)
+    }
+
+    @ViewBuilder
+    private func miniDayCell(grid: MonthCalendarGrid, day: Int?, column: Int) -> some View {
+        if let day {
+            Text("\(day)")
+                .font(.caption2.weight(grid.isToday(day: day) ? .bold : .regular))
+                .monospacedDigit()
+                .foregroundStyle(
+                    grid.isToday(day: day)
+                        ? AnyShapeStyle(Color(.systemBackground))
+                        : AnyShapeStyle(weekdayColor(grid: grid, column: column))
+                )
+                .background {
+                    if grid.isToday(day: day) {
+                        Circle()
+                            .fill(Color.primary)
+                            .frame(width: 16, height: 16)
+                    }
+                }
+        } else {
+            Text(verbatim: " ").font(.caption2)
+        }
+    }
+
+    /// 요일 색 — 일=빨강, 토=옅게, 평일=기본(위젯 캘린더와 같은 규칙).
+    private func weekdayColor(grid: MonthCalendarGrid, column: Int) -> Color {
+        let weekday = grid.weekdayIndex(column: column)
+        if weekday == 1 { return .red }
+        if weekday == 7 { return .secondary }
+        return .primary
     }
 
     /// 일정 행 스켈레톤 — 캘린더 색 막대 + 제목·시간 자리 막대.
