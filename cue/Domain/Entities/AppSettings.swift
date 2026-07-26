@@ -61,6 +61,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// 캘린더 숨김과 동일 동작 — 숨긴 리스트의 할일은 오늘·예정·전체 어디서도 안 보이고,
     /// 목록 칩에서도 빠진다. 오늘/예정/전체 시스템 필터는 항상 유지. `ReminderList.id` 값.
     var hiddenReminderListIDs: Set<String>
+    /// 첫 실행 온보딩을 끝(완료 또는 스킵)까지 봤는지. `false`면 앱 시작 시 온보딩 표시.
+    var hasCompletedOnboarding: Bool
 
     static let `default` = AppSettings(
         colorScheme: .system,
@@ -77,7 +79,8 @@ struct AppSettings: Codable, Equatable, Sendable {
         liveAlwaysOnReminderScopeID: "all",
         tasksDefaultScopeID: "all",
         hiddenCalendarIDs: [],
-        hiddenReminderListIDs: []
+        hiddenReminderListIDs: [],
+        hasCompletedOnboarding: false
     )
 }
 
@@ -117,5 +120,7 @@ extension AppSettings {
             ?? fallback.hiddenCalendarIDs
         hiddenReminderListIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenReminderListIDs)
             ?? fallback.hiddenReminderListIDs
+        hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)
+            ?? fallback.hasCompletedOnboarding
     }
 }

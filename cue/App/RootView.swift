@@ -23,6 +23,9 @@ struct RootView: View {
     @State private var memoViewModel: MemoViewModel
     /// 전역 설정의 단일 소유자 — 설정 탭이 편집하고, 여기서 화면 모드를 앱 전체에 적용한다.
     @State private var settingsViewModel: SettingsViewModel
+    /// 첫 실행 온보딩 — 설정 로드 후 완주 여부로 표시 결정(눈 검증 중엔 매 실행 표시).
+    @State private var onboardingViewModel: OnboardingViewModel
+    @State private var showsOnboarding = false
     /// 앱 전반 토스트 코디네이터 — 여기서 소유해 환경으로 주입하고, 상단 오버레이를 부착한다.
     @State private var toastCenter = ToastCenter()
 
@@ -36,6 +39,7 @@ struct RootView: View {
         _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
+        _onboardingViewModel = State(initialValue: OnboardingViewModel(dependencies: dependencies))
     }
 
     var body: some View {
@@ -106,7 +110,18 @@ struct RootView: View {
             if let startTab = AppTab(rawValue: settingsViewModel.settings.startTabID) {
                 selectedTab = startTab
             }
+            // 첫 실행 온보딩 — 완주 전이면 표시. (⚠️ 임시: 눈 검증 플래그가 켜져 있으면 매 실행 표시.)
+            showsOnboarding = OnboardingView.alwaysShowsForReview
+                || !settingsViewModel.settings.hasCompletedOnboarding
             await startAlwaysOnActivities(settingsViewModel.settings)
+        }
+        // 첫 실행 온보딩 — 전체 화면. 완료·스킵 시 커버를 닫고, 온보딩이 첫 큐(메모)를
+        // 저장했을 수 있으니 이미 로드된 메모 탭을 새로고침해 화면과 저장본을 맞춘다.
+        .fullScreenCover(isPresented: $showsOnboarding) {
+            OnboardingView(viewModel: onboardingViewModel) {
+                showsOnboarding = false
+                Task { await memoViewModel.onAppear() }
+            }
         }
         // 포그라운드 복귀 — 시스템이 8시간 후 LA를 종료했을 수 있어 다시 게시한다
         // (VM이 이 실행에서 켠 상태면 각자 건너뛴다 — 중복 게시 없음).
