@@ -139,7 +139,8 @@ final class SettingsViewModel {
         await update { $0.liveAlwaysOnReminderScopeID = id }
     }
 
-    private static func collapseMasterIfAllKindsOff(_ settings: inout AppSettings) {
+    // nonisolated: 순수 함수 — update의 @Sendable 저장 클로저(비격리)에서도 호출된다.
+    nonisolated private static func collapseMasterIfAllKindsOff(_ settings: inout AppSettings) {
         if !settings.liveAlwaysOnMemo, !settings.liveAlwaysOnReminder, !settings.liveAlwaysOnSchedule {
             settings.liveAlwaysOn = false
         }
