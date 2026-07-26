@@ -162,6 +162,13 @@ struct RootView: View {
             case .none:
                 break
             }
+            // 온보딩 예시 LA 정리 — **다음 앱 실행에서만**. 포그라운드 복귀 시점은 Face ID가
+            // 잠금화면을 건너뛰어 "봤을 것"이라는 가정이 깨진다(게시 직후 정리돼 버림).
+            // 같은 실행 동안은 계속 유지 → 다음 실행에 마커 기반으로 예시만 정리, 실행이
+            // 없으면 8시간 뒤 시스템 자동 종료. 온보딩을 띄우는 실행은 건너뜀(진행 중 자산).
+            if !showsOnboarding {
+                await dependencies.endSampleLiveActivities()
+            }
             await startAlwaysOnActivities(settingsViewModel.settings)
         }
         // 첫 실행 온보딩 — 전체 화면. 완료·스킵 시 커버를 닫고:
@@ -203,12 +210,6 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task {
-                // 온보딩 예시 LA 정리 — Done 직후가 아니라 여기서(잠금화면을 봤을 가능성이
-                // 높은 복귀 시점) 마커 기반으로 예시만 종료한다. 커버가 떠 있는 동안은 보류 —
-                // 3장 게시 → 잠금 확인 → 복귀 흐름에서 예시가 사라지면 안 된다.
-                if !showsOnboarding {
-                    await dependencies.endSampleLiveActivities()
-                }
                 // 엔타이틀먼트 재확인을 **항상** — 구독·체험 만료는 시스템이 push해주지
                 // 않아, 게이트 안에 두면 항상표시 꺼둔 사용자의 강등이 재시작까지 밀린다.
                 // 판정이 바뀌면 위 onChange(confirmedIsPremium)가 reconcile을 돌린다 —
