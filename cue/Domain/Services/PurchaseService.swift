@@ -31,6 +31,17 @@ struct PurchasableProduct: Identifiable, Sendable, Equatable {
     let id: String
     /// 로케일·통화가 적용된 가격 문자열(예: "₩2,900"). StoreKit `displayPrice`.
     let displayPrice: String
+    /// 무료 체험 기간(일). 인트로 오퍼가 무료 체험이 아니거나 없으면 nil.
+    let trialDays: Int?
+    /// 이 사용자가 인트로 오퍼를 받을 자격이 있는가 — 구독 그룹당 1회라 재구독자는 false.
+    let isTrialEligible: Bool
+
+    init(id: String, displayPrice: String, trialDays: Int? = nil, isTrialEligible: Bool = false) {
+        self.id = id
+        self.displayPrice = displayPrice
+        self.trialDays = trialDays
+        self.isTrialEligible = isTrialEligible
+    }
 }
 
 /// 구매 시도 결과.

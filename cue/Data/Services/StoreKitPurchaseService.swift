@@ -14,9 +14,39 @@ struct StoreKitPurchaseService: PurchaseService {
     func loadProducts() async -> [PurchasableProduct] {
         do {
             let products = try await Product.products(for: PremiumProduct.allIDs)
-            return products.map { PurchasableProduct(id: $0.id, displayPrice: $0.displayPrice) }
+            var result: [PurchasableProduct] = []
+            for product in products {
+                var trialDays: Int?
+                var eligible = false
+                // 무료 체험만 트라이얼로 취급 — pay-as-you-go/pay-up-front 인트로는 표시하지 않는다.
+                if let subscription = product.subscription,
+                   let intro = subscription.introductoryOffer,
+                   intro.paymentMode == .freeTrial {
+                    trialDays = Self.days(from: intro.period)
+                    // 자격은 구독 그룹당 1회 — 재구독자에게 "무료" 문구를 숨기는 근거.
+                    eligible = await subscription.isEligibleForIntroOffer
+                }
+                result.append(PurchasableProduct(
+                    id: product.id,
+                    displayPrice: product.displayPrice,
+                    trialDays: trialDays,
+                    isTrialEligible: eligible
+                ))
+            }
+            return result
         } catch {
             return []
+        }
+    }
+
+    /// 구독 기간을 표시용 일수로 환산. 월·년은 근사값(30·365) — 현재 오퍼는 P1W라 정확값이다.
+    private static func days(from period: Product.SubscriptionPeriod) -> Int {
+        switch period.unit {
+        case .day: period.value
+        case .week: period.value * 7
+        case .month: period.value * 30
+        case .year: period.value * 365
+        @unknown default: period.value
         }
     }
 

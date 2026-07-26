@@ -211,6 +211,7 @@ struct PremiumPaywallView: View {
     }
 
     /// 플랜 라디오 카드 — 선택 시 테두리 강조. 가격은 StoreKit 연결 전 placeholder.
+    /// 트라이얼 강조는 CTA·고지 문구가 담당 — 카드는 가격 비교에 집중시킨다.
     private func planCard(_ plan: Plan, title: LocalizedStringKey, price: String, unit: LocalizedStringKey, badge: LocalizedStringKey?) -> some View {
         Button {
             dependencies.analytics.log(.planSelected(plan: plan.analyticsName))
@@ -261,6 +262,11 @@ struct PremiumPaywallView: View {
 
     // MARK: - CTA
 
+    /// 선택 플랜의 무료 체험 일수 — CTA·고지 문구 전환의 단일 기준.
+    private var selectedTrialDays: Int? {
+        premiumStore.trialDays(for: selectedPlan.product)
+    }
+
     private var footer: some View {
         VStack(spacing: Spacing.sm) {
             Button {
@@ -270,11 +276,18 @@ struct PremiumPaywallView: View {
                     if purchasing {
                         ProgressView().tint(Color(.systemBackground))
                     } else {
-                        Text("Start Premium")
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(Color(.systemBackground))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                        // 트라이얼 자격이 있으면 강조는 CTA 문구 자체에 싣는다 — 별도 배지·배너 없이.
+                        Group {
+                            if let days = selectedTrialDays {
+                                Text("Try \(days) Days Free")
+                            } else {
+                                Text("Start Premium")
+                            }
+                        }
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(Color(.systemBackground))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -284,11 +297,18 @@ struct PremiumPaywallView: View {
             .tint(.primary)
             .disabled(purchasing)
 
-            Text("Auto-renewable · Cancel anytime")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.top, Spacing.sm)
+            // 트라이얼 종료 후 자동 과금 고지(심사 필수) + "취소하면 결제 없음" 안심 문구.
+            Group {
+                if let days = selectedTrialDays {
+                    Text("\(days) days free, then auto-renews · Cancel during the trial and pay nothing")
+                } else {
+                    Text("Auto-renewable · Cancel anytime")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.top, Spacing.sm)
 
             HStack(spacing: Spacing.sm) {
                 Button("Restore") { Task { await restore() } }
@@ -321,9 +341,10 @@ struct PremiumPaywallView: View {
         purchasing = true
         defer { purchasing = false }
         let plan = selectedPlan.analyticsName
-        dependencies.analytics.log(.purchaseAttempted(plan: plan))
+        let trial = selectedTrialDays != nil
+        dependencies.analytics.log(.purchaseAttempted(plan: plan, trial: trial))
         let outcome = await premiumStore.purchase(selectedPlan.product.id)
-        dependencies.analytics.log(.purchaseResult(plan: plan, outcome: String(describing: outcome)))
+        dependencies.analytics.log(.purchaseResult(plan: plan, outcome: String(describing: outcome), trial: trial))
         if outcome == .success || premiumStore.isPremium { dismiss() }
     }
 

@@ -35,6 +35,31 @@ struct PremiumStoreTests {
         #expect(!analytics.events.contains(.productsLoadFailed))
     }
 
+    // MARK: - 트라이얼 표시
+
+    /// 로드된 상품에 자격 있는 트라이얼이 있으면 해당 플랜의 표시 일수를 돌려준다.
+    @Test func trialDaysReturnsDaysForEligibleProduct() async {
+        let service = FakePurchaseService()
+        service.products = [
+            PurchasableProduct(id: Self.monthlyID, displayPrice: "₩2,900",
+                               trialDays: 7, isTrialEligible: true),
+            PurchasableProduct(id: "azhy.cue.premium.lifetime", displayPrice: "₩44,000"),
+        ]
+        let store = PremiumStore(service: service, analytics: SpyAnalyticsService())
+
+        await store.start()
+
+        #expect(store.trialDays(for: .monthly) == 7)
+        #expect(store.trialDays(for: .lifetime) == nil)
+    }
+
+    /// 상품 미로드(빈 배열 폴백) 상태에서는 어떤 플랜도 트라이얼을 표시하지 않는다.
+    @Test func trialDaysReturnsNilBeforeProductsLoad() {
+        let store = PremiumStore(service: FakePurchaseService(), analytics: SpyAnalyticsService())
+
+        #expect(store.trialDays(for: .yearly) == nil)
+    }
+
     // MARK: - 엔타이틀먼트 변경
 
     /// 변경 스트림에서 isPremium 값이 실제로 바뀔 때만 entitlementChanged를 기록한다 —

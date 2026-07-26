@@ -318,6 +318,106 @@
         }
       }
     },
+    "%lld days free, then auto-renews · Cancel during the trial and pay nothing" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld أيام مجانًا، ثم يتجدد تلقائيًا · ألغِ خلال الفترة التجريبية ولن تدفع شيئًا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Tage kostenlos, danach automatische Verlängerung · Bei Kündigung im Testzeitraum entstehen keine Kosten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld días gratis, luego se renueva automáticamente · Cancela durante la prueba y no pagarás nada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld jours gratuits, puis renouvellement automatique · Annulez pendant l'essai et ne payez rien"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld दिन मुफ़्त, फिर स्वतः नवीनीकरण · ट्रायल के दौरान रद्द करें, कुछ नहीं देना होगा"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gratis %lld hari, lalu diperpanjang otomatis · Batalkan selama masa coba tanpa dikenai biaya"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld giorni gratis, poi rinnovo automatico · Annulla durante la prova e non paghi nulla"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld日間無料、その後自動更新 · 体験中に解約すれば請求されません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일 무료, 이후 자동 갱신 · 체험 중 취소하면 결제되지 않아요"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Percuma %lld hari, kemudian diperbaharui secara automatik · Batalkan semasa percubaan tanpa sebarang bayaran"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dias grátis, depois renova automaticamente · Cancele durante o teste e não pague nada"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld дней бесплатно, затем автопродление · Отмените во время пробного периода — платить не придётся"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฟรี %lld วัน จากนั้นต่ออายุอัตโนมัติ · ยกเลิกระหว่างทดลองใช้ได้โดยไม่มีค่าใช้จ่าย"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miễn phí %lld ngày, sau đó tự động gia hạn · Hủy trong thời gian dùng thử sẽ không bị tính phí"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld天免费，之后自动续订 · 试用期内取消不会收费"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld天免費，之後自動續訂 · 試用期內取消不會收費"
+          }
+        }
+      }
+    },
     "%lld Hidden" : {
       "localizations" : {
         "ar" : {
@@ -20088,9 +20188,6 @@
         }
       }
     },
-    "Shift Mock Schedule Case" : {
-
-    },
     "Show All" : {
       "localizations" : {
         "ar" : {
@@ -23402,6 +23499,106 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "明天 %@"
+          }
+        }
+      }
+    },
+    "Try %lld Days Free" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جرّب %lld أيام مجانًا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Tage kostenlos testen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probar %lld días gratis"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Essayer %lld jours gratuitement"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld दिन मुफ़्त आज़माएँ"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba Gratis %lld Hari"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prova %lld giorni gratis"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld日間無料で試す"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일 무료로 시작하기"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuba Percuma %lld Hari"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Experimentar %lld dias grátis"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Попробовать %lld дней бесплатно"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ทดลองฟรี %lld วัน"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dùng thử miễn phí %lld ngày"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免费试用%lld天"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "免費試用%lld天"
           }
         }
       }

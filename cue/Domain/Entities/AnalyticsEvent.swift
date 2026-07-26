@@ -62,8 +62,8 @@ enum AnalyticsEvent: Equatable, Sendable {
     case paywallShown(source: String)
     case paywallDismissed
     case planSelected(plan: String)
-    case purchaseAttempted(plan: String)
-    case purchaseResult(plan: String, outcome: String)
+    case purchaseAttempted(plan: String, trial: Bool)
+    case purchaseResult(plan: String, outcome: String, trial: Bool)
     case restoreTapped
     case restoreResult(outcome: String)
     case entitlementChanged(premium: Bool)
@@ -184,8 +184,9 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .focusPhaseAdvanced(let source): ["source": source]
         case .paywallShown(let source): ["source": source]
         case .planSelected(let plan): ["plan": plan]
-        case .purchaseAttempted(let plan): ["plan": plan]
-        case .purchaseResult(let plan, let outcome): ["plan": plan, "outcome": outcome]
+        case .purchaseAttempted(let plan, let trial): ["plan": plan, "trial": String(trial)]
+        case .purchaseResult(let plan, let outcome, let trial):
+            ["plan": plan, "outcome": outcome, "trial": String(trial)]
         case .restoreResult(let outcome): ["outcome": outcome]
         case .entitlementChanged(let premium): ["premium": String(premium)]
         case .premiumGateHit(let feature): ["feature": feature]

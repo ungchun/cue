@@ -35,7 +35,11 @@
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "1000000001",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "2000000001",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
           "localizations" : [
             {
               "description" : "월간 구독",
@@ -56,7 +60,11 @@
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "1000000002",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "2000000002",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P1W"
+          },
           "localizations" : [
             {
               "description" : "연간 구독",

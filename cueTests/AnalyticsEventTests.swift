@@ -67,8 +67,9 @@ struct AnalyticsEventTests {
         #expect(AnalyticsEvent.paywallShown(source: "banner").name == "paywall_shown")
         #expect(AnalyticsEvent.paywallDismissed.name == "paywall_dismissed")
         #expect(AnalyticsEvent.planSelected(plan: "monthly").name == "plan_selected")
-        #expect(AnalyticsEvent.purchaseAttempted(plan: "yearly").name == "purchase_attempted")
-        #expect(AnalyticsEvent.purchaseResult(plan: "yearly", outcome: "success").name == "purchase_result")
+        #expect(AnalyticsEvent.purchaseAttempted(plan: "yearly", trial: true).name == "purchase_attempted")
+        #expect(AnalyticsEvent.purchaseResult(plan: "yearly", outcome: "success", trial: true).name
+                == "purchase_result")
         #expect(AnalyticsEvent.restoreTapped.name == "restore_tapped")
         #expect(AnalyticsEvent.restoreResult(outcome: "success").name == "restore_result")
         #expect(AnalyticsEvent.entitlementChanged(premium: true).name == "entitlement_changed")
@@ -119,9 +120,11 @@ struct AnalyticsEventTests {
     }
 
     @Test func purchaseParameters() {
-        #expect(AnalyticsEvent.purchaseAttempted(plan: "lifetime").parameters == ["plan": "lifetime"])
-        #expect(AnalyticsEvent.purchaseResult(plan: "monthly", outcome: "cancelled").parameters
-                == ["plan": "monthly", "outcome": "cancelled"])
+        // trial 파라미터 — 트라이얼 시작과 일반 결제를 전환 분석에서 구분한다.
+        #expect(AnalyticsEvent.purchaseAttempted(plan: "lifetime", trial: false).parameters
+                == ["plan": "lifetime", "trial": "false"])
+        #expect(AnalyticsEvent.purchaseResult(plan: "monthly", outcome: "cancelled", trial: true).parameters
+                == ["plan": "monthly", "outcome": "cancelled", "trial": "true"])
     }
 
     @Test func parameterFreeEventsHaveEmptyParameters() {

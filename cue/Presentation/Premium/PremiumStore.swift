@@ -81,6 +81,11 @@ final class PremiumStore {
     func displayPrice(for product: PremiumProduct) -> String? {
         products.first { $0.id == product.id }?.displayPrice
     }
+
+    /// 특정 상품에 표시할 무료 체험 일수 — 트라이얼이 있고 자격도 있을 때만. 판정은 Domain에 위임.
+    func trialDays(for product: PremiumProduct) -> Int? {
+        PaywallTrial.displayDays(for: product.id, in: products)
+    }
     // 앱 수명 동안 사는 단일 인스턴스라 별도 deinit 취소는 두지 않는다(프로세스 종료 시 함께 정리).
 }
 
