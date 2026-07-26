@@ -226,9 +226,13 @@ final class SettingsViewModel {
         memoTextColorHex = hex
     }
 
-    /// 한 항목을 바꾸고 통째로 저장한다 — 설정이 하나뿐이라 매 변경마다 전체 write가 가볍다.
+    /// 한 항목을 바꾸고 저장한다 — **최신 저장본을 다시 읽어** 그 위에 변경을 적용한다.
+    /// 메모리 스냅샷을 통째로 쓰면 외부 저장(온보딩 완주 플래그·강등 정리)이 onAppear
+    /// 이후에 남긴 값을 되돌려버린다(fetch-modify-save, 메모 색 저장과 같은 규칙).
     private func update(_ mutate: (inout AppSettings) -> Void) async {
-        mutate(&settings)
-        await saveAppSettings(settings)
+        var fresh = await fetchAppSettings()
+        mutate(&fresh)
+        settings = fresh
+        await saveAppSettings(fresh)
     }
 }

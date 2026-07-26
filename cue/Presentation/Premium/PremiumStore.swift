@@ -57,6 +57,15 @@ final class PremiumStore {
     }
 
     /// 현재 보유 엔타이틀먼트로 프리미엄 상태를 다시 계산한다.
+    /// 페이월 진입 시 상품·트라이얼 자격 재확인 — 자격은 세션 중에도 변한다(타 기기에서
+    /// 체험 소진, 계정 전환). 실패(빈 배열 폴백)면 기존 캐시를 유지해 CTA가 통째로
+    /// 사라지는 깜빡임을 막는다.
+    func reloadProducts() async {
+        let latest = await service.loadProducts()
+        guard !latest.isEmpty else { return }
+        products = latest
+    }
+
     func refresh() async {
         let ids = await service.currentEntitlements()
         isPremium = PremiumEntitlement.isPremium(entitledProductIDs: ids)

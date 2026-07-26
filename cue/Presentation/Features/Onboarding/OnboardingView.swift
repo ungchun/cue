@@ -37,11 +37,13 @@ struct OnboardingView: View {
         // 앱 전체와 동일한 무채색 틴트 — fullScreenCover는 루트의 .tint를 상속하지 않는다.
         .tint(.primary)
         .overlay(alignment: .topTrailing) {
-            Button("Skip") { finish() }
-                .font(.callout)
-                .foregroundStyle(.tertiary)
-                .padding(Spacing.lg)
-                .opacity(viewModel.published ? 0 : 1)
+            // 게시 후엔 아예 제거 — opacity만 낮추면 보이지 않는 탭 영역과 VoiceOver 노출이 남는다.
+            if !viewModel.published {
+                Button("Skip") { finish() }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(Spacing.lg)
+            }
         }
     }
 

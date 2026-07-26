@@ -114,6 +114,18 @@ struct SchedulePackerTests {
         #expect(ScheduleMetrics.eventHeight(allDay) <= 21.1)
     }
 
+    /// 톨 스크립트(태국어·데바나가리·아랍어·베트남어)는 라틴 lineHeight보다 캐스케이드가
+    /// 커서 행 마진을 넉넉히 — 그 외(한글·라틴)는 실측 기반 0.4 유지(밀도 보존).
+    @Test func rowSafetyMarginScalesForTallScripts() {
+        for code in ["th", "hi", "ar", "vi"] {
+            #expect(ScheduleMetrics.rowSafetyMargin(languageCode: code) == 2.0)
+        }
+        for code in ["ko", "en", "ja", "zh"] {
+            #expect(ScheduleMetrics.rowSafetyMargin(languageCode: code) == 0.4)
+        }
+        #expect(ScheduleMetrics.rowSafetyMargin(languageCode: nil) == 0.4)
+    }
+
     // MARK: - 단일 컬럼 (캘린더 함께 표시 시 오른쪽 반쪽)
 
     /// 적은 이벤트는 헤더와 함께 그대로 들어간다.

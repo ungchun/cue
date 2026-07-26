@@ -136,8 +136,17 @@ enum ScheduleMetrics {
     /// 행당 안전 마진 — 실기기 실측(2026-07) 시간행은 30.95~31.2로 흔들린다(한글 캐스케이드
     /// ~0.2 + 3x 렌더 양자화 1/3pt). 추정은 31.13: 참값(~31.0)을 덮고, 양자화 극단(31.2)과의
     /// 잔차 0.07은 서브픽셀이라 무시한다. 더 키우면 레퍼런스형 배치(한 열에 헤더 2 + 시간행 3,
-    /// 행당 상한 31.27)가 깨져 날짜를 다시 버리게 된다 — 이 창(≤31.27)이 상한이다.
-    private static let rowSafetyMargin: CGFloat = 0.4
+    /// 행당 상한 31.27)가 깨져 날짜를 다시 버리게 된다 — 이 창(≤31.27)이 한글·라틴 상한이다.
+    private static var rowSafetyMargin: CGFloat {
+        rowSafetyMargin(languageCode: Locale.current.language.languageCode?.identifier)
+    }
+
+    /// 언어별 마진 — 톨 스크립트(태국어·데바나가리·아랍어·베트남어)는 글리프 캐스케이드가
+    /// 라틴 lineHeight보다 수 pt 커서 0.4로는 하단 잘림 위험이 있다. 여유 2.0을 주는 대신
+    /// 경계 케이스에서 행이 하나 덜 들어갈 수 있다(잘림보다 덜 나쁨). 실측으로 재조정 여지.
+    static func rowSafetyMargin(languageCode: String?) -> CGFloat {
+        ["th", "hi", "ar", "vi"].contains(languageCode ?? "") ? 2.0 : 0.4
+    }
 
     /// 날짜 헤더는 caption2(11pt) 텍스트 스타일 그대로 렌더 — 뷰(ScheduleDayView)와 동기.
     static var header: CGFloat { caption2Line }

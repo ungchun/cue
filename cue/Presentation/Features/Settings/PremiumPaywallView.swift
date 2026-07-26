@@ -78,6 +78,9 @@ struct PremiumPaywallView: View {
         }
         .presentationDetents([.large])
         .onAppear { dependencies.analytics.log(.paywallShown(source: "settings")) }
+        // 진입 시 상품·트라이얼 자격 재확인 — 타 기기 체험 소진 등으로 자격이 바뀌었을 수 있다.
+        // 로드 완료 전엔 기존 캐시가 유지돼 CTA가 비었다 채워지는 깜빡임은 없다.
+        .task { await premiumStore.reloadProducts() }
     }
 
     // MARK: - 에코 장식
@@ -267,6 +270,19 @@ struct PremiumPaywallView: View {
         premiumStore.trialDays(for: selectedPlan.product)
     }
 
+    /// 트라이얼 고지의 갱신 가격 문구 — "₩19,000 / yr". 카드와 같은 가격 소스·폴백을 쓴다.
+    /// lifetime은 트라이얼이 없어 도달하지 않는다.
+    private var selectedRenewalPriceText: String {
+        switch selectedPlan {
+        case .monthly:
+            (premiumStore.displayPrice(for: .monthly) ?? "₩2,900") + " " + String(localized: "/ mo")
+        case .yearly:
+            (premiumStore.displayPrice(for: .yearly) ?? "₩19,000") + " " + String(localized: "/ yr")
+        case .lifetime:
+            premiumStore.displayPrice(for: .lifetime) ?? "₩44,000"
+        }
+    }
+
     private var footer: some View {
         VStack(spacing: Spacing.sm) {
             Button {
@@ -297,10 +313,13 @@ struct PremiumPaywallView: View {
             .tint(.primary)
             .disabled(purchasing)
 
-            // 트라이얼 종료 후 자동 과금 고지(심사 필수) + "취소하면 결제 없음" 안심 문구.
+            // 결제 고지(심사 필수) — 3분기: 트라이얼(종료 후 실제 갱신 가격 명시, 3.1.2) /
+            // 일반 구독(자동 갱신) / 평생(1회 결제 — 자동 갱신 오고지 금지).
             Group {
                 if let days = selectedTrialDays {
-                    Text("\(days) days free, then auto-renews · Cancel during the trial and pay nothing")
+                    Text("\(days) days free, then \(selectedRenewalPriceText) · Cancel during the trial and pay nothing")
+                } else if selectedPlan == .lifetime {
+                    Text("One-time purchase · Yours forever")
                 } else {
                     Text("Auto-renewable · Cancel anytime")
                 }

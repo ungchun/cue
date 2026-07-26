@@ -132,6 +132,13 @@ final class MemoViewModel {
         }
     }
 
+    /// 외부(온보딩)에서 **이미 게시된** 메모 LA를 이 VM이 켠 것으로 넘겨받는다 —
+    /// 버튼 상태·자동 갱신을 살리고, 사용자가 다시 켜며 쿼터를 낭비하지 않게.
+    /// 재게시하지 않는다(이미 떠 있는 활동을 그대로 채택).
+    func adoptExternalLiveActivity() {
+        liveActivityActive = true
+    }
+
     /// LA가 떠 있을 때 변경을 반영 — 텍스트가 비면(use case가 throw) 종료한다.
     private func refreshLiveActivityIfActive() async {
         guard liveActivityActive else { return }

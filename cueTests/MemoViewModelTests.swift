@@ -38,6 +38,30 @@ struct MemoViewModelTests {
         )
     }
 
+    // MARK: - 외부(온보딩) 게시 채택
+
+    /// 온보딩이 게시한 LA를 넘겨받으면 이 VM이 켠 것으로 표시된다 — 버튼 상태·자동 갱신 활성.
+    @Test func adoptExternalLiveActivityMarksActive() {
+        let (viewModel, _, _) = makeViewModel()
+        viewModel.adoptExternalLiveActivity()
+        #expect(viewModel.liveActivityActive)
+    }
+
+    /// 채택 후 텍스트 수정은 쿼터 소비 없이 잠금화면에 반영된다 — 한도 소진 상태여도 갱신.
+    @Test func afterAdoptTextEditsRefreshLiveActivityWithoutQuota() async {
+        let (viewModel, _, service) = makeViewModel(
+            memo: Memo(text: "첫 큐", colorHex: "#000000"),
+            quotaRepository: quotaRepository(used: 9)
+        )
+        await viewModel.onAppear()
+        viewModel.adoptExternalLiveActivity()
+
+        await viewModel.setText("수정된 큐")
+
+        let calls = await service.startMemoCalls
+        #expect(calls.last?.text == "수정된 큐")
+    }
+
     // MARK: - 로드
 
     @Test func onAppearLoadsSavedMemo() async {

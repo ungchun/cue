@@ -53,6 +53,36 @@ struct PremiumStoreTests {
         #expect(store.trialDays(for: .lifetime) == nil)
     }
 
+    /// 페이월 재진입 재로드 — 자격이 바뀌면(타 기기 체험 소진 등) 표시가 따라간다.
+    @Test func reloadProductsRefreshesTrialEligibility() async {
+        let service = FakePurchaseService()
+        service.products = [PurchasableProduct(id: Self.monthlyID, displayPrice: "₩2,900",
+                                               trialDays: 7, isTrialEligible: true)]
+        let store = PremiumStore(service: service, analytics: SpyAnalyticsService())
+        await store.start()
+        #expect(store.trialDays(for: .monthly) == 7)
+
+        service.products = [PurchasableProduct(id: Self.monthlyID, displayPrice: "₩2,900",
+                                               trialDays: 7, isTrialEligible: false)]
+        await store.reloadProducts()
+
+        #expect(store.trialDays(for: .monthly) == nil)
+    }
+
+    /// 재로드 실패(빈 배열 폴백)면 기존 캐시를 유지한다 — CTA가 통째로 사라지지 않게.
+    @Test func reloadProductsKeepsCacheOnFailure() async {
+        let service = FakePurchaseService()
+        service.products = [PurchasableProduct(id: Self.monthlyID, displayPrice: "₩2,900",
+                                               trialDays: 7, isTrialEligible: true)]
+        let store = PremiumStore(service: service, analytics: SpyAnalyticsService())
+        await store.start()
+
+        service.products = []
+        await store.reloadProducts()
+
+        #expect(store.trialDays(for: .monthly) == 7)
+    }
+
     /// 상품 미로드(빈 배열 폴백) 상태에서는 어떤 플랜도 트라이얼을 표시하지 않는다.
     @Test func trialDaysReturnsNilBeforeProductsLoad() {
         let store = PremiumStore(service: FakePurchaseService(), analytics: SpyAnalyticsService())

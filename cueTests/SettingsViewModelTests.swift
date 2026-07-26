@@ -35,6 +35,24 @@ struct SettingsViewModelTests {
         #expect(viewModel.settings.colorScheme == .dark)
     }
 
+    /// 설정 변경은 **최신 저장본 위에** 적용된다 — 외부(온보딩 완주 처리·강등 정리)가
+    /// 저장한 값을, onAppear 시점의 낡은 메모리 스냅샷이 통째로 덮어 되돌리면 안 된다.
+    @Test func settingChangePreservesExternallySavedFlags() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()                       // 이 시점 스냅샷엔 완주 플래그 없음
+
+        var external = await repository.fetch()
+        external.hasCompletedOnboarding = true           // 외부에서 완주 플래그 저장
+        await repository.save(external)
+
+        await viewModel.setColorScheme(.dark)            // 이후 아무 설정이나 변경
+
+        let stored = await repository.fetch()
+        #expect(stored.hasCompletedOnboarding)           // 외부 플래그 보존
+        #expect(stored.colorScheme == .dark)             // 변경도 반영
+    }
+
     /// 로드 전 기본 상태는 .default(시스템 테마).
     @Test func startsAtDefaultBeforeLoad() {
         let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository())

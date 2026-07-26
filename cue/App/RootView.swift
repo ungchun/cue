@@ -141,19 +141,32 @@ struct RootView: View {
             }
             await startAlwaysOnActivities(settingsViewModel.settings)
         }
-        // 첫 실행 온보딩 — 전체 화면. 완료·스킵 시 커버를 닫고, 온보딩이 첫 큐(메모)를
-        // 저장했을 수 있으니 이미 로드된 메모 탭을 새로고침해 화면과 저장본을 맞춘다.
+        // 첫 실행 온보딩 — 전체 화면. 완료·스킵 시 커버를 닫고:
+        // 1) 메모 탭 새로고침(온보딩이 첫 큐를 저장했을 수 있음)
+        // 2) 게시했으면 그 LA를 메모 VM이 채택(버튼 상태·자동 갱신 동기)
+        // 3) 설정 VM 재로드(완주 플래그가 낡은 스냅샷에 덮이지 않게)
         .fullScreenCover(isPresented: $showsOnboarding) {
             OnboardingView(viewModel: onboardingViewModel) {
                 showsOnboarding = false
-                Task { await memoViewModel.onAppear() }
+                Task {
+                    await memoViewModel.onAppear()
+                    if onboardingViewModel.published {
+                        memoViewModel.adoptExternalLiveActivity()
+                    }
+                    await settingsViewModel.onAppear()
+                }
             }
         }
         // 포그라운드 복귀 — 시스템이 8시간 후 LA를 종료했을 수 있어 다시 게시한다
         // (VM이 이 실행에서 켠 상태면 각자 건너뛴다 — 중복 게시 없음).
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
-            Task { await startAlwaysOnActivities(settingsViewModel.settings) }
+            Task {
+                // 엔타이틀먼트 재확인을 **항상** — 구독·체험 만료는 시스템이 push해주지
+                // 않아, 게이트 안에 두면 항상표시 꺼둔 사용자의 강등이 재시작까지 밀린다.
+                await premiumStore.refresh()
+                await startAlwaysOnActivities(settingsViewModel.settings)
+            }
         }
         // 설정에서 항상 표시(또는 항목)를 켜는 순간 즉시 게시 — 꺼짐 방향은 건드리지 않는다
         // (사용자가 수동으로 띄운 LA를 죽이지 않기 위해).
