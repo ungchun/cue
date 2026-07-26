@@ -51,15 +51,13 @@ struct OnboardingView: View {
     // MARK: - 1장. 신호 — 점이 켜진다
 
     private var signalPage: some View {
-        VStack(spacing: Spacing.zero) {
-            Spacer()
+        pageLayout {
             signalDot(coreDiameter: Spacing.smd, rippleDiameter: 88)
-                .frame(height: 180)
-            Spacer()
+        } copy: {
             VStack(spacing: Spacing.smd) {
                 // 브랜드 슬로건 — 설정 푸터와 같은 문구("잊지 않게, 흔들리지 않게").
                 Text("Never forget, never waver")
-                    .font(.system(.title, design: .rounded).weight(.semibold))
+                    .font(.system(.title2, design: .rounded).weight(.semibold))
                     .multilineTextAlignment(.center)
                 Text("One quiet signal for the one thing you must not forget.")
                     .font(.callout)
@@ -67,24 +65,36 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(Spacing.xxs)
             }
-            .padding(.bottom, Spacing.xxl)
-            Spacer()
+        }
+    }
+
+    /// 공통 페이지 골격 — 위 비주얼 존(고정 높이, 중앙 정렬)과 아래 안내 문구 존
+    /// (고정 높이, 상단 정렬)을 모든 장이 공유해 **문구 시작 위치가 세 장에서 같다**.
+    private func pageLayout(
+        @ViewBuilder visual: () -> some View,
+        @ViewBuilder copy: () -> some View
+    ) -> some View {
+        VStack(spacing: Spacing.zero) {
+            Spacer(minLength: Spacing.zero)
+            visual()
+                .frame(height: 340)
+            copy()
+                .padding(.horizontal, Spacing.xl)
+                .frame(height: 150, alignment: .top)
+            Spacer(minLength: Spacing.zero)
         }
     }
 
     // MARK: - 2장. 실물 카드 — 점이 카드가 된다
 
     private var cardPage: some View {
-        VStack(spacing: Spacing.zero) {
-            Spacer()
-            // 실물 크기의 메모 LA 카드 — 일러스트가 아니라 잠금화면에 뜨는 그 모습.
-            // 뒤에 옅은 에코 링을 깔아 1장의 점과 같은 존재임을 잇는다.
+        pageLayout {
+            // 실물 크기의 LA 카드 스택 — 뒤에 옅은 에코 링으로 1장의 점과 같은 존재임을 잇는다.
             ZStack {
                 BreathingRings(base: 240, step: 100, opacities: [0.10, 0.06, 0.03])
                 liveCardMock
             }
-            .frame(height: 330)
-            Spacer()
+        } copy: {
             VStack(spacing: Spacing.smd) {
                 Text("It stays, quietly.")
                     .font(.title2.weight(.semibold))
@@ -94,8 +104,6 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(Spacing.xxs)
             }
-            .padding(.bottom, Spacing.xxl)
-            Spacer()
         }
     }
 
@@ -234,41 +242,36 @@ struct OnboardingView: View {
     // MARK: - 3장. 첫 큐 — 점이 당신의 큐가 된다
 
     private var firstCuePage: some View {
-        VStack(spacing: Spacing.md) {
-            Spacer()
+        pageLayout {
+            // 3장에도 점을 유지 — 점이 사용자의 큐가 된다는 서사의 연속.
+            signalDot(coreDiameter: Spacing.sm, rippleDiameter: 64)
+        } copy: {
             if viewModel.published {
-                signalDot(coreDiameter: Spacing.sm, rippleDiameter: 64)
-                    .frame(height: 120)
-                Text("Your cue is on.")
-                    .font(.title2.weight(.semibold))
                 Text("Lock your phone and see it sitting on the Lock Screen.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(.title2.weight(.semibold))
                     .multilineTextAlignment(.center)
                     .lineSpacing(Spacing.xxs)
+                    .frame(maxWidth: .infinity)
             } else {
-                // 질문이 곧 제목 — 별도 타이틀 없이 바로 입력으로.
-                Text("What must you not forget right now?")
-                    .font(.title2.weight(.semibold))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.xl)
-                VStack(spacing: Spacing.sm) {
-                    TextField("Write it here", text: $viewModel.text, axis: .vertical)
-                        .font(.title3.weight(.semibold))
+                VStack(spacing: Spacing.md) {
+                    // 질문이 곧 제목 — 별도 타이틀 없이 바로 입력으로.
+                    Text("What must you not forget right now?")
+                        .font(.title2.weight(.semibold))
                         .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                        .focused($isTextFieldFocused)
-                        .submitLabel(.done)
-                    Rectangle()
-                        .fill(viewModel.canPublish ? Color.primary : Color.secondary.opacity(0.3))
-                        .frame(height: 1)
-                        .frame(maxWidth: 240)
+                    VStack(spacing: Spacing.sm) {
+                        TextField("Write it here", text: $viewModel.text, axis: .vertical)
+                            .font(.title3.weight(.semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .focused($isTextFieldFocused)
+                            .submitLabel(.done)
+                        Rectangle()
+                            .fill(viewModel.canPublish ? Color.primary : Color.secondary.opacity(0.3))
+                            .frame(height: 1)
+                            .frame(maxWidth: 240)
+                    }
                 }
-                .padding(.horizontal, Spacing.xl)
-                .padding(.top, Spacing.md)
             }
-            Spacer()
-            Spacer()
         }
         // 3장에 도착하면 바로 입력 포커스 — 타이핑까지의 마찰을 없앤다.
         .onChange(of: viewModel.page) { _, page in
