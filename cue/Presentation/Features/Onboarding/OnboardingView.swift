@@ -377,18 +377,15 @@ private struct RippleRings: View {
                 }
             } else {
                 TimelineView(.animation) { context in
-                    let time = context.date.timeIntervalSinceReferenceDate
                     ZStack {
                         ForEach(0..<3, id: \.self) { index in
-                            // 0→1 진행도 — 링마다 1/3 주기씩 어긋난 위상.
-                            let progress = ((time / period) + Double(index) / 3)
-                                .truncatingRemainder(dividingBy: 1)
+                            let progress = rippleProgress(at: context.date, ring: index)
                             Circle()
                                 .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1.5)
                                 .frame(width: diameter, height: diameter)
                                 // 시작 스케일은 가운데 점 뒤에 숨는 크기 — 점에서 배어나온다.
-                                .scaleEffect(0.12 + (2.6 - 0.12) * progress)
-                                .opacity(0.7 * (1 - progress))
+                                .scaleEffect(Self.rippleScale(progress))
+                                .opacity(0.7 * (1.0 - progress))
                         }
                     }
                 }
@@ -396,6 +393,17 @@ private struct RippleRings: View {
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    /// 0→1 진행도 — 링마다 1/3 주기씩 어긋난 위상. (뷰 빌더 밖 계산 — 타입 체커 부담 분리.)
+    private func rippleProgress(at date: Date, ring index: Int) -> Double {
+        let time: Double = date.timeIntervalSinceReferenceDate
+        let raw: Double = time / period + Double(index) / 3.0
+        return raw.truncatingRemainder(dividingBy: 1.0)
+    }
+
+    private static func rippleScale(_ progress: Double) -> Double {
+        0.12 + (2.6 - 0.12) * progress
     }
 }
 
@@ -414,16 +422,22 @@ private struct BreathingRings: View {
                 staticRings(scales: [1, 1, 1])
             } else {
                 TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
-                    let time = context.date.timeIntervalSinceReferenceDate
-                    // easeInOut 3초 왕복 ≈ 사인 6초 주기, 링마다 0.3초 시차.
-                    staticRings(scales: (0..<3).map { index in
-                        1 + 0.05 * (1 + sin((time - Double(index) * 0.3) * 2 * .pi / 6))
-                    })
+                    staticRings(scales: Self.breathingScales(at: context.date))
                 }
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    /// easeInOut 3초 왕복 ≈ 사인 6초 주기, 링마다 0.3초 시차. (뷰 빌더 밖에서 계산해
+    /// 표현식을 잘게 쪼갠다 — 인라인 수식은 타입 체커가 시간 안에 못 푼다.)
+    private static func breathingScales(at date: Date) -> [Double] {
+        let time: Double = date.timeIntervalSinceReferenceDate
+        return (0..<3).map { (index: Int) -> Double in
+            let phase: Double = (time - Double(index) * 0.3) * 2.0 * Double.pi / 6.0
+            return 1.0 + 0.05 * (1.0 + sin(phase))
+        }
     }
 
     private func staticRings(scales: [Double]) -> some View {
