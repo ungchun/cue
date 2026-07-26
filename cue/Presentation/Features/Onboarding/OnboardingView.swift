@@ -190,9 +190,11 @@ struct OnboardingView: View {
                 .monospacedDigit()
                 .foregroundStyle(weekdayColor(grid: grid, column: column))
                 .overlay(alignment: .bottom) {
+                    // 폭 미지정 — overlay가 숫자(Text) 폭에 맞춰져 밑줄이 글자를 벗어나지
+                    // 않는다(caption2는 실물 footnote보다 좁아 고정 14pt가 삐져나왔다).
                     RoundedRectangle(cornerRadius: 1)
                         .fill(grid.isToday(day: day) ? Color.primary : Color.clear)
-                        .frame(width: 14, height: 2)
+                        .frame(height: 2)
                         .offset(y: Spacing.xxs)
                 }
         } else {
