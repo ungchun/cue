@@ -281,10 +281,17 @@ struct OnboardingView: View {
         // 배경 탭 → 키보드 내림(입력 필드 자체 탭은 필드가 우선 처리).
         .contentShape(Rectangle())
         .onTapGesture { isTextFieldFocused = false }
-        // 3장 도착 시 바로 입력 포커스, 다른 장으로 넘어가면 키보드 내림.
+        // 3장 도착 시 입력 포커스, 다른 장으로 넘어가면 키보드 내림.
+        // 포커스는 페이지 전환 트랜잭션 **후**에 걸어야 한다 — 전환 중엔 필드가 아직
+        // 포커스를 못 받아 요청이 조용히 버려진다(첫 진입에 키보드 안 뜨던 버그).
         .onChange(of: viewModel.page) { _, page in
             if page == 2 {
-                if !viewModel.published { isTextFieldFocused = true }
+                guard !viewModel.published else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    // 지연 사이 다른 장으로 떠났으면 포커스 걸지 않는다.
+                    if viewModel.page == 2, !viewModel.published { isTextFieldFocused = true }
+                }
             } else {
                 isTextFieldFocused = false
             }
