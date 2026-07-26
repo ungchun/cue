@@ -34,16 +34,10 @@ struct cueApp: App {
                 // 이어서 강등(비프리미엄) 사용자의 프리미엄 전용 설정 잔존값을 정리한다 —
                 // 정리됐으면 떠 있는 LA를 재게시해 캘린더 등 프리미엄 표시를 즉시 걷는다.
                 .task {
+                    // 첫 refresh가 confirmedIsPremium을 확정하면 RootView의
+                    // onChange(confirmedIsPremium)가 reconcile(강등 접어두기/재구독 복구)을
+                    // 단일 지점에서 실행한다 — 여기서 병행 호출하면 같은 전이에 이중 실행.
                     await composition.premiumStore.start()
-                    // **확정 판정일 때만** reconcile — 조회 실패(nil)를 무료로 넘기면 유료
-                    // 사용자의 설정을 파괴한다. 강등이면 접어두고 정리, 재구독이면 자동 복구.
-                    guard let confirmed = composition.premiumStore.confirmedIsPremium else { return }
-                    let reconciled = await composition.dependencies.reconcilePremiumSettings(
-                        isPremium: confirmed
-                    )
-                    if reconciled {
-                        await composition.dependencies.refreshLiveActivityLayout()
-                    }
                 }
         }
         .modelContainer(composition.modelContainer)

@@ -35,6 +35,8 @@ struct RootView: View {
     @State private var toastCenter = ToastCenter()
     /// 프리미엄 토스트 탭으로 여는 전역 페이월 — 게이트에 걸린 화면이 어디든 여기 시트 하나로 뜬다.
     @State private var showsGatePaywall = false
+    /// reconcile 직렬 체인 — 확정 판정 전이가 연달아 와도 실행 순서 = 전이 순서를 보장한다.
+    @State private var reconcileChain: Task<Void, Never>?
 
     /// 항상 표시 게시 전 엔타이틀먼트 확정용 — `start()`(cueApp)와 경쟁해도 게시 시점 값이 정확하게.
     private let premiumStore: PremiumStore
@@ -180,12 +182,14 @@ struct RootView: View {
                 }
             }
         }
-        // 확정 판정이 바뀌는 즉시(페이월 구매·복원, 갱신·환불 스트림 포함) 정리/복구 반영 —
-        // 포그라운드 복귀·재시작까지 기다리지 않는다. 재구독이면 접어둔 설정을 되켜고 항상표시도
-        // 즉시 재게시. reconcile은 바꿀 게 없으면 no-op이라 다른 트리거와 중복 실행돼도 안전.
+        // reconcile(강등 접어두기/재구독 복구)의 **단일 실행 지점** — 확정 판정이 바뀔 때마다
+        // (콜드런치 첫 판정, 포그라운드 refresh, 페이월 구매·복원, 갱신·환불 스트림) 여기서만 돈다.
+        // 다른 곳(scenePhase·cueApp)에서 병행 호출하면 같은 전이에 두 번 실행돼 fetch-modify-save가
+        // 인터리브된다(리뷰 지적). 연속 전이는 직렬 체인으로 순서를 보장한다.
         .onChange(of: premiumStore.confirmedIsPremium) { _, confirmed in
             guard let confirmed else { return }
-            Task {
+            reconcileChain = Task { [previous = reconcileChain] in
+                await previous?.value
                 if await dependencies.reconcilePremiumSettings(isPremium: confirmed) {
                     await dependencies.refreshLiveActivityLayout()
                     await settingsViewModel.onAppear()
@@ -200,14 +204,9 @@ struct RootView: View {
             Task {
                 // 엔타이틀먼트 재확인을 **항상** — 구독·체험 만료는 시스템이 push해주지
                 // 않아, 게이트 안에 두면 항상표시 꺼둔 사용자의 강등이 재시작까지 밀린다.
+                // 판정이 바뀌면 위 onChange(confirmedIsPremium)가 reconcile을 돌린다 —
+                // 여기서 병행 호출하면 같은 전이에 이중 실행이라 refresh만 한다.
                 await premiumStore.refresh()
-                // **확정 판정일 때만** reconcile — 조회 실패(nil)를 무료로 넘기면 유료
-                // 사용자의 설정을 파괴한다. 강등이면 접어두고 정리, 재구독 확인이면 자동 복구.
-                if let confirmed = premiumStore.confirmedIsPremium,
-                   await dependencies.reconcilePremiumSettings(isPremium: confirmed) {
-                    await dependencies.refreshLiveActivityLayout()
-                    await settingsViewModel.onAppear()
-                }
                 await startAlwaysOnActivities(settingsViewModel.settings)
             }
         }
