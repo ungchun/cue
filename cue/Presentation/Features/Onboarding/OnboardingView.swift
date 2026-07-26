@@ -57,7 +57,7 @@ struct OnboardingView: View {
     private var signalPage: some View {
         VStack(spacing: Spacing.zero) {
             Spacer()
-            signalDot(coreDiameter: Spacing.smd, ringBase: 44)
+            signalDot(coreDiameter: Spacing.smd, rippleDiameter: 88)
                 .frame(height: 180)
             Spacer()
             VStack(spacing: Spacing.smd) {
@@ -90,7 +90,7 @@ struct OnboardingView: View {
             VStack(spacing: Spacing.smd) {
                 Text("It stays, quietly.")
                     .font(.title2.weight(.semibold))
-                Text("On your Lock Screen and Dynamic Island. Not a notification — it never slides away.")
+                Text("On your Lock Screen. Not a notification — it never slides away.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -128,7 +128,7 @@ struct OnboardingView: View {
         VStack(spacing: Spacing.md) {
             Spacer()
             if viewModel.published {
-                signalDot(coreDiameter: Spacing.sm, ringBase: 36)
+                signalDot(coreDiameter: Spacing.sm, rippleDiameter: 64)
                     .frame(height: 120)
                 Text("Your cue is on.")
                     .font(.title2.weight(.semibold))
@@ -169,10 +169,29 @@ struct OnboardingView: View {
 
     // MARK: - Signal Dot (브랜드 비주얼 코어 — 점 + 퍼지는 동심원)
 
-    /// 점 + 숨쉬는 동심원 3겹. 설정 푸터·페이월 에코와 같은 느린 pulse, Reduce Motion이면 정적.
-    private func signalDot(coreDiameter: CGFloat, ringBase: CGFloat) -> some View {
+    /// 점 + 바깥으로 퍼지는 물결 링(1·3장) — 링이 점에서 커지며 옅어지다 사라지는 루프라
+    /// "신호가 퍼진다"가 눈에 보인다(숨쉬기 pulse보다 방향성이 분명). 링 3개를 시차로 돌려
+    /// 파동이 끊기지 않는다. Reduce Motion이면 정적 동심원.
+    private func signalDot(coreDiameter: CGFloat, rippleDiameter: CGFloat) -> some View {
         ZStack {
-            echoRings(base: ringBase, step: ringBase, opacities: [0.25, 0.15, 0.08])
+            if reduceMotion {
+                echoRings(base: rippleDiameter * 0.5, step: rippleDiameter * 0.5,
+                          opacities: [0.25, 0.15, 0.08])
+            } else {
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1.5)
+                        .frame(width: rippleDiameter, height: rippleDiameter)
+                        .scaleEffect(echoPulsing ? 2.6 : 0.3)
+                        .opacity(echoPulsing ? 0 : 0.9)
+                        .animation(
+                            .easeOut(duration: 2.7)
+                                .repeatForever(autoreverses: false)
+                                .delay(Double(index) * 0.9),
+                            value: echoPulsing
+                        )
+                }
+            }
             Circle()
                 .fill(Color.primary)
                 .frame(width: coreDiameter, height: coreDiameter)

@@ -260,7 +260,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "첫 큐를 켜보세요"
+            "value" : "첫 큐를 써보세요"
           }
         },
         "ms" : {
@@ -407,102 +407,102 @@
         }
       }
     },
-    "On your Lock Screen and Dynamic Island. Not a notification — it never slides away." : {
+    "On your Lock Screen. Not a notification — it never slides away." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "على شاشة القفل وفي Dynamic Island. ليس إشعارًا — لا يختفي أبدًا."
+            "value" : "على شاشة القفل. ليس إشعارًا — لا يختفي أبدًا."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auf Sperrbildschirm und Dynamic Island. Keine Mitteilung – sie verschwindet nie."
+            "value" : "Auf deinem Sperrbildschirm. Keine Mitteilung – sie verschwindet nie."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En la pantalla de bloqueo y la Dynamic Island. No es una notificación: nunca desaparece."
+            "value" : "En tu pantalla de bloqueo. No es una notificación: nunca desaparece."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sur l'écran verrouillé et la Dynamic Island. Ce n'est pas une notification : il ne disparaît jamais."
+            "value" : "Sur votre écran verrouillé. Ce n'est pas une notification : il ne disparaît jamais."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "लॉक स्क्रीन और Dynamic Island पर। यह नोटिफ़िकेशन नहीं है — यह कभी गायब नहीं होता।"
+            "value" : "आपकी लॉक स्क्रीन पर। यह नोटिफ़िकेशन नहीं है — यह कभी गायब नहीं होता।"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Di Layar Kunci dan Dynamic Island. Bukan notifikasi — tidak akan hilang."
+            "value" : "Di Layar Kunci. Bukan notifikasi — tidak akan hilang."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sulla schermata di blocco e nella Dynamic Island. Non è una notifica: non scompare mai."
+            "value" : "Sulla schermata di blocco. Non è una notifica: non scompare mai."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ロック画面と Dynamic Island に。通知ではないから、消えません。"
+            "value" : "ロック画面に。通知ではないから、消えません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "잠금화면과 Dynamic Island 위에. 알림이 아니라서 사라지지 않아요."
+            "value" : "잠금화면 위에. 알림이 아니라서 사라지지 않아요."
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Di Skrin Kunci dan Dynamic Island. Bukan pemberitahuan — ia tidak akan hilang."
+            "value" : "Di Skrin Kunci. Bukan pemberitahuan — ia tidak akan hilang."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Na Tela de Bloqueio e na Dynamic Island. Não é uma notificação — nunca desaparece."
+            "value" : "Na sua Tela de Bloqueio. Não é uma notificação — nunca desaparece."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "На экране блокировки и в Dynamic Island. Это не уведомление — он не исчезает."
+            "value" : "На экране блокировки. Это не уведомление — он не исчезает."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บนหน้าจอล็อกและ Dynamic Island ไม่ใช่การแจ้งเตือน จึงไม่หายไปไหน"
+            "value" : "บนหน้าจอล็อกของคุณ ไม่ใช่การแจ้งเตือน จึงไม่หายไปไหน"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trên Màn hình khóa và Dynamic Island. Không phải thông báo — nó không bao giờ biến mất."
+            "value" : "Trên Màn hình khóa. Không phải thông báo — nó không bao giờ biến mất."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在锁定屏幕和灵动岛上。不是通知，不会滑走消失。"
+            "value" : "在你的锁定屏幕上。不是通知，不会滑走消失。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在鎖定畫面和動態島上。不是通知，不會滑走消失。"
+            "value" : "在你的鎖定畫面上。不是通知，不會滑走消失。"
           }
         }
       }
@@ -960,7 +960,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "큐가 켜졌어요."
+            "value" : "신호가 켜졌어요."
           }
         },
         "ms" : {
