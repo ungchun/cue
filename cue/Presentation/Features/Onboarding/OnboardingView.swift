@@ -113,49 +113,46 @@ struct OnboardingView: View {
     /// LA 카드 실물 재현 — 메모(실제 문구)·일정·할일(스켈레톤) 세 카드를 잠금화면처럼
     /// 쌓는다. 일정·할일은 진짜 텍스트 대신 자리 표시 막대 — 내용이 아니라 형태를 보여준다.
     private var liveCardMock: some View {
-        VStack(spacing: Spacing.smd) {
-            Text(Date.now, format: .dateTime.hour().minute())
-                .font(.system(.title2, design: .rounded).weight(.medium))
-                .foregroundStyle(.tertiary)
-            // 메모 — 큰 텍스트 카드(첫 큐 예시만 실제 문구)
-            Text("Pick up milk")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.md)
-                .background(mockCardBackground)
-            // 일정 — 왼쪽 실제 월간 캘린더("캘린더 함께 보기" 레이아웃) + 스켈레톤 이벤트 행
-            HStack(spacing: Spacing.smd) {
-                miniMonthCalendar
-                Divider()
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    skeletonEventRow(titleWidth: 76, timeWidth: 52)
-                    skeletonEventRow(titleWidth: 60, timeWidth: 44)
-                    skeletonEventRow(titleWidth: 84, timeWidth: 48)
+        // 여러 글래스 카드가 인접 — 컨테이너로 묶어야 서로 자연스럽게 어우러진다(HIG).
+        GlassEffectContainer {
+            VStack(spacing: Spacing.smd) {
+                Text(Date.now, format: .dateTime.hour().minute())
+                    .font(.system(.title2, design: .rounded).weight(.medium))
+                    .foregroundStyle(.tertiary)
+                // 메모 — 큰 텍스트 카드(첫 큐 예시만 실제 문구)
+                Text("Pick up milk")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.md)
+                    .glassEffect(.regular, in: .rect(cornerRadius: Spacing.md))
+                // 일정 — 왼쪽 실제 월간 캘린더("캘린더 함께 보기" 레이아웃) + 스켈레톤 이벤트 행
+                HStack(spacing: Spacing.smd) {
+                    miniMonthCalendar
+                    Divider()
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        skeletonEventRow(titleWidth: 76, timeWidth: 52)
+                        skeletonEventRow(titleWidth: 60, timeWidth: 44)
+                        skeletonEventRow(titleWidth: 84, timeWidth: 48)
+                    }
+                    Spacer(minLength: Spacing.zero)
                 }
-                Spacer(minLength: Spacing.zero)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.smd)
+                .glassEffect(.regular, in: .rect(cornerRadius: Spacing.md))
+                // 할일 — 체크 동그라미 + 스켈레톤 막대(무채색)
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    skeletonTaskRow(barWidth: 96)
+                    skeletonTaskRow(barWidth: 64)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.smd)
+                .glassEffect(.regular, in: .rect(cornerRadius: Spacing.md))
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.smd)
-            .background(mockCardBackground)
-            // 할일 — 체크 동그라미 + 스켈레톤 막대(무채색)
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                skeletonTaskRow(barWidth: 96)
-                skeletonTaskRow(barWidth: 64)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.smd)
-            .background(mockCardBackground)
+            .frame(maxWidth: 280)
         }
-        .frame(maxWidth: 280)
         .accessibilityHidden(true)
-    }
-
-    private var mockCardBackground: some View {
-        RoundedRectangle(cornerRadius: Spacing.md)
-            .fill(.regularMaterial)
-            .shadow(color: .black.opacity(0.06), radius: 16, y: 6)
     }
 
     /// 미니 월간 캘린더 — 이번 달을 실제로 그린다(공유 `MonthCalendarGrid` 재사용,
