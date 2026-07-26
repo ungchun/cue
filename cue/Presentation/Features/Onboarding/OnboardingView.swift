@@ -21,10 +21,7 @@ struct OnboardingView: View {
     /// 완료·스킵 공통 마감 — RootView가 커버를 닫고 메모 탭을 새로고침한다.
     let onFinished: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var isTextFieldFocused: Bool
-    /// 에코 링 숨쉬기 트리거 — 설정 푸터·페이월 에코와 같은 느린 pulse 루프.
-    @State private var echoPulsing = false
 
     var body: some View {
         VStack(spacing: Spacing.zero) {
@@ -49,7 +46,6 @@ struct OnboardingView: View {
                 .padding(Spacing.lg)
                 .opacity(viewModel.published ? 0 : 1)
         }
-        .onAppear { echoPulsing = true }
     }
 
     // MARK: - 1장. 신호 — 점이 켜진다
@@ -84,7 +80,7 @@ struct OnboardingView: View {
             // 실물 크기의 메모 LA 카드 — 일러스트가 아니라 잠금화면에 뜨는 그 모습.
             // 뒤에 옅은 에코 링을 깔아 1장의 점과 같은 존재임을 잇는다.
             ZStack {
-                echoRings(base: 240, step: 100, opacities: [0.10, 0.06, 0.03])
+                BreathingRings(base: 240, step: 100, opacities: [0.10, 0.06, 0.03])
                 liveCardMock
             }
             .frame(height: 330)
@@ -103,40 +99,37 @@ struct OnboardingView: View {
         }
     }
 
-    /// LA 카드 실물 재현 — 메모·일정·할일 세 카드를 잠금화면처럼 쌓는다(글래스 재질,
-    /// 위젯과 같은 인상). 위에 잠금화면 시계를 작게 얹어 "잠금화면 위"라는 맥락만 준다.
+    /// LA 카드 실물 재현 — 메모(실제 문구)·일정·할일(스켈레톤) 세 카드를 잠금화면처럼
+    /// 쌓는다. 일정·할일은 진짜 텍스트 대신 자리 표시 막대 — 내용이 아니라 형태를 보여준다.
     private var liveCardMock: some View {
         VStack(spacing: Spacing.smd) {
             Text(Date.now, format: .dateTime.hour().minute())
                 .font(.system(.title2, design: .rounded).weight(.medium))
                 .foregroundStyle(.tertiary)
-            // 메모 — 큰 텍스트 카드
+            // 메모 — 큰 텍스트 카드(첫 큐 예시만 실제 문구)
             Text("Pick up milk")
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.md)
                 .background(mockCardBackground)
-            // 일정 — 색 막대 + 제목 + 시간
-            HStack(spacing: Spacing.sm) {
-                RoundedRectangle(cornerRadius: 1.25)
-                    .fill(Color.blue)
-                    .frame(width: 2.5, height: 30)
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("Team meeting")
-                        .font(.subheadline.weight(.semibold))
-                    Text("\(sampleEventStart, format: .dateTime.hour().minute()) - \(sampleEventEnd, format: .dateTime.hour().minute())")
-                        .font(.footnote)
-                        .foregroundStyle(Color.blue)
+            // 일정 — 왼쪽 미니 캘린더("캘린더 함께 보기" 레이아웃) + 스켈레톤 이벤트 행
+            HStack(spacing: Spacing.smd) {
+                miniCalendarSkeleton
+                Divider()
+                    .frame(height: 52)
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    skeletonEventRow(bar: .blue, titleWidth: 72, timeWidth: 48)
+                    skeletonEventRow(bar: .purple, titleWidth: 56, timeWidth: 40)
                 }
                 Spacer(minLength: Spacing.zero)
             }
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.smd)
             .background(mockCardBackground)
-            // 할일 — 리스트 색 동그라미 체크 행
+            // 할일 — 리스트 색 동그라미 + 스켈레톤 막대
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                mockTaskRow("Reply to email", color: .orange)
-                mockTaskRow("Workout", color: .green)
+                skeletonTaskRow(color: .orange, barWidth: 96)
+                skeletonTaskRow(color: .green, barWidth: 64)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.md)
@@ -153,22 +146,49 @@ struct OnboardingView: View {
             .shadow(color: .black.opacity(0.06), radius: 16, y: 6)
     }
 
-    private func mockTaskRow(_ title: LocalizedStringKey, color: Color) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Circle()
-                .strokeBorder(color, lineWidth: 1.5)
-                .frame(width: 18, height: 18)
-            Text(title)
-                .font(.subheadline)
+    /// 미니 월간 캘린더 스켈레톤 — 4×5 점 그리드 + 오늘 강조 점 하나.
+    private var miniCalendarSkeleton: some View {
+        VStack(spacing: Spacing.xs) {
+            ForEach(0..<4, id: \.self) { row in
+                HStack(spacing: Spacing.xs) {
+                    ForEach(0..<5, id: \.self) { col in
+                        Circle()
+                            // 가운데쯤 한 점만 진하게 — 오늘.
+                            .fill(row == 1 && col == 2 ? Color.primary : Color.secondary.opacity(0.3))
+                            .frame(width: 4, height: 4)
+                    }
+                }
+            }
         }
     }
 
-    /// 일정 카드 샘플 시각 — 오늘 10:00–11:00(로케일 표기는 시스템이 처리).
-    private var sampleEventStart: Date {
-        Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: .now) ?? .now
+    /// 일정 행 스켈레톤 — 캘린더 색 막대 + 제목·시간 자리 막대.
+    private func skeletonEventRow(bar: Color, titleWidth: CGFloat, timeWidth: CGFloat) -> some View {
+        HStack(spacing: Spacing.sm) {
+            RoundedRectangle(cornerRadius: 1.25)
+                .fill(bar)
+                .frame(width: 2.5, height: 20)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Capsule()
+                    .fill(Color.secondary.opacity(0.35))
+                    .frame(width: titleWidth, height: 6)
+                Capsule()
+                    .fill(bar.opacity(0.5))
+                    .frame(width: timeWidth, height: 5)
+            }
+        }
     }
-    private var sampleEventEnd: Date {
-        Calendar.current.date(bySettingHour: 11, minute: 0, second: 0, of: .now) ?? .now
+
+    /// 할일 행 스켈레톤 — 리스트 색 체크 동그라미 + 제목 자리 막대.
+    private func skeletonTaskRow(color: Color, barWidth: CGFloat) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Circle()
+                .strokeBorder(color, lineWidth: 1.5)
+                .frame(width: 16, height: 16)
+            Capsule()
+                .fill(Color.secondary.opacity(0.35))
+                .frame(width: barWidth, height: 6)
+        }
     }
 
     // MARK: - 3장. 첫 큐 — 점이 당신의 큐가 된다
@@ -193,7 +213,7 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.xl)
                 VStack(spacing: Spacing.sm) {
-                    TextField("Pick up milk", text: $viewModel.text, axis: .vertical)
+                    TextField("Write it here", text: $viewModel.text, axis: .vertical)
                         .font(.title3.weight(.semibold))
                         .multilineTextAlignment(.center)
                         .lineLimit(3)
@@ -218,55 +238,14 @@ struct OnboardingView: View {
 
     // MARK: - Signal Dot (브랜드 비주얼 코어 — 점 + 퍼지는 동심원)
 
-    /// 점 + 바깥으로 퍼지는 물결 링(1·3장) — 링이 점에서 커지며 옅어지다 사라지는 루프라
-    /// "신호가 퍼진다"가 눈에 보인다(숨쉬기 pulse보다 방향성이 분명). 링 3개를 시차로 돌려
-    /// 파동이 끊기지 않는다. Reduce Motion이면 정적 동심원.
+    /// 점 + 바깥으로 퍼지는 물결 링(1·3장) — 링이 점에서 커지며 옅어지다 사라지는 루프.
     private func signalDot(coreDiameter: CGFloat, rippleDiameter: CGFloat) -> some View {
         ZStack {
-            if reduceMotion {
-                echoRings(base: rippleDiameter * 0.5, step: rippleDiameter * 0.5,
-                          opacities: [0.25, 0.15, 0.08])
-            } else {
-                ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1.5)
-                        .frame(width: rippleDiameter, height: rippleDiameter)
-                        .scaleEffect(echoPulsing ? 2.6 : 0.3)
-                        .opacity(echoPulsing ? 0 : 0.9)
-                        .animation(
-                            .easeOut(duration: 2.7)
-                                .repeatForever(autoreverses: false)
-                                .delay(Double(index) * 0.9),
-                            value: echoPulsing
-                        )
-                }
-            }
+            RippleRings(diameter: rippleDiameter)
             Circle()
                 .fill(Color.primary)
                 .frame(width: coreDiameter, height: coreDiameter)
         }
-        .accessibilityHidden(true)
-    }
-
-    /// 동심원 스트로크 링 3겹 — 링마다 시차를 둔 숨쉬기 루프. 순수 장식.
-    private func echoRings(base: CGFloat, step: CGFloat, opacities: [Double]) -> some View {
-        ZStack {
-            ForEach(0..<3, id: \.self) { index in
-                Circle()
-                    .strokeBorder(Color.primary.opacity(opacities[index]), lineWidth: 1)
-                    .frame(width: base + CGFloat(index) * step, height: base + CGFloat(index) * step)
-                    .scaleEffect(echoPulsing && !reduceMotion ? 1.1 : 1)
-                    .animation(
-                        reduceMotion
-                            ? nil
-                            : .easeInOut(duration: 3)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 0.3),
-                        value: echoPulsing
-                    )
-            }
-        }
-        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
@@ -313,6 +292,87 @@ struct OnboardingView: View {
             await viewModel.finish()
             onFinished()
         }
+    }
+}
+
+/// 바깥으로 퍼지는 물결 링 3겹 — 링이 점에서 커지며 옅어지다 사라지는 루프(1·3장).
+/// 자체 상태를 갖는 이유: 부모의 onAppear가 뷰 삽입과 같은 트랜잭션에서 상태를 바꾸면
+/// `animation(value:)`가 변화를 못 보고 초기 프레임에 얼어붙는다 — 삽입 다음 런루프에서
+/// 트리거해야 확실히 돌고, TabView 페이지 재진입 시에도 리셋 후 다시 돈다.
+private struct RippleRings: View {
+    let diameter: CGFloat
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var expanding = false
+
+    var body: some View {
+        ZStack {
+            if reduceMotion {
+                // 모션 최소화 — 정적 동심원으로 대체.
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .strokeBorder(Color.primary.opacity([0.25, 0.15, 0.08][index]), lineWidth: 1)
+                        .frame(width: diameter * (0.5 + CGFloat(index) * 0.5),
+                               height: diameter * (0.5 + CGFloat(index) * 0.5))
+                }
+            } else {
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1.5)
+                        .frame(width: diameter, height: diameter)
+                        .scaleEffect(expanding ? 2.6 : 0.3)
+                        .opacity(expanding ? 0 : 0.9)
+                        .animation(
+                            .easeOut(duration: 2.7)
+                                .repeatForever(autoreverses: false)
+                                .delay(Double(index) * 0.9),
+                            value: expanding
+                        )
+                }
+            }
+        }
+        .onAppear {
+            expanding = false
+            DispatchQueue.main.async { expanding = true }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// 제자리에서 숨쉬는 동심원 3겹(2장 배경) — 설정 푸터·페이월 에코와 같은 느린 pulse.
+/// RippleRings와 같은 이유로 자체 상태 + 다음 런루프 트리거.
+private struct BreathingRings: View {
+    let base: CGFloat
+    let step: CGFloat
+    let opacities: [Double]
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulsing = false
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .strokeBorder(Color.primary.opacity(opacities[index]), lineWidth: 1)
+                    .frame(width: base + CGFloat(index) * step, height: base + CGFloat(index) * step)
+                    .scaleEffect(pulsing && !reduceMotion ? 1.1 : 1)
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            : .easeInOut(duration: 3)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.3),
+                        value: pulsing
+                    )
+            }
+        }
+        .onAppear {
+            pulsing = false
+            DispatchQueue.main.async { pulsing = true }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
