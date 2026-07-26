@@ -29,6 +29,10 @@ struct ReminderLiveActivityAttributes: ActivityAttributes {
         var calendarMonthOffset: Int = 0
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot] = []
+        /// 잠금화면 월간 캘린더 표시를 설정 미러(App Group)와 무관하게 강제하는 오버라이드.
+        /// nil이면 위젯이 설정 미러를 따른다(기존 동작). 온보딩 목업 게시가 true로 켠다 —
+        /// 목업 캘린더는 점 없이 이번 달만 정적으로 그린다(월 이동 셰브런도 숨김).
+        var showsCalendarOverride: Bool? = nil
     }
 
     let listTitle: String
@@ -44,6 +48,7 @@ extension ReminderLiveActivityAttributes.ContentState {
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
+        showsCalendarOverride = try container.decodeIfPresent(Bool.self, forKey: .showsCalendarOverride)
     }
 }
 

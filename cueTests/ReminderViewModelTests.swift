@@ -1996,7 +1996,7 @@ private actor RecordingReminderLiveActivity: LiveActivityService {
     var isEnabled: Bool { true }
     private(set) var startReminderCalls: [(items: [LiveReminderItem], remaining: Int)] = []
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
         startReminderCalls.append((items, remaining))
     }
     func endReminder() async {}

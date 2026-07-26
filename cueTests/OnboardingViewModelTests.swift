@@ -103,8 +103,8 @@ struct OnboardingViewModelTests {
 
     // MARK: - 예시 일정·할일 LA (첫 큐와 함께 3카드 장면)
 
-    /// 첫 큐 게시는 예시 일정(캘린더 강제 표시)·할일 LA도 함께 띄운다 —
-    /// 권한·실데이터 없이 잠금화면 3카드 장면을 보여주는 게 목적.
+    /// 첫 큐 게시는 예시 일정·할일 LA도 함께 띄운다 — 권한·실데이터 없이 잠금화면
+    /// 3카드 장면. 캘린더는 **할일 쪽에만**(일정 카드는 일정 목록만) 강제한다.
     @Test func publishAlsoStartsSampleScheduleAndTasks() async {
         let (viewModel, _, service, _) = makeViewModel()
         viewModel.text = "우유 사기"
@@ -113,8 +113,10 @@ struct OnboardingViewModelTests {
 
         let scheduleCalls = await service.startScheduleCalls
         #expect(scheduleCalls.count == 1)
-        #expect(scheduleCalls.first?.showsCalendarOverride == true)
-        #expect(await service.startReminderCalls.count == 1)
+        #expect(scheduleCalls.first?.showsCalendarOverride == false)
+        let reminderCalls = await service.startReminderCalls
+        #expect(reminderCalls.count == 1)
+        #expect(reminderCalls.first?.showsCalendarOverride == true)
     }
 
     /// 메모 게시가 실패하면 예시도 안 띄운다 — 주인공(첫 큐) 없이 조연만 뜨는 잠금화면 방지.
@@ -220,14 +222,14 @@ private actor RecordingOnboardingLiveActivity: LiveActivityService {
 
     func setStartFails(_ fails: Bool) { startFails = fails }
 
-    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem])] = []
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], showsCalendarOverride: Bool?)] = []
     private(set) var startScheduleCalls: [(days: [LiveScheduleDay], showsCalendarOverride: Bool?)] = []
     private(set) var endReminderCount = 0
     private(set) var endScheduleCount = 0
     private(set) var endMemoCount = 0
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {
-        startReminderCalls.append((listTitle, items))
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
+        startReminderCalls.append((listTitle, items, showsCalendarOverride))
     }
     func endReminder() async { endReminderCount += 1 }
     func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {

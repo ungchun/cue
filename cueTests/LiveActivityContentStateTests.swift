@@ -138,4 +138,26 @@ struct LiveActivityContentStateTests {
 
         #expect(decoded.showsCalendarOverride == true)
     }
+
+    // MARK: - 할일 ContentState (캘린더 오버라이드)
+
+    /// `showsCalendarOverride` 키가 없는 옛 할일 상태도 nil로 디코딩 — 설정 미러를 따르는 기존 동작 유지.
+    @Test func reminderStateDecodesLegacyWithoutCalendarOverrideAsNil() throws {
+        let legacy = Data(##"{"items":[],"remaining":0}"##.utf8)
+
+        let state = try JSONDecoder().decode(ReminderLiveActivityAttributes.ContentState.self, from: legacy)
+
+        #expect(state.showsCalendarOverride == nil)
+    }
+
+    /// 온보딩 목업 할일 카드의 캘린더 오버라이드가 왕복에서 보존된다.
+    @Test func reminderStateRoundTripsCalendarOverride() throws {
+        var state = ReminderLiveActivityAttributes.ContentState(items: [], remaining: 0, todayCount: 0, weekEventDots: [])
+        state.showsCalendarOverride = true
+
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(ReminderLiveActivityAttributes.ContentState.self, from: data)
+
+        #expect(decoded.showsCalendarOverride == true)
+    }
 }

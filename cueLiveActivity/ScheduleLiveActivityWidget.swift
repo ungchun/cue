@@ -84,7 +84,9 @@ private struct ScheduleLockScreenView: View {
                 MonthCalendarView(
                     grid: MonthCalendarGrid(now: .now, monthOffset: calendarMonthOffset),
                     intentTarget: ShiftCalendarMonthIntent.scheduleTarget,
-                    eventDots: monthEventDots
+                    eventDots: monthEventDots,
+                    // 목업(오버라이드) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
+                    allowsMonthShift: showsCalendarOverride == nil
                 )
                 .frame(maxWidth: .infinity)
                 // 달력 높이를 예산으로 **클램프** — 아래 `.fixedSize(vertical:)`는 자식의 자연

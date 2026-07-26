@@ -22,6 +22,8 @@ struct MonthCalendarView: View {
     var secondaryForeground: Color = .secondary
     /// 표시 월의 날짜별 일정 점(일 정수 기준) — 각 날 숫자 아래에 캘린더 색 동그라미. 오늘은 제외.
     var eventDots: [LiveMonthDot] = []
+    /// 월 이동 셰브런 표시 여부 — 온보딩 목업의 정적 캘린더는 false로 이동을 막는다.
+    var allowsMonthShift: Bool = true
 
     /// 표시 월의 공휴일(일 숫자) — 일요일과 같은 빨강으로 칠한다.
     private var holidays: Set<Int> {
@@ -48,10 +50,10 @@ struct MonthCalendarView: View {
         }
         // 셰브런은 상단 좌우 모서리(스크린샷의 ‹ 자리) — 그리드 숫자와 겹침 최소화.
         .overlay(alignment: .topLeading) {
-            chevron("chevron.left", delta: -1)
+            if allowsMonthShift { chevron("chevron.left", delta: -1) }
         }
         .overlay(alignment: .topTrailing) {
-            chevron("chevron.right", delta: 1)
+            if allowsMonthShift { chevron("chevron.right", delta: 1) }
         }
     }
 

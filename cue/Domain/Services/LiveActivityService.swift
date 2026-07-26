@@ -28,12 +28,14 @@ protocol LiveActivityService: Sendable {
     /// 미리알림 리스트 스냅샷을 라이브 액티비티로 게시.
     /// `items`가 시스템에 표시 가능한 한도(6)를 넘으면 구현이 잘라 사용하고 나머지 개수는
     /// `remaining`에 들어간 그대로 표시한다 — 잘라내기 결정은 호출처에서.
+    /// `showsCalendarOverride` — 잠금화면 월간 캘린더 표시 강제. nil이면 설정 미러를 따른다.
     func startReminder(
         listTitle: String,
         items: [LiveReminderItem],
         remaining: Int,
         todayCount: Int,
-        weekEventDots: [LiveDayEventDots]
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?
     ) async throws
 
     /// 미리알림 라이브 액티비티 즉시 종료.

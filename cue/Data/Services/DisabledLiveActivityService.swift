@@ -21,7 +21,8 @@ struct DisabledLiveActivityService: LiveActivityService {
         items: [LiveReminderItem],
         remaining: Int,
         todayCount: Int,
-        weekEventDots: [LiveDayEventDots]
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?
     ) async throws {}
 
     func endReminder() async {}

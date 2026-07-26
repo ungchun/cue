@@ -527,9 +527,10 @@ struct LiveActivityUseCaseTests {
 
     // MARK: - StartSampleLiveActivities (온보딩 목업 3종 게시의 일정·할일)
 
-    /// 온보딩 목업 일정 — 오늘 하루 묶음(종일 1 + 시간 2), 월간 캘린더 강제 표시.
-    /// 설정 미러를 건드리지 않고 캘린더가 보이려면 오버라이드가 반드시 true여야 한다.
-    @Test func samplePublishesTodayScheduleWithCalendarOverride() async throws {
+    /// 온보딩 목업 일정 — 오늘 하루 묶음(종일 1 + 시간 2), 캘린더 **강제 숨김**(false).
+    /// 캘린더는 할일 카드가 담당하고, 일정 카드는 일정 목록만 — 사용자 설정 미러가 켜져
+    /// 있어도(nil이면 미러를 따라가버림) 목업 구성은 결정적이어야 한다.
+    @Test func samplePublishesTodayScheduleWithoutCalendar() async throws {
         let service = RecordingLiveActivityService()
         let useCase = StartSampleLiveActivitiesUseCase(
             startSchedule: StartScheduleLiveActivityUseCase(service: service),
@@ -541,7 +542,7 @@ struct LiveActivityUseCaseTests {
         let calls = await service.startScheduleCalls
         #expect(calls.count == 1)
         let call = try #require(calls.first)
-        #expect(call.showsCalendarOverride == true)
+        #expect(call.showsCalendarOverride == false)
         #expect(call.days.count == 1)                     // 오늘 하루 묶음만
         let events = try #require(call.days.first?.events)
         #expect(events.count == 3)
@@ -550,7 +551,7 @@ struct LiveActivityUseCaseTests {
     }
 
     /// 온보딩 목업 할일 — 예시 6개, 합성 id(EventKit 식별자와 절대 안 겹침 → 체크 인텐트가
-    /// 자연히 no-op), 오늘 카운트 6.
+    /// 자연히 no-op), 오늘 카운트 6, 왼쪽 월간 캘린더 강제 표시(true).
     @Test func samplePublishesSixTasksWithSyntheticIDs() async throws {
         let service = RecordingLiveActivityService()
         let useCase = StartSampleLiveActivitiesUseCase(
@@ -568,6 +569,7 @@ struct LiveActivityUseCaseTests {
         #expect(call.items.allSatisfy { !$0.title.isEmpty })
         #expect(call.remaining == 0)
         #expect(call.todayCount == 6)
+        #expect(call.showsCalendarOverride == true)
     }
 
     /// 일정 게시가 실패해도 할일 목업은 게시된다 — 목업은 조연이라 best-effort로 삼킨다.
@@ -614,7 +616,7 @@ struct LiveActivityUseCaseTests {
 private final actor RecordingLiveActivityService: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots])] = []
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?)] = []
     private(set) var endReminderCount = 0
 
     private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?)] = []
@@ -631,9 +633,10 @@ private final actor RecordingLiveActivityService: LiveActivityService {
         items: [LiveReminderItem],
         remaining: Int,
         todayCount: Int,
-        weekEventDots: [LiveDayEventDots]
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?
     ) async throws {
-        startReminderCalls.append((listTitle, items, remaining, todayCount, weekEventDots))
+        startReminderCalls.append((listTitle, items, remaining, todayCount, weekEventDots, showsCalendarOverride))
     }
 
     func endReminder() async {
@@ -676,7 +679,8 @@ private final actor ScheduleFailingLiveActivityService: LiveActivityService {
         items: [LiveReminderItem],
         remaining: Int,
         todayCount: Int,
-        weekEventDots: [LiveDayEventDots]
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?
     ) async throws {
         startReminderCount += 1
     }

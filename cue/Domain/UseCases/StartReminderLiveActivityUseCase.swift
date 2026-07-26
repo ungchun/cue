@@ -21,12 +21,15 @@ struct StartReminderLiveActivityUseCase: Sendable {
     ///   자기 리스트 색으로 채운다 — 매핑에 없으면 `nil`(위젯에서 시스템 색 폴백).
     /// - Parameter weekEvents: 이번 주 캘린더 이벤트 — Dynamic Island 주간 스트립의 날짜별
     ///   일정 점 계산용. 할일 LA도 일정 LA와 같은 스트립을 그리므로 함께 싣는다. 비면 점 없음.
+    /// - Parameter showsCalendarOverride: 잠금화면 월간 캘린더 표시 강제(온보딩 목업용).
+    ///   nil이면 설정 미러를 따른다(기존 동작).
     func callAsFunction(
         listTitle: String,
         reminders: [Reminder],
         listColors: [String: String],
         weekEvents: [CalendarEvent] = [],
-        now: Date = .now
+        now: Date = .now,
+        showsCalendarOverride: Bool? = nil
     ) async throws {
         let visible = reminders.prefix(Self.storageLimit).map {
             LiveReminderItem(id: $0.id, title: $0.title, colorHex: listColors[$0.listID])
@@ -37,7 +40,8 @@ struct StartReminderLiveActivityUseCase: Sendable {
             items: Array(visible),
             remaining: remaining,
             todayCount: Self.todayCount(reminders, now: now),
-            weekEventDots: WeekEventDotsBuilder.build(events: weekEvents, now: now)
+            weekEventDots: WeekEventDotsBuilder.build(events: weekEvents, now: now),
+            showsCalendarOverride: showsCalendarOverride
         )
     }
 

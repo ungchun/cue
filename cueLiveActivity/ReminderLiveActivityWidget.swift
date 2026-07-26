@@ -61,7 +61,9 @@ private struct ReminderLockScreenView: View {
                 MonthCalendarView(
                     grid: MonthCalendarGrid(now: .now, monthOffset: state.calendarMonthOffset),
                     intentTarget: ShiftCalendarMonthIntent.reminderTarget,
-                    eventDots: state.monthEventDots
+                    eventDots: state.monthEventDots,
+                    // 목업(오버라이드) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
+                    allowsMonthShift: state.showsCalendarOverride == nil
                 )
                 .frame(maxWidth: .infinity)
                 // 캘린더 모드는 1열 세로 나열이라 많으면 LA 높이를 넘는다 — 3개로 제한.
@@ -113,8 +115,10 @@ private struct ReminderLockScreenView: View {
     }
 
     /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
+    /// ContentState 오버라이드(온보딩 목업)가 있으면 미러 대신 그 값을 따른다.
     private func showsCalendar() -> Bool {
-        SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
+        state.showsCalendarOverride
+            ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
     }
 }
 

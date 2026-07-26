@@ -12,7 +12,8 @@ import Foundation
 ///   오인되면 혼란("내 캘린더에 이게 왜 있지")을 만든다.
 /// - 할일 id는 합성 접두사 — EventKit 식별자와 절대 겹치지 않아 체크 인텐트
 ///   (`CompleteReminderIntent`)가 조회 실패로 자연히 no-op이 된다(별도 가드 불필요).
-/// - 일정은 캘린더 오버라이드로 월간 캘린더까지 강제 표시 — 설정 미러를 건드리지 않는다.
+/// - 캘린더는 **할일 카드 왼쪽에만** 강제 표시(일정 카드는 일정 목록만) — 설정 미러를
+///   건드리지 않고, 점 없이 이번 달만 정적으로(월 이동 셰브런 숨김) 그린다.
 /// - 쿼터(`ConsumeLiveActivation`) 미소비 — 첫 큐 게시와 같은 이유로 무료 한도를 갉지 않는다.
 /// - best-effort: 목업은 조연이라 하나가 실패해도 나머지·메모 게시에 영향을 주지 않는다.
 struct StartSampleLiveActivitiesUseCase: Sendable {
@@ -27,12 +28,15 @@ struct StartSampleLiveActivitiesUseCase: Sendable {
     func callAsFunction(now: Date = .now) async {
         // 실패는 삼킨다 — 온보딩 화면은 조용히 머무는 게 에러 알림보다 낫고(메모와 동일 정책),
         // 일정이 실패해도 할일은 계속 시도한다.
-        try? await startSchedule(events: Self.sampleEvents(now: now), now: now, showsCalendarOverride: true)
+        // 캘린더는 **할일 카드에만**(일정 카드는 일정 목록만) — 둘 다 명시적 오버라이드로,
+        // 사용자 설정 미러가 어떻든 목업 구성이 결정적이다. 목업 캘린더는 점 없이 이번 달만.
+        try? await startSchedule(events: Self.sampleEvents(now: now), now: now, showsCalendarOverride: false)
         try? await startReminder(
             listTitle: String(localized: "Sample"),
             reminders: Self.sampleReminders(),
             listColors: [:],
-            now: now
+            now: now,
+            showsCalendarOverride: true
         )
     }
 
