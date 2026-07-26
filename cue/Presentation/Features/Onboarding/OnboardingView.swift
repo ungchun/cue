@@ -79,11 +79,11 @@ struct OnboardingView: View {
             visual()
                 .frame(height: 340)
             copy()
-                // 비주얼(카드 스택이 존을 꽉 채우는 2장)과 문구 사이 숨 쉴 간격 —
-                // 존 안쪽 패딩이라 세 장의 문구 시작 위치는 여전히 같다.
-                .padding(.top, Spacing.lg)
+                // 비주얼과 문구 사이 간격 — 텍스트 두 줄 정도 더 내려 여백을 넉넉히
+                // (존 안쪽 패딩이라 1·2장의 문구 시작 위치는 여전히 같다).
+                .padding(.top, Spacing.xxl + Spacing.md)
                 .padding(.horizontal, Spacing.xl)
-                .frame(height: 150, alignment: .top)
+                .frame(height: 150 + Spacing.xxl, alignment: .top)
             Spacer(minLength: Spacing.zero)
         }
     }
