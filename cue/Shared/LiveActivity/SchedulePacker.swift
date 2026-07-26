@@ -114,7 +114,7 @@ enum SchedulePacker {
 /// **잠금화면 Live Activity 최대 높이 = 160pt**(시스템이 초과분을 잘라냄, 디바이스 공통).
 /// `columnMax = 160 − 상하 패딩(outerPadding × 2)`로 두면 패커가 컬럼 콘텐츠를 이 값 이하로
 /// 잘라 **총높이 ≤ 160pt가 보장**된다. xSmall 고정 + 조합별 간격 기준 컬럼당 시간 이벤트
-/// 4개(종일은 더) 정도 들어간다.
+/// 3개(헤더 포함) — 헤더 2개짜리 열도 시간 이벤트 3개까지 들어간다(레퍼런스급 밀도).
 enum ScheduleMetrics {
     /// 위젯 상하 패딩 — 이 값이 바뀌면 columnMax(높이 예산)가 자동으로 따라간다.
     static let outerPadding: CGFloat = Spacing.smd      // 12
@@ -157,9 +157,11 @@ enum ScheduleMetrics {
     static var titleLine: CGFloat { UIFont.systemFont(ofSize: eventFontSize).lineHeight }
     static var timeLine: CGFloat { UIFont.systemFont(ofSize: timeFontSize).lineHeight }
 
-    /// 행당 안전 마진 — 한글 캐스케이드가 lineHeight보다 살짝 크게 렌더되는 실측분(~0.1)을
-    /// 여유 있게 덮는다. 과소추정(잘림)은 막되 행을 버릴 만큼 크지 않게.
-    private static let rowSafetyMargin: CGFloat = 0.3
+    /// 행당 안전 마진 — 실기기 실측(2026-07) 시간행은 30.95~31.2로 흔들린다(한글 캐스케이드
+    /// ~0.2 + 3x 렌더 양자화 1/3pt). 추정은 31.13: 참값(~31.0)을 덮고, 양자화 극단(31.2)과의
+    /// 잔차 0.07은 서브픽셀이라 무시한다. 더 키우면 레퍼런스형 배치(한 열에 헤더 2 + 시간행 3,
+    /// 행당 상한 31.27)가 깨져 날짜를 다시 버리게 된다 — 이 창(≤31.27)이 상한이다.
+    private static let rowSafetyMargin: CGFloat = 0.4
 
     /// 날짜 헤더는 caption2(11pt) 텍스트 스타일 그대로 렌더 — 뷰(ScheduleDayView)와 동기.
     static var header: CGFloat { caption2Line }
