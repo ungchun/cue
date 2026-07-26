@@ -22,6 +22,12 @@ struct OnboardingViewModelTests {
         deps.fetchMemo = FetchMemoUseCase(repository: memoRepo)
         deps.saveMemo = SaveMemoUseCase(repository: memoRepo)
         deps.startMemoLiveActivity = StartMemoLiveActivityUseCase(service: service)
+        deps.startSampleLiveActivities = StartSampleLiveActivitiesUseCase(
+            startSchedule: StartScheduleLiveActivityUseCase(service: service),
+            startReminder: StartReminderLiveActivityUseCase(service: service)
+        )
+        deps.endScheduleLiveActivity = EndScheduleLiveActivityUseCase(service: service)
+        deps.endReminderLiveActivity = EndReminderLiveActivityUseCase(service: service)
         deps.fetchAppSettings = FetchAppSettingsUseCase(repository: settingsRepo)
         deps.saveAppSettings = SaveAppSettingsUseCase(repository: settingsRepo)
         return (OnboardingViewModel(dependencies: deps), memoRepo, service, settingsRepo)
@@ -95,6 +101,57 @@ struct OnboardingViewModelTests {
         #expect(viewModel.published == false)
     }
 
+    // MARK: - 예시 일정·할일 LA (첫 큐와 함께 3카드 장면)
+
+    /// 첫 큐 게시는 예시 일정(캘린더 강제 표시)·할일 LA도 함께 띄운다 —
+    /// 권한·실데이터 없이 잠금화면 3카드 장면을 보여주는 게 목적.
+    @Test func publishAlsoStartsSampleScheduleAndTasks() async {
+        let (viewModel, _, service, _) = makeViewModel()
+        viewModel.text = "우유 사기"
+
+        await viewModel.publish()
+
+        let scheduleCalls = await service.startScheduleCalls
+        #expect(scheduleCalls.count == 1)
+        #expect(scheduleCalls.first?.showsCalendarOverride == true)
+        #expect(await service.startReminderCalls.count == 1)
+    }
+
+    /// 메모 게시가 실패하면 예시도 안 띄운다 — 주인공(첫 큐) 없이 조연만 뜨는 잠금화면 방지.
+    @Test func publishFailureSkipsSamples() async {
+        let (viewModel, _, service, _) = makeViewModel()
+        await service.setStartFails(true)
+        viewModel.text = "우유 사기"
+
+        await viewModel.publish()
+
+        #expect(await service.startScheduleCalls.isEmpty)
+        #expect(await service.startReminderCalls.isEmpty)
+    }
+
+    /// Done·Skip 마감 시 예시 일정·할일 LA를 종료한다 — 가짜 데이터가 잠금화면에
+    /// 최대 8시간 남는 것을 방지. 메모(진짜 첫 큐)는 남긴다.
+    @Test func endSampleLiveActivitiesEndsScheduleAndReminderOnly() async {
+        let (viewModel, _, service, _) = makeViewModel()
+
+        await viewModel.endSampleLiveActivities()
+
+        #expect(await service.endScheduleCount == 1)
+        #expect(await service.endReminderCount == 1)
+        #expect(await service.endMemoCount == 0)
+    }
+
+    /// 조용한 완주 처리(기존 사용자 마이그레이션)는 finish만 부른다 — 이 경로에서
+    /// LA를 종료하면 실사용 일정·할일 LA를 죽일 수 있으므로 finish는 저장만 해야 한다.
+    @Test func finishAloneDoesNotEndAnyLiveActivity() async {
+        let (viewModel, _, service, _) = makeViewModel()
+
+        await viewModel.finish()
+
+        #expect(await service.endScheduleCount == 0)
+        #expect(await service.endReminderCount == 0)
+    }
+
     // MARK: - launchDecision (앱 시작 시 온보딩 표시 판정)
 
     /// 이미 완주했으면 아무것도 안 한다 — 한 번 본 사람에겐 다시 안 뜬다.
@@ -163,15 +220,25 @@ private actor RecordingOnboardingLiveActivity: LiveActivityService {
 
     func setStartFails(_ fails: Bool) { startFails = fails }
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
-    func endReminder() async {}
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
-    func endSchedule() async {}
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem])] = []
+    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], showsCalendarOverride: Bool?)] = []
+    private(set) var endReminderCount = 0
+    private(set) var endScheduleCount = 0
+    private(set) var endMemoCount = 0
+
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {
+        startReminderCalls.append((listTitle, items))
+    }
+    func endReminder() async { endReminderCount += 1 }
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
+        startScheduleCalls.append((days, showsCalendarOverride))
+    }
+    func endSchedule() async { endScheduleCount += 1 }
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
         if startFails { throw DomainError.validation("test") }
         startMemoCalls.append((text, colorHex, textColorHex))
     }
-    func endMemo() async {}
+    func endMemo() async { endMemoCount += 1 }
     func sync() async {}
     func refreshLayout() async {}
 }

@@ -59,6 +59,9 @@ struct Dependencies: Sendable {
     var startScheduleLiveActivity: StartScheduleLiveActivityUseCase
     var endScheduleLiveActivity: EndScheduleLiveActivityUseCase
 
+    /// 온보딩 첫 큐 게시에 곁들이는 예시 일정·할일 LA — 권한·실데이터·쿼터 없이 3카드 장면.
+    var startSampleLiveActivities: StartSampleLiveActivitiesUseCase
+
     /// 단일 메모 영속화 — onAppear 시 fetch, 텍스트·색 변경 직후 save.
     var fetchMemo: FetchMemoUseCase
     var saveMemo: SaveMemoUseCase
@@ -228,6 +231,10 @@ extension Dependencies {
             endReminderLiveActivity: EndReminderLiveActivityUseCase(service: liveActivityService),
             startScheduleLiveActivity: StartScheduleLiveActivityUseCase(service: liveActivityService),
             endScheduleLiveActivity: EndScheduleLiveActivityUseCase(service: liveActivityService),
+            startSampleLiveActivities: StartSampleLiveActivitiesUseCase(
+                startSchedule: StartScheduleLiveActivityUseCase(service: liveActivityService),
+                startReminder: StartReminderLiveActivityUseCase(service: liveActivityService)
+            ),
             fetchMemo: FetchMemoUseCase(repository: memoRepository),
             saveMemo: SaveMemoUseCase(repository: memoRepository),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: liveActivityService),

@@ -36,6 +36,9 @@ final class OnboardingViewModel {
     @ObservationIgnored private let fetchMemoUseCase: FetchMemoUseCase
     @ObservationIgnored private let saveMemoUseCase: SaveMemoUseCase
     @ObservationIgnored private let startMemoLiveActivityUseCase: StartMemoLiveActivityUseCase
+    @ObservationIgnored private let startSampleLiveActivitiesUseCase: StartSampleLiveActivitiesUseCase
+    @ObservationIgnored private let endScheduleLiveActivityUseCase: EndScheduleLiveActivityUseCase
+    @ObservationIgnored private let endReminderLiveActivityUseCase: EndReminderLiveActivityUseCase
     @ObservationIgnored private let fetchAppSettingsUseCase: FetchAppSettingsUseCase
     @ObservationIgnored private let saveAppSettingsUseCase: SaveAppSettingsUseCase
 
@@ -43,6 +46,9 @@ final class OnboardingViewModel {
         fetchMemoUseCase = dependencies.fetchMemo
         saveMemoUseCase = dependencies.saveMemo
         startMemoLiveActivityUseCase = dependencies.startMemoLiveActivity
+        startSampleLiveActivitiesUseCase = dependencies.startSampleLiveActivities
+        endScheduleLiveActivityUseCase = dependencies.endScheduleLiveActivity
+        endReminderLiveActivityUseCase = dependencies.endReminderLiveActivity
         fetchAppSettingsUseCase = dependencies.fetchAppSettings
         saveAppSettingsUseCase = dependencies.saveAppSettings
     }
@@ -62,6 +68,7 @@ final class OnboardingViewModel {
     }
 
     /// 첫 큐 띄우기 — 입력 텍스트로 메모를 저장하고(기존 색 보존) LA를 게시한다.
+    /// 성공하면 예시 일정·할일 LA도 함께 띄워 잠금화면 3카드 장면을 만든다(권한·쿼터 불요).
     /// 실패하면 published로 넘어가지 않는다 — 온보딩에서는 조용히 머무는 게
     /// 에러 알림보다 낫다(다음 화면에서 다시 시도 가능).
     func publish() async {
@@ -74,9 +81,21 @@ final class OnboardingViewModel {
         do {
             try await startMemoLiveActivityUseCase(memo)
             published = true
+            // 주인공(첫 큐)이 떠야 조연도 뜬다 — 메모 실패 시 예시만 남는 잠금화면 방지.
+            await startSampleLiveActivitiesUseCase()
         } catch {
             published = false
         }
+    }
+
+    /// 예시 일정·할일 LA 종료 — Done/Skip(온보딩 UI 마감) 전용. 가짜 데이터가 잠금화면에
+    /// 최대 8시간 남지 않게 하고 메모(진짜 첫 큐)만 남긴다. 온보딩 UI가 떠 있는 동안 실사용
+    /// 일정·할일 LA는 존재할 수 없으므로(신규·재개 사용자만 이 화면을 봄) 무조건 종료해도
+    /// 안전하다 — 이전 실행이 남긴 예시(재개 후 스킵)도 함께 정리된다.
+    /// 조용한 완주 경로(`finish`만 호출)는 부르지 않는다 — 기존 사용자의 실사용 LA 보호.
+    func endSampleLiveActivities() async {
+        await endScheduleLiveActivityUseCase()
+        await endReminderLiveActivityUseCase()
     }
 
     /// 표시 직전 시작 마커 저장 — 중단 후 재실행 시 이어서 보여주기 위한 근거.

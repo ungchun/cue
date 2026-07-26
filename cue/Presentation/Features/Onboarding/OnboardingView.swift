@@ -349,6 +349,8 @@ struct OnboardingView: View {
 
     private func finish() {
         Task {
+            // 예시 일정·할일 LA 먼저 정리 — 메모(진짜 첫 큐)만 잠금화면에 남긴다.
+            await viewModel.endSampleLiveActivities()
             await viewModel.finish()
             onFinished()
         }
