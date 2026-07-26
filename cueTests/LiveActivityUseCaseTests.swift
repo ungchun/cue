@@ -508,6 +508,15 @@ struct LiveActivityUseCaseTests {
         #expect(await service.endScheduleCount == 1)
     }
 
+    /// 온보딩 예시 LA 정리 위임 — 마커(showsCalendarOverride) 스캔·종료는 서비스 구현의 몫.
+    @Test func endSampleLiveActivitiesCallsServiceOnce() async {
+        let service = RecordingLiveActivityService()
+
+        await EndSampleLiveActivitiesUseCase(service: service)()
+
+        #expect(await service.endSamplesCount == 1)
+    }
+
     @Test func syncCallsServiceOnce() async {
         let service = RecordingLiveActivityService()
 
@@ -628,6 +637,7 @@ private final actor RecordingLiveActivityService: LiveActivityService {
 
     private(set) var syncCount = 0
     private(set) var refreshLayoutCount = 0
+    private(set) var endSamplesCount = 0
 
     func startReminder(
         listTitle: String,
@@ -667,6 +677,10 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     func refreshLayout() async {
         refreshLayoutCount += 1
     }
+
+    func endSamples() async {
+        endSamplesCount += 1
+    }
 }
 
 /// startSchedule만 throw하는 실패 주입 더블 — 목업 use case의 best-effort 검증용.
@@ -693,6 +707,7 @@ private final actor ScheduleFailingLiveActivityService: LiveActivityService {
     }
 
     func endSchedule() async {}
+    func endSamples() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}
     func sync() async {}

@@ -37,8 +37,6 @@ final class OnboardingViewModel {
     @ObservationIgnored private let saveMemoUseCase: SaveMemoUseCase
     @ObservationIgnored private let startMemoLiveActivityUseCase: StartMemoLiveActivityUseCase
     @ObservationIgnored private let startSampleLiveActivitiesUseCase: StartSampleLiveActivitiesUseCase
-    @ObservationIgnored private let endScheduleLiveActivityUseCase: EndScheduleLiveActivityUseCase
-    @ObservationIgnored private let endReminderLiveActivityUseCase: EndReminderLiveActivityUseCase
     @ObservationIgnored private let fetchAppSettingsUseCase: FetchAppSettingsUseCase
     @ObservationIgnored private let saveAppSettingsUseCase: SaveAppSettingsUseCase
 
@@ -47,8 +45,6 @@ final class OnboardingViewModel {
         saveMemoUseCase = dependencies.saveMemo
         startMemoLiveActivityUseCase = dependencies.startMemoLiveActivity
         startSampleLiveActivitiesUseCase = dependencies.startSampleLiveActivities
-        endScheduleLiveActivityUseCase = dependencies.endScheduleLiveActivity
-        endReminderLiveActivityUseCase = dependencies.endReminderLiveActivity
         fetchAppSettingsUseCase = dependencies.fetchAppSettings
         saveAppSettingsUseCase = dependencies.saveAppSettings
     }
@@ -61,12 +57,6 @@ final class OnboardingViewModel {
 
     /// 첫 큐가 실제로 게시됐는지 — true면 3장이 "이제 화면을 잠가보세요" 안내로 전환.
     private(set) var published = false
-
-    /// 이번 실행에서 예시 일정·할일 LA를 게시했는지 — 마감 정리는 이 경우에만 한다.
-    /// 설정 "온보딩 다시 보기"에서 게시 없이 스킵하면 사용자의 **실사용** 일정·할일 LA가
-    /// 떠 있을 수 있어, 무조건 종료하면 그걸 죽인다. reset()에도 유지 — 게시 후 커버가
-    /// 비정상 종료(강제 업데이트 양보 등)돼 남은 예시를 다음 마감이 정리할 수 있게.
-    @ObservationIgnored private var hasPublishedSamples = false
 
     /// 게시 버튼 활성 기준 — 공백만으로는 게시 불가(빈 신호는 의미가 없다).
     var canPublish: Bool {
@@ -88,23 +78,12 @@ final class OnboardingViewModel {
             try await startMemoLiveActivityUseCase(memo)
             published = true
             // 주인공(첫 큐)이 떠야 조연도 뜬다 — 메모 실패 시 예시만 남는 잠금화면 방지.
+            // 정리는 Done이 아니라 **다음 포그라운드 복귀**(RootView)에서 — Done을 바로
+            // 눌러도 다음 잠금에서 3카드 장면을 최소 한 번 보게 하기 위함.
             await startSampleLiveActivitiesUseCase()
-            hasPublishedSamples = true
         } catch {
             published = false
         }
-    }
-
-    /// 예시 일정·할일 LA 종료 — Done/Skip(온보딩 UI 마감) 전용. 가짜 데이터가 잠금화면에
-    /// 최대 8시간 남지 않게 하고 메모(진짜 첫 큐)만 남긴다. **이번 실행에서 예시를 게시한
-    /// 경우에만** — 재시청(설정 "온보딩 다시 보기")에서 게시 없이 스킵하면 떠 있을 수 있는
-    /// 실사용 일정·할일 LA를 건드리지 않기 위함.
-    /// 조용한 완주 경로(`finish`만 호출)는 부르지 않는다 — 기존 사용자의 실사용 LA 보호.
-    func endSampleLiveActivities() async {
-        guard hasPublishedSamples else { return }
-        hasPublishedSamples = false
-        await endScheduleLiveActivityUseCase()
-        await endReminderLiveActivityUseCase()
     }
 
     /// 재시청(설정 "온보딩 다시 보기") 진입 직전 호출 — 진행 상태를 처음으로 되돌린다.

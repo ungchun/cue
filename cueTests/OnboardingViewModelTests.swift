@@ -26,8 +26,6 @@ struct OnboardingViewModelTests {
             startSchedule: StartScheduleLiveActivityUseCase(service: service),
             startReminder: StartReminderLiveActivityUseCase(service: service)
         )
-        deps.endScheduleLiveActivity = EndScheduleLiveActivityUseCase(service: service)
-        deps.endReminderLiveActivity = EndReminderLiveActivityUseCase(service: service)
         deps.fetchAppSettings = FetchAppSettingsUseCase(repository: settingsRepo)
         deps.saveAppSettings = SaveAppSettingsUseCase(repository: settingsRepo)
         return (OnboardingViewModel(dependencies: deps), memoRepo, service, settingsRepo)
@@ -129,32 +127,6 @@ struct OnboardingViewModelTests {
 
         #expect(await service.startScheduleCalls.isEmpty)
         #expect(await service.startReminderCalls.isEmpty)
-    }
-
-    /// 예시를 게시한 세션의 Done·Skip 마감은 예시 일정·할일 LA를 종료한다 — 가짜 데이터가
-    /// 잠금화면에 최대 8시간 남는 것을 방지. 메모(진짜 첫 큐)는 남긴다.
-    @Test func endSampleLiveActivitiesEndsScheduleAndReminderOnly() async {
-        let (viewModel, _, service, _) = makeViewModel()
-        viewModel.text = "우유 사기"
-        await viewModel.publish()
-
-        await viewModel.endSampleLiveActivities()
-
-        #expect(await service.endScheduleCount == 1)
-        #expect(await service.endReminderCount == 1)
-        #expect(await service.endMemoCount == 0)
-    }
-
-    /// 이번 세션에 예시를 게시하지 않았으면 마감이 아무것도 종료하지 않는다 —
-    /// 설정의 "온보딩 다시 보기"에서 게시 없이 스킵할 때 사용자의 **실사용** 일정·할일
-    /// LA를 죽이면 안 된다(첫 실행과 달리 재시청 중엔 실 LA가 떠 있을 수 있다).
-    @Test func endSampleWithoutPublishLeavesLiveActivitiesAlone() async {
-        let (viewModel, _, service, _) = makeViewModel()
-
-        await viewModel.endSampleLiveActivities()
-
-        #expect(await service.endScheduleCount == 0)
-        #expect(await service.endReminderCount == 0)
     }
 
     /// 재시청 진입용 reset — 진행 상태(페이지·입력·게시 표시)를 처음으로 되돌린다.
@@ -265,6 +237,7 @@ private actor RecordingOnboardingLiveActivity: LiveActivityService {
         startScheduleCalls.append((days, showsCalendarOverride))
     }
     func endSchedule() async { endScheduleCount += 1 }
+    func endSamples() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
         if startFails { throw DomainError.validation("test") }
         startMemoCalls.append((text, colorHex, textColorHex))

@@ -2010,6 +2010,7 @@ private actor RecordingReminderLiveActivity: LiveActivityService {
     func endReminder() async {}
     func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
     func endSchedule() async {}
+    func endSamples() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}
     func sync() async {}

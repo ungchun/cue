@@ -171,6 +171,30 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         lastScheduleDays = []
     }
 
+    // MARK: - 온보딩 예시 정리
+
+    /// 예시 마커(`showsCalendarOverride != nil`)가 박힌 일정·할일 활동만 종료한다.
+    /// 보관 중인 핸들이 아니라 시스템 컬렉션을 스캔 — 앱 재시작으로 핸들이 유실된
+    /// 지난 실행의 예시도 정리된다. 실사용 게시는 마커가 항상 nil이라 안 걸린다.
+    func endSamples() async {
+        for activity in Activity<ScheduleLiveActivityAttributes>.activities
+        where activity.content.state.showsCalendarOverride != nil {
+            await activity.end(nil, dismissalPolicy: .immediate)
+            if scheduleActivity?.id == activity.id {
+                scheduleActivity = nil
+                lastScheduleDays = []
+            }
+        }
+        for activity in Activity<ReminderLiveActivityAttributes>.activities
+        where activity.content.state.showsCalendarOverride != nil {
+            await activity.end(nil, dismissalPolicy: .immediate)
+            if reminderActivity?.id == activity.id {
+                reminderActivity = nil
+                lastReminderItems = []
+            }
+        }
+    }
+
     // MARK: - Memo
 
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {

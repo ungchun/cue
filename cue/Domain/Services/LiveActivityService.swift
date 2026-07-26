@@ -56,6 +56,13 @@ protocol LiveActivityService: Sendable {
     /// 일정 라이브 액티비티 즉시 종료.
     func endSchedule() async
 
+    // MARK: - 온보딩 예시 정리
+
+    /// 온보딩 예시 일정·할일 LA만 골라 종료 — `showsCalendarOverride`가 박힌 활동이 예시다
+    /// (실사용 게시는 항상 nil). 앱 재시작으로 핸들이 유실돼도 시스템 컬렉션에서 식별해
+    /// 정리할 수 있고, 실사용 LA를 건드릴 위험이 구조적으로 없다.
+    func endSamples() async
+
     // MARK: - Memo
 
     /// 단일 메모를 큰 텍스트 카드로 라이브 액티비티에 게시. `text`는 use case가 빈 값 검증·

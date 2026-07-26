@@ -71,6 +71,7 @@ struct CompositionRoot {
                 startSchedule: StartScheduleLiveActivityUseCase(service: liveActivityService),
                 startReminder: StartReminderLiveActivityUseCase(service: liveActivityService)
             ),
+            endSampleLiveActivities: EndSampleLiveActivitiesUseCase(service: liveActivityService),
             fetchMemo: FetchMemoUseCase(repository: memoRepository),
             saveMemo: SaveMemoUseCase(repository: memoRepository),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: liveActivityService),

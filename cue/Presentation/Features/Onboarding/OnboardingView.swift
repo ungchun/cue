@@ -352,8 +352,8 @@ struct OnboardingView: View {
 
     private func finish() {
         Task {
-            // 예시 일정·할일 LA 먼저 정리 — 메모(진짜 첫 큐)만 잠금화면에 남긴다.
-            await viewModel.endSampleLiveActivities()
+            // 예시 일정·할일 LA는 여기서 정리하지 않는다 — Done을 바로 눌러도 다음 잠금에서
+            // 3카드 장면을 보게 하고, 정리는 다음 포그라운드 복귀(RootView)가 맡는다.
             await viewModel.finish()
             onFinished()
         }

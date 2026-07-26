@@ -61,6 +61,8 @@ struct Dependencies: Sendable {
 
     /// 온보딩 첫 큐 게시에 곁들이는 예시 일정·할일 LA — 권한·실데이터·쿼터 없이 3카드 장면.
     var startSampleLiveActivities: StartSampleLiveActivitiesUseCase
+    /// 예시 LA 정리 — 포그라운드 복귀 시(온보딩 커버 없을 때) 마커 기반으로 예시만 종료.
+    var endSampleLiveActivities: EndSampleLiveActivitiesUseCase
 
     /// 단일 메모 영속화 — onAppear 시 fetch, 텍스트·색 변경 직후 save.
     var fetchMemo: FetchMemoUseCase
@@ -238,6 +240,7 @@ extension Dependencies {
                 startSchedule: StartScheduleLiveActivityUseCase(service: liveActivityService),
                 startReminder: StartReminderLiveActivityUseCase(service: liveActivityService)
             ),
+            endSampleLiveActivities: EndSampleLiveActivitiesUseCase(service: liveActivityService),
             fetchMemo: FetchMemoUseCase(repository: memoRepository),
             saveMemo: SaveMemoUseCase(repository: memoRepository),
             startMemoLiveActivity: StartMemoLiveActivityUseCase(service: liveActivityService),
