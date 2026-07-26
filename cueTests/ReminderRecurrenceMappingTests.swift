@@ -143,4 +143,26 @@ struct ReminderRecurrenceMappingTests {
         #expect(ReminderMapper.isEquivalentRecurrence(nil, to: nil))
         #expect(!ReminderMapper.isEquivalentRecurrence(nil, to: simplified))
     }
+
+    /// 도메인이 온전히 표현하는 리치 규칙(요일 집합·종료일)도 동치 판정이 정확해야 —
+    /// 안 바꾸면 재기록 생략, 종료일만 바꿔도 재기록.
+    @Test func equivalenceCoversRichRulesAndEndDateChanges() {
+        let until = date(2026, 12, 31)
+        let ekRule = ReminderMapper.toEKRecurrenceRule(
+            RecurrenceRule(frequency: .weekly, interval: 2, weekdays: [2, 4], endDate: until)
+        )
+        let readBack = ReminderMapper.toRecurrence(ekRule)
+
+        // 왕복 값 그대로 = 동치(재기록 생략).
+        #expect(ReminderMapper.isEquivalentRecurrence(ekRule, to: readBack))
+        // 종료일 제거·요일 변경은 재기록 대상.
+        #expect(!ReminderMapper.isEquivalentRecurrence(
+            ekRule, to: RecurrenceRule(frequency: .weekly, interval: 2, weekdays: [2, 4])
+        ))
+        #expect(!ReminderMapper.isEquivalentRecurrence(
+            ekRule, to: RecurrenceRule(frequency: .weekly, interval: 2, weekdays: [2, 6], endDate: until)
+        ))
+        // 반복 제거 매핑(nil → EK 규칙 없음) — 저장 경로의 전제.
+        #expect(ReminderMapper.toEKRecurrenceRule(nil) == nil)
+    }
 }
