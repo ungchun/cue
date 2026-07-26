@@ -150,11 +150,16 @@ enum ScheduleMetrics {
     /// 시간 줄은 제목보다 살짝 작게(12.5/12) — 크기로도 위계를 준다. 뷰와 동기.
     static let timeFontSize: CGFloat = 12
 
-    /// 이벤트 한 줄의 줄높이 — 한글 시스템 폰트의 큰 줄박스가 반영된 실측 기반 값
-    /// (caption2 = 11pt의 preferredFont 줄높이)을 크기 비로 스케일한다. `systemFont(ofSize:)`의
-    /// lineHeight는 한글 캐스케이드를 반영하지 않아 실렌더보다 작게 나온다(과소추정 = 잘림 위험).
-    static var titleLine: CGFloat { caption2Line * (eventFontSize / 11) }
-    static var timeLine: CGFloat { caption2Line * (timeFontSize / 11) }
+    /// 이벤트 한 줄의 줄높이 — 고정 크기 `.system(size:)` 텍스트의 실렌더는 `systemFont(ofSize:)`
+    /// lineHeight와 일치한다(실기기 실측 2026-07: 12.5pt 행 30.9 = 14.9+1.5+14.3 + 한글 캐스케이드 ~0.1).
+    /// 이전엔 caption2 **스타일** 메트릭(리딩 포함 15.1)을 크기 비로 스케일해 행당 ~4.3pt 과대
+    /// → 들어갈 날짜를 통째로 버렸다. 스타일 줄높이는 스타일로 렌더하는 헤더에만 쓴다.
+    static var titleLine: CGFloat { UIFont.systemFont(ofSize: eventFontSize).lineHeight }
+    static var timeLine: CGFloat { UIFont.systemFont(ofSize: timeFontSize).lineHeight }
+
+    /// 행당 안전 마진 — 한글 캐스케이드가 lineHeight보다 살짝 크게 렌더되는 실측분(~0.1)을
+    /// 여유 있게 덮는다. 과소추정(잘림)은 막되 행을 버릴 만큼 크지 않게.
+    private static let rowSafetyMargin: CGFloat = 0.3
 
     /// 날짜 헤더는 caption2(11pt) 텍스트 스타일 그대로 렌더 — 뷰(ScheduleDayView)와 동기.
     static var header: CGFloat { caption2Line }
@@ -163,11 +168,11 @@ enum ScheduleMetrics {
         UIFont.preferredFont(forTextStyle: .caption2, compatibleWith: defaultTraits).lineHeight
     }
     static func eventHeight(_ event: LiveEventItem) -> CGFloat {
-        // 별도 글리프 마진 없음 — preferredFont 줄높이가 이미 한글 시스템 폰트의 큰 줄박스
-        // (11pt→15.1)를 반영한 렌더 실측이라, 마진을 더하면 예산만 이중으로 깎인다.
-        event.isAllDay
+        // 실측 대조(2026-07): 종일 19.1 / 시간행 30.9 — 아래 식 + 마진이 각각 19.2 / 31.0.
+        let base = event.isAllDay
             ? titleLine + Spacing.xxs * 2               // 캡슐 상하 패딩(2) — 뷰(ScheduleEventRow)와 동기
             : titleLine + titleTimeGap + timeLine       // 제목 + 간격(titleTimeGap) + 시간 — 뷰와 동기
+        return base + rowSafetyMargin
     }
 
     /// 160pt(시스템 최대) − 상하 패딩.

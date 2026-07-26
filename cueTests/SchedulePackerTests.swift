@@ -87,6 +87,33 @@ struct SchedulePackerTests {
         #expect(placed == (0..<40).map { "big-\($0)" }.prefix(placed.count).map { $0 })
     }
 
+    /// 실기기 실측 회귀(2026-07 진단) — "오늘 2·내일 2·모레 1" 시나리오는 두 열에 **전부** 들어간다.
+    /// 실측: 헤더 15.2 / 시간행 30.9 → 컬럼당 (헤더+2행) 83pt + 다음 날 첫 행 52.1 = 135.1 ≤ 136.
+    /// 과거엔 caption2 스타일 메트릭(리딩 포함 15.1)을 크기비 스케일해 행당 ~4.3pt 과대 추정
+    /// → 셋째 날이 통째로 버려졌다(레퍼런스 대비 휑한 카드).
+    @Test func fiveRowsAcrossThreeDaysAllFitLikeReference() {
+        let (left, right) = SchedulePacker.pack([
+            day(id: "a", label: "오늘", count: 2),
+            day(id: "b", label: "내일", count: 2),
+            day(id: "c", label: "모레", count: 1),
+        ])
+
+        let placed = (left + right).flatMap { $0.events.map(\.id) }
+        #expect(placed.count == 5)
+    }
+
+    /// 추정 캘리브레이션 가드 — 시간 행 추정은 실측(30.9pt)을 과소하지 않되(잘림 위험)
+    /// 2pt 이상 과대하지도 않아야 한다(행 버림 재발). 종일 캡슐 실측은 19.1pt.
+    @Test func estimatesStayWithinMeasuredBounds() {
+        let timed = day(id: "t", label: "오늘", count: 1).events[0]
+        let allDay = day(id: "a", label: "오늘", count: 1, allDay: true).events[0]
+
+        #expect(ScheduleMetrics.eventHeight(timed) >= 30.9)
+        #expect(ScheduleMetrics.eventHeight(timed) <= 32.9)
+        #expect(ScheduleMetrics.eventHeight(allDay) >= 19.1)
+        #expect(ScheduleMetrics.eventHeight(allDay) <= 21.1)
+    }
+
     // MARK: - 단일 컬럼 (캘린더 함께 표시 시 오른쪽 반쪽)
 
     /// 적은 이벤트는 헤더와 함께 그대로 들어간다.
