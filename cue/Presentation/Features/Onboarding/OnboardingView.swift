@@ -351,47 +351,48 @@ struct OnboardingView: View {
     }
 }
 
-/// 바깥으로 퍼지는 물결 링 3겹 — 링이 점에서 커지며 옅어지다 사라지는 루프(1·3장).
-/// 자체 상태를 갖는 이유: 부모의 onAppear가 뷰 삽입과 같은 트랜잭션에서 상태를 바꾸면
-/// `animation(value:)`가 변화를 못 보고 초기 프레임에 얼어붙는다 — 삽입 다음 런루프에서
-/// 트리거해야 확실히 돌고, TabView 페이지 재진입 시에도 리셋 후 다시 돈다.
+/// 바깥으로 퍼지는 물결 링 3겹 — 링이 점에서 커지며 옅어지다 사라지는 루프(1장).
+/// `repeatForever` + 상태 토글 대신 **시간 기반(TimelineView)**으로 그린다 — 위상을
+/// 현재 시각에서 계산하므로 TabView 페이지를 나갔다 돌아와도(onAppear 재발화·상태 잔존)
+/// 항상 같은 리듬으로 돈다. Reduce Motion이면 정적 동심원.
 private struct RippleRings: View {
     let diameter: CGFloat
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var expanding = false
+
+    /// 링 하나가 점에서 태어나 사라지기까지 — 3링 × 1초 시차로 파동이 끊기지 않는다.
+    private let period: Double = 3.0
 
     var body: some View {
-        ZStack {
+        Group {
             if reduceMotion {
                 // 모션 최소화 — 정적 동심원으로 대체.
-                ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .strokeBorder(Color.primary.opacity([0.25, 0.15, 0.08][index]), lineWidth: 1)
-                        .frame(width: diameter * (0.5 + CGFloat(index) * 0.5),
-                               height: diameter * (0.5 + CGFloat(index) * 0.5))
+                ZStack {
+                    ForEach(0..<3, id: \.self) { index in
+                        Circle()
+                            .strokeBorder(Color.primary.opacity([0.25, 0.15, 0.08][index]), lineWidth: 1)
+                            .frame(width: diameter * (0.5 + CGFloat(index) * 0.5),
+                                   height: diameter * (0.5 + CGFloat(index) * 0.5))
+                    }
                 }
             } else {
-                ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1.5)
-                        .frame(width: diameter, height: diameter)
-                        // 시작 스케일은 가운데 점 뒤에 숨는 크기 — 루프가 되감길 때
-                        // 링이 보이는 크기로 "팍" 생겨나지 않고 점에서 배어나온다.
-                        .scaleEffect(expanding ? 2.6 : 0.12)
-                        .opacity(expanding ? 0 : 0.7)
-                        .animation(
-                            .linear(duration: 3.0)
-                                .repeatForever(autoreverses: false)
-                                .delay(Double(index) * 1.0),
-                            value: expanding
-                        )
+                TimelineView(.animation) { context in
+                    let time = context.date.timeIntervalSinceReferenceDate
+                    ZStack {
+                        ForEach(0..<3, id: \.self) { index in
+                            // 0→1 진행도 — 링마다 1/3 주기씩 어긋난 위상.
+                            let progress = ((time / period) + Double(index) / 3)
+                                .truncatingRemainder(dividingBy: 1)
+                            Circle()
+                                .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1.5)
+                                .frame(width: diameter, height: diameter)
+                                // 시작 스케일은 가운데 점 뒤에 숨는 크기 — 점에서 배어나온다.
+                                .scaleEffect(0.12 + (2.6 - 0.12) * progress)
+                                .opacity(0.7 * (1 - progress))
+                        }
+                    }
                 }
             }
-        }
-        .onAppear {
-            expanding = false
-            DispatchQueue.main.async { expanding = true }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -399,38 +400,41 @@ private struct RippleRings: View {
 }
 
 /// 제자리에서 숨쉬는 동심원 3겹(2장 배경) — 설정 푸터·페이월 에코와 같은 느린 pulse.
-/// RippleRings와 같은 이유로 자체 상태 + 다음 런루프 트리거.
+/// RippleRings와 같은 이유로 시간 기반(사인 곡선)으로 그린다.
 private struct BreathingRings: View {
     let base: CGFloat
     let step: CGFloat
     let opacities: [Double]
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var pulsing = false
 
     var body: some View {
+        Group {
+            if reduceMotion {
+                staticRings(scales: [1, 1, 1])
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                    let time = context.date.timeIntervalSinceReferenceDate
+                    // easeInOut 3초 왕복 ≈ 사인 6초 주기, 링마다 0.3초 시차.
+                    staticRings(scales: (0..<3).map { index in
+                        1 + 0.05 * (1 + sin((time - Double(index) * 0.3) * 2 * .pi / 6))
+                    })
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func staticRings(scales: [Double]) -> some View {
         ZStack {
             ForEach(0..<3, id: \.self) { index in
                 Circle()
                     .strokeBorder(Color.primary.opacity(opacities[index]), lineWidth: 1)
                     .frame(width: base + CGFloat(index) * step, height: base + CGFloat(index) * step)
-                    .scaleEffect(pulsing && !reduceMotion ? 1.1 : 1)
-                    .animation(
-                        reduceMotion
-                            ? nil
-                            : .easeInOut(duration: 3)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 0.3),
-                        value: pulsing
-                    )
+                    .scaleEffect(scales[index])
             }
         }
-        .onAppear {
-            pulsing = false
-            DispatchQueue.main.async { pulsing = true }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }
 
