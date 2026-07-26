@@ -29,6 +29,10 @@ struct ScheduleLiveActivityAttributes: ActivityAttributes {
         var weekEventDots: [LiveDayEventDots] = []
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot] = []
+        /// 잠금화면 월간 캘린더 표시를 설정 미러(App Group)와 무관하게 강제하는 오버라이드.
+        /// nil이면 위젯이 설정 미러를 따른다(기존 동작). 온보딩 목업 게시가 true로 켜 —
+        /// 설정을 건드리지 않고 이 LA 한정으로 캘린더를 보여준다(전역 상태 오염·원복 누락 없음).
+        var showsCalendarOverride: Bool? = nil
     }
 
     let startedAt: Date
@@ -45,5 +49,6 @@ extension ScheduleLiveActivityAttributes.ContentState {
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
         monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
+        showsCalendarOverride = try container.decodeIfPresent(Bool.self, forKey: .showsCalendarOverride)
     }
 }

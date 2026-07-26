@@ -112,7 +112,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     // MARK: - Schedule
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {
+    func startSchedule(
+        days: [LiveScheduleDay],
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?
+    ) async throws {
         guard await isEnabled else { return }
 
         if let existing = scheduleActivity {
@@ -125,9 +130,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 캘린더 껐다 켤 때 원본에서 다시 계산하도록 전체 days를 보관한다(cap 이전 값).
         lastScheduleDays = days
         // 캘린더 함께 보기 ON이면 월간 점을 싣는다. 이벤트는 예산에 맞는 만큼 최대로(안 들어가면 축소).
-        let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+        // 오버라이드가 있으면 설정 미러 대신 그 값을 따른다(온보딩 목업 — 권한 없으면 점은 빈 배열).
+        let showsCalendar = showsCalendarOverride
+            ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
         let monthDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
-        let state = Self.fittedScheduleState(days: days, todayCount: todayCount, weekEventDots: weekEventDots, monthEventDots: monthDots)
+        var state = Self.fittedScheduleState(days: days, todayCount: todayCount, weekEventDots: weekEventDots, monthEventDots: monthDots)
+        state.showsCalendarOverride = showsCalendarOverride
         // staleDate = "이 시점 이후 정보는 오래됨"을 시스템에 알리는 미래 시각.
         // **과거 시각을 넣으면 request 직후 시스템이 즉시 stale로 처리해 화면에 표시 자체가
         // 안 뜬다** — 오늘 첫 이벤트가 이미 시작된 시각인 경우(오후에 토글)가 흔한 함정.
@@ -306,12 +314,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
         if let schedule = scheduleActivity {
             let prev = schedule.content.state
-            let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+            // 오버라이드(온보딩 목업)가 있으면 설정 미러 대신 유지 — 재게시로 목업 캘린더가 꺼지지 않게.
+            let showsCalendar = prev.showsCalendarOverride
+                ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
             // 게시된(cap됐을 수 있는) days가 아니라 보관해 둔 원본에서 다시 계산 — 껐다 켤 때 복원.
             let source = lastScheduleDays.isEmpty ? prev.days : lastScheduleDays
             let monthDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
             var state = Self.fittedScheduleState(days: source, todayCount: prev.todayCount, weekEventDots: prev.weekEventDots, monthEventDots: monthDots)
             state.calendarMonthOffset = prev.calendarMonthOffset
+            state.showsCalendarOverride = prev.showsCalendarOverride
             await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: 2))
         }
     }

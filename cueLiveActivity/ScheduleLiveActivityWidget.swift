@@ -17,7 +17,8 @@ struct ScheduleLiveActivityWidget: Widget {
             ScheduleLockScreenView(
                 days: context.state.days,
                 calendarMonthOffset: context.state.calendarMonthOffset,
-                monthEventDots: context.state.monthEventDots
+                monthEventDots: context.state.monthEventDots,
+                showsCalendarOverride: context.state.showsCalendarOverride
             )
             .padding(.vertical, ScheduleMetrics.outerPadding)
             .padding(.horizontal, ScheduleMetrics.outerHorizontalPadding)
@@ -66,10 +67,13 @@ private struct ScheduleLockScreenView: View {
     let days: [LiveScheduleDay]
     let calendarMonthOffset: Int
     var monthEventDots: [LiveMonthDot] = []
+    /// ContentState의 캘린더 표시 오버라이드(온보딩 목업) — nil이면 설정 미러를 따른다.
+    var showsCalendarOverride: Bool? = nil
 
-    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
+    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더). 오버라이드가 있으면 우선.
     private var showsCalendar: Bool {
-        SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+        showsCalendarOverride
+            ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
     }
 
     var body: some View {

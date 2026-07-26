@@ -165,7 +165,7 @@ private actor RecordingOnboardingLiveActivity: LiveActivityService {
 
     func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
     func endReminder() async {}
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
     func endSchedule() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
         if startFails { throw DomainError.validation("test") }

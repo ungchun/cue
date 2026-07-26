@@ -559,7 +559,7 @@ private final actor RecordingLiveActivityService: LiveActivityService {
     private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots])] = []
     private(set) var endReminderCount = 0
 
-    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots])] = []
+    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?)] = []
     private(set) var endScheduleCount = 0
 
     private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []
@@ -582,8 +582,8 @@ private final actor RecordingLiveActivityService: LiveActivityService {
         endReminderCount += 1
     }
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {
-        startScheduleCalls.append((days, todayCount, weekEventDots))
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
+        startScheduleCalls.append((days, todayCount, weekEventDots, showsCalendarOverride))
     }
 
     func endSchedule() async {

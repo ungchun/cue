@@ -26,7 +26,7 @@ struct DisabledLiveActivityService: LiveActivityService {
 
     func endReminder() async {}
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
 
     func endSchedule() async {}
 

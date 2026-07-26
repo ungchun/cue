@@ -118,4 +118,24 @@ struct LiveActivityContentStateTests {
         #expect(decoded.todayCount == 2)
         #expect(decoded.calendarMonthOffset == 5)
     }
+
+    /// `showsCalendarOverride` 키가 없는 옛 상태는 nil로 디코딩 — 위젯이 설정 미러를 따르는 기존 동작 유지.
+    @Test func scheduleStateDecodesLegacyWithoutCalendarOverrideAsNil() throws {
+        let legacy = Data(##"{"days":[]}"##.utf8)
+
+        let state = try JSONDecoder().decode(ScheduleLiveActivityAttributes.ContentState.self, from: legacy)
+
+        #expect(state.showsCalendarOverride == nil)
+    }
+
+    /// 온보딩 목업이 켠 캘린더 오버라이드가 왕복에서 보존된다 — 위젯이 미러 대신 이 값을 따라야 함.
+    @Test func scheduleStateRoundTripsCalendarOverride() throws {
+        var state = ScheduleLiveActivityAttributes.ContentState(days: [], todayCount: 0)
+        state.showsCalendarOverride = true
+
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(ScheduleLiveActivityAttributes.ContentState.self, from: data)
+
+        #expect(decoded.showsCalendarOverride == true)
+    }
 }

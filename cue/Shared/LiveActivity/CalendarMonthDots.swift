@@ -10,8 +10,12 @@
 
 import EventKit
 import Foundation
+import os
 
 enum CalendarMonthDots {
+    /// [진단용 임시] 점이 비는 원인 격리 로그 — 원인 확정 후 제거한다.
+    /// 듀얼 타깃 파일이라 앱 전용 AppLogger 대신 로컬 Logger를 쓴다.
+    private static let log = Logger(subsystem: "azhy.cue", category: "monthDots")
     /// 하루 최대 3점 — 초과분은 안 그린다. 점이 늘어 ContentState가 커지면 리스트 아이템 수를
     /// 적응형 fitter가 알아서 줄여 4KB 한도를 지킨다.
     static let maxDotsPerDay = 3
@@ -20,7 +24,11 @@ enum CalendarMonthDots {
     /// 숨긴 캘린더는 App Group의 `hiddenCalendarIDs`로 거른다. 오늘은 제외(밑줄로 표시).
     static func dots(monthOffset: Int, now: Date = Date(), calendar: Calendar = .current) -> [LiveMonthDot] {
         let status = EKEventStore.authorizationStatus(for: .event)
-        guard status == .fullAccess || status == .writeOnly else { return [] }
+        let processName = ProcessInfo.processInfo.processName
+        guard status == .fullAccess || status == .writeOnly else {
+            log.error("[진단] 권한 미달로 점 없음 — status=\(status.rawValue) process=\(processName)")
+            return []
+        }
 
         let base = calendar.startOfDay(for: now)
         guard let monthDate = calendar.date(byAdding: .month, value: monthOffset, to: base),
@@ -43,6 +51,10 @@ enum CalendarMonthDots {
             if byDay[day] == nil { order.append(day) }
             byDay[day, default: []].append(hex(from: event.calendar.cgColor) ?? "")
         }
+        log.info("""
+        [진단] offset=\(monthOffset) process=\(processName) status=\(status.rawValue) \
+        조회이벤트=\(events.count) 숨김캘린더=\(hidden.count) 점날짜=\(order.count)
+        """)
         return order.sorted().map {
             LiveMonthDot(day: $0, colorHexes: Array(byDay[$0, default: []].prefix(maxDotsPerDay)))
         }

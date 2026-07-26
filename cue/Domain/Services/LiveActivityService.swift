@@ -42,7 +42,14 @@ protocol LiveActivityService: Sendable {
     // MARK: - Schedule
 
     /// 일정 스냅샷(날짜별 묶음, 오늘부터)을 라이브 액티비티로 게시.
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots]) async throws
+    /// `showsCalendarOverride` — 잠금화면 월간 캘린더 표시 강제. nil이면 설정 미러(App Group)를
+    /// 따른다(기존 동작). 온보딩 목업 게시가 설정을 건드리지 않고 캘린더를 보여줄 때 true.
+    func startSchedule(
+        days: [LiveScheduleDay],
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?
+    ) async throws
 
     /// 일정 라이브 액티비티 즉시 종료.
     func endSchedule() async
