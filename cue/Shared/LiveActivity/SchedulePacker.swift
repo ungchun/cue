@@ -5,6 +5,13 @@
 
 import Foundation
 import UIKit
+import os
+
+/// ⚠️ 임시 — 일정 LA 패킹 진단 로그. Console.app에서 subsystem `azhy.cue` /
+/// category `ScheduleLA`로 필터해 본다. 원인 확정 후 로그 호출과 함께 제거.
+enum ScheduleLADiag {
+    static let log = Logger(subsystem: "azhy.cue", category: "ScheduleLA")
+}
 
 /// 한 열에 들어가는 한 묶음 — 같은 날이 두 열로 나뉘면 두 번째 묶음은 `label == nil`(헤더 생략).
 struct DayChunk: Identifiable, Equatable {
@@ -35,6 +42,15 @@ enum SchedulePacker {
         var col = 0
         var used: CGFloat = 0
 
+        // ⚠️ 임시 진단 — 예산·줄높이 상수 스냅샷.
+        ScheduleLADiag.log.log("""
+        [pack] 시작 — days: \(days.count), columnMax: \(Double(ScheduleMetrics.columnMax), format: .fixed(precision: 1)), \
+        header: \(Double(ScheduleMetrics.header), format: .fixed(precision: 1)), \
+        titleLine: \(Double(ScheduleMetrics.titleLine), format: .fixed(precision: 1)), \
+        timeLine: \(Double(ScheduleMetrics.timeLine), format: .fixed(precision: 1)), \
+        timedHeight: \(Double(ScheduleMetrics.titleLine + ScheduleMetrics.titleTimeGap + ScheduleMetrics.timeLine), format: .fixed(precision: 1))
+        """)
+
         outer: for day in days {
             var index = 0
             var isFirstChunk = true
@@ -60,7 +76,11 @@ enum SchedulePacker {
                         used += inc
                         chunk.append(event)
                         index += 1
+                        // ⚠️ 임시 진단 — 채택된 행의 증분·누적.
+                        ScheduleLADiag.log.log("[pack] col\(col) 채택 '\(event.title, privacy: .public)' inc \(Double(inc), format: .fixed(precision: 1)) → used \(Double(used), format: .fixed(precision: 1)) / \(Double(ScheduleMetrics.columnMax), format: .fixed(precision: 1))")
                     } else {
+                        // ⚠️ 임시 진단 — 예산 초과로 탈락한 행과 부족분.
+                        ScheduleLADiag.log.log("[pack] col\(col) 탈락 '\(event.title, privacy: .public)' inc \(Double(inc), format: .fixed(precision: 1)) — used \(Double(used), format: .fixed(precision: 1)) + inc = \(Double(used + inc), format: .fixed(precision: 1)) > \(Double(ScheduleMetrics.columnMax), format: .fixed(precision: 1)) (초과 \(Double(used + inc - ScheduleMetrics.columnMax), format: .fixed(precision: 1)))")
                         break
                     }
                 }
@@ -81,6 +101,10 @@ enum SchedulePacker {
                 }
             }
         }
+        // ⚠️ 임시 진단 — 최종 배치 요약(열별 청크·행 수)과 버려진 행 수.
+        let placed = cols.flatMap { $0 }.reduce(0) { $0 + $1.events.count }
+        let total = days.reduce(0) { $0 + $1.events.count }
+        ScheduleLADiag.log.log("[pack] 완료 — 배치 \(placed)/\(total)행, 열별: \(cols.map { "\($0.count)청크/\($0.reduce(0) { $0 + $1.events.count })행" }.joined(separator: ", "), privacy: .public)")
         return cols
     }
 }

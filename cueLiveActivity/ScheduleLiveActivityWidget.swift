@@ -7,6 +7,7 @@ import ActivityKit
 import AppIntents
 import SwiftUI
 import WidgetKit
+import os
 
 /// 일정 라이브 액티비티 위젯.
 ///
@@ -94,15 +95,17 @@ private struct ScheduleLockScreenView: View {
                 column(SchedulePacker.packSingleColumn(days))
             } else {
                 let columns = SchedulePacker.pack(days)
-                column(columns.left)
+                column(columns.left, diagLabel: "left")
                 Divider()
-                column(columns.right)
+                column(columns.right, diagLabel: "right")
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         // 캘린더 모드에선 일정이 적어도 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다.
         .frame(minHeight: showsCalendar ? ScheduleMetrics.columnMax : nil, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
+        // ⚠️ 임시 진단 — 카드 콘텐츠 전체(패딩 제외)의 실측 높이. 원인 확정 후 제거.
+        .background(diagHeightReader("card.content"))
         // ⚠️ 임시 mock 브라우징 셰브런 — 앱이 modeKey를 켰을 때만 카드 좌우 하단에 떠서
         // mock 케이스를 순환 전환한다(MockScheduleLiveCases). 눈 검증 후 함께 제거.
         .overlay(alignment: .bottomLeading) {
@@ -132,13 +135,24 @@ private struct ScheduleLockScreenView: View {
     }
 
     @ViewBuilder
-    private func column(_ chunks: [DayChunk]) -> some View {
+    private func column(_ chunks: [DayChunk], diagLabel: String = "single") -> some View {
         VStack(alignment: .leading, spacing: ScheduleMetrics.dayGap) {
             ForEach(chunks) { chunk in
                 ScheduleDayView(chunk: chunk)
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        // ⚠️ 임시 진단 — 이 컬럼의 실제 렌더 높이(추정 used와 대조). 원인 확정 후 제거.
+        .background(diagHeightReader("column.\(diagLabel)"))
+    }
+
+    /// ⚠️ 임시 진단 — 렌더 시점에 실측 높이를 로그로 남기는 투명 배경.
+    /// 위젯은 onAppear가 불안정해 GeometryReader 클로저의 부수효과로 찍는다.
+    private func diagHeightReader(_ label: String) -> some View {
+        GeometryReader { geo -> Color in
+            ScheduleLADiag.log.log("[render] \(label, privacy: .public) 실측 높이 \(Double(geo.size.height), format: .fixed(precision: 1))")
+            return Color.clear
+        }
     }
 }
 
