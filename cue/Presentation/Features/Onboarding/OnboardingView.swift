@@ -61,8 +61,10 @@ struct OnboardingView: View {
                 .frame(height: 180)
             Spacer()
             VStack(spacing: Spacing.smd) {
-                Text(verbatim: "Cue your day.")
-                    .font(.system(.largeTitle, design: .rounded).weight(.semibold))
+                // 브랜드 슬로건 — 설정 푸터와 같은 문구("잊지 않게, 흔들리지 않게").
+                Text("Never forget, never waver")
+                    .font(.system(.title, design: .rounded).weight(.semibold))
+                    .multilineTextAlignment(.center)
                 Text("One quiet signal for the one thing you must not forget.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -82,10 +84,10 @@ struct OnboardingView: View {
             // 실물 크기의 메모 LA 카드 — 일러스트가 아니라 잠금화면에 뜨는 그 모습.
             // 뒤에 옅은 에코 링을 깔아 1장의 점과 같은 존재임을 잇는다.
             ZStack {
-                echoRings(base: 200, step: 90, opacities: [0.10, 0.06, 0.03])
+                echoRings(base: 240, step: 100, opacities: [0.10, 0.06, 0.03])
                 liveCardMock
             }
-            .frame(height: 260)
+            .frame(height: 330)
             Spacer()
             VStack(spacing: Spacing.smd) {
                 Text("It stays, quietly.")
@@ -101,25 +103,72 @@ struct OnboardingView: View {
         }
     }
 
-    /// 메모 LA 카드 실물 재현 — 글래스 재질 + 큰 텍스트(위젯과 같은 인상). 위에 잠금화면
-    /// 시계를 작게 얹어 "잠금화면 위"라는 맥락만 준다.
+    /// LA 카드 실물 재현 — 메모·일정·할일 세 카드를 잠금화면처럼 쌓는다(글래스 재질,
+    /// 위젯과 같은 인상). 위에 잠금화면 시계를 작게 얹어 "잠금화면 위"라는 맥락만 준다.
     private var liveCardMock: some View {
-        VStack(spacing: Spacing.md) {
+        VStack(spacing: Spacing.smd) {
             Text(Date.now, format: .dateTime.hour().minute())
-                .font(.system(.title, design: .rounded).weight(.medium))
+                .font(.system(.title2, design: .rounded).weight(.medium))
                 .foregroundStyle(.tertiary)
+            // 메모 — 큰 텍스트 카드
             Text("Pick up milk")
-                .font(.title2.weight(.semibold))
+                .font(.headline)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, Spacing.lg + Spacing.xs)
-                .background(
-                    RoundedRectangle(cornerRadius: Spacing.lg)
-                        .fill(.regularMaterial)
-                        .shadow(color: .black.opacity(0.08), radius: 24, y: 8)
-                )
-                .padding(.horizontal, Spacing.xl + Spacing.sm)
+                .padding(.vertical, Spacing.md)
+                .background(mockCardBackground)
+            // 일정 — 색 막대 + 제목 + 시간
+            HStack(spacing: Spacing.sm) {
+                RoundedRectangle(cornerRadius: 1.25)
+                    .fill(Color.blue)
+                    .frame(width: 2.5, height: 30)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("Team meeting")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(sampleEventStart, format: .dateTime.hour().minute()) - \(sampleEventEnd, format: .dateTime.hour().minute())")
+                        .font(.footnote)
+                        .foregroundStyle(Color.blue)
+                }
+                Spacer(minLength: Spacing.zero)
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.smd)
+            .background(mockCardBackground)
+            // 할일 — 리스트 색 동그라미 체크 행
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                mockTaskRow("Reply to email", color: .orange)
+                mockTaskRow("Workout", color: .green)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.smd)
+            .background(mockCardBackground)
         }
+        .frame(maxWidth: 280)
         .accessibilityHidden(true)
+    }
+
+    private var mockCardBackground: some View {
+        RoundedRectangle(cornerRadius: Spacing.md)
+            .fill(.regularMaterial)
+            .shadow(color: .black.opacity(0.06), radius: 16, y: 6)
+    }
+
+    private func mockTaskRow(_ title: LocalizedStringKey, color: Color) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Circle()
+                .strokeBorder(color, lineWidth: 1.5)
+                .frame(width: 18, height: 18)
+            Text(title)
+                .font(.subheadline)
+        }
+    }
+
+    /// 일정 카드 샘플 시각 — 오늘 10:00–11:00(로케일 표기는 시스템이 처리).
+    private var sampleEventStart: Date {
+        Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: .now) ?? .now
+    }
+    private var sampleEventEnd: Date {
+        Calendar.current.date(bySettingHour: 11, minute: 0, second: 0, of: .now) ?? .now
     }
 
     // MARK: - 3장. 첫 큐 — 점이 당신의 큐가 된다
@@ -138,11 +187,11 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .lineSpacing(Spacing.xxs)
             } else {
-                Text("Light your first cue")
-                    .font(.title2.weight(.semibold))
+                // 질문이 곧 제목 — 별도 타이틀 없이 바로 입력으로.
                 Text("What must you not forget right now?")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(.title2.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.xl)
                 VStack(spacing: Spacing.sm) {
                     TextField("Pick up milk", text: $viewModel.text, axis: .vertical)
                         .font(.title3.weight(.semibold))
