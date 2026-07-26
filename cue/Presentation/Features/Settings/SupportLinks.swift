@@ -5,10 +5,10 @@
 
 import Foundation
 
-/// 지원/정보 섹션의 외부 링크 모음. 앱스토어 ID는 출시 후 실제 값으로 교체한다.
+/// 지원/정보 섹션의 외부 링크 모음.
 enum SupportLinks {
-    /// TODO: 앱스토어 출시 후 실제 앱 ID로 교체. (현재 placeholder)
-    static let appStoreID = "0000000000"
+    /// ASC 앱 정보의 Apple ID — 강제 업데이트 알럿(RootView.appStoreURL)과 동일 값.
+    static let appStoreID = "6789932436"
 
     /// 앱 공유 시트에 담을 앱스토어 페이지 링크.
     static var appStoreURL: URL {
