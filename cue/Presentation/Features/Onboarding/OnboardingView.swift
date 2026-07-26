@@ -183,20 +183,17 @@ struct OnboardingView: View {
     @ViewBuilder
     private func miniDayCell(grid: MonthCalendarGrid, day: Int?, column: Int) -> some View {
         if let day {
+            // 오늘 표시 — 실제 LA 캘린더(MonthCalendarView)와 동일한 숫자 아래 밑줄 바.
+            // 실물 재현이 목적이라 채운 원 반전 대신 실물과 같은 문법을 쓴다.
             Text("\(day)")
                 .font(.caption2.weight(grid.isToday(day: day) ? .bold : .regular))
                 .monospacedDigit()
-                .foregroundStyle(
-                    grid.isToday(day: day)
-                        ? AnyShapeStyle(Color(.systemBackground))
-                        : AnyShapeStyle(weekdayColor(grid: grid, column: column))
-                )
-                .background {
-                    if grid.isToday(day: day) {
-                        Circle()
-                            .fill(Color.primary)
-                            .frame(width: 16, height: 16)
-                    }
+                .foregroundStyle(weekdayColor(grid: grid, column: column))
+                .overlay(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(grid.isToday(day: day) ? Color.primary : Color.clear)
+                        .frame(width: 14, height: 2)
+                        .offset(y: Spacing.xxs)
                 }
         } else {
             Text(verbatim: " ").font(.caption2)
