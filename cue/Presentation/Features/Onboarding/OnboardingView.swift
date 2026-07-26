@@ -79,11 +79,11 @@ struct OnboardingView: View {
             visual()
                 .frame(height: 340)
             copy()
-                // 비주얼과 문구 사이 간격 — 텍스트 두 줄 정도 더 내려 여백을 넉넉히
-                // (존 안쪽 패딩이라 1·2장의 문구 시작 위치는 여전히 같다).
-                .padding(.top, Spacing.xxl * 2)
+                // 문구만 아래로 — offset은 레이아웃에 불참해 위 비주얼 위치가 전혀 안 변한다.
+                // 존 높이는 원래대로(150) 유지, 1·2장의 문구 시작 위치는 서로 같다.
+                .offset(y: Spacing.xxl + Spacing.lg)
                 .padding(.horizontal, Spacing.xl)
-                .frame(height: 150 + Spacing.xxl * 2, alignment: .top)
+                .frame(height: 150, alignment: .top)
             Spacer(minLength: Spacing.zero)
         }
     }
