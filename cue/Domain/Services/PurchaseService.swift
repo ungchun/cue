@@ -19,7 +19,9 @@ protocol PurchaseService: Sendable {
     func restore() async
 
     /// 현재 보유한 프리미엄 엔타이틀먼트 상품 ID 집합.
-    func currentEntitlements() async -> Set<String>
+    /// **빈 집합 = 확정 미보유**, **nil = 조회 신뢰 불가**(서명 검증 실패 등) — 호출부는
+    /// nil이면 기존 판정을 유지해야 한다. 둘을 뭉개면 일시적 실패가 유료 사용자를 강등시킨다.
+    func currentEntitlements() async -> Set<String>?
 
     /// 엔타이틀먼트 변경 스트림 — 구매/갱신/만료/환불 시 최신 상품 ID 집합을 방출한다.
     func entitlementUpdates() -> AsyncStream<Set<String>>

@@ -75,14 +75,22 @@ struct StoreKitPurchaseService: PurchaseService {
         try? await AppStore.sync()
     }
 
-    func currentEntitlements() async -> Set<String> {
+    func currentEntitlements() async -> Set<String>? {
         var ids: Set<String> = []
+        var sawUnverified = false
         for await result in Transaction.currentEntitlements {
-            guard let transaction = try? Self.checkVerified(result) else { continue }
+            guard let transaction = try? Self.checkVerified(result) else {
+                sawUnverified = true
+                continue
+            }
             if transaction.revocationDate == nil, PremiumProduct.allIDs.contains(transaction.productID) {
                 ids.insert(transaction.productID)
             }
         }
+        // 검증 실패만 있고 확인된 보유가 없으면 "미보유 확정"이 아니라 "판정 불가" —
+        // 일시적 검증 실패(인증서·시계 문제 등)로 유료 사용자를 강등시키지 않는다.
+        // 트랜잭션이 아예 없으면 StoreKit의 확정 답변(미보유)이다.
+        if ids.isEmpty, sawUnverified { return nil }
         return ids
     }
 
@@ -94,7 +102,11 @@ struct StoreKitPurchaseService: PurchaseService {
                     if let transaction = try? Self.checkVerified(update) {
                         await transaction.finish()
                     }
-                    continuation.yield(await currentEntitlements())
+                    // 신뢰 불가(nil) 스냅샷은 방출하지 않는다 — 스트림 구독자(PremiumStore)가
+                    // 빈 집합으로 오인해 강등하는 것을 막고, 직전 판정을 유지시킨다.
+                    if let ids = await currentEntitlements() {
+                        continuation.yield(ids)
+                    }
                 }
                 continuation.finish()
             }

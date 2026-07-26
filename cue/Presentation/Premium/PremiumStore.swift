@@ -13,7 +13,11 @@ import SwiftUI
 @Observable
 final class PremiumStore {
     /// 현재 프리미엄 여부 — 구매/복원/갱신/만료 시 자동 갱신. 게이트가 이 값을 읽는다.
+    /// 조회가 신뢰 불가면 직전 값을 유지한다(켜기 게이트는 fail-closed 초기값 false로 안전).
     private(set) var isPremium: Bool = false
+    /// **확정** 판정 — 값이 있으면 마지막 조회가 신뢰 가능했다는 뜻. nil이면 판정 불가.
+    /// 강등 정리·자동 복구(reconcile) 같은 파괴적/영속적 동작은 이 값이 있을 때만 실행한다.
+    private(set) var confirmedIsPremium: Bool?
     /// 페이월에 표시할 상품(가격) 목록.
     private(set) var products: [PurchasableProduct] = []
 
@@ -32,6 +36,7 @@ final class PremiumStore {
     convenience init(previewIsPremium: Bool) {
         self.init(service: DisabledPurchaseService())
         self.isPremium = previewIsPremium
+        self.confirmedIsPremium = previewIsPremium
     }
 
     /// 앱 시작 시 1회 — 상품 로드 + 현재 엔타이틀먼트 반영 + 변경 스트림 구독.
@@ -52,6 +57,8 @@ final class PremiumStore {
                     self.analytics.log(.entitlementChanged(premium: premium))
                 }
                 self.isPremium = premium
+                // 스트림은 검증된 스냅샷만 방출한다(서비스가 nil을 거른다) — 확정 판정.
+                self.confirmedIsPremium = premium
             }
         }
     }
@@ -67,8 +74,14 @@ final class PremiumStore {
     }
 
     func refresh() async {
-        let ids = await service.currentEntitlements()
-        isPremium = PremiumEntitlement.isPremium(entitledProductIDs: ids)
+        // nil = 조회 신뢰 불가 — 판정을 바꾸지 않는다(일시 실패로 유료 사용자를 강등 금지).
+        guard let ids = await service.currentEntitlements() else {
+            confirmedIsPremium = nil
+            return
+        }
+        let premium = PremiumEntitlement.isPremium(entitledProductIDs: ids)
+        isPremium = premium
+        confirmedIsPremium = premium
     }
 
     /// 구매 시도 — 성공 시 즉시 엔타이틀먼트를 재확인해 잠금을 푼다.

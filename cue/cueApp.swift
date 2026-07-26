@@ -35,10 +35,13 @@ struct cueApp: App {
                 // 정리됐으면 떠 있는 LA를 재게시해 캘린더 등 프리미엄 표시를 즉시 걷는다.
                 .task {
                     await composition.premiumStore.start()
-                    let stripped = await composition.dependencies.reconcilePremiumSettings(
-                        isPremium: composition.premiumStore.isPremium
+                    // **확정 판정일 때만** reconcile — 조회 실패(nil)를 무료로 넘기면 유료
+                    // 사용자의 설정을 파괴한다. 강등이면 접어두고 정리, 재구독이면 자동 복구.
+                    guard let confirmed = composition.premiumStore.confirmedIsPremium else { return }
+                    let reconciled = await composition.dependencies.reconcilePremiumSettings(
+                        isPremium: confirmed
                     )
-                    if stripped {
+                    if reconciled {
                         await composition.dependencies.refreshLiveActivityLayout()
                     }
                 }

@@ -180,6 +180,19 @@ struct RootView: View {
                 }
             }
         }
+        // 확정 판정이 바뀌는 즉시(페이월 구매·복원, 갱신·환불 스트림 포함) 정리/복구 반영 —
+        // 포그라운드 복귀·재시작까지 기다리지 않는다. 재구독이면 접어둔 설정을 되켜고 항상표시도
+        // 즉시 재게시. reconcile은 바꿀 게 없으면 no-op이라 다른 트리거와 중복 실행돼도 안전.
+        .onChange(of: premiumStore.confirmedIsPremium) { _, confirmed in
+            guard let confirmed else { return }
+            Task {
+                if await dependencies.reconcilePremiumSettings(isPremium: confirmed) {
+                    await dependencies.refreshLiveActivityLayout()
+                    await settingsViewModel.onAppear()
+                    await startAlwaysOnActivities(settingsViewModel.settings)
+                }
+            }
+        }
         // 포그라운드 복귀 — 시스템이 8시간 후 LA를 종료했을 수 있어 다시 게시한다
         // (VM이 이 실행에서 켠 상태면 각자 건너뛴다 — 중복 게시 없음).
         .onChange(of: scenePhase) { _, phase in
@@ -188,8 +201,10 @@ struct RootView: View {
                 // 엔타이틀먼트 재확인을 **항상** — 구독·체험 만료는 시스템이 push해주지
                 // 않아, 게이트 안에 두면 항상표시 꺼둔 사용자의 강등이 재시작까지 밀린다.
                 await premiumStore.refresh()
-                // 강등이면 프리미엄 전용 설정·App Group 미러도 즉시 정리(콜드런치와 동일 경로).
-                if await dependencies.reconcilePremiumSettings(isPremium: premiumStore.isPremium) {
+                // **확정 판정일 때만** reconcile — 조회 실패(nil)를 무료로 넘기면 유료
+                // 사용자의 설정을 파괴한다. 강등이면 접어두고 정리, 재구독 확인이면 자동 복구.
+                if let confirmed = premiumStore.confirmedIsPremium,
+                   await dependencies.reconcilePremiumSettings(isPremium: confirmed) {
                     await dependencies.refreshLiveActivityLayout()
                     await settingsViewModel.onAppear()
                 }

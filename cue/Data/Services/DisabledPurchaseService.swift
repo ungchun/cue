@@ -15,7 +15,7 @@ struct DisabledPurchaseService: PurchaseService {
     func loadProducts() async -> [PurchasableProduct] { products }
     func purchase(productID: String) async throws -> PurchaseOutcome { .userCancelled }
     func restore() async {}
-    func currentEntitlements() async -> Set<String> { entitled }
+    func currentEntitlements() async -> Set<String>? { entitled }
     func entitlementUpdates() -> AsyncStream<Set<String>> {
         AsyncStream { $0.finish() }
     }
