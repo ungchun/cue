@@ -81,9 +81,9 @@ struct OnboardingView: View {
             copy()
                 // 비주얼과 문구 사이 간격 — 텍스트 두 줄 정도 더 내려 여백을 넉넉히
                 // (존 안쪽 패딩이라 1·2장의 문구 시작 위치는 여전히 같다).
-                .padding(.top, Spacing.xxl + Spacing.md)
+                .padding(.top, Spacing.xxl * 2)
                 .padding(.horizontal, Spacing.xl)
-                .frame(height: 150 + Spacing.xxl, alignment: .top)
+                .frame(height: 150 + Spacing.xxl * 2, alignment: .top)
             Spacer(minLength: Spacing.zero)
         }
     }
