@@ -55,6 +55,7 @@ struct AppSettingsRepositoryTests {
         #expect(settings.tasksDefaultScopeID == "all")           // 할일 탭 기본 화면도 전체
         #expect(settings.hiddenCalendarIDs.isEmpty)              // 숨긴 캘린더 기본 없음(전부 표시)
         #expect(settings.hasCompletedOnboarding == false)        // 온보딩 완주 기본 false(첫 실행 표시)
+        #expect(settings.hasStartedOnboarding == false)          // 온보딩 시작 마커 기본 false
     }
 
     /// 숨긴 캘린더 집합이 저장·복원 왕복에서 보존된다.

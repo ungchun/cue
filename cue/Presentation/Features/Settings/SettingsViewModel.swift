@@ -226,13 +226,27 @@ final class SettingsViewModel {
         memoTextColorHex = hex
     }
 
-    /// 한 항목을 바꾸고 저장한다 — **최신 저장본을 다시 읽어** 그 위에 변경을 적용한다.
-    /// 메모리 스냅샷을 통째로 쓰면 외부 저장(온보딩 완주 플래그·강등 정리)이 onAppear
-    /// 이후에 남긴 값을 되돌려버린다(fetch-modify-save, 메모 색 저장과 같은 규칙).
-    private func update(_ mutate: (inout AppSettings) -> Void) async {
-        var fresh = await fetchAppSettings()
-        mutate(&fresh)
-        settings = fresh
-        await saveAppSettings(fresh)
+    /// 저장 직렬 체인 — 세터가 연속(동시) 호출될 때 fetch-modify-save가 인터리브하면
+    /// 나중 저장이 앞 변경을 못 본 낡은 값으로 덮는다(연속 체크 유실). 이전 저장 완료 후
+    /// 다음 저장을 실행해 유실을 막는다.
+    @ObservationIgnored private var saveChain: Task<Void, Never>?
+
+    /// 한 항목을 바꾸고 저장한다.
+    /// 1) 메모리엔 즉시 반영 — 토글이 저장 왕복을 기다리며 깜빡이지 않게(기존 동작 유지).
+    /// 2) 저장은 직렬 체인에서 **최신 저장본을 다시 읽어** 그 위에 적용 — 외부 저장
+    ///    (온보딩 플래그·강등 정리)을 되돌리지 않는다(fetch-modify-save).
+    /// 반환 시 저장까지 완료 — 호출부(테스트 포함)의 async 계약 유지.
+    private func update(_ mutate: @escaping @Sendable (inout AppSettings) -> Void) async {
+        mutate(&settings)
+        let fetch = fetchAppSettings
+        let save = saveAppSettings
+        let task = Task { [previous = saveChain] in
+            await previous?.value
+            var fresh = await fetch()
+            mutate(&fresh)
+            await save(fresh)
+        }
+        saveChain = task
+        await task.value
     }
 }

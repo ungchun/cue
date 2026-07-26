@@ -63,6 +63,9 @@ struct AppSettings: Codable, Equatable, Sendable {
     var hiddenReminderListIDs: Set<String>
     /// 첫 실행 온보딩을 끝(완료 또는 스킵)까지 봤는지. `false`면 앱 시작 시 온보딩 표시.
     var hasCompletedOnboarding: Bool
+    /// 온보딩을 **표시한 적** 있는지 — 도중(첫 큐 게시가 메모를 저장한 뒤) 앱이 종료돼도
+    /// 다음 실행에서 기존 설치 흔적으로 오판해 조용히 완주 처리하지 않고 이어서 보여준다.
+    var hasStartedOnboarding: Bool
 
     static let `default` = AppSettings(
         colorScheme: .system,
@@ -80,7 +83,8 @@ struct AppSettings: Codable, Equatable, Sendable {
         tasksDefaultScopeID: "all",
         hiddenCalendarIDs: [],
         hiddenReminderListIDs: [],
-        hasCompletedOnboarding: false
+        hasCompletedOnboarding: false,
+        hasStartedOnboarding: false
     )
 }
 
@@ -122,5 +126,7 @@ extension AppSettings {
             ?? fallback.hiddenReminderListIDs
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)
             ?? fallback.hasCompletedOnboarding
+        hasStartedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasStartedOnboarding)
+            ?? fallback.hasStartedOnboarding
     }
 }

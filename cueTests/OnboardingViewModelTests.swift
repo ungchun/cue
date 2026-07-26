@@ -110,6 +110,28 @@ struct OnboardingViewModelTests {
         #expect(OnboardingViewModel.launchDecision(settings: .default, hasPriorInstall: true) == .markCompletedSilently)
     }
 
+    /// 온보딩을 **시작한 적 있는** 미완주 사용자는 흔적과 무관하게 이어서 다시 본다 —
+    /// 온보딩 도중(첫 큐 게시가 메모를 저장한 뒤) 앱을 죽여도 기존 사용자로 오판하지 않는다.
+    @Test func launchDecisionResumesWhenStartedButNotCompleted() {
+        var settings = AppSettings.default
+        settings.hasStartedOnboarding = true
+        #expect(OnboardingViewModel.launchDecision(settings: settings, hasPriorInstall: true) == .show)
+        #expect(OnboardingViewModel.launchDecision(settings: settings, hasPriorInstall: false) == .show)
+    }
+
+    /// 표시 직전 시작 마커 저장 — 다른 설정은 보존, 완주 뒤에는 다시 안 쓴다.
+    @Test func markStartedPersistsFlagPreservingOtherSettings() async {
+        var seeded = AppSettings.default
+        seeded.startTabID = "focus"
+        let (viewModel, _, _, settingsRepo) = makeViewModel(settings: seeded)
+
+        await viewModel.markStarted()
+
+        let saved = await settingsRepo.fetch()
+        #expect(saved.hasStartedOnboarding)
+        #expect(saved.startTabID == "focus")
+    }
+
     /// 미완주 + 흔적 없음 = 진짜 신규 설치 — 온보딩 표시.
     @Test func launchDecisionShowsForFreshInstall() {
         #expect(OnboardingViewModel.launchDecision(settings: .default, hasPriorInstall: false) == .show)

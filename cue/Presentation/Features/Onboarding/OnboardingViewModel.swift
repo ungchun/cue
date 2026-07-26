@@ -23,12 +23,14 @@ enum OnboardingLaunchDecision: Equatable {
 final class OnboardingViewModel {
 
     /// 앱 시작 시 온보딩 표시 판정 — 한 번이라도 완주(스킵 포함)했으면 다시 안 뜬다.
-    /// 미완주여도 구버전 저장물이 있는 **기존 사용자**는 업데이트 직후 온보딩 없이
-    /// 조용히 완주 처리한다(잘 쓰던 사람에게 소개 화면을 끼얹지 않는다).
+    /// 시작만 하고 중단했으면(마커) 이어서 다시 보여준다 — 온보딩이 저장한 메모가
+    /// "기존 설치 흔적"으로 읽혀 조용히 완주 처리되는 오판 방지. 그 외 미완주는
+    /// 구버전 저장물이 있는 기존 사용자만 온보딩 없이 조용히 완주 처리한다.
     nonisolated static func launchDecision(
         settings: AppSettings, hasPriorInstall: Bool
     ) -> OnboardingLaunchDecision {
         guard !settings.hasCompletedOnboarding else { return .none }
+        if settings.hasStartedOnboarding { return .show }
         return hasPriorInstall ? .markCompletedSilently : .show
     }
     @ObservationIgnored private let fetchMemoUseCase: FetchMemoUseCase
@@ -75,6 +77,14 @@ final class OnboardingViewModel {
         } catch {
             published = false
         }
+    }
+
+    /// 표시 직전 시작 마커 저장 — 중단 후 재실행 시 이어서 보여주기 위한 근거.
+    func markStarted() async {
+        var settings = await fetchAppSettingsUseCase()
+        guard !settings.hasStartedOnboarding else { return }
+        settings.hasStartedOnboarding = true
+        await saveAppSettingsUseCase(settings)
     }
 
     /// 완료·스킵 공통 마감 — 완주 플래그만 저장하고 다른 설정은 보존한다.

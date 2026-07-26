@@ -300,7 +300,7 @@ struct PremiumPaywallView: View {
             .tint(.primary)
             .disabled(purchasing)
 
-            // 결제 고지(심사 필수) — 3분기: 트라이얼(종료 후 실제 갱신 가격 명시, 3.1.2) /
+            // 결제 고지(심사 필수) — 3분기: 트라이얼(자동 갱신 고지, 가격은 위 플랜 카드가 전달) /
             // 일반 구독(자동 갱신) / 평생(1회 결제 — 자동 갱신 오고지 금지).
             Group {
                 if let days = selectedTrialDays {

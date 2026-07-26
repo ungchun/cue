@@ -53,6 +53,22 @@ struct SettingsViewModelTests {
         #expect(stored.colorScheme == .dark)             // 변경도 반영
     }
 
+    /// 동시(연속 탭) 변경이 서로를 덮지 않는다 — fetch-modify-save가 인터리브하면
+    /// 나중 저장이 앞 변경을 못 본 낡은 값으로 덮는 유실이 난다(직렬화 필요).
+    @Test func concurrentUpdatesDoNotLoseChanges() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        async let first: Void = viewModel.setColorScheme(.dark)
+        async let second: Void = viewModel.setFocusEndSound(true)
+        _ = await (first, second)
+
+        let stored = await repository.fetch()
+        #expect(stored.colorScheme == .dark)
+        #expect(stored.focusEndSound == true)
+    }
+
     /// 로드 전 기본 상태는 .default(시스템 테마).
     @Test func startsAtDefaultBeforeLoad() {
         let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository())

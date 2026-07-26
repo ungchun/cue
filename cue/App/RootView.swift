@@ -13,6 +13,8 @@ struct RootView: View {
     @Environment(\.openURL) private var openURL
     /// 강제 업데이트 필요 — 원격 최소 버전 판정 결과. true면 App Store 이동 알림(회피 불가).
     @State private var isUpdateRequired = false
+    /// 온보딩에 양보된 강제 업데이트 알림 — 커버 dismiss 후 재무장한다.
+    @State private var pendingUpdateAlert = false
     /// App Store 앱 페이지 — ASC 앱 정보의 Apple ID.
     private let appStoreURL = URL(string: "https://apps.apple.com/app/id6789932436")!
     /// 설정 로드 전 첫 프레임의 탭 — 기본 시작 탭(메모)과 일치시켜 깜빡임 없이 시작한다.
@@ -93,19 +95,27 @@ struct RootView: View {
         }
         // 강제 업데이트 알럿 노출 기록 — OK 후 재표시 루프도 각각 한 번의 노출로 센다.
         // 온보딩 커버가 떠 있으면 **알림이 우선**: 같은 뷰의 동시 presentation은 하나가
-        // 조용히 버려지므로, 커버를 내리고 커버 dismiss 후 알림을 다시 켠다.
+        // 조용히 버려지므로, 커버를 내리고 dismiss 완료를 신호로 알림을 다시 켠다
+        // (고정 지연은 dismiss가 늦으면 알림이 또 버려진 채 영영 안 뜰 수 있다).
         .onChange(of: isUpdateRequired) { _, shown in
             guard shown else { return }
             if showsOnboarding {
                 showsOnboarding = false
                 isUpdateRequired = false
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(700))
-                    isUpdateRequired = true
-                }
+                pendingUpdateAlert = true
                 return
             }
             dependencies.analytics.log(.forcedUpdatePrompted)
+        }
+        // 온보딩 커버가 내려간 뒤 보류된 강제 업데이트 알림 재무장 — dismiss 전환이
+        // 끝날 시간만 짧게 두고 켠다(같은 프레임 재-present는 버려질 수 있음).
+        .onChange(of: showsOnboarding) { _, showing in
+            guard !showing, pendingUpdateAlert else { return }
+            pendingUpdateAlert = false
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(400))
+                isUpdateRequired = true
+            }
         }
         .task {
             let version = Bundle.main
@@ -133,7 +143,11 @@ struct RootView: View {
             ) {
             case .show:
                 // 강제 업데이트 알림이 우선 — 업데이트가 필요하면 온보딩을 띄우지 않는다.
-                if !isUpdateRequired { showsOnboarding = true }
+                if !isUpdateRequired {
+                    // 시작 마커 먼저 — 도중 종료돼도 다음 실행에 이어서 보여준다.
+                    await onboardingViewModel.markStarted()
+                    showsOnboarding = true
+                }
             case .markCompletedSilently:
                 await onboardingViewModel.finish()
             case .none:
@@ -165,6 +179,11 @@ struct RootView: View {
                 // 엔타이틀먼트 재확인을 **항상** — 구독·체험 만료는 시스템이 push해주지
                 // 않아, 게이트 안에 두면 항상표시 꺼둔 사용자의 강등이 재시작까지 밀린다.
                 await premiumStore.refresh()
+                // 강등이면 프리미엄 전용 설정·App Group 미러도 즉시 정리(콜드런치와 동일 경로).
+                if await dependencies.reconcilePremiumSettings(isPremium: premiumStore.isPremium) {
+                    await dependencies.refreshLiveActivityLayout()
+                    await settingsViewModel.onAppear()
+                }
                 await startAlwaysOnActivities(settingsViewModel.settings)
             }
         }

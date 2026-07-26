@@ -144,6 +144,8 @@ enum ScheduleMetrics {
     /// 언어별 마진 — 톨 스크립트(태국어·데바나가리·아랍어·베트남어)는 글리프 캐스케이드가
     /// 라틴 lineHeight보다 수 pt 커서 0.4로는 하단 잘림 위험이 있다. 여유 2.0을 주는 대신
     /// 경계 케이스에서 행이 하나 덜 들어갈 수 있다(잘림보다 덜 나쁨). 실측으로 재조정 여지.
+    /// 한계(의도된 트레이드오프): 기준이 **UI 언어**라 한국어 UI에 태국어 제목이 섞이면
+    /// 여전히 0.4가 걸린다 — 제목 스크립트별 판정은 비용 대비 과해서 하지 않는다.
     static func rowSafetyMargin(languageCode: String?) -> CGFloat {
         ["th", "hi", "ar", "vi"].contains(languageCode ?? "") ? 2.0 : 0.4
     }
