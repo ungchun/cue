@@ -10,6 +10,9 @@
 import SwiftUI
 
 struct PremiumPaywallView: View {
+    /// 분석용 진입 경로 — 설정 배너("settings") / 게이트 토스트 탭("gate").
+    var source: String = "settings"
+
     @Environment(\.dismiss) private var dismiss
 
     /// 구매 플랜. 연간이 기본 선택(절약 뱃지) — 업계 표준 앵커.
@@ -77,7 +80,7 @@ struct PremiumPaywallView: View {
             .padding(Spacing.md)
         }
         .presentationDetents([.large])
-        .onAppear { dependencies.analytics.log(.paywallShown(source: "settings")) }
+        .onAppear { dependencies.analytics.log(.paywallShown(source: source)) }
         // 진입 시 상품·트라이얼 자격 재확인 — 타 기기 체험 소진 등으로 자격이 바뀌었을 수 있다.
         // 로드 완료 전엔 기존 캐시가 유지돼 CTA가 비었다 채워지는 깜빡임은 없다.
         .task { await premiumStore.reloadProducts() }

@@ -264,7 +264,7 @@ struct FocusSessionEditorSheet: View {
         case .create:
             // 무료 한도 초과면 추가되지 않는다 — Premium 안내 토스트.
             if viewModel.addSession(title: name, settings: settings, colorHex: colorHex) == nil {
-                toastCenter.show("Premium")
+                toastCenter.showPremium()
             }
         case .edit(let session):
             viewModel.updateSession(id: session.id, title: name, settings: settings, colorHex: colorHex)

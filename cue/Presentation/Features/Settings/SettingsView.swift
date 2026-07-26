@@ -441,7 +441,7 @@ struct SettingsView: View {
     /// 무료 사용자가 Premium 게이트에 걸렸다 — 토스트 표시 + 어떤 기능이 유인인지 기록.
     private func showPremiumGate(feature: String) {
         dependencies.analytics.log(.premiumGateHit(feature: feature))
-        toastCenter.show("Premium")
+        toastCenter.showPremium()
     }
 
     /// Premium 전용 행 게이트 — 무료 사용자는 컨트롤 조작을 가로채 "Premium" 토스트만 띄운다.

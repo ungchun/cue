@@ -33,6 +33,8 @@ struct RootView: View {
     private let hadPriorInstall: Bool
     /// 앱 전반 토스트 코디네이터 — 여기서 소유해 환경으로 주입하고, 상단 오버레이를 부착한다.
     @State private var toastCenter = ToastCenter()
+    /// 프리미엄 토스트 탭으로 여는 전역 페이월 — 게이트에 걸린 화면이 어디든 여기 시트 하나로 뜬다.
+    @State private var showsGatePaywall = false
 
     /// 항상 표시 게시 전 엔타이틀먼트 확정용 — `start()`(cueApp)와 경쟁해도 게시 시점 값이 정확하게.
     private let premiumStore: PremiumStore
@@ -79,6 +81,11 @@ struct RootView: View {
         // 상단에서 내려오는 앱 공통 라이브 토스트 — 어느 탭에서 켜도 같은 오버레이가 뜬다.
         .liveToastOverlay(toastCenter)
         .environment(\.toastCenter, toastCenter)
+        // 프리미엄 토스트 탭 → 페이월. 핸들러 주입은 선언적 시트와 달리 1회면 충분해 task에서.
+        .task { toastCenter.premiumTapHandler = { showsGatePaywall = true } }
+        .sheet(isPresented: $showsGatePaywall) {
+            PremiumPaywallView(source: "gate")
+        }
         // 화면 모드(라이트/다크/시스템)를 앱 전체에 적용. `.system`이면 nil → 시스템 따름.
         .preferredColorScheme(settingsViewModel.settings.colorScheme.colorScheme)
         // 강제 업데이트 — 최소 요구 버전 미만이면 알림. 확인은 App Store 이동뿐이고,
@@ -138,9 +145,11 @@ struct RootView: View {
             }
             // 첫 실행 온보딩 — 완주했으면 없음, 기존 사용자는 조용히 완주 처리(업데이트로
             // 온보딩이 처음 생겨도 잘 쓰던 사람에겐 안 띄운다), 신규 설치만 표시.
-            switch OnboardingViewModel.launchDecision(
-                settings: settingsViewModel.settings, hasPriorInstall: hadPriorInstall
-            ) {
+            // [임시] 온보딩 검증용 — 매 실행 무조건 표시. 확인 끝나면 아래 원래 판정으로 원복:
+            // switch OnboardingViewModel.launchDecision(
+            //     settings: settingsViewModel.settings, hasPriorInstall: hadPriorInstall
+            // ) {
+            switch OnboardingLaunchDecision.show {
             case .show:
                 // 강제 업데이트 알림이 우선 — 업데이트가 필요하면 온보딩을 띄우지 않는다.
                 if !isUpdateRequired {

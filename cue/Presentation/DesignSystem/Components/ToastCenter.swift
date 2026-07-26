@@ -17,6 +17,11 @@ final class ToastCenter {
     private(set) var isPresented = false
     /// 캡슐 안 라벨 — "라이브"(새로 켬) / "새로고침"(재시작) / "Premium"(유료 전용 안내).
     private(set) var message = String(localized: "Live")
+    /// 프리미엄 안내 토스트인지 — 오버레이가 탭 제스처(페이월 열기)를 붙이는 기준.
+    private(set) var isPremiumToast = false
+    /// 프리미엄 토스트 탭 시 실행 — RootView가 페이월 시트 열기를 주입한다.
+    /// 게이트 호출처(각 화면)는 페이월 표시 지점을 몰라도 되게 여기로 결합을 모은다.
+    var premiumTapHandler: (() -> Void)?
 
     /// 자동 해제 타이머 — 새 토스트가 뜨면 이전 타이머를 취소하고 다시 건다(연속 호출 안전).
     private var dismissTask: Task<Void, Never>?
@@ -32,8 +37,26 @@ final class ToastCenter {
     /// 다시 눌러 재시작했을 때 호출. `message`로 "라이브"/"새로고침"을 구분해 넘긴다.
     func show(_ message: String) {
         self.message = message
+        isPremiumToast = false
         isPresented = true
         scheduleAutoDismiss()
+    }
+
+    /// 프리미엄 전용 안내 토스트 — 탭하면 페이월로 이어진다(`premiumTapHandler`).
+    /// 게이트에 걸린 순간이 구매 의향이 가장 높은 순간이라, 토스트를 결제 진입점으로 쓴다.
+    func showPremium() {
+        // 브랜드어라 로컬라이즈하지 않는다 — 기존 게이트 호출처의 리터럴 표기와 동일.
+        message = "Premium"
+        isPremiumToast = true
+        isPresented = true
+        scheduleAutoDismiss()
+    }
+
+    /// 토스트 탭 — 프리미엄 토스트면 닫고 페이월 핸들러를 부른다. 일반 토스트는 no-op.
+    func handleTap() {
+        guard isPresented, isPremiumToast else { return }
+        dismiss()
+        premiumTapHandler?()
     }
 
     /// 사용자가 위로 밀거나(스와이프) 즉시 닫아야 할 때 호출 — 자동 타이머도 함께 끈다.

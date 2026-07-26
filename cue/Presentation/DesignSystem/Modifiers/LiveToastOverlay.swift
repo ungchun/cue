@@ -25,6 +25,8 @@ private struct LiveToastOverlay: ViewModifier {
                                 if value.translation.height < 0 { center.dismiss() }
                             }
                     )
+                    // 프리미엄 토스트만 탭으로 페이월 진입 — 일반 토스트는 탭 무반응 유지.
+                    .onTapGesture { center.handleTap() }
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.82), value: center.isPresented)
