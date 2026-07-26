@@ -195,6 +195,69 @@ struct FocusViewModelTests {
         #expect(viewModel.displayedSettings == FocusSettings.default)
     }
 
+    // MARK: - 선택 게이트 (무료 한도)
+
+    /// 무료 유저는 첫 세션만 사용할 수 있다 — 프리미엄 시절 만든 초과 세션을 강등 후에도
+    /// 계속 쓰는 잔존을 막는다(선택 실패 시 false — 호출처가 Premium 토스트를 띄운다).
+    @Test func freeUserCannotSelectBeyondFirstSession() async {
+        let first = FocusSession(id: UUID(), title: "A", settings: .default, colorHex: "#FF3B30")
+        let second = FocusSession(id: UUID(), title: "B", settings: .default, colorHex: "#FF9500")
+        let repo = InMemoryFocusSessionsRepository(sessions: [first, second], selectedID: first.id)
+        let (deps, _) = makeDependencies(focusSessionsRepository: repo)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: false))
+        await viewModel.onAppear()
+
+        let selected = viewModel.selectSession(id: second.id)
+
+        #expect(selected == false)
+        #expect(viewModel.selectedSessionID == first.id)
+    }
+
+    /// 무료 유저도 첫 세션(무료 한도 안)은 자유롭게 선택한다.
+    @Test func freeUserCanSelectFirstSession() async {
+        let first = FocusSession(id: UUID(), title: "A", settings: .default, colorHex: "#FF3B30")
+        let second = FocusSession(id: UUID(), title: "B", settings: .default, colorHex: "#FF9500")
+        let repo = InMemoryFocusSessionsRepository(sessions: [first, second], selectedID: second.id)
+        let (deps, _) = makeDependencies(focusSessionsRepository: repo)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: false))
+        await viewModel.onAppear()
+
+        let selected = viewModel.selectSession(id: first.id)
+
+        #expect(selected == true)
+        #expect(viewModel.selectedSessionID == first.id)
+    }
+
+    /// 프리미엄은 어느 세션이든 선택 가능(기존 동작 유지).
+    @Test func premiumUserSelectsAnySession() async {
+        let first = FocusSession(id: UUID(), title: "A", settings: .default, colorHex: "#FF3B30")
+        let second = FocusSession(id: UUID(), title: "B", settings: .default, colorHex: "#FF9500")
+        let repo = InMemoryFocusSessionsRepository(sessions: [first, second], selectedID: nil)
+        let (deps, _) = makeDependencies(focusSessionsRepository: repo)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
+        await viewModel.onAppear()
+
+        let selected = viewModel.selectSession(id: second.id)
+
+        #expect(selected == true)
+        #expect(viewModel.selectedSessionID == second.id)
+    }
+
+    /// 무료 유저의 복원 — 저장된 선택이 첫 세션 밖(프리미엄 전용)이면 화면은 첫 세션으로
+    /// 폴백하되, **저장값은 덮어쓰지 않는다** — 재구독하면 원래 선택이 그대로 돌아오게.
+    @Test func freeUserRestoreFallsBackToFirstWithoutOverwritingStored() async {
+        let first = FocusSession(id: UUID(), title: "A", settings: .default, colorHex: "#FF3B30")
+        let second = FocusSession(id: UUID(), title: "B", settings: .default, colorHex: "#FF9500")
+        let repo = InMemoryFocusSessionsRepository(sessions: [first, second], selectedID: second.id)
+        let (deps, _) = makeDependencies(focusSessionsRepository: repo)
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: false))
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.selectedSessionID == first.id)
+        #expect(await repo.fetchSelectedSessionID() == second.id)
+    }
+
     // MARK: - 선택 영속화 / 복원
 
     /// 저장된 selectedID가 sessions에 그대로 존재하면 그 세션이 복원된다 —

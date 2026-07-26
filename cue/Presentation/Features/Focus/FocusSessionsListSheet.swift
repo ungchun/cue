@@ -13,6 +13,8 @@ import SwiftUI
 struct FocusSessionsListSheet: View {
     @Bindable var viewModel: FocusViewModel
     @Environment(\.dismiss) private var dismiss
+    /// 무료 한도 밖 세션 선택 시 Premium 토스트(탭하면 페이월) — 에디터 시트의 게이트와 동일 문법.
+    @Environment(\.toastCenter) private var toastCenter
 
     /// 신규 추가 시트 표시 — + 버튼이 true로 올린다.
     @State private var showingCreate = false
@@ -74,7 +76,10 @@ struct FocusSessionsListSheet: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                viewModel.selectSession(id: session.id)
+                guard viewModel.selectSession(id: session.id) else {
+                    toastCenter.showPremium()
+                    return
+                }
                 dismiss()
             }
 

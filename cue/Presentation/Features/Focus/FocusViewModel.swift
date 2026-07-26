@@ -120,13 +120,27 @@ final class FocusViewModel {
     private func restoreSelection() async {
         let storedID = await fetchSelectedFocusSessionID()
         if let storedID, sessions.contains(where: { $0.id == storedID }) {
-            selectedSessionID = storedID
+            if isUsable(sessionID: storedID) {
+                selectedSessionID = storedID
+            } else if let first = sessions.first {
+                // 무료 한도 밖(강등 후 잔존) 선택은 화면만 첫 세션으로 폴백하고 **저장값은
+                // 보존한다** — 재구독하면 원래 선택이 그대로 돌아온다(파괴적 정리 금지).
+                selectedSessionID = first.id
+            }
         } else if let first = sessions.first {
             selectedSessionID = first.id
             persistSelectedID(first.id)
         } else {
             selectedSessionID = nil
         }
+    }
+
+    /// 무료 한도 안에서 사용 가능한 세션인지 — 프리미엄이면 전부, 무료면 목록 앞
+    /// `freeSessionLimit`개만. 생성 게이트(addSession)와 같은 한도를 사용 게이트에도 적용해
+    /// 프리미엄 시절 만든 초과 세션이 강등 후 계속 쓰이는 잔존을 막는다.
+    private func isUsable(sessionID: UUID) -> Bool {
+        premiumStore.isPremium
+            || sessions.prefix(Self.freeSessionLimit).contains { $0.id == sessionID }
     }
 
     // MARK: - 세션 제어 (인앱 — 누른 즉시 VM 상태 갱신)
@@ -418,9 +432,16 @@ final class FocusViewModel {
     }
 
     /// 목록에서 사용자가 고른 선택만 여기로 온다 — onAppear의 프로그램적 복원은 이 경로를 타지 않는다.
-    func selectSession(id: UUID) {
+    /// 무료 한도 밖 세션이면 선택하지 않고 false — 호출처(목록 시트)가 Premium 토스트를 띄운다.
+    @discardableResult
+    func selectSession(id: UUID) -> Bool {
+        guard isUsable(sessionID: id) else {
+            analytics.log(.focusSessionLimitReached)
+            return false
+        }
         analytics.log(.focusSessionSelected)
         selectedSessionID = id
         persistSelectedID(id)
+        return true
     }
 }
