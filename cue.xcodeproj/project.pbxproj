@@ -90,6 +90,17 @@
 				Shared/LiveActivity/SchedulePacker.swift,
 				Shared/LiveActivity/ScheduleTimeText.swift,
 				Shared/LiveActivity/ShiftCalendarMonthIntent.swift,
+				Shared/Widget/DayTimelineLayout.swift,
+				Shared/Widget/DayTimelineMetrics.swift,
+				Shared/Widget/ISOWeekNumber.swift,
+				Shared/Widget/MonthWeekPacker.swift,
+				Shared/Widget/MonthWidgetMetrics.swift,
+				Shared/Widget/MonthWidgetPacker.swift,
+				Shared/Widget/ShiftWidgetRangeIntent.swift,
+				Shared/Widget/WidgetCalendarDataSource.swift,
+				Shared/Widget/WidgetCalendarItem.swift,
+				Shared/Widget/WidgetChipContrast.swift,
+				Shared/Widget/WidgetRangeOffsetStore.swift,
 			);
 			target = 65D102F12FD032BD00081EB7 /* cueLiveActivityExtension */;
 		};
@@ -657,7 +668,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = cueLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = cueLiveActivity;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Cue needs access to view and create your iOS Calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Cue needs access to view and manage your iOS Reminders.";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -693,7 +706,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = cueLiveActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = cueLiveActivity;
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Cue needs access to view and create your iOS Calendar events.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "Cue needs access to view and manage your iOS Reminders.";
 				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

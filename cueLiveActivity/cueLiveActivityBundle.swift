@@ -17,5 +17,10 @@ struct cueLiveActivityBundle: WidgetBundle {
         ScheduleLiveActivityWidget()
         FocusAlarmLiveActivityWidget()
         MemoLiveActivityWidget()
+        // 홈 화면 캘린더 위젯 — LA와 같은 익스텐션에 묶어 EventKit 조회 코드를 공유한다.
+        MonthCalendarWidget()
+        FixedMonthCalendarWidget()
+        ThreeDayCalendarWidget()
+        OneDayCalendarWidget()
     }
 }

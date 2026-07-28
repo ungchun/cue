@@ -12068,6 +12068,9 @@
         }
       }
     },
+    "kind" : {
+
+    },
     "Large" : {
       "localizations" : {
         "ar" : {
@@ -21086,6 +21089,9 @@
           }
         }
       }
+    },
+    "Shift Widget Range" : {
+
     },
     "Show All" : {
       "localizations" : {

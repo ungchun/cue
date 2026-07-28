@@ -8,11 +8,14 @@
 import FirebaseCore
 import SwiftData
 import SwiftUI
+import WidgetKit
 
 @main
 struct cueApp: App {
     /// 앱 의존성을 조립하는 단 하나의 진입점.
     private let composition: CompositionRoot
+
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         // Firebase(Analytics·Remote Config)는 다른 어떤 의존성보다 먼저 구성돼야 한다.
@@ -41,5 +44,12 @@ struct cueApp: App {
                 }
         }
         .modelContainer(composition.modelContainer)
+        // 앱을 벗어나는 순간 홈 화면 위젯을 갱신한다 — 위젯이 자체적으로 다시 그리는 건
+        // 자정/정시뿐이라, 앱에서 일정·할일을 고치고 홈으로 나가면 낡은 그림이 남는다.
+        // 그 자리에서 위젯이 EventKit을 다시 조회하므로 데이터를 넘겨줄 필요는 없다.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase != .active else { return }
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 }
