@@ -94,7 +94,6 @@ enum AnalyticsEvent: Equatable, Sendable {
     /// 두 경로는 동작이 다르다: 자동은 시스템 프롬프트(안 뜰 수 있음), 수동은 App Store 리뷰 작성 페이지.
     case reviewRequested(source: String)
     case feedbackTapped
-    case onboardingReplayTapped
     case externalAppOpened(app: String)
     case permissionSettingsOpened(kind: String)
 
@@ -165,7 +164,6 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .forcedUpdateTapped: "forced_update_tapped"
         case .reviewRequested: "review_requested"
         case .feedbackTapped: "feedback_tapped"
-        case .onboardingReplayTapped: "onboarding_replay_tapped"
         case .externalAppOpened: "external_app_opened"
         case .permissionSettingsOpened: "permission_settings_opened"
         }

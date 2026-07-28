@@ -9,8 +9,6 @@ import SwiftUI
 /// 설정 탭 화면. 전역 설정을 섹션별로 보여준다.
 struct SettingsView: View {
     let viewModel: SettingsViewModel
-    /// 지원 섹션 "온보딩 다시 보기" — RootView가 온보딩 커버를 다시 띄운다(기본 no-op은 프리뷰용).
-    var onReplayOnboarding: () -> Void = {}
     @Environment(\.toastCenter) private var toastCenter
     @Environment(\.premiumStore) private var premiumStore
     @Environment(\.dependencies) private var dependencies
@@ -206,13 +204,6 @@ struct SettingsView: View {
             .tint(.green)
 
             Section {
-                // 다시 보기가 맨 위 — 리뷰·피드백(앱이 바라는 것)보다 사용자 목적이 먼저.
-                Button {
-                    dependencies.analytics.log(.onboardingReplayTapped)
-                    onReplayOnboarding()
-                } label: {
-                    chevronRowLabel("Replay Onboarding")
-                }
                 // 사용자가 직접 누르는 경로라 `requestReview`가 아니라 App Store 리뷰 작성 페이지로
                 // 보낸다 — 이유는 `SupportLinks.writeReviewURL` 주석 참고(탭 응답으로 호출 금지).
                 Button {

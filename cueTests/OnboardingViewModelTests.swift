@@ -13,8 +13,7 @@ struct OnboardingViewModelTests {
     /// `.preview` 의존성에서 온보딩이 만지는 경로(메모 저장·메모 LA·앱 설정)만 교체한다.
     private func makeViewModel(
         memo: Memo = .default,
-        settings: AppSettings = .default,
-        isPremium: Bool = false
+        settings: AppSettings = .default
     ) -> (OnboardingViewModel, InMemoryMemoRepository, RecordingOnboardingLiveActivity, InMemoryAppSettingsRepository) {
         let memoRepo = InMemoryMemoRepository(memo: memo)
         let service = RecordingOnboardingLiveActivity()
@@ -29,9 +28,7 @@ struct OnboardingViewModelTests {
         )
         deps.fetchAppSettings = FetchAppSettingsUseCase(repository: settingsRepo)
         deps.saveAppSettings = SaveAppSettingsUseCase(repository: settingsRepo)
-        let viewModel = OnboardingViewModel(
-            dependencies: deps, premiumStore: PremiumStore(previewIsPremium: isPremium)
-        )
+        let viewModel = OnboardingViewModel(dependencies: deps)
         return (viewModel, memoRepo, service, settingsRepo)
     }
 
@@ -131,71 +128,6 @@ struct OnboardingViewModelTests {
 
         #expect(await service.startScheduleCalls.isEmpty)
         #expect(await service.startReminderCalls.isEmpty)
-    }
-
-    // MARK: - 재시청(설정 "온보딩 다시 보기") 무료 사용자 데모 게시
-
-    /// 무료 사용자의 재시청 게시는 입력 텍스트를 **저장하지도 잠금화면에 싣지도 않는다** —
-    /// 하루 1회 쿼터를 재시청으로 우회해 메모 LA를 무제한 켜는 구멍 차단. 메모 카드는
-    /// 메모 탭 placeholder 문구("무엇을 기억할까요?")로 데모만 보여준다.
-    @Test func freeReplayPublishShowsPlaceholderWithoutSavingMemo() async {
-        let (viewModel, memoRepo, service, _) = makeViewModel(
-            memo: Memo(text: "기존 메모", colorHex: "#112233")
-        )
-        viewModel.reset()   // 재시청 진입 표식
-        viewModel.text = "우유 사기"
-
-        await viewModel.publish()
-
-        let saved = await memoRepo.fetch()
-        #expect(saved.text == "기존 메모")                       // 실제 메모는 안 건드린다
-        let call = await service.startMemoCalls.first
-        #expect(call?.text == String(localized: "What to remember?"))
-        #expect(call?.colorHex == "#112233")                     // 색은 기존 메모 것 유지
-        #expect(viewModel.published)
-        #expect(viewModel.publishedDemo)                         // RootView가 채택을 건너뛰는 근거
-        #expect(await service.startScheduleCalls.count == 1)     // 예시 일정·할일은 그대로 게시
-        #expect(await service.startReminderCalls.count == 1)
-    }
-
-    /// 프리미엄 사용자의 재시청은 첫 실행과 동일 — 입력을 실제 메모로 저장·게시한다
-    /// (어차피 무제한이라 우회 이득이 없고, 진짜 경험이 더 낫다).
-    @Test func premiumReplayPublishesTypedMemo() async {
-        let (viewModel, memoRepo, service, _) = makeViewModel(isPremium: true)
-        viewModel.reset()
-        viewModel.text = "우유 사기"
-
-        await viewModel.publish()
-
-        #expect(await memoRepo.fetch().text == "우유 사기")
-        #expect(await service.startMemoCalls.first?.text == "우유 사기")
-        #expect(viewModel.publishedDemo == false)
-    }
-
-    /// 첫 실행(무료)은 기존 그대로 — reset 없이 게시하면 실제 메모 저장·게시(publishedDemo 아님).
-    @Test func firstRunFreePublishStillSavesTypedMemo() async {
-        let (viewModel, memoRepo, _, _) = makeViewModel()
-        viewModel.text = "우유 사기"
-
-        await viewModel.publish()
-
-        #expect(await memoRepo.fetch().text == "우유 사기")
-        #expect(viewModel.publishedDemo == false)
-    }
-
-    /// 재시청 진입용 reset — 진행 상태(페이지·입력·게시 표시)를 처음으로 되돌린다.
-    /// 지난 시청의 "게시 완료" 화면이 그대로 열리면 안 된다.
-    @Test func resetClearsProgressForReplay() async {
-        let (viewModel, _, _, _) = makeViewModel()
-        viewModel.page = 2
-        viewModel.text = "우유 사기"
-        await viewModel.publish()
-
-        viewModel.reset()
-
-        #expect(viewModel.page == 0)
-        #expect(viewModel.text.isEmpty)
-        #expect(viewModel.published == false)
     }
 
     /// 조용한 완주 처리(기존 사용자 마이그레이션)는 finish만 부른다 — 이 경로에서

@@ -462,7 +462,7 @@ private struct BreathingRings: View {
 
 #Preview {
     OnboardingView(
-        viewModel: OnboardingViewModel(dependencies: .preview, premiumStore: PremiumStore(previewIsPremium: false)),
+        viewModel: OnboardingViewModel(dependencies: .preview),
         onFinished: {}
     )
 }

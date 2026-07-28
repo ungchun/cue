@@ -48,7 +48,7 @@ struct RootView: View {
         _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
-        _onboardingViewModel = State(initialValue: OnboardingViewModel(dependencies: dependencies, premiumStore: premiumStore))
+        _onboardingViewModel = State(initialValue: OnboardingViewModel(dependencies: dependencies))
         hadPriorInstall = dependencies.detectPriorInstall()
     }
 
@@ -180,14 +180,12 @@ struct RootView: View {
                 showsOnboarding = false
                 Task {
                     await memoViewModel.onAppear()
-                    // 데모 게시(무료 재시청의 placeholder 카드)는 채택하지 않는다 — 저장 메모와
-                    // 다른 내용이고, 채택하면 메모 탭 편집이 쿼터 없이 LA를 갱신하는 우회가 열린다.
-                    if onboardingViewModel.published, !onboardingViewModel.publishedDemo {
+                    if onboardingViewModel.published {
                         memoViewModel.adoptExternalLiveActivity()
                     }
                     await settingsViewModel.onAppear()
-                    // 4) 항상 표시 재게시 — 재시청(설정) 경로에서 예시 게시가 실사용 일정·할일
-                    //    LA를 대체했다가 방금 정리됐을 수 있다. 첫 실행 경로에선 기본 off라 no-op.
+                    // 4) 항상 표시 재게시 — 온보딩의 예시 게시가 실사용 일정·할일 LA를
+                    //    대체했다가 방금 정리됐을 수 있다. 첫 실행 경로에선 기본 off라 no-op.
                     await startAlwaysOnActivities(settingsViewModel.settings)
                 }
             }
@@ -260,12 +258,7 @@ struct RootView: View {
         case .focus: FocusView(viewModel: focusViewModel)
         case .reminder: ReminderView(viewModel: reminderViewModel)
         case .schedule: ScheduleView(viewModel: scheduleViewModel)
-        case .settings:
-            // 온보딩 다시 보기 — 첫 실행과 같은 커버를 재사용하되 진행 상태만 초기화한다.
-            SettingsView(viewModel: settingsViewModel) {
-                onboardingViewModel.reset()
-                showsOnboarding = true
-            }
+        case .settings: SettingsView(viewModel: settingsViewModel)
         }
     }
 }
