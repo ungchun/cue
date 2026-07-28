@@ -80,6 +80,7 @@ struct CompositionRoot {
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: liveActivityService),
             // Keychain 저장 — 앱 삭제·재설치로 무료 한도(첫날 2회·이후 1회)를 리셋하는 우회를 막는다.
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: KeychainLiveActivationQuotaRepository()),
+            considerReviewPrompt: ConsiderReviewPromptUseCase(repository: UserDefaultsReviewPromptStateRepository()),
             checkForcedUpdate: CheckForcedUpdateUseCase(service: FirebaseAppUpdatePolicyService()),
             detectPriorInstall: DetectPriorInstallUseCase(repository: UserDefaultsPriorInstallRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),

@@ -99,7 +99,7 @@ struct AnalyticsEventTests {
     @Test func appEventNames() {
         #expect(AnalyticsEvent.forcedUpdatePrompted.name == "forced_update_prompted")
         #expect(AnalyticsEvent.forcedUpdateTapped.name == "forced_update_tapped")
-        #expect(AnalyticsEvent.reviewRequested.name == "review_requested")
+        #expect(AnalyticsEvent.reviewRequested(source: "live").name == "review_requested")
         #expect(AnalyticsEvent.feedbackTapped.name == "feedback_tapped")
         #expect(AnalyticsEvent.onboardingReplayTapped.name == "onboarding_replay_tapped")
         #expect(AnalyticsEvent.externalAppOpened(app: "calendar").name == "external_app_opened")
@@ -167,6 +167,10 @@ struct AnalyticsEventTests {
         #expect(AnalyticsEvent.focusEnded(source: "app").parameters == ["source": "app"])
         #expect(AnalyticsEvent.focusPhaseAdvanced(source: "live_activity").parameters
                 == ["source": "live_activity"])
+        // 자동(라이브 게시 후)과 수동(설정 탭)은 동작이 달라 반드시 구분돼야 한다.
+        #expect(AnalyticsEvent.reviewRequested(source: "live").parameters == ["source": "live"])
+        #expect(AnalyticsEvent.reviewRequested(source: "settings").parameters
+                == ["source": "settings"])
     }
 
     @Test func reminderDetailParameters() {

@@ -90,7 +90,9 @@ enum AnalyticsEvent: Equatable, Sendable {
     // 앱
     case forcedUpdatePrompted
     case forcedUpdateTapped
-    case reviewRequested
+    /// 리뷰 요청 — `source`로 자동("live": 라이브 게시 후 문턱 도달)과 수동("settings": 사용자 탭)을 가른다.
+    /// 두 경로는 동작이 다르다: 자동은 시스템 프롬프트(안 뜰 수 있음), 수동은 App Store 리뷰 작성 페이지.
+    case reviewRequested(source: String)
     case feedbackTapped
     case onboardingReplayTapped
     case externalAppOpened(app: String)
@@ -204,6 +206,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .focusEndSoundToggled(let on): ["on": String(on)]
         case .calendarVisibilityToggled(let kind, let on): ["kind": kind, "on": String(on)]
         case .calendarShowAllTapped(let kind): ["kind": kind]
+        case .reviewRequested(let source): ["source": source]
         case .externalAppOpened(let app): ["app": app]
         case .permissionSettingsOpened(let kind): ["kind": kind]
         default: [:]

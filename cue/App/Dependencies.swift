@@ -80,6 +80,10 @@ struct Dependencies: Sendable {
     /// 무료 사용자의 라이브 활성화(켜기·새로고침) 하루 한도 소비 — 켜기 버튼에서 호출.
     var consumeLiveActivation: ConsumeLiveActivationUseCase
 
+    /// 라이브 게시 성공 직후 호출 — 사용일을 세고 리뷰를 요청할 시점인지 판정.
+    /// 인메모리 기본값 — 리뷰와 무관한 테스트 헬퍼가 이 필드를 몰라도 컴파일되게(전례: `moveReminder`).
+    var considerReviewPrompt = ConsiderReviewPromptUseCase(repository: InMemoryReviewPromptStateRepository())
+
     /// 앱 시작 시 호출 — 원격 최소 버전과 비교해 강제 업데이트 블로커 표시 여부 판정.
     var checkForcedUpdate: CheckForcedUpdateUseCase
 
@@ -248,6 +252,7 @@ extension Dependencies {
             syncLiveActivities: SyncLiveActivitiesUseCase(service: liveActivityService),
             refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase(service: liveActivityService),
             consumeLiveActivation: ConsumeLiveActivationUseCase(repository: InMemoryLiveActivationQuotaRepository()),
+            considerReviewPrompt: ConsiderReviewPromptUseCase(repository: InMemoryReviewPromptStateRepository()),
             checkForcedUpdate: CheckForcedUpdateUseCase(service: DisabledAppUpdatePolicyService()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository)

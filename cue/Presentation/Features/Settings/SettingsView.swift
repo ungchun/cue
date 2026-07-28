@@ -11,7 +11,6 @@ struct SettingsView: View {
     let viewModel: SettingsViewModel
     /// 지원 섹션 "온보딩 다시 보기" — RootView가 온보딩 커버를 다시 띄운다(기본 no-op은 프리뷰용).
     var onReplayOnboarding: () -> Void = {}
-    @Environment(\.requestReview) private var requestReview
     @Environment(\.toastCenter) private var toastCenter
     @Environment(\.premiumStore) private var premiumStore
     @Environment(\.dependencies) private var dependencies
@@ -214,9 +213,11 @@ struct SettingsView: View {
                 } label: {
                     chevronRowLabel("Replay Onboarding")
                 }
+                // 사용자가 직접 누르는 경로라 `requestReview`가 아니라 App Store 리뷰 작성 페이지로
+                // 보낸다 — 이유는 `SupportLinks.writeReviewURL` 주석 참고(탭 응답으로 호출 금지).
                 Button {
-                    dependencies.analytics.log(.reviewRequested)
-                    requestReview()
+                    dependencies.analytics.log(.reviewRequested(source: "settings"))
+                    openURL(SupportLinks.writeReviewURL)
                 } label: {
                     chevronRowLabel("Leave a Review")
                 }

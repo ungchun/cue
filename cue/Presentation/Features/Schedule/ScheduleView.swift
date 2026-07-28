@@ -4,6 +4,7 @@
 //
 
 import EventKit
+import StoreKit
 import SwiftUI
 import UIKit
 
@@ -29,6 +30,8 @@ struct ScheduleView: View {
     @Environment(\.openURL) private var openURL
     /// 앱 공통 토스트 — "켜기"로 라이브가 켜지면 상단 토스트를 띄운다.
     @Environment(\.toastCenter) private var toastCenter
+    @Environment(\.dependencies) private var dependencies
+    @Environment(\.requestReview) private var requestReview
 
     var body: some View {
         // ReminderView와 동일한 패턴: navigation bar는 inline 모드로 두고 large title은
@@ -119,16 +122,25 @@ struct ScheduleView: View {
             FloatingMessageButton {
                 let wasActive = viewModel.liveActivityActive
                 let verdict = await viewModel.toggleLiveActivity()
+                // 실제로 게시된 경우만 리뷰 후보 — .denied는 기존 LA를 건드리지 않아
+                // liveActivityActive가 true로 남을 수 있으므로 분기에서 직접 구분한다.
+                var published = false
                 switch verdict {
                 case .unlimited where viewModel.liveActivityActive:
                     toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
+                    published = true
                 case .denied:
                     toastCenter.showPremium()
                 case .allowed(let remaining, let limit) where viewModel.liveActivityActive:
                     // 무료 한도 잔여 표기 — "1/2" → "0/2".
                     toastCenter.show("\(remaining) / \(limit)")
+                    published = true
                 default:
                     break
+                }
+                if published, await dependencies.considerReviewPrompt() {
+                    dependencies.analytics.log(.reviewRequested(source: "live"))
+                    requestReview()
                 }
             }
             // 보여줄 일정이 없으면 라이브 버튼 비활성 — 메모·할일과 동일.

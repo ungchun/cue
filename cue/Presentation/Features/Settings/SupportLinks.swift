@@ -15,6 +15,16 @@ enum SupportLinks {
         URL(string: "https://apps.apple.com/app/id\(appStoreID)")!
     }
 
+    /// App Store 리뷰 **작성** 화면을 바로 여는 링크.
+    ///
+    /// 사용자가 직접 누르는 버튼은 `requestReview`를 쓰지 않는다 — Apple 문서가 명시적으로
+    /// 금지한다("don't call it in response to a button tap"). 1년 3회 한도에 걸리거나 사용자가
+    /// 리뷰 요청을 꺼두면 **아무 일도 안 일어나** 버튼이 고장 난 것처럼 보이기 때문.
+    /// 이 링크는 항상 열리고, 별점뿐 아니라 글도 남길 수 있다.
+    static var writeReviewURL: URL {
+        URL(string: "https://apps.apple.com/app/id\(appStoreID)?action=write-review")!
+    }
+
     /// 피드백 받을 개발자 이메일.
     static let feedbackEmail = "leedool3003@gmail.com"
 
