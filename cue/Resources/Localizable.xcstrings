@@ -7,306 +7,6 @@
     " " : {
 
     },
-    "%lld days free, then auto-renews · Cancel during the trial and pay nothing" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld أيام مجانًا، ثم يتجدد تلقائيًا · ألغِ خلال الفترة التجريبية ولن تدفع شيئًا"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld Tage kostenlos, danach automatische Verlängerung · Bei Kündigung im Testzeitraum entstehen keine Kosten"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld días gratis, luego se renueva automáticamente · Cancela durante la prueba y no pagarás nada"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld jours gratuits, puis renouvellement automatique · Annulez pendant l'essai et ne payez rien"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld दिन मुफ़्त, फिर स्वतः नवीनीकरण · ट्रायल के दौरान रद्द करें, कुछ नहीं देना होगा"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gratis %lld hari, lalu diperpanjang otomatis · Batalkan selama masa coba tanpa dikenai biaya"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld giorni gratis, poi rinnovo automatico · Annulla durante la prova e non paghi nulla"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld日間無料、その後自動更新 · 体験中に解約すれば請求されません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld일 무료, 이후 자동 갱신 · 체험 중 취소하면 결제되지 않아요"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Percuma %lld hari, kemudian diperbaharui secara automatik · Batalkan semasa percubaan tanpa sebarang bayaran"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld dias grátis, depois renova automaticamente · Cancele durante o teste e não pague nada"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld дней бесплатно, затем автопродление · Отмените во время пробного периода — платить не придётся"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ฟรี %lld วัน จากนั้นต่ออายุอัตโนมัติ · ยกเลิกระหว่างทดลองใช้ได้โดยไม่มีค่าใช้จ่าย"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Miễn phí %lld ngày, sau đó tự động gia hạn · Hủy trong thời gian dùng thử sẽ không bị tính phí"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld天免费，之后自动续订 · 试用期内取消不会收费"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld天免費，之後自動續訂 · 試用期內取消不會收費"
-          }
-        }
-      }
-    },
-    "Check your Lock Screen." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تحقق من شاشة القفل."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wirf einen Blick auf deinen Sperrbildschirm."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Echa un vistazo a tu pantalla de bloqueo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jetez un œil à votre écran verrouillé."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अपनी लॉक स्क्रीन देखें।"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cek Layar Kunci kamu."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dai un'occhiata alla schermata di blocco."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ロック画面を確認してみてください"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "잠금화면을 확인해보세요"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Semak Skrin Kunci anda."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dê uma olhada na sua Tela de Bloqueio."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Проверьте экран блокировки."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ลองดูหน้าจอล็อกของคุณ"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hãy xem Màn hình khóa của bạn."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "看看你的锁定屏幕"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "看看你的鎖定畫面"
-          }
-        }
-      }
-    },
-    "One-time purchase · Yours forever" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "شراء لمرة واحدة · ملكك للأبد"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einmaliger Kauf · Für immer deins"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pago único · Tuyo para siempre"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Achat unique · À vous pour toujours"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "एक बार भुगतान · हमेशा के लिए आपका"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sekali bayar · Milikmu selamanya"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acquisto una tantum · Tuo per sempre"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1回買い切り · ずっと使える"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1회 결제 · 평생 이용"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bayar sekali · Milik anda selamanya"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pagamento único · Seu para sempre"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Разовая покупка · Навсегда"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ซื้อครั้งเดียว · เป็นของคุณตลอดไป"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mua một lần · Sở hữu mãi mãi"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一次性购买 · 永久使用"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一次性購買 · 永久使用"
-          }
-        }
-      }
-    },
     "·" : {
 
     },
@@ -614,6 +314,106 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld天前"
+          }
+        }
+      }
+    },
+    "%lld days free, then auto-renews · Cancel during the trial and pay nothing" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld أيام مجانًا، ثم يتجدد تلقائيًا · ألغِ خلال الفترة التجريبية ولن تدفع شيئًا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Tage kostenlos, danach automatische Verlängerung · Bei Kündigung im Testzeitraum entstehen keine Kosten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld días gratis, luego se renueva automáticamente · Cancela durante la prueba y no pagarás nada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld jours gratuits, puis renouvellement automatique · Annulez pendant l'essai et ne payez rien"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld दिन मुफ़्त, फिर स्वतः नवीनीकरण · ट्रायल के दौरान रद्द करें, कुछ नहीं देना होगा"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gratis %lld hari, lalu diperpanjang otomatis · Batalkan selama masa coba tanpa dikenai biaya"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld giorni gratis, poi rinnovo automatico · Annulla durante la prova e non paghi nulla"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld日間無料、その後自動更新 · 体験中に解約すれば請求されません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일 무료, 이후 자동 갱신 · 체험 중 취소하면 결제되지 않아요"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Percuma %lld hari, kemudian diperbaharui secara automatik · Batalkan semasa percubaan tanpa sebarang bayaran"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dias grátis, depois renova automaticamente · Cancele durante o teste e não pague nada"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld дней бесплатно, затем автопродление · Отмените во время пробного периода — платить не придётся"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ฟรี %lld วัน จากนั้นต่ออายุอัตโนมัติ · ยกเลิกระหว่างทดลองใช้ได้โดยไม่มีค่าใช้จ่าย"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miễn phí %lld ngày, sau đó tự động gia hạn · Hủy trong thời gian dùng thử sẽ không bị tính phí"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld天免费，之后自动续订 · 试用期内取消不会收费"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld天免費，之後自動續訂 · 試用期內取消不會收費"
           }
         }
       }
@@ -4056,6 +3856,106 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "取消"
+          }
+        }
+      }
+    },
+    "Check your Lock Screen." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تحقق من شاشة القفل."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wirf einen Blick auf deinen Sperrbildschirm."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Echa un vistazo a tu pantalla de bloqueo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetez un œil à votre écran verrouillé."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अपनी लॉक स्क्रीन देखें।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cek Layar Kunci kamu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dai un'occhiata alla schermata di blocco."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ロック画面を確認してみてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잠금화면을 확인해보세요"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semak Skrin Kunci anda."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dê uma olhada na sua Tela de Bloqueio."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Проверьте экран блокировки."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลองดูหน้าจอล็อกของคุณ"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy xem Màn hình khóa của bạn."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看看你的锁定屏幕"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "看看你的鎖定畫面"
           }
         }
       }
@@ -16980,6 +16880,106 @@
         }
       }
     },
+    "One-time purchase · Yours forever" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شراء لمرة واحدة · ملكك للأبد"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmaliger Kauf · Für immer deins"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pago único · Tuyo para siempre"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achat unique · À vous pour toujours"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "एक बार भुगतान · हमेशा के लिए आपका"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sekali bayar · Milikmu selamanya"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acquisto una tantum · Tuo per sempre"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1回買い切り · ずっと使える"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1회 결제 · 평생 이용"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bayar sekali · Milik anda selamanya"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pagamento único · Seu para sempre"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Разовая покупка · Навсегда"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ซื้อครั้งเดียว · เป็นของคุณตลอดไป"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mua một lần · Sở hữu mãi mãi"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一次性购买 · 永久使用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一次性購買 · 永久使用"
+          }
+        }
+      }
+    },
     "Open Settings" : {
       "localizations" : {
         "ar" : {
@@ -18883,106 +18883,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重複：%@"
-          }
-        }
-      }
-    },
-    "Replay Onboarding" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "إعادة مشاهدة المقدمة"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einführung erneut ansehen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volver a ver la introducción"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revoir l'introduction"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "परिचय फिर से देखें"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lihat lagi pengantar"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rivedi l’introduzione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "イントロをもう一度見る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "온보딩 다시 보기"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lihat semula pengenalan"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rever a introdução"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Посмотреть введение снова"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ดูการแนะนำอีกครั้ง"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xem lại phần giới thiệu"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重看新手引导"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重看新手引導"
           }
         }
       }
