@@ -71,9 +71,10 @@ struct SettingsView: View {
             }
 
             Section {
-                // 켜기는 Premium 전용 — 바인딩 setter가 가로채 Premium 토스트만 띄운다(끄기는 항상 허용).
-                Toggle("Always Show Live", isOn: liveAlwaysOnBinding)
-                    .tint(.green)
+                premiumGated(feature: "always_on") {
+                    Toggle("Always Show Live", isOn: liveAlwaysOnBinding)
+                        .tint(.green)
+                }
                 // 대상 선택 — 평면 메뉴 한 번에 열림. 서브메뉴 펼침이 없어서 메뉴 재배치
                 // 점프(iOS가 서브메뉴 확장 시 메뉴를 위로 밀어 올리는 동작)가 원천적으로 없다.
                 // 길어지면 메뉴가 내부 스크롤(시스템 표준).
@@ -98,7 +99,9 @@ struct SettingsView: View {
                             Image(systemName: "chevron.up.chevron.down")
                                 .font(.footnote.weight(.medium))
                         }
-                        .foregroundStyle(.secondary)
+                        // 항상 표시가 켜져 있을 때만 또렷하게 — 꺼져 있으면 이 행은 조작 대상이
+                        // 아니므로 회색으로 물러난다(비활성 자체보다 대비를 더 벌린다).
+                        .foregroundStyle(viewModel.settings.liveAlwaysOn ? .primary : .secondary)
                     }
                     .menuOrder(.fixed)
                 }
@@ -144,9 +147,10 @@ struct SettingsView: View {
                 premiumGated(feature: "live_color") {
                     ColorPicker("Live Font Color", selection: $memoFontColor, supportsOpacity: false)
                 }
-                // 켜기는 Premium 전용 — 바인딩 setter가 가로채 Premium 토스트만 띄운다(끄기는 항상 허용).
-                Toggle("Show Calendar", isOn: memoShowsCalendarBinding)
-                    .tint(.green)
+                premiumGated(feature: "show_calendar_memo") {
+                    Toggle("Show Calendar", isOn: memoShowsCalendarBinding)
+                        .tint(.green)
+                }
             }
 
             Section {
@@ -158,8 +162,10 @@ struct SettingsView: View {
                         LabeledContent("Calendars", value: calendarsSummary)
                     }
                 }
-                Toggle("Show Calendar", isOn: scheduleShowsCalendarBinding)
-                    .tint(.green)
+                premiumGated(feature: "show_calendar_schedule") {
+                    Toggle("Show Calendar", isOn: scheduleShowsCalendarBinding)
+                        .tint(.green)
+                }
             } header: {
                 sectionHeader("Schedule")
             }
@@ -183,8 +189,10 @@ struct SettingsView: View {
                         Text(list.title).tag(list.id)
                     }
                 }
-                Toggle("Show Calendar", isOn: reminderShowsCalendarBinding)
-                    .tint(.green)
+                premiumGated(feature: "show_calendar_tasks") {
+                    Toggle("Show Calendar", isOn: reminderShowsCalendarBinding)
+                        .tint(.green)
+                }
             } header: {
                 sectionHeader("Tasks")
             }
@@ -454,8 +462,9 @@ struct SettingsView: View {
         toastCenter.showPremium()
     }
 
-    /// Premium 전용 행 게이트 — 무료 사용자는 컨트롤 조작을 가로채 "Premium" 토스트만 띄운다.
-    /// 잠금 표시 없이 평소처럼 보이되, 탭이 컨트롤에 닿기 전에 오버레이가 가로챈다.
+    /// Premium 전용 행 게이트 — 무료 사용자에겐 컨트롤을 비활성(회색)으로 보여 잠겨 있음을
+    /// 먼저 알리고, 탭이 컨트롤에 닿기 전에 오버레이가 가로채 "Premium" 토스트를 띄운다.
+    /// 색·토글 등 게이트 대상은 모두 이 한 경로를 쓴다 — 보이는 상태와 실제 동작이 갈리지 않게.
     @ViewBuilder
     private func premiumGated(feature: String, @ViewBuilder _ content: () -> some View) -> some View {
         content()
@@ -470,7 +479,8 @@ struct SettingsView: View {
             }
     }
 
-    /// "항상 표시" 켜기는 Premium 전용 — 무료면 저장하지 않고 Premium 토스트만. 끄기는 항상 허용.
+    /// "항상 표시" 켜기는 Premium 전용. UI는 `premiumGated`가 비활성으로 막지만, setter 가드도
+    /// 남겨둔다 — 구독 만료 등으로 보이는 상태와 권한이 어긋나도 저장까지 새지 않게(이중 방어).
     private var liveAlwaysOnBinding: Binding<Bool> {
         Binding(
             get: { viewModel.settings.liveAlwaysOn },
@@ -484,7 +494,7 @@ struct SettingsView: View {
         )
     }
 
-    /// "캘린더 함께 표시"(true) 선택은 Premium 전용 — 무료면 저장하지 않고 Premium 토스트만.
+    /// "캘린더 함께 표시"(true) 선택은 Premium 전용 — UI 비활성과 별개로 setter도 막는다.
     /// getter가 계속 false를 돌려주므로 선택은 "기본"에 머문다. "기본"으로 되돌리기는 항상 허용.
     private var memoShowsCalendarBinding: Binding<Bool> {
         Binding(
