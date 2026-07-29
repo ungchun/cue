@@ -18,6 +18,19 @@ struct CalendarWidgetHeader: View {
     var shiftStep: Int = 1
 
     var body: some View {
+        // 위젯 4종이 **같은 상단 바**를 갖도록, 제목 줄 아래 구분선까지 헤더가 소유한다.
+        // 예전엔 월 위젯만 본문(`MonthWidgetView`) 안에서 선을 그렸고 시간표 위젯은
+        // 날짜 머리글 뒤에 그려서, 두 위젯을 나란히 놓으면 선의 높이가 달랐다.
+        VStack(spacing: Spacing.zero) {
+            titleBar
+            Rectangle()
+                .fill(WidgetCalendarTheme.gridLine)
+                .frame(height: WidgetCalendarTheme.hairline)
+        }
+    }
+
+    /// ‹ 7월 2026년 › 한 줄.
+    private var titleBar: some View {
         // 셰브런을 좌우 끝에 고정하고 제목은 폭 중앙에 — 제목 길이가 로케일마다 달라도
         // 가운데가 흔들리지 않게 overlay로 겹친다.
         HStack(spacing: Spacing.zero) {
@@ -43,7 +56,9 @@ struct CalendarWidgetHeader: View {
         // 안 그러면 둥근 모서리가 좌우 셰브런을 잘라먹는다(실기기에서 확인).
         // overlay보다 **뒤에** 붙여야 제목과 셰브런의 세로 중심이 어긋나지 않는다.
         .padding(.horizontal, Spacing.smd)
-        .padding(.top, Spacing.xs)
+        // 제목 줄 위아래를 같은 값으로 — 아래 구분선이 헤더 안으로 들어오면서 바깥
+        // VStack의 spacing이 더 이상 아래 여백을 만들어주지 않는다.
+        .padding(.vertical, Spacing.xs)
     }
 
     @ViewBuilder

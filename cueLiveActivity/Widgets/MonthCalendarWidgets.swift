@@ -76,7 +76,9 @@ struct MonthWidgetEntryView: View {
     }
 
     var body: some View {
-        VStack(spacing: Spacing.xs) {
+        // 간격 0 — 헤더가 자기 아래 구분선까지 소유하므로, 여기에 간격을 주면
+        // 선과 격자 사이가 떠서 위젯 4종의 상단 바 높이가 어긋난다.
+        VStack(spacing: Spacing.zero) {
             CalendarWidgetHeader(
                 month: WidgetCalendarTheme.monthName(for: displayedMonth, calendar: calendar),
                 year: WidgetCalendarTheme.yearName(for: displayedMonth, calendar: calendar),
@@ -85,7 +87,8 @@ struct MonthWidgetEntryView: View {
             if entry.snapshot.hasAccess {
                 MonthWidgetView(grid: grid, itemsByDay: itemsByDay)
             } else {
-                WidgetAccessPrompt()
+                // 헤더 VStack의 간격이 0이라 안내문 위 여백을 여기서 준다.
+                WidgetAccessPrompt().padding(.top, Spacing.xs)
             }
         }
         // 표준(.large) 타입 램프로는 셀 하나에 칩이 한 줄도 안 들어간다 — LA 일정 위젯과

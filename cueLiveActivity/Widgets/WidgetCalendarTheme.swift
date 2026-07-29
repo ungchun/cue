@@ -150,6 +150,10 @@ extension View {
     /// 같은 색을 **두 번** 칠한다. `containerBackground`만 주면 시스템이 그 위에 위젯 재질을
     /// 얹어 상단이 하단보다 밝게 뜬다(실기기에서 확인 — 코드엔 그라데이션이 없다).
     /// 콘텐츠 바로 뒤에 단색을 한 겹 더 깔면 그 재질이 가려져 위아래가 균일해진다.
+    ///
+    /// 루트에서 따로 클립하지 않는다 — 시스템이 이미 위젯을 둥근 사각으로 잘라낸다.
+    /// 여기서 한 겹 더 깎으면 넘친 콘텐츠까지 같이 숨겨져, 레이아웃이 넘치고 있다는
+    /// 사실 자체가 보이지 않는다(마지막 주가 사라진 걸 하단 여백으로 오진하게 만들었다).
     func calendarWidgetBackground(_ colorScheme: ColorScheme) -> some View {
         let color = colorScheme == .dark ? Color.black : Color.white
         return frame(maxWidth: .infinity, maxHeight: .infinity)

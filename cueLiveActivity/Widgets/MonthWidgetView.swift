@@ -16,6 +16,14 @@
 import SwiftUI
 
 struct MonthWidgetView: View {
+    /// 격자 아래 남기는 카드 바닥 여백.
+    ///
+    /// 헤더가 제목 줄에 주는 위쪽 패딩(`Spacing.xs`)과 같은 값이다.
+    ///
+    /// 높이 **예산에서 빼는** 값이라 `Spacing` 토큰이 아니라 여기 둔다 — 간격이 아니라
+    /// 레이아웃 치수다(`WidgetCalendarTheme`의 거터·마커 크기와 같은 성격).
+    static let bottomInset: CGFloat = Spacing.xs
+
     let grid: MonthCalendarGrid
     /// 표시 월의 **일(day-of-month) → 그날 항목들**. 표시 월 밖의 날은 담지 않는다.
     let itemsByDay: [Int: [WidgetCalendarItem]]
@@ -28,21 +36,30 @@ struct MonthWidgetView: View {
 
     var body: some View {
         VStack(spacing: Spacing.zero) {
-            // 요일 줄 위 경계선 — 아래 주 행들과 같은 선으로 격자의 위쪽 테두리를 닫는다.
-            separator
+            // 요일 줄 위 경계선은 여기서 그리지 않는다 — 공통 헤더가 자기 아래 구분선을
+            // 소유하며, 그 선이 곧 격자의 위쪽 테두리다(위젯 4종 공통).
             weekdayHeader
             GeometryReader { geometry in
-                // 위젯 하단의 둥근 모서리가 마지막 주 칩의 좌·우 끝을 잘라먹는다(실기기 확인).
-                // 모서리 반경만큼 격자 전체를 들이면 셀이 좁아지므로 아래만 비운다 — 다만
-                // **예산에서 먼저 빼야** 한다. VStack에 패딩으로 주면 행 높이 합이 이미 전체
-                // 높이라 패딩이 아래로 넘쳐 오히려 더 잘린다.
-                let usableHeight = max(0, geometry.size.height - Spacing.smd)
-                // 구분선이 먹는 높이를 떼고 남은 만큼을 주 행이 균등하게 나눈다.
+                // 행 높이는 **SwiftUI가 나눈다** — `maxHeight: .infinity`로 남는 높이를
+                // 균등 분배시킨다. 예전엔 여기서 직접 나눠 `.frame(height:)`로 박았는데,
+                // 자식이 예산보다 조금이라도 크면 VStack이 그만큼 넘쳐 마지막 주가
+                // GeometryReader 밖으로 밀려났다(GeometryReader는 자식을 클립하지 않는다).
+                // 그 결과가 "닫히지 않는 하단 여백"이었다 — 실제로는 여백이 아니라
+                // 마지막 주가 통째로 화면 밖에 있었던 것.
+                //
+                // 칩 높이 예산은 그대로 필요하다 — 칸 수를 주 수가 고정하기 때문에
+                // 칩이 그 개수에 맞춰 눌려야 한다. 다만 예산이 어긋나도 이제는 행이
+                // 자기 몫만 차지하고 `.clipped()`가 잘라낼 뿐, 격자가 밀려나지 않는다.
+                // 카드 바닥에 숨 쉴 틈을 남긴다 — 마지막 주 칩이 모서리에 바로 닿으면
+                // 격자가 카드 밖으로 이어지는 것처럼 답답해 보인다.
+                // **예산에서 먼저 뺀다**. 바깥에 패딩으로 주면 행 높이 합이 이미 전체
+                // 높이라 그만큼 아래로 넘쳐 마지막 주가 잘린다.
+                let usableHeight = max(0, geometry.size.height - Self.bottomInset)
                 let rowHeight = max(
                     0,
-                    (usableHeight - WidgetCalendarTheme.hairline * CGFloat(weekCount)) / CGFloat(weekCount)
+                    (usableHeight - WidgetCalendarTheme.hairline * CGFloat(weekCount))
+                        / CGFloat(weekCount)
                 )
-                // 칸 수는 주 수가 정하고(5주 3개·6주 2개), 칩 높이가 그 개수에 맞춰 눌린다.
                 let slots = MonthWidgetMetrics.slotCount(weekCount: weekCount)
                 let chipHeight = MonthWidgetMetrics.chipHeight(rowHeight: rowHeight, slots: slots)
 
@@ -55,11 +72,15 @@ struct MonthWidgetView: View {
                             chipHeight: chipHeight,
                             columnWidth: geometry.size.width / CGFloat(max(1, week.count))
                         )
-                            // 고정 높이 — 자식이 아무리 커도 행이 밀려나지 않는다.
-                            .frame(height: rowHeight)
+                            // 남는 높이를 행들이 균등하게 나눠 갖는다 — 합이 정확히
+                            // GeometryReader 높이라 마지막 주가 바닥에 닿는다.
+                            .frame(maxHeight: .infinity)
                             .clipped()
                     }
                 }
+                // 자식이 넘치더라도 격자가 위젯 밖으로 밀려나지 않게 못 박는다.
+                // 높이는 `usableHeight` — 남는 `bottomInset`이 카드 바닥 여백이 된다.
+                .frame(height: usableHeight, alignment: .top)
             }
         }
     }
@@ -77,12 +98,15 @@ struct MonthWidgetView: View {
                     .font(.caption2)
                     // caption2가 램프의 바닥이라 그 아래 미세 조정은 scaleEffect뿐이다.
                     // textScale 한 단계는 너무 작아 요일이 격자에 묻힌다.
-                    .scaleEffect(0.92)
+                    .scaleEffect(0.88)
                     .foregroundStyle(WidgetCalendarTheme.weekdayColor(grid.weekdayIndex(column: column)))
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.bottom, Spacing.xxs)
+        // 위아래를 **같은 값으로** 준다. 예전엔 아래만 줬는데, 위 여백은 바깥 VStack의
+        // spacing에서 간접적으로 오다 보니 구분선 바로 아래는 사실상 0이었다 —
+        // 요일 글자가 위 선에 붙고 아래만 떠 보였다(실기기 확인).
+        .padding(.vertical, Spacing.xxs)
     }
 
     /// 한 주 행 — 날짜 숫자 줄 + 칸(lane)별 가로 막대.
@@ -103,8 +127,13 @@ struct MonthWidgetView: View {
             ForEach(0..<max(0, slots), id: \.self) { lane in
                 laneRow(week, layout: layout, lane: lane, columnWidth: columnWidth, height: chipHeight)
             }
-            Spacer(minLength: Spacing.zero)
+            // Spacer를 두지 않는다 — 칩이 행 높이를 나눠 가지므로 남는 높이가 없다.
+            // 예전엔 칩 높이에 상한이 있어 남는 몫을 Spacer가 행 아래로 몰았고,
+            // 마지막 주에서 그게 카드 바닥의 빈 공간으로 보였다.
         }
+        // 예산과 실제 렌더가 어긋나도 행이 자기 몫보다 커지지 않게 한다 — 넘치는 쪽은
+        // 바깥 `.clipped()`가 잘라낸다. 이게 없으면 오차가 누적돼 마지막 주가 밀려난다.
+        .frame(maxHeight: .infinity, alignment: .top)
         // 세로 그리드는 막대 위가 아니라 **아래**에 깔린다 — 스팬 막대가 열 경계를 가로질러야
         // 하나로 이어져 보이는데, 선이 위에 있으면 막대가 토막나 보인다.
         .background(alignment: .topLeading) {

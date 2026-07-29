@@ -41,26 +41,25 @@ enum MonthWidgetMetrics {
             slots: slots,
             headerHeight: dayNumberHeight + dayNumberGap,
             spacing: chipSpacing,
-            minimum: minimumChipHeight,
-            maximum: chipLine.rounded(.up)
+            minimum: minimumChipHeight
         )
     }
 
     /// 순수 계산 버전 — 폰트 메트릭에 기대지 않아 결정론적으로 테스트할 수 있다.
     ///
-    /// 상한을 두는 이유: 칩이 필요 이상으로 두꺼워지면(4주 달처럼 행이 넉넉할 때) 글자만
-    /// 작은 채 배경만 커져 어색하다. 글자 줄높이에서 멈춘다.
+    /// 상한을 두지 않는다. 예전엔 글자 줄높이에서 멈췄는데, 그러면 행에 남는 높이를
+    /// 아무도 쓰지 않아 마지막 주 아래가 그대로 빈 공간으로 남았다(실기기 확인).
+    /// 칸 수는 주 수가 고정하므로, 남는 높이는 칩이 나눠 갖는 게 맞다 — 행이 바닥까지 찬다.
     static func chipHeight(
         rowHeight: CGFloat,
         slots: Int,
         headerHeight: CGFloat,
         spacing: CGFloat,
-        minimum: CGFloat,
-        maximum: CGFloat
+        minimum: CGFloat
     ) -> CGFloat {
         guard slots > 0 else { return minimum }
         let available = rowHeight - headerHeight - spacing * CGFloat(slots - 1)
-        return min(maximum, max(minimum, available / CGFloat(slots)))
+        return max(minimum, available / CGFloat(slots))
     }
 
     /// 칩 사이 세로 간격.
@@ -76,6 +75,9 @@ enum MonthWidgetMetrics {
 
     /// 칩 제목 한 줄 높이(xSmall 고정) — 뷰의 `.font(.caption)`과 **같은 스타일**이어야 한다.
     /// 어긋나면 예산과 렌더가 벌어져 칩이 셀을 넘치거나 빈 공간이 남는다.
+    ///
+    /// 월 격자에서는 칩 높이를 행에서 역산하므로 이 값을 쓰지 않는다. 행 맥락이 없는
+    /// 곳(종일 스트립 등)의 `WidgetItemChip` 기본 높이로 남아 있다.
     ///
     /// ⚠️ xSmall에서는 `caption`과 `caption2`가 둘 다 11pt로 클램프된다 — 지금은 날짜 줄과
     /// 같은 값이지만, 스타일이 다르므로 표준 크기에서는 갈린다. 그래서 분리해 둔다.

@@ -73,7 +73,9 @@ struct DayCalendarEntryView: View {
     }
 
     var body: some View {
-        VStack(spacing: Spacing.xs) {
+        // 간격 0 — 헤더가 자기 아래 구분선까지 소유한다(위젯 4종 공통). 날짜 머리글의
+        // 위 여백은 그 아래에서 따로 준다.
+        VStack(spacing: Spacing.zero) {
             CalendarWidgetHeader(
                 month: WidgetCalendarTheme.monthName(for: days.first ?? entry.date, calendar: calendar),
                 year: WidgetCalendarTheme.yearName(for: days.first ?? entry.date, calendar: calendar),
@@ -82,10 +84,15 @@ struct DayCalendarEntryView: View {
                 shiftStep: dayCount
             )
             if entry.snapshot.hasAccess {
-                dayHeader
-                allDayStrip
-                // 월 위젯의 주 행 구분선과 같은 선 — `Divider`는 색·두께가 달라 두 위젯을
-                // 나란히 놓으면 눈에 띄게 튄다.
+                VStack(spacing: Spacing.xs) {
+                    dayHeader
+                    allDayStrip
+                }
+                // 월 위젯 요일 헤더와 같은 규칙 — 구분선 아래 첫 줄의 위 여백을 명시한다.
+                .padding(.top, Spacing.xs)
+                .padding(.bottom, Spacing.xxs)
+                // 시간표 위 경계선 — 월 위젯의 주 행 구분선과 같은 선. `Divider`는 색·두께가
+                // 달라 두 위젯을 나란히 놓으면 눈에 띄게 튄다.
                 Rectangle()
                     .fill(WidgetCalendarTheme.gridLine)
                     .frame(height: WidgetCalendarTheme.hairline)
@@ -95,7 +102,8 @@ struct DayCalendarEntryView: View {
                     calendar: calendar
                 )
             } else {
-                WidgetAccessPrompt()
+                // 헤더 VStack의 간격이 0이라 안내문 위 여백을 여기서 준다.
+                WidgetAccessPrompt().padding(.top, Spacing.xs)
             }
         }
         .dynamicTypeSize(.xSmall)

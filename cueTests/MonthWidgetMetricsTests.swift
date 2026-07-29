@@ -17,12 +17,11 @@ struct MonthWidgetMetricsTests {
     private let header: CGFloat = 16
     private let spacing: CGFloat = 1
     private let minimum: CGFloat = 9
-    private let maximum: CGFloat = 14
 
     private func chipHeight(rowHeight: CGFloat, slots: Int) -> CGFloat {
         MonthWidgetMetrics.chipHeight(
             rowHeight: rowHeight, slots: slots,
-            headerHeight: header, spacing: spacing, minimum: minimum, maximum: maximum
+            headerHeight: header, spacing: spacing, minimum: minimum
         )
     }
 
@@ -47,24 +46,26 @@ struct MonthWidgetMetricsTests {
 
     // MARK: - 칩 높이
 
-    @Test func chipHeightStopsGrowingAtTheTextLineHeight() {
-        // 행이 넉넉해도(4주 달) 배경만 두꺼워지면 어색하다 — 글자 줄높이에서 멈춘다.
-        #expect(chipHeight(rowHeight: 200, slots: 3) == maximum)
+    @Test func chipHeightGrowsToFillATallRow() {
+        // 행이 넉넉하면 칩이 그만큼 두꺼워진다 — 상한을 두면 남는 높이를 아무도 쓰지 않아
+        // 마지막 주 아래가 빈 공간으로 남는다.
+        let chip = chipHeight(rowHeight: 200, slots: 3)
+
+        #expect(totalHeight(chip: chip, slots: 3) == 200)
     }
 
     @Test func chipHeightShrinksSoTheRequiredCountAlwaysFits() {
         // 5주 달 기준 행 높이(약 55pt)에서 3개가 반드시 들어가야 한다.
         let chip = chipHeight(rowHeight: 55, slots: 3)
 
-        #expect(chip < maximum)
         #expect(totalHeight(chip: chip, slots: 3) <= 55.0001)
     }
 
     @Test func chipHeightFillsTheRowExactly() {
-        // 상한·하한에 걸리지 않는 구간에서는 남는 높이를 정확히 나눠 가진다.
+        // 하한에 걸리지 않는 구간에서는 남는 높이를 **남김없이** 나눠 가진다.
         for rowHeight in stride(from: 45.0, through: 55.0, by: 1.0) {
             let chip = chipHeight(rowHeight: CGFloat(rowHeight), slots: 3)
-            #expect(totalHeight(chip: chip, slots: 3) <= CGFloat(rowHeight) + 0.0001)
+            #expect(abs(totalHeight(chip: chip, slots: 3) - CGFloat(rowHeight)) < 0.0001)
         }
     }
 
@@ -79,7 +80,7 @@ struct MonthWidgetMetricsTests {
     @Test func zeroSlotsDoNotDivideByZero() {
         #expect(MonthWidgetMetrics.chipHeight(
             rowHeight: 100, slots: 0,
-            headerHeight: header, spacing: spacing, minimum: minimum, maximum: maximum
+            headerHeight: header, spacing: spacing, minimum: minimum
         ) == minimum)
     }
 
@@ -95,12 +96,34 @@ struct MonthWidgetMetricsTests {
 
     @Test func realMetricsStayWithinBounds() {
         // 폰트 메트릭이 기기·OS에 따라 흔들려도 계산은 항상 유효 범위 안에 있어야 한다.
+        // 상한은 없다 — 행이 넉넉하면 칩이 그만큼 두꺼워져 행을 채운다.
         for rowHeight in stride(from: 0.0, through: 200.0, by: 7.0) {
             for slots in 1...MonthWidgetMetrics.maximumSlots {
                 let chip = MonthWidgetMetrics.chipHeight(rowHeight: CGFloat(rowHeight), slots: slots)
                 #expect(chip >= MonthWidgetMetrics.minimumChipHeight)
-                #expect(chip <= MonthWidgetMetrics.chipLine.rounded(.up))
             }
+        }
+    }
+
+    /// 격자는 카드 바닥에 여백을 남기고, **남은 높이를 주 행이 남김없이 나눈다.**
+    ///
+    /// 뷰가 `usableHeight = 전체 - bottomInset`으로 예산을 잡고 행마다 구분선을 하나씩
+    /// 그리므로, 그 합이 다시 `usableHeight`가 되어야 마지막 주가 잘리지도 뜨지도 않는다.
+    /// 이 관계가 깨지면 마지막 주가 위젯 밖으로 밀려나 "닫히지 않는 하단 여백"이 된다.
+    @Test func gridBudgetLeavesTheBottomInsetAndFillsTheRest() {
+        // 뷰(`MonthWidgetView.bottomInset`)·테마(`WidgetCalendarTheme.hairline`)는 위젯
+        // 익스텐션 타깃이라 여기서 import할 수 없다 — 같은 값을 상수로 두고 관계식만 검증한다.
+        let total: CGFloat = 313
+        let inset: CGFloat = Spacing.xs
+        let hairline: CGFloat = 0.5
+
+        for weekCount in 4...6 {
+            let usable = total - inset
+            let rowHeight = (usable - hairline * CGFloat(weekCount)) / CGFloat(weekCount)
+            let consumed = (rowHeight + hairline) * CGFloat(weekCount)
+
+            #expect(abs(consumed - usable) < 0.0001)
+            #expect(abs((total - consumed) - inset) < 0.0001)
         }
     }
 
