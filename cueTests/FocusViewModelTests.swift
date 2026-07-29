@@ -101,6 +101,31 @@ struct FocusViewModelTests {
         #expect(viewModel.sessions.count == 1)
     }
 
+    /// + 버튼은 **누르기 전에** 막혀야 한다 — 폼을 다 채우고 저장을 눌러서야 거부당하면
+    /// 사용자는 자기가 쓴 걸 잃는다. `addSession`의 사후 거부와 같은 한도를 쓴다.
+    @Test func canAddSessionFollowsFreeLimit() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps)   // 기본 무료
+
+        #expect(viewModel.canAddSession)
+
+        viewModel.addSession(title: "첫 세션", settings: .default, colorHex: "#FF3B30")
+
+        #expect(viewModel.canAddSession == false)
+    }
+
+    /// 프리미엄은 개수와 무관하게 항상 열려 있다.
+    @Test func canAddSessionAlwaysTrueForPremium() {
+        let (deps, _) = makeDependencies()
+        let viewModel = FocusViewModel(dependencies: deps, premiumStore: PremiumStore(previewIsPremium: true))
+
+        viewModel.addSession(title: "A", settings: .default, colorHex: "#FF3B30")
+        viewModel.addSession(title: "B", settings: .default, colorHex: "#FF9500")
+
+        #expect(viewModel.sessions.count == 2)
+        #expect(viewModel.canAddSession)
+    }
+
     // MARK: - 세션 CRUD
 
     @Test func addSessionAppendsToList() {

@@ -379,10 +379,20 @@ final class FocusViewModel {
 
     // MARK: - 세션 프리셋 CRUD
 
+    /// 지금 세션을 하나 더 만들 수 있는가 — **+ 버튼이 눌리기 전에** 묻는다.
+    ///
+    /// `addSession`이 사후에 거부하는 것만으로는 부족하다. 그 경로는 사용자가 제목·시간·색을
+    /// 다 채우고 저장을 누른 뒤에야 막혀서, 쓴 걸 잃고 나서 한도를 알게 된다.
+    /// 판단 기준은 `addSession`의 guard와 **같아야** 한다 — 갈라지면 버튼은 열렸는데 저장이
+    /// 거부되는(혹은 그 반대) 상태가 된다.
+    var canAddSession: Bool {
+        premiumStore.isPremium || sessions.count < Self.freeSessionLimit
+    }
+
     /// 무료 한도(1개)를 넘는 추가는 `nil` — 호출처(에디터 시트)가 Premium 토스트를 띄운다.
     @discardableResult
     func addSession(title: String, settings: FocusSettings, colorHex: String) -> FocusSession? {
-        guard premiumStore.isPremium || sessions.count < Self.freeSessionLimit else {
+        guard canAddSession else {
             analytics.log(.focusSessionLimitReached)
             return nil
         }

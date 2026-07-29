@@ -41,7 +41,14 @@ struct FocusSessionsListSheet: View {
                     .accessibilityLabel("Close")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
+                    // 한도에 걸렸으면 에디터를 열지 않고 여기서 막는다 — 폼을 다 채우고
+                    // 저장을 눌러서야 거부당하면 사용자는 자기가 쓴 걸 잃는다.
+                    // (에디터 쪽 게이트는 그대로 둔다 — 마지막 방어선이다.)
                     Button {
+                        guard viewModel.canAddSession else {
+                            toastCenter.showPremium()
+                            return
+                        }
                         showingCreate = true
                     } label: {
                         Image(systemName: "plus")
