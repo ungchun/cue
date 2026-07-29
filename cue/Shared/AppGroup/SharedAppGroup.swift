@@ -39,5 +39,20 @@ enum SharedAppGroup {
         static let hiddenCalendarIDs = "cue.la.hiddenCalendarIDs.v1"
         /// 가장 최근 LA 게시 시각(`timeIntervalSince1970`) — 진행 링의 8시간 기준점.
         static let ringAnchor = "cue.la.ringAnchor.v1"
+        /// 프리미엄 구독 여부(`Bool`) — 위젯이 잠금 화면을 띄울지 가른다.
+        ///
+        /// 위젯 익스텐션에서 StoreKit을 직접 조회하지 않는 이유: 타임라인을 만들 때마다
+        /// 네트워크를 타는 비용이 들고, 실패하면 유료 사용자에게 잠금이 뜬다.
+        /// 앱이 구독 상태를 확인할 때마다 여기 미러링하고 위젯은 읽기만 한다.
+        static let isPremium = "cue.premium.isActive.v1"
+    }
+
+    /// 프리미엄 구독 여부 — 앱이 쓰고 위젯이 읽는다.
+    ///
+    /// 기본값 `false`. 앱을 한 번도 안 열었거나 entitlement가 빠져 공유가 끊기면
+    /// 잠금 화면이 뜬다 — 유료 기능이 새는 것보다 낫다.
+    static var isPremium: Bool {
+        get { defaults.bool(forKey: Keys.isPremium) }
+        set { defaults.set(newValue, forKey: Keys.isPremium) }
     }
 }

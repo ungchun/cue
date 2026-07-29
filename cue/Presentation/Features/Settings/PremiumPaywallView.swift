@@ -169,6 +169,13 @@ struct PremiumPaywallView: View {
                 detail: "A monthly calendar beside your memos, schedule, and to-dos"
             )
             featureRow(
+                icon: "square.grid.2x2",
+                title: "Home Screen Widgets",
+                // 위젯 종류를 나열하지 않는다 — 위젯이 늘 때마다 문구를 고치고
+                // 17개 언어를 다시 번역해야 한다. "모든"이 범위를 대신 말해준다.
+                detail: "Unlock every widget"
+            )
+            featureRow(
                 icon: "paintpalette",
                 title: "Customize Live",
                 detail: "Background and text colors your way"

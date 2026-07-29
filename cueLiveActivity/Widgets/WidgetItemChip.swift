@@ -7,7 +7,7 @@
 //  세 종류를 눈으로 구분되게 그린다:
 //  - 종일 일정  : 캘린더 색으로 **꽉 채운** 칩 (제목만)
 //  - 시간 일정  : 캘린더 색을 **옅게** 깐 배경 + 제목 앞 작은 사각
-//  - 미리알림   : 배경 없이 제목 앞 원형 마커 (우선순위 지정이면 채운 원)
+//  - 미리알림   : 배경 없이 제목 앞 원형 마커 (완료·우선순위 지정이면 채운 원)
 //
 
 import SwiftUI
@@ -95,7 +95,9 @@ struct WidgetItemChip: View {
         HStack(spacing: Spacing.xs) {
             marker()
             title
-                .foregroundStyle(.primary)
+                // 완료된 할일은 한 단계 물러난다 — 지나간 일이라 지금 해야 할 것보다
+                // 눈에 덜 띄어야 한다.
+                .foregroundStyle(item.isCompleted ? .secondary : .primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, Spacing.xxs)
@@ -117,14 +119,20 @@ struct WidgetItemChip: View {
 
     @ViewBuilder
     private var circleMarker: some View {
-        if item.isHighPriority {
+        let size = WidgetCalendarTheme.markerSize
+        // 완료됐거나 우선순위가 지정된 것은 **채운 원**, 그 외엔 테두리만.
+        // 5pt짜리 마커에 체크 같은 기호를 넣으면 형태가 뭉개져 점으로만 보인다.
+        if item.isCompleted || item.isHighPriority {
+            // 지름을 한 단계 줄인다 — 속이 찬 원은 같은 크기여도 테두리 원보다 커 보인다.
+            // 실제 크기를 맞추면 오히려 어긋나 보이므로 눈에 맞춘다.
             Circle()
                 .fill(color)
-                .frame(width: WidgetCalendarTheme.markerSize, height: WidgetCalendarTheme.markerSize)
+                .frame(width: WidgetCalendarTheme.filledMarkerSize,
+                       height: WidgetCalendarTheme.filledMarkerSize)
+                // 자리는 빈 원과 같게 잡아 제목 시작점이 흔들리지 않는다.
+                .frame(width: size, height: size)
         } else {
-            Circle()
-                .strokeBorder(color, lineWidth: 1)
-                .frame(width: WidgetCalendarTheme.markerSize, height: WidgetCalendarTheme.markerSize)
+            Circle().strokeBorder(color, lineWidth: 1).frame(width: size, height: size)
         }
     }
 

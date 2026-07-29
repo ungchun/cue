@@ -33,17 +33,13 @@ struct DayTimelineLayoutTests {
 
     /// 높이 240pt = 1시간당 10pt. 최소 높이도 10pt라 "1시간"이 최소 단위가 돼 계산이 읽기 쉽다.
     private func metrics(
-        availableWidth: CGFloat = 300,
         columnWidth: CGFloat = 100,
-        minimumWidth: CGFloat = 20,
         gap: CGFloat = 0
     ) -> DayTimelineLayout.Metrics {
         DayTimelineLayout.Metrics(
-            availableWidth: availableWidth,
             columnWidth: columnWidth,
             height: 240,
             minimumHeight: 10,
-            minimumWidth: minimumWidth,
             gap: gap
         )
     }
@@ -62,16 +58,14 @@ struct DayTimelineLayoutTests {
         )
     }
 
-    /// 제목 폭은 기본 60pt로 고정 — 폭 상한 로직만 남기고 텍스트 측정을 배제한다.
+    /// 폭은 컬럼 패킹이 정하므로 제목 측정을 주입할 필요가 없다 — 결정론적이다.
     private func layout(
         _ items: [WidgetCalendarItem],
-        _ metrics: DayTimelineLayout.Metrics? = nil,
-        preferredWidth: @escaping (WidgetCalendarItem) -> CGFloat = { _ in 60 }
+        _ metrics: DayTimelineLayout.Metrics? = nil
     ) -> DayTimelineLayoutResult {
         DayTimelineLayout.layout(
             for: items, day: day,
             metrics: metrics ?? self.metrics(),
-            preferredWidth: preferredWidth,
             calendar: calendar
         )
     }
@@ -158,9 +152,10 @@ struct DayTimelineLayoutTests {
         #expect(isClose(byID["b"]?.x ?? -1, 50))
     }
 
-    @Test func eventsArePlacedBeforeRemindersSoLongEventsKeepTheLeftEdge() {
-        // 시각 순으로만 놓으면 오전에 몰린 짧은 미리알림이 왼쪽을 차지해, 하루를 관통하는
-        // 일정이 오른쪽 끝으로 밀린다. 레퍼런스처럼 일정이 기둥으로 서야 한다.
+    @Test func aLongEventReusesAColumnFreedByAnEarlierItem() {
+        // `early`가 0번 칸을 잡고 `mid`는 겹치므로 1번으로 간다. `shift`는 10시 시작이라
+        // `early`(9시, 최소 높이만큼만 차지)와 안 겹치므로 **0번 칸을 다시 쓴다.**
+        // 그리디 컬럼 배정이 "비워진 왼쪽 칸"을 재사용한다는 뜻이다.
         let result = layout([
             reminder("early", at(9)),
             reminder("mid", at(9, 30)),
@@ -169,7 +164,7 @@ struct DayTimelineLayoutTests {
         let byID = Dictionary(uniqueKeysWithValues: result.blocks.map { ($0.id, $0) })
 
         #expect(isClose(byID["shift"]?.x ?? -1, 0))
-        #expect((byID["early"]?.x ?? 0) > 0 || (byID["mid"]?.x ?? 0) > 0)
+        #expect((byID["mid"]?.x ?? 0) > 0)
     }
 
     // MARK: - 폭 예산
@@ -200,11 +195,12 @@ struct DayTimelineLayoutTests {
         #expect(result.hidden == 0)
     }
 
-    @Test func aSoloBlockGrowsToItsTitleWithinTheColumn() {
-        // 겹치는 게 없으면 제목 길이만큼 넓어진다 — 단, 자기 열 폭 안에서.
-        let result = layout([event("alone", at(9), at(10))], preferredWidth: { _ in 80 })
+    @Test func aSoloBlockTakesTheWholeColumn() {
+        // 겹치는 게 없으면 열 폭을 다 쓴다 — 제목 길이는 보지 않는다.
+        let result = layout([event("alone", at(9), at(10))])
 
-        #expect(isClose(result.blocks[0].width, 80))
+        #expect(isClose(result.blocks[0].width, 100))
+        #expect(isClose(result.blocks[0].x, 0))
     }
 
     /// 어떤 두 블록도 **겹치지 않는다** — 세로가 겹치면 가로는 반드시 벌어져 있어야 한다.
@@ -219,7 +215,7 @@ struct DayTimelineLayoutTests {
             event("c", at(8, 15), at(8, 45)),
             event("d", at(8), at(9)),
             event("e", at(8, 40), at(9, 10))
-        ], metrics(columnWidth: 100, minimumWidth: 15), preferredWidth: { _ in 30 })
+        ], metrics(columnWidth: 100))
 
         for (i, lhs) in result.blocks.enumerated() {
             for rhs in result.blocks.dropFirst(i + 1) {
@@ -233,50 +229,72 @@ struct DayTimelineLayoutTests {
         }
     }
 
-    /// 단독 블록이라도 **자기 열을 넘지 않는다.**
+    /// 어떤 블록도 **자기 열을 넘지 않는다.**
     ///
-    /// 충돌 판정은 같은 날짜 열 안에서만 이뤄지므로(배치가 날짜별로 돈다) 옆 열에 뭐가
-    /// 있는지 알 수 없다. 넘어가면 그쪽 블록을 덮는다 — 실기기에서 "출근 전 에어컨 송풍
-    /// 30분 후 끄기"가 31일 일정을 가렸고, 상한을 1.5배로 낮춰도 52pt를 침범해 그대로였다.
-    @Test func aSoloBlockNeverLeavesItsColumn() {
-        let result = layout(
-            [event("veryLongTitle", at(9), at(10))],
-            metrics(availableWidth: 300, columnWidth: 100),
-            preferredWidth: { _ in 900 }
-        )
-
-        #expect(result.blocks[0].width <= 100.0001)
-    }
-
-    @Test func overlappingBlocksStayWithinTheirColumn() {
-        // 겹치는 블록은 폭을 자기 열 몫으로 나눠 갖고, 위치도 열 안에 머문다.
-        // 제목이 아무리 길어도(500pt를 원해도) 열을 넘지 않는다.
+    /// 조사해 보니 FullCalendar·react-big-calendar 등 어떤 캘린더 구현도 날짜 열을 넘기지
+    /// 않는다. 날짜 열은 의미 경계라, 넘어가면 어느 날 일정인지 모호해진다.
+    /// 실기기에서도 "출근 전 에어컨 송풍 30분 후 끄기"가 31일 일정을 통째로 가렸다.
+    @Test func noBlockEverLeavesItsColumn() {
         let result = layout([
-            event("a", at(9), at(12)),
-            event("b", at(9, 30), at(12)),
-            event("c", at(10), at(12))
-        ], preferredWidth: { _ in 500 })
+            event("solo", at(9), at(10)),
+            event("a", at(14), at(16)),
+            event("b", at(14, 30), at(16)),
+            event("c", at(15), at(16))
+        ], metrics(columnWidth: 100))
 
-        #expect(result.blocks.count == 3)
-        // 셋이 겹치므로 각자 열 폭의 3분의 1 남짓.
-        #expect(result.blocks.allSatisfy { $0.width <= 100.0 / 3 + 0.0001 })
         #expect(result.blocks.allSatisfy { $0.x + $0.width <= 100.0001 })
     }
 
-    @Test func itemsWithNoRoomLeftStillGetAThinBar() {
-        // 최소 폭이 안 나와도 **버리지 않는다** — 좁으면 색 막대로 남긴다.
-        // 예전엔 여기서 개수만 알렸는데, 겹침이 깊은 오전이 통째로 비어 보였다.
+    /// **확장** — 오른쪽 칸이 자기 시간대에 비어 있으면 흡수한다.
+    ///
+    /// 이게 없으면 3일 위젯처럼 열이 좁을 때(104pt) 3컬럼 그룹의 단독 블록이 35pt로 렌더돼
+    /// 글자가 안 읽힌다. 표준 알고리즘의 `ExpandEvent` 단계다.
+    @Test func aBlockAbsorbsFreeColumnsToItsRight() {
+        // a·b·c가 9~10시에 세 겹 → 3컬럼. d는 11~12시라 셋 중 누구와도 안 겹친다.
+        // d는 0번 칸에 배정된 뒤 오른쪽 두 칸이 비어 있으므로 전부 흡수해 열 폭을 다 쓴다.
+        let result = layout([
+            event("a", at(9), at(10)),
+            event("b", at(9), at(10)),
+            event("c", at(9), at(10)),
+            event("d", at(11), at(12))
+        ])
+        let byID = Dictionary(uniqueKeysWithValues: result.blocks.map { ($0.id, $0) })
+
+        // a·b·c는 셋이 겹치므로 1/3씩.
+        #expect(isClose(byID["a"]?.width ?? 0, 100.0 / 3))
+        // d는 다른 그룹이라 통째로 쓴다.
+        #expect(isClose(byID["d"]?.width ?? 0, 100))
+    }
+
+    /// 확장은 **첫 막힌 칸에서 멈춘다** — 건너뛰어 더 먼 빈 칸을 잡지 않는다.
+    @Test func expansionStopsAtTheFirstBlockedColumn() {
+        // a(0번), b(1번), c(2번)가 같은 시간대에 세 겹.
+        // d는 a와만 겹치고 b·c와는 안 겹치는데, 1번 칸이 막혀 있으면 거기서 멈춰야 한다.
+        let result = layout([
+            event("a", at(9), at(12)),
+            event("b", at(9), at(12)),
+            event("c", at(9), at(12)),
+            event("d", at(9), at(12))
+        ])
+
+        // 네 겹이므로 각자 1/4. 아무도 옆 칸을 흡수하지 못한다.
+        #expect(result.blocks.allSatisfy { isClose($0.width, 25) })
+    }
+
+    @Test func narrowBlocksSurviveAsColourBarsInsteadOfBeingDropped() {
+        // 제목이 못 들어갈 만큼 좁아져도 **버리지 않는다** — 색 막대로 남긴다.
+        // 예전엔 최소 폭 미달이면 통째로 버려서, 겹침이 깊은 오전이 비어 보였다.
         let result = layout([
             event("a", at(9), at(12)),
             event("b", at(9, 10), at(12)),
             event("c", at(9, 20), at(12)),
             event("d", at(9, 30), at(12))
-        ], metrics(minimumWidth: 45))
+        ], metrics())
 
         #expect(result.blocks.count == 4)
         #expect(result.hidden == 0)
-        // 좁아진 뒤에도 폭은 자기 열 몫을 넘지 않는다.
-        #expect(result.blocks.allSatisfy { $0.width <= 100.0001 })
+        // 네 겹 → 각자 1/4. 제목은 안 들어가도 막대는 선다.
+        #expect(result.blocks.allSatisfy { isClose($0.width, 25) })
     }
 
     @Test func aLaterFreeSlotStillStartsAtTheLeftEdge() {
@@ -289,7 +307,8 @@ struct DayTimelineLayoutTests {
         let byID = Dictionary(uniqueKeysWithValues: result.blocks.map { ($0.id, $0) })
 
         #expect(isClose(byID["afternoon"]?.x ?? -1, 0))
-        #expect(isClose(byID["afternoon"]?.width ?? 0, 60))
+        // 오전 혼잡과 다른 그룹이라 열 폭을 온전히 쓴다.
+        #expect(isClose(byID["afternoon"]?.width ?? 0, 100))
     }
 
     // MARK: - 결정론
@@ -315,125 +334,108 @@ struct DayTimelineLayoutTests {
             items.append(event("dense\(index)", at(8, index * 5), at(9, index * 5)))
         }
 
-        let result = layout(items, metrics(columnWidth: 100, minimumWidth: 20))
+        let result = layout(items, metrics(columnWidth: 100))
 
         #expect(result.blocks.count == items.count)
         #expect(result.hidden == 0)
     }
 
-    /// 긴 일정은 **짧은 일정보다 먼저** 자리를 잡아 왼쪽 넓은 자리를 쓴다.
-    ///
-    /// 일정끼리 시각 순으로 놓으면 8~10시 짧은 일정들이 왼쪽을 선점하고, 10시에 시작하는
-    /// 긴 일정은 남은 좁은 틈으로 밀려 최소 폭 언저리만 받는다 — 폭이 남아 있는데도 제목이
-    /// `...`로만 남는다(실기기에서 21pt까지 눌렸다).
-    @Test func longEventTakesTheLeftEdgeBeforeShorterOnes() {
-        let result = layout([
-            event("short1", at(8), at(9)),
-            event("short2", at(8, 30), at(9, 30)),
-            event("long", at(10), at(19))
-        ])
-        let byID = Dictionary(uniqueKeysWithValues: result.blocks.map { ($0.id, $0) })
-
-        #expect(isClose(byID["long"]?.x ?? -1, 0))
-    }
-
-    /// 긴 일정은 **자기 구간의 겹침**만큼만 좁아진다.
+    /// 충돌 그룹은 **서로 독립**이다 — 오전의 혼잡이 오후 블록의 폭을 깎지 않는다.
     ///
     /// 예전엔 묶음 전체의 최대 겹침을 모든 블록에 일괄 적용했다. 오전에 짧은 일정이 몰린
     /// 날은 그 최대값이 5~6이 되고, 10~19시에 걸친 "출근" 블록까지 그만큼 눌려 최소 폭에
     /// 못 미쳐 통째로 버려졌다(실기기에서 3일 내내 출근이 사라졌다).
-    @Test func longEventKeepsItsWidthDespiteACrowdedMorning() {
+    @Test func aCrowdedMorningDoesNotShrinkAnUnrelatedLaterEvent() {
         var items: [WidgetCalendarItem] = []
-        // 오전 8~10시에 여섯 겹 — 서로 조금씩 어긋나게 겹친다.
+        // 오전 8~9시에 여섯 겹.
         for index in 0..<6 {
-            items.append(
-                event("morning\(index)", at(8, index * 10), at(9, index * 10))
+            items.append(event("morning\(index)", at(8), at(9)))
+        }
+        // 오후 단독 일정 — 오전 혼잡과 시간이 전혀 겹치지 않는다.
+        items.append(event("afternoon", at(14), at(16)))
+
+        let result = layout(items, metrics(columnWidth: 104))
+        let byID = Dictionary(uniqueKeysWithValues: result.blocks.map { ($0.id, $0) })
+
+        #expect(result.blocks.count == 7)
+        // 다른 그룹이므로 열 폭을 온전히 쓴다.
+        #expect(isClose(byID["afternoon"]?.width ?? 0, 104))
+    }
+
+    // MARK: - 치수
+
+    /// 제목을 그릴지 색 막대만 남길지 가르는 임계값 — **실제로 그려지는 글자 크기** 기준.
+    ///
+    /// 폭 자체는 컬럼 패킹이 정하므로 예산 계산이 없다. 여기서 답할 건 하나뿐이다:
+    /// 주어진 폭에 제목 한 글자가 들어가는가. 이 값이 렌더와 어긋나면 "그릴 수 있다"고
+    /// 판정한 블록에 글자가 잘려 나오거나, 들어갈 제목이 색 막대로 밀려난다.
+    @Test func barOnlyWidthFitsTheLeadingMarkAndOneGlyph() {
+        let glyph = DayTimelineMetrics.titleFont.pointSize * DayTimelineMetrics.titleScale
+        // 일정은 색 막대, 할일은 동그라미가 앞에 선다 — 넓은 쪽을 기준으로 잡아야
+        // 어느 종류든 글자가 밀리지 않는다.
+        let leading = max(
+            DayTimelineMetrics.leadingBarWidth,
+            DayTimelineMetrics.markerSize + DayTimelineMetrics.markerGap
+        )
+
+        #expect(DayTimelineMetrics.barOnlyWidth >= leading + glyph)
+        // 두 글자를 요구하지는 않는다 — 그러면 한 글자는 들어갈 칸까지 막대로 밀려난다.
+        #expect(DayTimelineMetrics.barOnlyWidth < leading + glyph * 2)
+    }
+
+    /// 최소 높이는 **축소된 줄높이**를 따른다 — 뷰가 `titleScale`로 줄여 그리기 때문이다.
+    @Test func minimumHeightMatchesTheScaledLineHeight() {
+        let scaled = DayTimelineMetrics.titleFont.lineHeight * DayTimelineMetrics.titleScale
+
+        #expect(DayTimelineMetrics.minimumHeight >= scaled)
+        #expect(DayTimelineMetrics.minimumHeight < scaled + 1)
+    }
+
+    /// 항목이 하나도 없어도 터지지 않는다 — 종일만 있는 날이 실제로 흔하다.
+    @Test func emptyDayProducesNoBlocks() {
+        let result = layout([])
+
+        #expect(result.blocks.isEmpty)
+        #expect(result.hidden == 0)
+    }
+
+    /// **완전히 같은 구간**이 여러 개 — 컬럼 배정이 이들을 각자 다른 칸에 놓아야 한다.
+    ///
+    /// 그리디 배정이 "겹치지 않는 첫 칸"을 찾는데, 전부 같은 구간이면 매번 새 칸이 열린다.
+    /// 이 경우가 깨지면 반복 일정이 여러 개인 날에 블록이 하나로 포개진다.
+    @Test func identicalSpansEachGetTheirOwnColumn() {
+        let result = layout([
+            event("a", at(9), at(10)),
+            event("b", at(9), at(10)),
+            event("c", at(9), at(10))
+        ])
+        let xs = Set(result.blocks.map { $0.x })
+
+        #expect(result.blocks.count == 3)
+        // 셋이 서로 다른 x — 같은 자리에 포개지지 않는다.
+        #expect(xs.count == 3)
+        #expect(result.blocks.allSatisfy { isClose($0.width, 100.0 / 3) })
+    }
+
+    /// 종일 항목만 있는 날 — 시간표에는 아무것도 그리지 않는다(별도 스트립이 맡는다).
+    @Test func aDayWithOnlyAllDayItemsDrawsNothingOnTheTimeline() {
+        func allDay(_ id: String) -> WidgetCalendarItem {
+            WidgetCalendarItem(
+                id: id, title: id, start: day, end: day.addingTimeInterval(86_400),
+                kind: .allDayEvent, colorHex: nil, isHighPriority: false
             )
         }
-        // 그 뒤로 이어지는 긴 일정 — 오전 혼잡과는 10시 이후로만 스친다.
-        items.append(event("long", at(10), at(19)))
+        let result = layout([allDay("holiday"), allDay("vacation")])
 
-        let result = layout(items, metrics(columnWidth: 104, minimumWidth: 23))
-
-        #expect(result.blocks.contains { $0.id == "long" })
-    }
-
-    // MARK: - 치수 예산
-
-    /// 블록 왼쪽 색 막대는 **제목이 쓸 수 있는 폭에서 먼저 빠진다.**
-    ///
-    /// 뷰가 막대를 그리고 그만큼 제목을 들여쓰므로, 예산이 이를 모르면 계산상 "들어간다"고
-    /// 판정한 제목이 실제로는 막대 폭만큼 잘린다. 두 값은 항상 같이 움직여야 한다.
-    @Test func preferredWidthReservesRoomForTheLeadingColorBar() {
-        let item = WidgetCalendarItem(
-            id: "a", title: "회의", start: at(9), end: at(10),
-            kind: .timedEvent, colorHex: nil, isHighPriority: false
-        )
-        let width = DayTimelineMetrics.preferredWidth(for: item)
-        let titleOnly = ("회의" as NSString)
-            .size(withAttributes: [.font: DayTimelineMetrics.titleFont]).width
-            * DayTimelineMetrics.titleScale
-
-        #expect(width >= titleOnly + DayTimelineMetrics.leadingBarWidth)
-    }
-
-    /// 제목 폭은 **축소된 글자 크기**로 잰다.
-    ///
-    /// 뷰가 `titleScale`로 줄여 그리므로, 측정에 배율을 안 곱하면 실제보다 넓게 잡아
-    /// 블록 오른쪽에 빈 공간이 남는다.
-    @Test func preferredWidthMeasuresTheScaledTitle() {
-        let item = WidgetCalendarItem(
-            id: "a", title: "긴 제목의 일정 이름", start: at(9), end: at(10),
-            kind: .timedEvent, colorHex: nil, isHighPriority: false
-        )
-        let unscaled = (item.title as NSString)
-            .size(withAttributes: [.font: DayTimelineMetrics.titleFont]).width
-
-        #expect(DayTimelineMetrics.preferredWidth(for: item) < unscaled)
-    }
-
-    /// 제목이 못 들어가는 폭이면 버린다 — 그 하한도 막대를 포함한다.
-    @Test func minimumWidthIncludesTheLeadingColorBar() {
-        #expect(DayTimelineMetrics.minimumWidth > DayTimelineMetrics.leadingBarWidth)
-    }
-
-    /// 할일은 색 막대 대신 **동그라미**가 앞에 서므로, 예산도 그 폭을 잡아야 한다.
-    ///
-    /// 동그라미는 폭과 무관하게 언제나 그려진다(일정과 구분되는 유일한 표식이다).
-    /// 예산이 이를 모르면 좁은 할일에서 동그라미가 제목을 밀어내 글자가 잘린다.
-    @Test func reminderWidthReservesRoomForTheCircleMarker() {
-        let title = "빨래"
-        let reminderWidth = DayTimelineMetrics.preferredWidth(
-            for: WidgetCalendarItem(
-                id: "r", title: title, start: at(9), end: at(9),
-                kind: .reminder, colorHex: nil, isHighPriority: false
-            )
-        )
-        let measured = (title as NSString)
-            .size(withAttributes: [.font: DayTimelineMetrics.titleFont]).width
-            * DayTimelineMetrics.titleScale
-
-        #expect(reminderWidth >= measured + DayTimelineMetrics.markerSize)
-    }
-
-    /// 최소 폭은 **실제로 그려지는 글자 크기**(= 축소 반영) 기준이어야 한다.
-    ///
-    /// 블록마다 배율이 달라지지 않으므로 하한도 하나로 정해진다. 말줄임표 몫은 빼야 한다 —
-    /// 뷰가 `...`를 만들지 않고 끝에서 잘라내므로, 그만큼 요구하면 한 글자는 들어갈 칸까지
-    /// 색 막대로 밀려난다.
-    @Test func minimumWidthFitsExactlyOneGlyph() {
-        let scaled = DayTimelineMetrics.titleFont.pointSize * DayTimelineMetrics.titleScale
-
-        #expect(DayTimelineMetrics.minimumWidth >= scaled)
-        // 두 글자를 요구하지 않는다.
-        #expect(DayTimelineMetrics.minimumWidth < scaled * 2)
+        #expect(result.blocks.isEmpty)
+        #expect(result.hidden == 0)
     }
 
     @Test func degenerateHeightNeverProducesInvalidFractions() {
         // GeometryReader가 첫 렌더에 0을 주는 순간이 있다.
         let zeroHeight = DayTimelineLayout.Metrics(
-            availableWidth: 300, columnWidth: 100, height: 0,
-            minimumHeight: 10, minimumWidth: 20, gap: 0
+            columnWidth: 100, height: 0,
+            minimumHeight: 10, gap: 0
         )
         let result = layout([event("a", at(9), at(10))], zeroHeight)
 

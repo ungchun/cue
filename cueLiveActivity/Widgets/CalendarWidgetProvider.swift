@@ -18,6 +18,9 @@ struct CalendarWidgetEntry: TimelineEntry {
     let snapshot: WidgetCalendarSnapshot
     /// 표시 구간 이동량 — 월 위젯은 개월, 1일·3일 위젯은 일. 고정형은 항상 0.
     let offset: Int
+    /// 유료 위젯을 잠글지. 갤러리 미리보기에서는 언제나 `false` —
+    /// 무엇을 살지 고르는 자리에서 잠금을 보여주면 정작 위젯 모습을 알 수 없다.
+    var isLocked: Bool = false
 }
 
 /// 위젯이 어떤 구간을 그리는지 — 프로바이더가 조회 범위와 갱신 주기를 이 값으로 정한다.
@@ -37,15 +40,34 @@ enum CalendarWidgetRange {
 
 struct CalendarWidgetProvider: TimelineProvider {
     let range: CalendarWidgetRange
+    /// 유료 위젯인지. `true`면 구독하지 않은 사용자에게 잠금이 덮인다.
+    var requiresPremium = false
 
+    /// 로딩 중 잠깐 비치는 자리표시자 — 조회를 기다릴 수 없으니 표본으로 채운다.
+    /// 빈 격자를 두면 위젯이 깜빡이며 나타나는 것처럼 보인다.
     func placeholder(in context: Context) -> CalendarWidgetEntry {
-        CalendarWidgetEntry(date: Date(), snapshot: .empty, offset: 0)
+        let now = Date()
+        let calendar = Calendar.current
+        let bounds = self.bounds(now: now, offset: 0, calendar: calendar)
+        return CalendarWidgetEntry(
+            date: now,
+            snapshot: WidgetCalendarSample.snapshot(
+                from: bounds.start, to: bounds.end, calendar: calendar
+            ),
+            offset: 0
+        )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (CalendarWidgetEntry) -> Void) {
-        // 갤러리 미리보기는 권한 프롬프트도, EventKit 조회도 하지 않는다 — 빈 격자만.
-        guard !context.isPreview else { return completion(placeholder(in: context)) }
-        load { completion($0) }
+        guard context.isPreview else { return load { completion($0) } }
+        // 갤러리 미리보기 — **권한이 있으면 진짜 일정**을 그린다. 자기 일정이 들어간 모습을
+        // 봐야 이 위젯이 쓸모 있는지 판단할 수 있다.
+        //
+        // 권한이 없을 때만 표본으로 대체한다. 그때 EventKit을 조회하면 위젯을 고르다 말고
+        // 권한 프롬프트를 만나고, 거절하면 빈 격자만 남아 무엇을 고르는지 알 수 없다.
+        // 미리보기에서는 잠그지 않는다 — 무엇을 살지 고르는 자리에서 잠금을 보여주면
+        // 정작 위젯 모습을 알 수 없다.
+        load(preferSample: !WidgetCalendarDataSource.hasAnyAccess, locks: false) { completion($0) }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CalendarWidgetEntry>) -> Void) {
@@ -57,16 +79,35 @@ struct CalendarWidgetProvider: TimelineProvider {
     // MARK: - 조회
 
     /// EventKit 조회는 미리알림 콜백을 세마포어로 기다리므로 **메인 스레드를 피해** 돌린다.
-    private func load(_ completion: @escaping (CalendarWidgetEntry) -> Void) {
+    ///
+    /// - Parameter preferSample: 실제 데이터 대신 표본을 채운다. 갤러리 미리보기에서
+    ///   권한이 없을 때만 켠다 — 빈 격자보다 표본이 위젯을 고르는 데 도움이 된다.
+    private func load(
+        preferSample: Bool = false,
+        locks: Bool = true,
+        _ completion: @escaping (CalendarWidgetEntry) -> Void
+    ) {
         DispatchQueue.global(qos: .userInitiated).async {
             let now = Date()
             let calendar = Calendar.current
-            let offset = currentOffset(now: now, calendar: calendar)
+            let offset = preferSample ? 0 : currentOffset(now: now, calendar: calendar)
             let bounds = self.bounds(now: now, offset: offset, calendar: calendar)
-            let snapshot = WidgetCalendarDataSource.snapshot(
-                from: bounds.start, to: bounds.end, calendar: calendar
+            let snapshot = preferSample
+                ? WidgetCalendarSample.snapshot(
+                    from: bounds.start, to: bounds.end, calendar: calendar
+                )
+                : WidgetCalendarDataSource.snapshot(
+                    from: bounds.start, to: bounds.end, calendar: calendar
+                )
+            completion(
+                CalendarWidgetEntry(
+                    date: now,
+                    snapshot: snapshot,
+                    offset: offset,
+                    // 앱이 App Group에 미러링한 확정 판정을 읽는다(→ `SharedAppGroup.isPremium`).
+                    isLocked: locks && requiresPremium && !SharedAppGroup.isPremium
+                )
             )
-            completion(CalendarWidgetEntry(date: now, snapshot: snapshot, offset: offset))
         }
     }
 

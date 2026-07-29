@@ -60,6 +60,12 @@ enum WidgetCalendarDataSource {
 
     // MARK: - 조회
 
+    /// 캘린더·미리알림 중 하나라도 읽을 수 있는지 — 갤러리 미리보기가 실제 데이터를 쓸지
+    /// 표본으로 대체할지 가른다.
+    static var hasAnyAccess: Bool {
+        isAllowed(.event) || isAllowed(.reminder)
+    }
+
     private static func isAllowed(_ type: EKEntityType) -> Bool {
         let status = EKEventStore.authorizationStatus(for: type)
         return status == .fullAccess || status == .writeOnly
@@ -91,6 +97,16 @@ enum WidgetCalendarDataSource {
 
     /// 미완료 + 기한이 구간 안에 있는 미리알림만. 완료분은 "지금 잊으면 안 되는" 신호가 아니라 뺀다.
     ///
+    /// 그 미리알림을 위젯에 그릴지.
+    ///
+    /// 미완료는 언제나 그린다. **완료된 것은 오늘 이후 마감만** 남긴다 — 오늘 끝낸 일은
+    /// 그날 무엇을 했는지 알려주지만, 지난 것까지 두면 위젯이 이미 끝난 일로 채워져
+    /// 지금 해야 할 것이 묻힌다.
+    static func showsReminder(isCompleted: Bool, due: Date, today: Date) -> Bool {
+        guard isCompleted else { return true }
+        return due >= today
+    }
+
     /// EventKit의 미리알림 조회는 콜백 기반이라 세마포어로 동기화한다 — 위젯 타임라인 생성은
     /// 이미 백그라운드 큐에서 돌고, 여기서 async를 위로 전파하면 호출부가 전부 물든다.
     private static func reminders(
@@ -99,9 +115,10 @@ enum WidgetCalendarDataSource {
         to: Date,
         hidden: Set<String>
     ) -> [WidgetCalendarItem] {
-        let predicate = store.predicateForIncompleteReminders(
-            withDueDateStarting: from, ending: to, calendars: nil
-        )
+        // **완료된 것까지** 받아온다. 미완료만 주는 `predicateForIncompleteReminders`를 쓰면
+        // 오늘 끝낸 할 일이 위젯에서 즉시 사라져, 그날 무엇을 했는지가 남지 않는다.
+        // 어느 것을 숨길지는 아래에서 마감일로 가른다.
+        let predicate = store.predicateForReminders(in: nil)
         let semaphore = DispatchSemaphore(value: 0)
         var fetched: [EKReminder] = []
         store.fetchReminders(matching: predicate) { reminders in
@@ -111,9 +128,16 @@ enum WidgetCalendarDataSource {
         // 조회가 매달리면 위젯 갱신 전체가 멈춘다 — 일정만이라도 그리도록 짧게 포기한다.
         guard semaphore.wait(timeout: .now() + 5) == .success else { return [] }
 
+        let today = Calendar.current.startOfDay(for: Date())
+
         return fetched.compactMap { reminder in
             guard !hidden.contains(reminder.calendar.calendarIdentifier),
-                  let due = reminder.dueDateComponents?.date else { return nil }
+                  let due = reminder.dueDateComponents?.date,
+                  // 전체를 받아왔으므로 표시 구간은 직접 자른다.
+                  due >= from, due < to else { return nil }
+            guard showsReminder(isCompleted: reminder.isCompleted, due: due, today: today) else {
+                return nil
+            }
             return WidgetCalendarItem(
                 // 마감 시각을 붙여 구분한다 — 반복 미리알림은 여러 회차가 같은
                 // `calendarItemIdentifier`를 갖는다. 그대로 두면 창 안에 두 회차가 들어올 때
@@ -126,7 +150,8 @@ enum WidgetCalendarDataSource {
                 kind: .reminder,
                 colorHex: hex(from: reminder.calendar.cgColor),
                 // EventKit 우선순위는 0=미지정, 1~9=높음~낮음. 지정된 것만 마커를 채운다.
-                isHighPriority: reminder.priority != 0
+                isHighPriority: reminder.priority != 0,
+                isCompleted: reminder.isCompleted
             )
         }
     }

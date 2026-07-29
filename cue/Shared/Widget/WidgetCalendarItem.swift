@@ -38,5 +38,11 @@ struct WidgetCalendarItem: Identifiable, Hashable, Sendable {
     /// 일정에는 의미가 없어 항상 `false`.
     let isHighPriority: Bool
 
+    /// 완료된 미리알림인지. 일정에는 의미가 없어 항상 `false`.
+    ///
+    /// 완료해도 **오늘 이후 마감이면 계속 보여준다** — 오늘 할 일을 끝냈다는 사실 자체가
+    /// 정보다. 지나간 것만 숨겨 위젯이 과거로 채워지는 걸 막는다(→ `WidgetCalendarDataSource`).
+    var isCompleted: Bool = false
+
     var isAllDay: Bool { kind == .allDayEvent }
 }

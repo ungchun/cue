@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import WidgetKit
 
 /// 앱의 첫 화면. 시스템(Apple) 탭바에 5탭(메모·일정·할일·집중·설정)을 한 캡슐로 두고,
 /// 우하단에 메시지 버튼을 플로팅(FAB)으로 띄운다. 탭바·칩바·스크롤 축소 등 네이티브 동작 유지.
@@ -196,6 +197,11 @@ struct RootView: View {
         // 인터리브된다(리뷰 지적). 연속 전이는 직렬 체인으로 순서를 보장한다.
         .onChange(of: premiumStore.confirmedIsPremium) { _, confirmed in
             guard let confirmed else { return }
+            // 위젯이 읽을 수 있게 App Group에 미러링한다 — 익스텐션에서 StoreKit을 직접
+            // 조회하면 타임라인마다 네트워크를 타고, 실패 시 유료 사용자에게 잠금이 뜬다.
+            // 여기가 **확정 판정**의 단일 지점이라 미러도 여기서만 갱신한다.
+            SharedAppGroup.isPremium = confirmed
+            WidgetCenter.shared.reloadAllTimelines()
             reconcileChain = Task { [previous = reconcileChain] in
                 await previous?.value
                 if await dependencies.reconcilePremiumSettings(isPremium: confirmed) {

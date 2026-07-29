@@ -49,11 +49,6 @@ struct CalendarWidgetHeader: View {
                 Text(year)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                // ⚠️ 임시 — 빌드가 위젯에 반영됐는지 눈으로 확인하는 용도.
-                // 작업할 때마다 `WidgetBuildStamp.number`를 올린다. 확인이 끝나면 지운다.
-                Text("#\(WidgetBuildStamp.number)")
-                    .font(.footnote)
-                    .foregroundStyle(.tertiary)
             }
             .lineLimit(1)
         }

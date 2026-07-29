@@ -14,12 +14,17 @@ struct MonthCalendarWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: WidgetRangeKind.month.widgetKind,
-            provider: CalendarWidgetProvider(range: .month(shift: .month))
+            provider: CalendarWidgetProvider(
+                range: .month(shift: .month), requiresPremium: true
+            )
         ) { entry in
             MonthWidgetEntryView(entry: entry, shiftKind: .month)
         }
-        .configurationDisplayName("Month")
-        .description("A month at a glance. Tap ‹ › to move between months.")
+        // 제목 옆 자물쇠는 **구독 전에만** 붙는다.
+        .configurationDisplayName(widgetGalleryName("Month", requiresPremium: true))
+        // 설명은 비운다 — 이름만으로 무엇인지 충분히 읽히고, 미리보기가 그 아래에서
+        // 실제 모습을 보여준다. `description`은 필수 modifier라 지울 수는 없다.
+        .description("")
         .supportedFamilies([.systemLarge])
         // 시스템 기본 콘텐츠 마진을 끈다 — 캘린더는 격자가 가장자리까지 닿아야
         // 셀 폭이 확보되고, 레퍼런스와 같은 밀도가 나온다.
@@ -36,8 +41,9 @@ struct FixedMonthCalendarWidget: Widget {
         ) { entry in
             MonthWidgetEntryView(entry: entry, shiftKind: nil)
         }
-        .configurationDisplayName("This Month")
-        .description("The current month, always.")
+        // 무료로 쓸 수 있는 유일한 캘린더 위젯 — 자물쇠를 붙이지 않는다.
+        .configurationDisplayName(widgetGalleryName("This Month", requiresPremium: false))
+        .description("")
         .supportedFamilies([.systemLarge])
         // 시스템 기본 콘텐츠 마진을 끈다 — 캘린더는 격자가 가장자리까지 닿아야
         // 셀 폭이 확보되고, 레퍼런스와 같은 밀도가 나온다.
@@ -85,7 +91,12 @@ struct MonthWidgetEntryView: View {
                 shiftKind: shiftKind
             )
             if entry.snapshot.hasAccess {
-                MonthWidgetView(grid: grid, itemsByDay: itemsByDay)
+                // 잠금은 **격자에만** 건다 — 헤더의 달·연도는 남겨야 이 위젯이 무엇인지
+                // 알 수 있고, 날짜 격자도 비쳐 보여야 "무엇을 잃고 있는지"가 전달된다.
+                // 잠겼으면 **항목을 아예 넘기지 않는다.** 재질로 덮기만 하면 흐릿하게나마
+                // 제목이 비쳐, 돈을 안 낸 사람에게 내용이 새어 나간다.
+                MonthWidgetView(grid: grid, itemsByDay: entry.isLocked ? [:] : itemsByDay)
+                    .premiumLocked(entry.isLocked)
             } else {
                 // 헤더 VStack의 간격이 0이라 안내문 위 여백을 여기서 준다.
                 WidgetAccessPrompt().padding(.top, Spacing.xs)

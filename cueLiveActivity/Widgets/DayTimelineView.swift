@@ -6,8 +6,9 @@
 //  블록 배치는 `DayTimelineLayout`이 계산하고, 이 뷰는 그리기만 한다.
 //
 //  ⚠️ 레이아웃 원칙
-//  - 블록 폭은 **제목 길이**가 정한다(균등분할 아님). 옆 날짜 열을 넘어가도 되고,
-//    위젯 오른쪽 끝에서 잘린다 — 레퍼런스와 같은 밀도를 내는 유일한 방법이다.
+//  - 블록 폭은 **컬럼 패킹**이 정한다 — 겹치는 것끼리 열 폭을 나누고, 오른쪽이 비면
+//    그만큼 흡수한다. 제목 길이는 보지 않는다(→ `DayTimelineLayout`).
+//  - 블록은 자기 날짜 열을 넘지 않는다. 날짜 열은 의미 경계다.
 //  - 클리핑은 **고정 프레임 뒤**에 붙인다. 안쪽 무한 프레임에 붙이면 글자가 칸을 뚫는다.
 //
 
@@ -33,11 +34,7 @@ struct DayTimelineView: View {
                 hourLines(height: height, width: geometry.size.width)
                 hourLabels(height: height)
                 dayDividers(height: height, columnWidth: columnWidth)
-                dayColumns(
-                    height: height,
-                    columnWidth: columnWidth,
-                    totalWidth: geometry.size.width
-                )
+                dayColumns(height: height, columnWidth: columnWidth)
             }
         }
         // 0시·24시 라벨은 눈금선 위에 세로 중앙 정렬이라 위아래로 반 줄씩 삐져나온다 —
@@ -45,10 +42,9 @@ struct DayTimelineView: View {
         // 반 줄(6.5pt)만 두면 "24"가 좌하단 코너에 걸려 잘린다(실기기에서 확인).
         .padding(.top, Spacing.sm)
         .padding(.bottom, Spacing.md)
-        // 좌우를 **같은 값으로** — 예전엔 왼쪽만 줘서 가로 눈금선이 오른쪽 끝에는 닿고
-        // 왼쪽만 들어가 있었다. 시간 라벨은 거터 안에서 오른쪽 정렬이라 이 값이 작을수록
-        // 왼쪽 가장자리에 붙는다.
-        .padding(.horizontal, Spacing.xxs)
+        // 좌우를 **같은 값으로** — 날짜 머리글과 같은 상수를 써야 거터에 늘어선 숫자들이
+        // 세로로 한 줄에 선다.
+        .padding(.horizontal, WidgetCalendarTheme.timelineInset)
     }
 
     // MARK: - 눈금
@@ -68,8 +64,9 @@ struct DayTimelineView: View {
             Text("\(hour)")
                 .font(.caption2)
                 // 레퍼런스와 나란히 재보니 시간 라벨이 컸다(@3x에서 7.7pt 대 6.3pt).
-                // caption2가 램프 바닥이라 그 아래는 scaleEffect로만 내려간다.
-                .scaleEffect(0.78)
+                // 헤더의 주차 배지와 **같은 상수**를 쓴다 — 같은 거터에 세로로 늘어서는
+                // 숫자들이라 크기가 갈리면 한 줄로 안 읽힌다.
+                .scaleEffect(WidgetCalendarTheme.hourLabelScale)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
                 // 높이 0 상자에 가운데 정렬하면 글자가 위아래로 반씩 흘러넘쳐 **눈금선 위에
@@ -94,26 +91,18 @@ struct DayTimelineView: View {
 
     // MARK: - 블록
 
-    private func dayColumns(height: CGFloat, columnWidth: CGFloat, totalWidth: CGFloat) -> some View {
+    private func dayColumns(height: CGFloat, columnWidth: CGFloat) -> some View {
         ForEach(Array(days.enumerated()), id: \.offset) { dayIndex, day in
             let originX = WidgetCalendarTheme.gutterWidth + columnWidth * CGFloat(dayIndex)
             let result = DayTimelineLayout.layout(
                 for: itemsByDay[calendar.startOfDay(for: day)] ?? [],
                 day: day,
                 metrics: DayTimelineLayout.Metrics(
-                    availableWidth: availableWidth(
-                        dayIndex: dayIndex,
-                        originX: originX,
-                        columnWidth: columnWidth,
-                        totalWidth: totalWidth
-                    ),
                     columnWidth: columnWidth,
                     height: height,
                     minimumHeight: DayTimelineMetrics.minimumHeight,
-                    minimumWidth: DayTimelineMetrics.minimumWidth,
                     gap: DayTimelineMetrics.gap
                 ),
-                preferredWidth: DayTimelineMetrics.preferredWidth(for:),
                 calendar: calendar
             )
 
@@ -122,14 +111,11 @@ struct DayTimelineView: View {
                 DayTimelineBlockView(
                     item: block.item,
                     showsTitle: block.width >= DayTimelineMetrics.barOnlyWidth,
-                    height: blockHeight
+                    height: blockHeight,
+                    width: block.width
                 )
                 // 프레임을 먼저 고정하고 **그 뒤에** 잘라내야 글자가 칸 밖으로 못 나간다.
-                .frame(
-                    width: block.width,
-                    height: blockHeight,
-                    alignment: .topLeading
-                )
+                .frame(width: block.width, height: blockHeight, alignment: .topLeading)
                 .clipped()
                 .offset(x: originX + block.x, y: CGFloat(block.startFraction) * height)
             }
@@ -143,26 +129,6 @@ struct DayTimelineView: View {
 
     /// 그 날짜 열이 가로로 쓸 수 있는 폭.
     ///
-    /// **자기 열 폭까지만.** 마지막 열만 위젯 오른쪽 끝까지 — 넘어갈 이웃이 없으니
-    /// 남는 공간을 다 쓰는 게 낫다.
-    ///
-    /// 예전엔 다음 열의 절반까지 허용했다. 배치의 충돌 판정이 같은 날짜 열 안에서만
-    /// 이뤄지다 보니(`dayColumns`가 날짜별로 돈다) 옆 열의 점유 상태를 모르고, 제목이 긴
-    /// 항목이 그대로 그쪽 블록을 덮었다 — "출근 전 에어컨 송풍 30분 후 끄기"가 31일 일정을
-    /// 가렸고, 상한을 1.5배로 낮춰도 52pt를 침범해 증상이 그대로였다(실기기 #9).
-    ///
-    /// 제목은 잘려도 다 읽히지만, 덮인 블록은 존재 자체가 사라진다. 가리지 않는 쪽을 택한다.
-    private func availableWidth(
-        dayIndex: Int,
-        originX: CGFloat,
-        columnWidth: CGFloat,
-        totalWidth: CGFloat
-    ) -> CGFloat {
-        let toEdge = max(0, totalWidth - originX)
-        guard dayIndex < days.count - 1 else { return toEdge }
-        return min(toEdge, columnWidth)
-    }
-
     /// 시각 → 세로 위치(pt). 하루를 24등분한 비율에 높이를 곱한다.
     private func y(for hour: Int, in height: CGFloat) -> CGFloat {
         height * CGFloat(hour) / 24
@@ -195,6 +161,10 @@ private struct DayTimelineBlockView: View {
         return height < DayTimelineMetrics.minimumHeight + DayTimelineMetrics.minimumHeight / 2
     }
 
+    /// 블록 폭 — 컬럼 패킹이 정한 값(→ `DayTimelineLayout`).
+    /// 제목 줄에 이 폭을 걸어야 긴 제목이 `HStack`을 부풀리지 않는다.
+    let width: CGFloat
+
     var body: some View {
         // ZStack이라 배경은 언제나 프레임 전체를 채운다 — 제목이 빠져도 블록이 사라지지 않는다.
         //
@@ -220,7 +190,7 @@ private struct DayTimelineBlockView: View {
                     bottomLeadingRadius: WidgetCalendarTheme.chipCornerRadius
                 )
                 .fill(color)
-                .frame(width: WidgetCalendarTheme.markerBarWidth)
+                .frame(width: DayTimelineMetrics.leadingBarWidth)
             }
             if showsTitle {
                 HStack(spacing: DayTimelineMetrics.markerGap) {
@@ -230,17 +200,19 @@ private struct DayTimelineBlockView: View {
                     if item.kind == .reminder { marker }
                     Text(item.title)
                         .font(.caption2)
-                        .foregroundStyle(.primary)
+                        // 완료된 할일은 한 단계 물러난다 — 지나간 일이라 지금 해야 할 것보다
+                        // 눈에 덜 띄어야 한다. 취소선은 좁은 칸에서 글자를 갉아먹어 안 쓴다.
+                        .foregroundStyle(item.isCompleted ? .secondary : .primary)
                         // 좁은 칸에서 두 줄은 글자가 반쪽만 보여 오히려 안 읽힌다 — 한 줄 고정.
                         .lineLimit(1)
-                        // 말줄임표를 만들지 않는다. 좁은 블록에서는 `...`가 폭의 절반을 먹어
-                        // 정작 제목은 한 글자도 안 남는다(실기기에서 `...`만 뜬 블록이 여럿).
-                        // 이상적 폭을 그대로 주고 **바깥 `.clipped()`가 끝에서 잘라내면**
-                        // 같은 자리에 글자가 한두 자라도 더 들어간다.
+                        // 말줄임표를 만들지 않는다 — 좁은 블록에서 `...`가 폭의 절반을 먹어
+                        // 정작 제목이 한 글자도 안 남는다. 이상적 폭을 그대로 주고 바깥
+                        // `.clipped()`가 끝에서 잘라내면 같은 자리에 글자가 더 들어간다.
+                        //
+                        // 이게 안전한 건 제목 줄(HStack)과 블록(ZStack)이 **둘 다** 배치가 정한
+                        // 폭으로 못 박혀 있기 때문이다. 그 고정이 없던 시절엔 긴 제목이
+                        // 프레임을 밀어내 옆 날짜 열까지 뚫고 나갔다.
                         .fixedSize(horizontal: true, vertical: false)
-                        // 왼쪽 정렬 — 남는 공간이 있어도 글자가 앞에 붙는다. 이상적 폭이
-                        // 칸보다 넓으면 오른쪽으로 넘치고, 그 넘침을 클리핑이 처리한다.
-                        .frame(maxWidth: .infinity, alignment: .leading)
                         // caption2가 램프 바닥이라 그 아래는 scaleEffect로만 내려간다.
                         // **폭이 정해진 뒤**에 줄여야 축소분이 잘림에 영향을 주지 않는다.
                         //
@@ -261,11 +233,16 @@ private struct DayTimelineBlockView: View {
                     .leading,
                     item.kind == .reminder
                         ? DayTimelineMetrics.horizontalPadding
-                        : WidgetCalendarTheme.markerBarWidth + DayTimelineMetrics.horizontalPadding
+                        : DayTimelineMetrics.leadingBarWidth + DayTimelineMetrics.horizontalPadding
                 )
                 .padding(.trailing, DayTimelineMetrics.horizontalPadding)
+                // 제목 줄에 배치가 정한 폭을 건다 — Text가 이 폭을 제안받아 그 안에서
+                // 말줄임 처리된다. 안 걸면 긴 제목이 HStack을 부풀린다.
+                .frame(width: width, alignment: .leading)
             }
         }
+        .frame(width: width, alignment: .leading)
+        .clipped()
     }
 
     /// 미리알림만 원 마커를 단다 — 레퍼런스와 같은 구분.
@@ -276,8 +253,16 @@ private struct DayTimelineBlockView: View {
     private var marker: some View {
         let size = DayTimelineMetrics.markerSize
         switch item.kind {
-        case .reminder where item.isHighPriority:
-            Circle().fill(color).frame(width: size, height: size)
+        // 완료됐거나 우선순위가 지정된 것은 **채운 원**, 그 외엔 테두리만.
+        // 5pt짜리 마커에 체크 같은 기호를 넣으면 형태가 뭉개져 점으로만 보인다.
+        case .reminder where item.isCompleted || item.isHighPriority:
+            // 지름을 한 단계 줄인다 — 속이 찬 원은 같은 크기여도 커 보인다.
+            // 자리는 빈 원과 같게 잡아 제목 시작점이 흔들리지 않는다.
+            Circle()
+                .fill(color)
+                .frame(width: DayTimelineMetrics.filledMarkerSize,
+                       height: DayTimelineMetrics.filledMarkerSize)
+                .frame(width: size, height: size)
         case .reminder:
             Circle().strokeBorder(color, lineWidth: 1).frame(width: size, height: size)
         default:

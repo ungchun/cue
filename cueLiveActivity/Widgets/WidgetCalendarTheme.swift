@@ -64,10 +64,36 @@ enum WidgetCalendarTheme {
 
     /// 시간축 라벨이 들어가는 왼쪽 거터 폭. 헤더의 주차 배지도 같은 폭을 써서 세로로 정렬된다.
     static let gutterWidth: CGFloat = 22
+    /// 시간표 위젯의 좌우 인셋 — 날짜 머리글·종일 스트립·시간표가 **같은 값**을 써야
+    /// 세로로 늘어선 요소들(주차 배지·시간 라벨·날짜 열)이 어긋나지 않는다.
+    ///
+    /// 위젯 콘텐츠 마진을 껐기 때문에 이 값이 곧 가장자리와의 거리다.
+    static let timelineInset: CGFloat = Spacing.sm
+    /// 거터에 서는 숫자(시간 라벨·주차 배지)의 축소율.
+    ///
+    /// `caption2`가 SwiftUI 텍스트 스타일 램프의 바닥이라 그 아래로는 이 방법뿐이다.
+    /// 두 곳이 **같은 값**을 써야 한 줄로 읽힌다 — 크기가 다르면 주차 배지만 떠 보인다.
+    static let hourLabelScale: CGFloat = 0.78
     /// 항목 앞 마커(원)의 지름.
-    static let markerSize: CGFloat = 5
+    static let markerSize: CGFloat = 4
+    /// **속이 찬** 마커의 지름 — 빈 원보다 한 단계 작다.
+    ///
+    /// 같은 지름이어도 채운 원이 테두리 원보다 커 보인다(면적이 통째로 보이니까).
+    /// 잉크량을 재보면 빈 원의 1.5배쯤 된다 — 한 단계 줄여야 나란히 놓았을 때 같아 보인다.
+    /// 차지하는 자리는 빈 원과 같게 잡으므로 제목 시작점은 흔들리지 않는다.
+    static let filledMarkerSize: CGFloat = 3.5
     /// 시간 일정 마커 막대의 폭 — 세로로 길게 세우므로 폭은 얇게.
     static let markerBarWidth: CGFloat = 3
+    /// systemLarge 위젯의 하루 열 폭 — 종일 줄이 제목을 몇 개 붙일지 역산하는 기준.
+    ///
+    /// 실제 렌더는 `GeometryReader`가 잰 값을 쓰지만, 개수 판단은 레이아웃 전에 해야 해서
+    /// 기기 폭(systemLarge ≈ 338pt)에서 계산한다. 기기마다 몇 pt 다르지만 개수가 바뀔
+    /// 정도는 아니다 — 경계에서 흔들리지 않게 임계값에 여유를 두는 쪽이 낫다.
+    static func dayColumnWidth(dayCount: Int) -> CGFloat {
+        let widgetWidth: CGFloat = 338
+        let usable = widgetWidth - timelineInset * 2 - gutterWidth
+        return usable / CGFloat(max(1, dayCount))
+    }
     /// 막대 위아래 인셋. 칩 높이를 꽉 채우면 막대가 글자보다 길어 보여 칩이 무거워진다 —
     /// 보이는 글자 높이 정도로 짧게 세운다.
     static let markerBarInset: CGFloat = 4
