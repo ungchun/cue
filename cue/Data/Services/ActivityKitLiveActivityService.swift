@@ -107,9 +107,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             content: content,
             pushType: nil
         )
+        LiveActivityIntentRecord.markStarted(.reminder)
     }
 
     func endReminder() async {
+        // 기록은 핸들 유무와 무관하게 지운다 — 사용자가 잠금화면에서 직접 밀어 없앤 뒤라
+        // 핸들이 이미 비어 있어도 "끄겠다"는 의사는 기록에 반영돼야 한다.
+        LiveActivityIntentRecord.markEnded(.reminder)
         guard let activity = reminderActivity else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         reminderActivity = nil
@@ -162,9 +166,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             content: content,
             pushType: nil
         )
+        LiveActivityIntentRecord.markStarted(.schedule)
     }
 
     func endSchedule() async {
+        // 기록은 핸들 유무와 무관하게 지운다(endReminder 주석 참고).
+        LiveActivityIntentRecord.markEnded(.schedule)
         guard let activity = scheduleActivity else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         scheduleActivity = nil
@@ -180,6 +187,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         for activity in Activity<ScheduleLiveActivityAttributes>.activities
         where activity.content.state.showsCalendarOverride != nil {
             await activity.end(nil, dismissalPolicy: .immediate)
+            // 예시도 `startSchedule`을 거치므로 기록이 남는다 — 사용자가 고른 적 없는
+            // 것을 자동화가 8시간마다 되살리지 않도록 여기서 지운다.
+            LiveActivityIntentRecord.markEnded(.schedule)
             if scheduleActivity?.id == activity.id {
                 scheduleActivity = nil
                 lastScheduleDays = []
@@ -188,6 +198,8 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         for activity in Activity<ReminderLiveActivityAttributes>.activities
         where activity.content.state.showsCalendarOverride != nil {
             await activity.end(nil, dismissalPolicy: .immediate)
+            // 예시 기록 정리(위 주석 참고).
+            LiveActivityIntentRecord.markEnded(.reminder)
             if reminderActivity?.id == activity.id {
                 reminderActivity = nil
                 lastReminderItems = []
@@ -209,6 +221,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
         if let existing = memoActivity {
             await existing.update(content)
+            // 갱신 경로에서도 기록을 다시 세운다 — 앱을 지웠다 깔거나 App Group이 비었을 때
+            // 라이브는 떠 있는데 기록만 없는 상태가 되면 자동화가 그 라이브를 포기한다.
+            LiveActivityIntentRecord.markStarted(.memo)
             return
         }
 
@@ -219,9 +234,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             content: content,
             pushType: nil
         )
+        LiveActivityIntentRecord.markStarted(.memo)
     }
 
     func endMemo() async {
+        // 기록은 핸들 유무와 무관하게 지운다(endReminder 주석 참고).
+        LiveActivityIntentRecord.markEnded(.memo)
         guard let activity = memoActivity else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         memoActivity = nil
