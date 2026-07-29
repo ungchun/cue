@@ -64,6 +64,10 @@ struct Live24HourGuideView: View {
         Text("Keeping your Live running 24 hours is a Premium feature.")
             .font(.footnote)
             .foregroundStyle(.secondary)
+            // 바깥 VStack의 `Spacing.lg`는 문단 사이 간격이라 한 줄짜리 주석에는 과하다 —
+            // 위아래로 `Spacing.sm`씩 당겨 24 → 16으로 좁힌다. 스택 간격을 통째로 줄이면
+            // 프리미엄 사용자(이 줄이 없는 화면)의 여백까지 같이 바뀐다.
+            .padding(.vertical, -Spacing.sm)
     }
 
     /// 단축어 앱 랜딩 — 탭하면 바로 단축어 앱이 열린다(자동화 탭으로 이동해 설정).
