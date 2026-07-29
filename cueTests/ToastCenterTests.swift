@@ -59,41 +59,76 @@ struct ToastCenterTests {
         #expect(center.isPremiumToast == false)
     }
 
-    // MARK: - 호스트 스택 (시트 위 중복 방지)
+    // MARK: - 토스트의 귀속 (시트 위 중복·잔상 방지)
 
     /// 오버레이가 하나뿐이면 그게 그린다.
     @Test func singleHostRenders() {
         let center = ToastCenter()
         let root = UUID()
-
         center.registerHost(root)
+
+        center.show("Live")
 
         #expect(center.shouldRender(host: root))
     }
 
-    /// 시트가 올라오면 **나중에 등록된 쪽만** 그린다 — 루트 오버레이는 시트 아래에 깔려
-    /// `.large` 시트 위쪽 틈으로 삐져나와 토스트가 둘로 보인다.
-    @Test func topmostHostWins() {
+    /// 시트가 떠 있을 때 뜬 토스트는 **시트만** 그린다 — 루트까지 그리면 `.large` 시트
+    /// 위쪽 틈으로 삐져나와 토스트가 둘로 보인다.
+    @Test func toastBelongsToTopmostHostAtShowTime() {
         let center = ToastCenter()
         let root = UUID()
         let sheet = UUID()
-
         center.registerHost(root)
         center.registerHost(sheet)
+
+        center.showPremium()
 
         #expect(center.shouldRender(host: sheet))
         #expect(center.shouldRender(host: root) == false)
     }
 
-    /// 시트가 닫히면 루트가 다시 그린다.
-    @Test func hostFallsBackWhenTopUnregisters() {
+    /// 토스트가 떠 있는 채로 시트를 내리면 **토스트도 함께 사라진다.**
+    /// 넘겨주면 사용자가 시트를 닫자마자 뒤 화면에 토스트가 불쑥 나타난다 —
+    /// 자기가 방금 떠난 맥락의 안내가 엉뚱한 화면에서 되살아나는 셈이다.
+    @Test func toastDiesWithItsHost() {
         let center = ToastCenter()
         let root = UUID()
         let sheet = UUID()
+        center.registerHost(root)
+        center.registerHost(sheet)
+        center.showPremium()
 
+        center.unregisterHost(sheet)
+
+        #expect(center.isPresented == false)
+        #expect(center.shouldRender(host: root) == false)
+    }
+
+    /// 주인이 아닌 오버레이가 사라지는 건 토스트에 영향을 주지 않는다.
+    @Test func unrelatedHostLeavingKeepsToast() {
+        let center = ToastCenter()
+        let root = UUID()
+        let sheet = UUID()
+        center.registerHost(root)
+        center.registerHost(sheet)
+        center.showPremium()
+
+        center.unregisterHost(root)
+
+        #expect(center.isPresented == true)
+        #expect(center.shouldRender(host: sheet))
+    }
+
+    /// 시트가 닫힌 **뒤에** 뜬 토스트는 루트가 정상적으로 그린다 — 귀속은 표시 시점에 정해진다.
+    @Test func hostFallsBackForLaterToasts() {
+        let center = ToastCenter()
+        let root = UUID()
+        let sheet = UUID()
         center.registerHost(root)
         center.registerHost(sheet)
         center.unregisterHost(sheet)
+
+        center.show("Live")
 
         #expect(center.shouldRender(host: root))
     }
@@ -105,11 +140,12 @@ struct ToastCenterTests {
         let root = UUID()
         let first = UUID()
         let second = UUID()
-
         center.registerHost(root)
         center.registerHost(first)
         center.registerHost(second)
+
         center.unregisterHost(first)
+        center.show("Live")
 
         #expect(center.shouldRender(host: second))
         #expect(center.shouldRender(host: root) == false)

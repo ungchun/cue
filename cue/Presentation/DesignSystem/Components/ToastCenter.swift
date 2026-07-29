@@ -31,6 +31,13 @@ final class ToastCenter {
     /// 가장 나중에 등록된 하나만 그리게 해 그걸 막는다 — 시트는 루트보다 늦게 나타난다.
     private var hostStack: [UUID] = []
 
+    /// 지금 떠 있는 토스트의 **주인** — 띄우는 순간의 맨 위 오버레이로 고정된다.
+    ///
+    /// 층위를 매번 다시 계산하지 않고 표시 시점에 못 박는 이유는, 토스트가 뜬 채로 시트를
+    /// 내리는 경우 때문이다. 그때 층위를 다시 계산하면 주인이 루트로 넘어가면서 사용자가
+    /// 방금 떠난 맥락의 안내가 **뒤 화면에 불쑥 나타난다**. 주인이 사라지면 토스트도 같이 끝난다.
+    private var ownerHost: UUID?
+
     /// 자동 해제 타이머 — 새 토스트가 뜨면 이전 타이머를 취소하고 다시 건다(연속 호출 안전).
     private var dismissTask: Task<Void, Never>?
 
@@ -46,6 +53,7 @@ final class ToastCenter {
     func show(_ message: String) {
         self.message = message
         isPremiumToast = false
+        ownerHost = hostStack.last
         isPresented = true
         scheduleAutoDismiss()
     }
@@ -56,6 +64,7 @@ final class ToastCenter {
         // 브랜드어라 로컬라이즈하지 않는다 — 기존 게이트 호출처의 리터럴 표기와 동일.
         message = "Premium"
         isPremiumToast = true
+        ownerHost = hostStack.last
         isPresented = true
         scheduleAutoDismiss()
     }
@@ -76,19 +85,23 @@ final class ToastCenter {
     /// 오버레이가 사라졌다 — 순서가 아니라 **id로** 지운다. SwiftUI는 새 시트의 `onAppear`가
     /// 이전 시트의 `onDisappear`보다 먼저 오기도 해서, 마지막 원소를 무작정 빼면 엉뚱한
     /// 오버레이가 떨어져 나간다.
+    /// 주인이 사라졌다면 토스트도 함께 끝낸다 — 뒤 화면으로 넘겨주지 않는다.
     func unregisterHost(_ id: UUID) {
         hostStack.removeAll { $0 == id }
+        guard ownerHost == id else { return }
+        dismiss()
     }
 
-    /// 이 오버레이가 지금 토스트를 그려야 하는가 — 맨 위 하나만 그린다.
+    /// 이 오버레이가 지금 토스트를 그려야 하는가 — 띄운 곳 하나만 그린다.
     func shouldRender(host id: UUID) -> Bool {
-        hostStack.last == id
+        ownerHost == id
     }
 
     /// 사용자가 위로 밀거나(스와이프) 즉시 닫아야 할 때 호출 — 자동 타이머도 함께 끈다.
     func dismiss() {
         dismissTask?.cancel()
         dismissTask = nil
+        ownerHost = nil
         isPresented = false
     }
 
@@ -97,6 +110,9 @@ final class ToastCenter {
         dismissTask = Task { [weak self] in
             try? await Task.sleep(for: Self.visibleDuration)
             guard !Task.isCancelled else { return }
+            // 주인도 함께 비운다 — 남겨두면 그 오버레이가 나중에 사라질 때
+            // `unregisterHost`가 이미 끝난 토스트를 또 닫으려 한다.
+            self?.ownerHost = nil
             self?.isPresented = false
         }
     }
