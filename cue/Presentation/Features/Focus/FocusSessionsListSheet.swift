@@ -68,6 +68,11 @@ struct FocusSessionsListSheet: View {
                     .presentationDetents([.large])
             }
         }
+        // 시트에도 토스트 오버레이를 붙인다 — `RootView`에 붙은 것 하나로는 부족하다.
+        // 시트는 별도 프레젠테이션 레이어에 올라가서, 루트 오버레이가 구조적으로 시트 **아래**에
+        // 깔린다. 이 시트의 게이트(세션 선택·+ 추가)가 띄우는 Premium 토스트가 안 보였던 이유다.
+        // `ToastCenter`는 환경으로 공유되는 하나라 상태는 그대로 따라온다.
+        .liveToastOverlay(toastCenter)
     }
 
     // MARK: - 행

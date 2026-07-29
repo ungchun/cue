@@ -105,6 +105,9 @@ struct FocusSessionEditorSheet: View {
                 showingCustomColorPicker = false
             }
         }
+        // 시트는 별도 프레젠테이션 레이어라 `RootView`의 토스트가 아래에 깔린다 —
+        // 여기서도 붙여야 저장 거부 안내가 보인다(목록 시트와 같은 이유).
+        .liveToastOverlay(toastCenter)
     }
 
     // MARK: - 색상 섹션
