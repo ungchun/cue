@@ -12171,6 +12171,106 @@
     "kind" : {
       "shouldTranslate" : false
     },
+    "Keeping your Live running 24 hours is a Premium feature." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحفاظ على تشغيل اللايف 24 ساعة ميزة Premium."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live 24 Stunden lang aktiv zu halten, ist eine Premium-Funktion."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantener el Live activo 24 horas es una función Premium."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Garder le Live actif 24 h est une fonction Premium."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लाइव को 24 घंटे चालू रखना प्रीमियम सुविधा है।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menjaga Live tetap aktif 24 jam adalah fitur Premium."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantenere Live attivo per 24 ore è una funzione Premium."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブを24時間表示し続けるのはプレミアム機能です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24시간 유지는 Premium 기능입니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengekalkan Live aktif 24 jam ialah ciri Premium."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manter o Live ativo por 24 horas é um recurso Premium."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показ Live 24 часа — функция Premium."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การให้ Live ทำงานต่อเนื่อง 24 ชั่วโมงเป็นฟีเจอร์พรีเมียม"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duy trì Live suốt 24 giờ là tính năng cao cấp."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让实时活动持续 24 小时是高级功能。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讓即時動態持續 24 小時是進階功能。"
+          }
+        }
+      }
+    },
     "Large" : {
       "localizations" : {
         "ar" : {
@@ -18038,7 +18138,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "프리미엄 기능은 계속 늘어나요"
+            "value" : "Premium 기능은 계속 늘어나요"
           }
         },
         "ms" : {
@@ -25715,13 +25815,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "نظام 24 ساعة"
+            "value" : "استخدام 24 ساعة"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "24-Stunden-Format"
+            "value" : "24 Stunden nutzen"
           }
         },
         "es" : {
@@ -25733,7 +25833,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Format 24 h"
+            "value" : "Utiliser 24 h"
           }
         },
         "hi" : {
@@ -25757,7 +25857,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "24時間表示を使う"
+            "value" : "24時間使う"
           }
         },
         "ko" : {
@@ -25781,13 +25881,13 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "24 часа"
+            "value" : "Использовать 24 часа"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ใช้แบบ 24 ชั่วโมง"
+            "value" : "ใช้งาน 24 ชั่วโมง"
           }
         },
         "vi" : {
@@ -25799,13 +25899,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 24 小时制"
+            "value" : "持续使用 24 小时"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 24 小時制"
+            "value" : "持續使用 24 小時"
           }
         }
       }

@@ -13,12 +13,16 @@ struct Live24HourGuideView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.dependencies) private var dependencies
+    @Environment(\.premiumStore) private var premiumStore
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     header
+                    if !premiumStore.isPremium {
+                        premiumNotice
+                    }
                     shortcutsButton
                     steps
                     Divider()
@@ -45,6 +49,21 @@ struct Live24HourGuideView: View {
             Text("Use the Shortcuts app’s ‘Automation’ to keep your Live running without interruption.")
                 .font(.headline)
         }
+    }
+
+    /// 무료 사용자에게만 보이는 조건 고지 — 자동화를 만들기 **전에** 읽혀야 헛수고가 없다.
+    ///
+    /// 하단 주석과 같은 `.footnote`·`.secondary`로 두고 아이콘도 붙이지 않는다. 자물쇠나
+    /// 큰 배너를 쓰면 시트를 여는 순간 "차단됨"으로 읽혀, 이 시트 본래의 목적(기능 설명)보다
+    /// 잠금이 먼저 말을 건다. 조건이지 거부가 아니다.
+    ///
+    /// 「전용」이 아니라 「기능」이라 쓴다 — 정보량은 같고 배제의 어감만 뺀다.
+    /// 표기는 `Cue Premium`이 아니라 `Premium` — 브랜드 타이틀 자리(배너·페이월 제목)가
+    /// 아닌 곳의 언급은 전부 `Premium`이다(`ToastCenter.showPremium` 전례).
+    private var premiumNotice: some View {
+        Text("Keeping your Live running 24 hours is a Premium feature.")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
     }
 
     /// 단축어 앱 랜딩 — 탭하면 바로 단축어 앱이 열린다(자동화 탭으로 이동해 설정).
