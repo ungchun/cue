@@ -20,9 +20,6 @@ struct Live24HourGuideView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     header
-                    if !premiumStore.isPremium {
-                        premiumNotice
-                    }
                     shortcutsButton
                     steps
                     Divider()
@@ -38,7 +35,9 @@ struct Live24HourGuideView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        // 풀 시트로 연다 — 4단계 절차·주석까지 한 번에 보여야 하는 문서형 시트라
+        // `.medium`으로 열리면 사용자가 읽기 전에 먼저 시트를 끌어올려야 한다.
+        .presentationDetents([.large])
     }
 
     private var header: some View {
@@ -49,34 +48,6 @@ struct Live24HourGuideView: View {
             Text("Use the Shortcuts app’s ‘Automation’ to keep your Live running without interruption.")
                 .font(.headline)
         }
-    }
-
-    /// 무료 사용자에게만 보이는 조건 고지 — 자동화를 만들기 **전에** 읽혀야 헛수고가 없다.
-    ///
-    /// 하단 주석 블록(`footnotes`)과 같은 `Label`·`.footnote`·`.secondary` 형태다 —
-    /// 새 패턴이 아니라 이 시트가 이미 쓰는 패턴의 반복이라 눈이 한 번만 배운다.
-    /// 큰 배너로 만들면 시트를 여는 순간 "차단됨"으로 읽혀, 기능을 설명하고 팔아야 할
-    /// 화면이 거부 화면이 된다. 조건이지 거부가 아니다.
-    ///
-    /// 아이콘이 `sparkles`인 이유 — 이 시트의 글리프는 뜻이 갈려 있다(`info.circle`=설명,
-    /// `exclamationmark.triangle`=주의). 셋째도 제 뜻을 가져야 해서 등급을 뜻하는 글리프를
-    /// 쓴다. `lock`은 같은 자리에서 "막혔다"로 읽혀 뺐다.
-    ///
-    /// 「전용」이 아니라 「기능」이라 쓴다 — 정보량은 같고 배제의 어감만 뺀다.
-    /// 표기는 `Cue Premium`이 아니라 `Premium` — 브랜드 타이틀 자리(배너·페이월 제목)가
-    /// 아닌 곳의 언급은 전부 `Premium`이다(`ToastCenter.showPremium` 전례).
-    private var premiumNotice: some View {
-        Label {
-            Text("Keeping your Live running 24 hours is a Premium feature.")
-        } icon: {
-            Image(systemName: "sparkles")
-        }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
-        // 바깥 VStack의 `Spacing.lg`는 문단 사이 간격이라 한 줄짜리 주석에는 과하다 —
-        // 위아래로 `Spacing.sm`씩 당겨 24 → 16으로 좁힌다. 스택 간격을 통째로 줄이면
-        // 프리미엄 사용자(이 줄이 없는 화면)의 여백까지 같이 바뀐다.
-        .padding(.vertical, -Spacing.sm)
     }
 
     /// 단축어 앱 랜딩 — 탭하면 바로 단축어 앱이 열린다(자동화 탭으로 이동해 설정).
@@ -121,8 +92,24 @@ struct Live24HourGuideView: View {
         }
     }
 
+    /// 하단 주석 — 맨 위가 무료 사용자용 조건 고지다.
+    ///
+    /// 고지를 이 블록의 **첫 줄**에 두는 이유는 성격이 같기 때문이다. 셋 다 "따라 하기 전에
+    /// 알아둘 것"이고, 형태(`Label`·`.footnote`·`.secondary`)도 같아야 눈이 한 번만 배운다.
+    /// 그중 조건이 가장 먼저 걸리는 문턱이라 맨 위에 온다.
+    ///
+    /// `lock`은 이 시트에서 아직 안 쓰인 글리프다 — `info.circle`(설명)·
+    /// `exclamationmark.triangle`(주의)과 뜻이 겹치지 않는다. 윤곽선 계열로 맞춰
+    /// `lock.fill`이 아니라 `lock`을 쓴다.
     private var footnotes: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
+            if !premiumStore.isPremium {
+                Label {
+                    Text("Keeping your Live running 24 hours is a Premium feature.")
+                } icon: {
+                    Image(systemName: "lock")
+                }
+            }
             Label {
                 Text("Live Activities are automatically ended by the system after 8 hours — the automation turns them back on every 8 hours.")
             } icon: {
