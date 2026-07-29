@@ -59,6 +59,62 @@ struct ToastCenterTests {
         #expect(center.isPremiumToast == false)
     }
 
+    // MARK: - 호스트 스택 (시트 위 중복 방지)
+
+    /// 오버레이가 하나뿐이면 그게 그린다.
+    @Test func singleHostRenders() {
+        let center = ToastCenter()
+        let root = UUID()
+
+        center.registerHost(root)
+
+        #expect(center.shouldRender(host: root))
+    }
+
+    /// 시트가 올라오면 **나중에 등록된 쪽만** 그린다 — 루트 오버레이는 시트 아래에 깔려
+    /// `.large` 시트 위쪽 틈으로 삐져나와 토스트가 둘로 보인다.
+    @Test func topmostHostWins() {
+        let center = ToastCenter()
+        let root = UUID()
+        let sheet = UUID()
+
+        center.registerHost(root)
+        center.registerHost(sheet)
+
+        #expect(center.shouldRender(host: sheet))
+        #expect(center.shouldRender(host: root) == false)
+    }
+
+    /// 시트가 닫히면 루트가 다시 그린다.
+    @Test func hostFallsBackWhenTopUnregisters() {
+        let center = ToastCenter()
+        let root = UUID()
+        let sheet = UUID()
+
+        center.registerHost(root)
+        center.registerHost(sheet)
+        center.unregisterHost(sheet)
+
+        #expect(center.shouldRender(host: root))
+    }
+
+    /// 해제 순서가 뒤집혀도 안전하다 — SwiftUI는 새 시트의 onAppear가 이전 시트의
+    /// onDisappear보다 먼저 올 수 있어, 스택을 순서가 아니라 **id로** 지운다.
+    @Test func outOfOrderUnregisterKeepsTopmost() {
+        let center = ToastCenter()
+        let root = UUID()
+        let first = UUID()
+        let second = UUID()
+
+        center.registerHost(root)
+        center.registerHost(first)
+        center.registerHost(second)
+        center.unregisterHost(first)
+
+        #expect(center.shouldRender(host: second))
+        #expect(center.shouldRender(host: root) == false)
+    }
+
     /// 스와이프 등 명시적 dismiss 후에는 탭이 와도 핸들러를 부르지 않는다.
     @Test func tapAfterDismissDoesNothing() {
         let center = ToastCenter()

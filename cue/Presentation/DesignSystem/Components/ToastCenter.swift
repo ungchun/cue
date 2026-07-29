@@ -23,6 +23,14 @@ final class ToastCenter {
     /// 게이트 호출처(각 화면)는 페이월 표시 지점을 몰라도 되게 여기로 결합을 모은다.
     var premiumTapHandler: (() -> Void)?
 
+    /// 토스트를 그릴 수 있는 오버레이들 — 등록 **순서**가 화면 층위다.
+    ///
+    /// 시트는 SwiftUI가 별도 프레젠테이션 레이어에 올려서, `RootView`에 붙은 오버레이 하나로는
+    /// 시트 위에 토스트를 못 띄운다. 그래서 시트에도 오버레이를 붙이는데, 그러면 이번엔 둘 다
+    /// 그려서 `.large` 시트 위쪽 틈으로 루트 토스트가 삐져나와 **두 개로 보인다**.
+    /// 가장 나중에 등록된 하나만 그리게 해 그걸 막는다 — 시트는 루트보다 늦게 나타난다.
+    private var hostStack: [UUID] = []
+
     /// 자동 해제 타이머 — 새 토스트가 뜨면 이전 타이머를 취소하고 다시 건다(연속 호출 안전).
     private var dismissTask: Task<Void, Never>?
 
@@ -57,6 +65,24 @@ final class ToastCenter {
         guard isPresented, isPremiumToast else { return }
         dismiss()
         premiumTapHandler?()
+    }
+
+    /// 오버레이가 화면에 나타났다 — 층위 맨 위로 올라간다.
+    func registerHost(_ id: UUID) {
+        hostStack.removeAll { $0 == id }
+        hostStack.append(id)
+    }
+
+    /// 오버레이가 사라졌다 — 순서가 아니라 **id로** 지운다. SwiftUI는 새 시트의 `onAppear`가
+    /// 이전 시트의 `onDisappear`보다 먼저 오기도 해서, 마지막 원소를 무작정 빼면 엉뚱한
+    /// 오버레이가 떨어져 나간다.
+    func unregisterHost(_ id: UUID) {
+        hostStack.removeAll { $0 == id }
+    }
+
+    /// 이 오버레이가 지금 토스트를 그려야 하는가 — 맨 위 하나만 그린다.
+    func shouldRender(host id: UUID) -> Bool {
+        hostStack.last == id
     }
 
     /// 사용자가 위로 밀거나(스와이프) 즉시 닫아야 할 때 호출 — 자동 타이머도 함께 끈다.

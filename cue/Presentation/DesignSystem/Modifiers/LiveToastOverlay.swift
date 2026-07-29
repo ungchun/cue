@@ -11,9 +11,15 @@ import SwiftUI
 private struct LiveToastOverlay: ViewModifier {
     let center: ToastCenter
 
+    /// 이 오버레이의 신원 — 여러 곳(루트·시트)에 붙어도 맨 위 하나만 그리게 하는 열쇠.
+    /// `@State`라 뷰가 다시 만들어져도 같은 값을 유지한다.
+    @State private var hostID = UUID()
+
     func body(content: Content) -> some View {
         content.overlay(alignment: .top) {
-            if center.isPresented {
+            // 시트가 떠 있으면 그 시트의 오버레이만 그린다 — 루트 것까지 그리면 `.large`
+            // 시트 위쪽 틈으로 삐져나와 토스트가 둘로 보인다.
+            if center.isPresented, center.shouldRender(host: hostID) {
                 LiveToastView(text: center.message)
                     .padding(.top, Spacing.sm)
                     // 상단에서 내려오고(올라가고) 페이드.
@@ -30,6 +36,8 @@ private struct LiveToastOverlay: ViewModifier {
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.82), value: center.isPresented)
+        .onAppear { center.registerHost(hostID) }
+        .onDisappear { center.unregisterHost(hostID) }
     }
 }
 
