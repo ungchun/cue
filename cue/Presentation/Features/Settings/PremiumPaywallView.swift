@@ -158,9 +158,19 @@ struct PremiumPaywallView: View {
                 title: "Unlimited Live",
                 detail: "Turn on and refresh without daily limits"
             )
+            // 「항상 표시」와 「24시간」은 다른 기능이다 — 앞은 *앱을 열 때* 자동으로 켜는
+            // 설정이고, 뒤는 단축어 자동화가 8시간마다 다시 게시하는 것이다
+            // (`RefreshLiveActivityDecision`은 `liveAlwaysOn`을 보지 않는다).
+            // 「하루 종일」은 8시간 한도를 넘기는 쪽만 해낼 수 있어 아래 행으로 옮겼다 —
+            // 「항상 표시」에 붙어 있던 동안은 그 기능에 없는 능력을 약속하고 있었다.
+            featureRow(
+                icon: "pin",
+                title: "Always Show Live",
+                detail: "Automatic every time you open Cue"
+            )
             featureRow(
                 icon: "clock.arrow.2.circlepath",
-                title: "Always Show Live",
+                title: "24-Hour Live",
                 detail: "A Live that stays on all day"
             )
             featureRow(
