@@ -15,10 +15,14 @@ import Foundation
 // (pbxproj exception). 따라서 이 인텐트들은 앱 전용 타입(`FocusViewModel` 등)을 참조하면 안 된다 —
 // `AlarmManager`/`FocusAlarmScheduling`만 써서 자급자족한다. perform()은 메인 앱 프로세스에서 실행되며,
 // 앱이 종료돼 있어도 시스템이 백그라운드로 깨워 실행한다(체이닝이 탭에 안정적인 이유).
+//
+// 넷 다 `isDiscoverable = false` — 단축어 갤러리에 노출할 이유가 없다(LA 버튼·AlarmKit 전용이라
+// alarmID를 손으로 채워야 해 무의미). 노출 여부는 `Button(intent:)`·`stopIntent` 경로와 무관하다.
 
 /// 알림(경계 도달)의 secondary 버튼 — **탭 체이닝**. 다음 단계 알람을 예약한다.
 struct FocusAlarmAdvanceIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Start Next Phase"
+    static let isDiscoverable = false
 
     @Parameter(title: "Next Phase") var nextPhaseRaw: String
     @Parameter(title: "Cycle") var nextCycle: Int
@@ -43,6 +47,7 @@ struct FocusAlarmAdvanceIntent: LiveActivityIntent {
 /// 카운트다운 LA의 일시정지 버튼 — 위젯이 `Button(intent:)`로 렌더, `alarmID`로 AlarmManager 제어.
 struct FocusAlarmPauseIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Pause"
+    static let isDiscoverable = false
     @Parameter(title: "alarmID") var alarmID: String
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }
@@ -58,6 +63,7 @@ struct FocusAlarmPauseIntent: LiveActivityIntent {
 /// 일시정지 LA의 재개 버튼.
 struct FocusAlarmResumeIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Resume"
+    static let isDiscoverable = false
     @Parameter(title: "alarmID") var alarmID: String
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }
@@ -72,6 +78,7 @@ struct FocusAlarmResumeIntent: LiveActivityIntent {
 /// 정지 버튼 — 이 알람을 취소한다(세션 종료). 다음 단계를 잇지 않는다.
 struct FocusAlarmStopIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "End"
+    static let isDiscoverable = false
     @Parameter(title: "alarmID") var alarmID: String
     init() {}
     init(alarmID: String) { self.alarmID = alarmID }

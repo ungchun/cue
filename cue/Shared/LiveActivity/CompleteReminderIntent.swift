@@ -21,6 +21,8 @@ import Foundation
 /// LA 체크박스 탭 — 해당 미리알림을 완료 처리하고 LA 화면에서 숨긴다.
 struct CompleteReminderIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Complete Reminder"
+    /// 단축어 갤러리에 노출할 이유가 없다 — LA 버튼 전용(reminderID를 손으로 채워야 해 무의미).
+    static let isDiscoverable = false
 
     @Parameter(title: "reminderID") var reminderID: String
 

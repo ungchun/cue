@@ -22,6 +22,8 @@ import Foundation
 /// `nextPhaseRaw` 전례). 메모·일정 LA가 동시에 떠 있어도 탭한 쪽만 움직인다.
 struct ShiftCalendarMonthIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Shift Calendar Month"
+    /// 단축어 갤러리에 노출할 이유가 없다 — LA 셰브런 전용(`ShiftWidgetRangeIntent` 전례).
+    static let isDiscoverable = false
 
     /// 어느 LA의 캘린더인지 — `memoTarget` 또는 `scheduleTarget`.
     @Parameter(title: "target") var targetRaw: String
