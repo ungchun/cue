@@ -115,7 +115,10 @@ enum WidgetCalendarDataSource {
             guard !hidden.contains(reminder.calendar.calendarIdentifier),
                   let due = reminder.dueDateComponents?.date else { return nil }
             return WidgetCalendarItem(
-                id: reminder.calendarItemIdentifier,
+                // 마감 시각을 붙여 구분한다 — 반복 미리알림은 여러 회차가 같은
+                // `calendarItemIdentifier`를 갖는다. 그대로 두면 창 안에 두 회차가 들어올 때
+                // `ForEach`가 id 충돌로 하나를 통째로 버린다(일정 쪽은 이미 같은 규칙이다).
+                id: "\(reminder.calendarItemIdentifier)-\(due.timeIntervalSince1970)",
                 title: reminder.title ?? "",
                 start: due,
                 // 미리알림은 길이가 없다 — 타임라인이 최소 높이를 준다.
