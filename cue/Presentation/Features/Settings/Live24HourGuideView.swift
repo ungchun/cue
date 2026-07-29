@@ -53,21 +53,30 @@ struct Live24HourGuideView: View {
 
     /// 무료 사용자에게만 보이는 조건 고지 — 자동화를 만들기 **전에** 읽혀야 헛수고가 없다.
     ///
-    /// 하단 주석과 같은 `.footnote`·`.secondary`로 두고 아이콘도 붙이지 않는다. 자물쇠나
-    /// 큰 배너를 쓰면 시트를 여는 순간 "차단됨"으로 읽혀, 이 시트 본래의 목적(기능 설명)보다
-    /// 잠금이 먼저 말을 건다. 조건이지 거부가 아니다.
+    /// 하단 주석 블록(`footnotes`)과 같은 `Label`·`.footnote`·`.secondary` 형태다 —
+    /// 새 패턴이 아니라 이 시트가 이미 쓰는 패턴의 반복이라 눈이 한 번만 배운다.
+    /// 큰 배너로 만들면 시트를 여는 순간 "차단됨"으로 읽혀, 기능을 설명하고 팔아야 할
+    /// 화면이 거부 화면이 된다. 조건이지 거부가 아니다.
+    ///
+    /// 아이콘이 `sparkles`인 이유 — 이 시트의 글리프는 뜻이 갈려 있다(`info.circle`=설명,
+    /// `exclamationmark.triangle`=주의). 셋째도 제 뜻을 가져야 해서 등급을 뜻하는 글리프를
+    /// 쓴다. `lock`은 같은 자리에서 "막혔다"로 읽혀 뺐다.
     ///
     /// 「전용」이 아니라 「기능」이라 쓴다 — 정보량은 같고 배제의 어감만 뺀다.
     /// 표기는 `Cue Premium`이 아니라 `Premium` — 브랜드 타이틀 자리(배너·페이월 제목)가
     /// 아닌 곳의 언급은 전부 `Premium`이다(`ToastCenter.showPremium` 전례).
     private var premiumNotice: some View {
-        Text("Keeping your Live running 24 hours is a Premium feature.")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            // 바깥 VStack의 `Spacing.lg`는 문단 사이 간격이라 한 줄짜리 주석에는 과하다 —
-            // 위아래로 `Spacing.sm`씩 당겨 24 → 16으로 좁힌다. 스택 간격을 통째로 줄이면
-            // 프리미엄 사용자(이 줄이 없는 화면)의 여백까지 같이 바뀐다.
-            .padding(.vertical, -Spacing.sm)
+        Label {
+            Text("Keeping your Live running 24 hours is a Premium feature.")
+        } icon: {
+            Image(systemName: "sparkles")
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        // 바깥 VStack의 `Spacing.lg`는 문단 사이 간격이라 한 줄짜리 주석에는 과하다 —
+        // 위아래로 `Spacing.sm`씩 당겨 24 → 16으로 좁힌다. 스택 간격을 통째로 줄이면
+        // 프리미엄 사용자(이 줄이 없는 화면)의 여백까지 같이 바뀐다.
+        .padding(.vertical, -Spacing.sm)
     }
 
     /// 단축어 앱 랜딩 — 탭하면 바로 단축어 앱이 열린다(자동화 탭으로 이동해 설정).
