@@ -10,13 +10,18 @@ import Foundation
 struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Sendable {
     private static let storageKey = "cue.appSettings.v1"
     private let defaults: UserDefaults
+    /// 위젯(다른 프로세스)이 읽는 미러의 저장소. 테스트에서 실제 App Group을 건드리지 않도록 주입 가능.
+    private let group: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, group: UserDefaults = SharedAppGroup.defaults) {
         self.defaults = defaults
+        self.group = group
     }
 
     func fetch() async -> AppSettings {
-        fetchImmediately() ?? .default
+        let settings = fetchImmediately() ?? .default
+        repairMirrorIfNeeded(settings)
+        return settings
     }
 
     /// UserDefaults는 동기 저장소라 즉시 읽기가 가능하다 — 첫 프레임 전 시작 탭 결정에 쓴다.
@@ -33,10 +38,37 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
         mirrorToAppGroup(settings)
     }
 
+    // MARK: - App Group 미러
+
+    /// 미러가 저장값과 어긋나 있으면 다시 맞춘다.
+    ///
+    /// **왜 필요한가** — 위젯은 `AppSettings`를 읽을 수 없어 LA 캘린더 표시를 미러만 보고 정한다.
+    /// 그런데 미러는 `save()` 안에서만 쓰였다. 그래서 한 번 어긋나면(도메인별 쓰기 유실, 같은
+    /// App Group에 쓰는 다른 프로세스의 클로버, 강등 정리와의 경합) 사용자가 그 토글을 **직접
+    /// 다시 만질 때까지 영구히** 틀린 채 남는다 — "설정은 ON인데 잠금화면 캘린더가 안 뜬다".
+    /// 재실행·재게시·프리미엄 재확인 중 어느 것도 이걸 고치지 못했다.
+    ///
+    /// 미러는 `AppSettings`에서 100% 파생되는 캐시라 방향이 항상 진실→미러 한쪽이다 —
+    /// 저장값을 덮을 위험이 구조적으로 없다. 맞을 때는 쓰지 않는다(fetch는 화면 진입마다 불리고,
+    /// 위젯 프로세스와 같은 도메인을 공유하므로 무의미한 쓰기를 던지지 않는다).
+    private func repairMirrorIfNeeded(_ settings: AppSettings) {
+        guard !mirrorMatches(settings) else { return }
+        mirrorToAppGroup(settings)
+    }
+
+    /// 미러가 저장값과 일치하는지 — 재동기 여부를 가르는 판정(테스트로 고정).
+    func mirrorMatches(_ settings: AppSettings) -> Bool {
+        group.string(forKey: SharedAppGroup.Keys.memoTextSize) == settings.memoTextSize.rawValue
+            && group.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar) == settings.memoShowsCalendar
+            && group.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar) == settings.scheduleShowsCalendar
+            && group.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar) == settings.reminderShowsCalendar
+            // 순서는 의미 없다(집합) — 배열 비교로 오탐하지 않게 집합으로 견준다.
+            && Set(group.stringArray(forKey: SharedAppGroup.Keys.hiddenCalendarIDs) ?? []) == settings.hiddenCalendarIDs
+    }
+
     /// 위젯(다른 프로세스)이 읽을 LA 관련 설정을 App Group에 미러링한다 — 위젯은 Domain 타입을
     /// 모르므로 rawValue 문자열·불리언만 공유한다. (메모 LA 글자 크기, 캘린더 함께 표시)
     private func mirrorToAppGroup(_ settings: AppSettings) {
-        let group = SharedAppGroup.defaults
         group.set(settings.memoTextSize.rawValue, forKey: SharedAppGroup.Keys.memoTextSize)
         group.set(settings.memoShowsCalendar, forKey: SharedAppGroup.Keys.memoShowsCalendar)
         group.set(settings.scheduleShowsCalendar, forKey: SharedAppGroup.Keys.scheduleShowsCalendar)

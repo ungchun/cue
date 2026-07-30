@@ -105,4 +105,90 @@ struct AppSettingsRepositoryTests {
 
         #expect(await repo.fetch() == .default)
     }
+
+    // MARK: - App Group 미러 재동기
+    //
+    // 위젯은 LA 캘린더를 그릴지를 **App Group 미러만 보고** 정한다(위젯은 AppSettings를 못 읽는다).
+    // 미러가 `save()`에서만 쓰이면 한 번 어긋난 순간 사용자가 그 토글을 직접 다시 만질 때까지
+    // 영구히 틀린 채 남는다 — "설정은 ON인데 LA 캘린더가 안 뜬다"의 정체.
+    // 그래서 `fetch()`가 진실(저장값)로 미러를 다시 맞춘다. 방향은 항상 진실→미러 한쪽이다.
+
+    private func makeRepo() -> (UserDefaultsAppSettingsRepository, UserDefaults, UserDefaults) {
+        let defaults = UserDefaults(suiteName: "test.appSettings.\(UUID().uuidString)")!
+        let group = UserDefaults(suiteName: "test.appGroup.\(UUID().uuidString)")!
+        return (UserDefaultsAppSettingsRepository(defaults: defaults, group: group), defaults, group)
+    }
+
+    /// 미러가 저장값과 어긋나 있으면(쓰기 유실·다른 프로세스의 도메인 클로버) fetch가 고친다.
+    /// 이게 없으면 유료 사용자가 켜둔 캘린더가 위젯에서 영구히 꺼진 채 남는다.
+    @Test func fetchRepairsStaleMirror() async {
+        let (repo, _, group) = makeRepo()
+        var settings = AppSettings.default
+        settings.reminderShowsCalendar = true
+        settings.scheduleShowsCalendar = true
+        await repo.save(settings)
+
+        // 외부 원인으로 미러만 꺼진 상태를 재현.
+        group.set(false, forKey: SharedAppGroup.Keys.reminderShowsCalendar)
+        group.set(false, forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+
+        _ = await repo.fetch()
+
+        #expect(group.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar) == true)
+        #expect(group.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar) == true)
+    }
+
+    /// 반대 방향(미러만 켜져 있음)도 고친다 — 저장값이 꺼졌는데 미러가 켜진 채면
+    /// 무료 사용자에게 유료 표시가 새고, 설정 화면과 잠금화면이 서로 다른 말을 한다.
+    @Test func fetchClearsMirrorLeftOnWhenSettingIsOff() async {
+        let (repo, _, group) = makeRepo()
+        await repo.save(.default)                                            // 전부 off
+        group.set(true, forKey: SharedAppGroup.Keys.memoShowsCalendar)        // 미러만 켜진 상태
+
+        _ = await repo.fetch()
+
+        #expect(group.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar) == false)
+    }
+
+    /// 저장값이 아예 없는 첫 실행에서도 미러를 기본값으로 심는다 — 미러가 비어 있으면
+    /// 위젯이 읽는 값(`memoTextSize` 등)이 저장값과 다른 채로 시작한다.
+    @Test func fetchSeedsMirrorOnFirstLaunch() async {
+        let (repo, _, group) = makeRepo()
+
+        #expect(await repo.fetch() == .default)
+
+        #expect(group.string(forKey: SharedAppGroup.Keys.memoTextSize) == AppSettings.default.memoTextSize.rawValue)
+        #expect(group.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar) == false)
+    }
+
+    /// 숨긴 캘린더 목록도 미러 재동기 대상 — LA 월간 캘린더 점이 이 목록으로 걸러진다.
+    @Test func fetchRepairsHiddenCalendarMirror() async {
+        let (repo, _, group) = makeRepo()
+        var settings = AppSettings.default
+        settings.hiddenCalendarIDs = ["cal-work"]
+        await repo.save(settings)
+
+        group.set(["cal-stale"], forKey: SharedAppGroup.Keys.hiddenCalendarIDs)
+
+        _ = await repo.fetch()
+
+        #expect(group.stringArray(forKey: SharedAppGroup.Keys.hiddenCalendarIDs) == ["cal-work"])
+    }
+
+    /// 재동기 여부를 가르는 판정 — fetch는 화면 진입마다 불리므로, 맞을 때는 쓰지 않아야
+    /// 한다(같은 App Group 도메인을 쓰는 위젯 프로세스와 무의미하게 경합하지 않게).
+    @Test func mirrorMatchesDetectsDivergence() async {
+        let (repo, _, group) = makeRepo()
+        var settings = AppSettings.default
+        settings.memoShowsCalendar = true
+        settings.memoTextSize = .small
+        settings.hiddenCalendarIDs = ["cal-work"]
+
+        #expect(repo.mirrorMatches(settings) == false)   // 미러 비어 있음 → 재동기 필요
+        await repo.save(settings)
+        #expect(repo.mirrorMatches(settings) == true)    // 저장으로 맞춰짐 → 재동기 불필요
+
+        group.set(false, forKey: SharedAppGroup.Keys.memoShowsCalendar)
+        #expect(repo.mirrorMatches(settings) == false)   // 한 키만 어긋나도 감지
+    }
 }
