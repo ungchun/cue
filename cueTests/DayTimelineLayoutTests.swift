@@ -322,6 +322,33 @@ struct DayTimelineLayoutTests {
         #expect(first.map(\.x) == second.map(\.x))
     }
 
+    /// 구간이 **완전히 같은** 항목들의 가로 위치가 입력 순서에 흔들리지 않아야 한다.
+    ///
+    /// 컬럼 패킹의 정렬이 `top`·`bottom`만 비교하던 동안 둘 다 같으면 비교가 양방향 false여서
+    /// 순서가 입력에 맡겨졌다(`sort`는 안정 정렬이 아니다). 그 순서가 그리디 컬럼 배정에
+    /// 흘러 EventKit 조회 순서마다 좌우가 뒤집혔다. 그리는 순서는 `precedes`가 `id`로
+    /// 확정하고 있었으므로 세로는 멀쩡하고 **가로만** 흔들렸다.
+    @Test func identicalSpansGetStableColumnsRegardlessOfInputOrder() {
+        let ids = ["a", "b", "c"]
+        let items = ids.map { event($0, at(9), at(10)) }
+
+        // 어떤 순서로 넣어도 같은 id가 같은 x를 받아야 한다.
+        let forward = xByID(layout(items).blocks)
+        let reversed = xByID(layout(items.reversed()).blocks)
+        let rotated = xByID(layout([items[1], items[2], items[0]]).blocks)
+
+        #expect(forward == reversed)
+        #expect(forward == rotated)
+        // 세 겹이라 컬럼 셋으로 갈리고, id 순서대로 왼쪽부터 놓인다.
+        #expect(isClose(forward["a"] ?? -1, 0))
+        #expect(isClose(forward["b"] ?? -1, 100.0 / 3))
+        #expect(isClose(forward["c"] ?? -1, 200.0 / 3))
+    }
+
+    private func xByID(_ blocks: [TimelineBlock]) -> [String: CGFloat] {
+        Dictionary(uniqueKeysWithValues: blocks.map { ($0.id, $0.x) })
+    }
+
     /// 겹침이 깊어도 항목을 **버리지 않는다** — 좁으면 색 막대로라도 남긴다.
     ///
     /// 예전엔 최소 폭이 안 나오면 그 자리를 건너뛰고 결국 항목을 버렸다. 오전처럼 여러 개가

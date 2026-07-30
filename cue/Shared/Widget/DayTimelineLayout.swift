@@ -197,7 +197,17 @@ enum DayTimelineLayout {
         var columnCounts: [String: Int] = [:]
 
         // 그룹 나누기는 시각 순으로 — 배치 순서(`precedes`)와는 다른 정렬이 필요하다.
-        let ordered = spans.sorted { $0.top == $1.top ? $0.bottom > $1.bottom : $0.top < $1.top }
+        //
+        // 마지막 `id` 비교가 **결정론을 만든다**. 구간이 완전히 같으면(`top`·`bottom` 동일)
+        // 앞의 두 조건이 양방향 모두 false여서 순서가 입력에 맡겨지고, `sort`는 안정 정렬을
+        // 보장하지 않는다. 그 순서가 아래 그리디 컬럼 배정에 그대로 흘러 **가로 위치가**
+        // EventKit 조회 순서마다 뒤집혔다 — 같은 시각 두 일정의 좌우가 갱신마다 바뀌어 보였다.
+        // 그리는 순서(`precedes`)는 이미 `id`로 확정돼 있어 세로만 안정적이었다.
+        let ordered = spans.sorted {
+            if $0.top != $1.top { return $0.top < $1.top }
+            if $0.bottom != $1.bottom { return $0.bottom > $1.bottom }
+            return $0.item.id < $1.item.id
+        }
 
         var cluster: [Span] = []
         var clusterBottom = -CGFloat.greatestFiniteMagnitude
