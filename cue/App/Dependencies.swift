@@ -99,6 +99,10 @@ struct Dependencies: Sendable {
     var fetchAppSettings: FetchAppSettingsUseCase
     var saveAppSettings: SaveAppSettingsUseCase
 
+    /// 시작 탭 — 첫 프레임 전에 동기로 읽는다(비동기로 읽으면 기본 탭이 한 번 보였다 전환).
+    /// 기본값은 인메모리(= "memo") — 실 배선은 `CompositionRoot`에서 같은 repo 인스턴스로.
+    var fetchStartTabID = FetchStartTabIDUseCase(repository: InMemoryAppSettingsRepository())
+
     // MARK: - 앱 시작 프리페치 + 첫 페인트 스냅샷 캐시
 
     /// 프롬프트 없는 권한 상태 조회 — 앱 시작 프리페치가 "이미 허용된 경우에만" 돌기 위한 경로.

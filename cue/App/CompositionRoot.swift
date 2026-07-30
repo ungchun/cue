@@ -85,6 +85,7 @@ struct CompositionRoot {
             detectPriorInstall: DetectPriorInstallUseCase(repository: UserDefaultsPriorInstallRepository()),
             fetchAppSettings: FetchAppSettingsUseCase(repository: appSettingsRepository),
             saveAppSettings: SaveAppSettingsUseCase(repository: appSettingsRepository),
+            fetchStartTabID: FetchStartTabIDUseCase(repository: appSettingsRepository),
             // 앱 시작 프리페치용 프롬프트-없는 권한 조회 + 첫 페인트 스냅샷 캐시.
             currentRemindersAccess: CurrentRemindersAccessUseCase(repository: remindersRepository),
             currentEventsAccess: CurrentEventsAccessUseCase(repository: eventsRepository),

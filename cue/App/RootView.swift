@@ -18,8 +18,9 @@ struct RootView: View {
     @State private var pendingUpdateAlert = false
     /// App Store 앱 페이지 — ASC 앱 정보의 Apple ID.
     private let appStoreURL = URL(string: "https://apps.apple.com/app/id6789932436")!
-    /// 설정 로드 전 첫 프레임의 탭 — 기본 시작 탭(메모)과 일치시켜 깜빡임 없이 시작한다.
-    @State private var selectedTab: AppTab = .memo
+    /// 현재 탭. 초기값은 `init`에서 저장된 시작 탭을 **동기로** 읽어 넣는다 —
+    /// 비동기 설정 로드 뒤에 대입하면 기본 탭(메모)이 한 프레임 이상 보였다가 전환된다.
+    @State private var selectedTab: AppTab
     @State private var reminderViewModel: ReminderViewModel
     @State private var scheduleViewModel: ScheduleViewModel
     @State private var focusViewModel: FocusViewModel
@@ -51,6 +52,9 @@ struct RootView: View {
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))
         _onboardingViewModel = State(initialValue: OnboardingViewModel(dependencies: dependencies))
         hadPriorInstall = dependencies.detectPriorInstall()
+        // 시작 탭을 첫 body 전에 확정한다 — UserDefaults는 동기 저장소라 대기가 없다.
+        // 모르는 식별자(옛 저장본·삭제된 탭)는 기본 탭으로.
+        _selectedTab = State(initialValue: AppTab(rawValue: dependencies.fetchStartTabID()) ?? .memo)
     }
 
     var body: some View {
@@ -140,12 +144,10 @@ struct RootView: View {
             async let schedule: Void = scheduleViewModel.prefetch()
             _ = await (reminders, schedule)
         }
-        // 앱 시작 시 저장된 설정을 불러온다 — 화면 모드 반영 + 시작 탭으로 한 번 이동 + 항상 표시 게시.
+        // 앱 시작 시 저장된 설정을 불러온다 — 화면 모드 반영 + 온보딩 판정 + 항상 표시 게시.
+        // 시작 탭은 여기서 다루지 않는다 — `init`에서 이미 동기로 확정했다(깜빡임 방지).
         .task {
             await settingsViewModel.onAppear()
-            if let startTab = AppTab(rawValue: settingsViewModel.settings.startTabID) {
-                selectedTab = startTab
-            }
             // 첫 실행 온보딩 — 완주했으면 없음, 기존 사용자는 조용히 완주 처리(업데이트로
             // 온보딩이 처음 생겨도 잘 쓰던 사람에겐 안 띄운다), 신규 설치만 표시.
             switch OnboardingViewModel.launchDecision(

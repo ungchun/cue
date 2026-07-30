@@ -16,10 +16,14 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
     }
 
     func fetch() async -> AppSettings {
-        guard let data = defaults.data(forKey: Self.storageKey),
-              let settings = try? JSONDecoder().decode(AppSettings.self, from: data)
-        else { return .default }
-        return settings
+        fetchImmediately() ?? .default
+    }
+
+    /// UserDefaults는 동기 저장소라 즉시 읽기가 가능하다 — 첫 프레임 전 시작 탭 결정에 쓴다.
+    /// 저장값이 없거나 디코딩이 실패하면 nil(호출부가 기본값 처리).
+    func fetchImmediately() -> AppSettings? {
+        guard let data = defaults.data(forKey: Self.storageKey) else { return nil }
+        return try? JSONDecoder().decode(AppSettings.self, from: data)
     }
 
     func save(_ settings: AppSettings) async {
