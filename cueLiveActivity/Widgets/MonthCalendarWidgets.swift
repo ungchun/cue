@@ -36,7 +36,7 @@ struct MonthCalendarWidget: Widget {
 struct FixedMonthCalendarWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
-            kind: "azhy.cue.widget.monthFixed",
+            kind: CalendarWidgetKind.fixedMonth,
             provider: CalendarWidgetProvider(range: .month(shift: nil))
         ) { entry in
             MonthWidgetEntryView(entry: entry, shiftKind: nil)

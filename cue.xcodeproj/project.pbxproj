@@ -91,6 +91,7 @@
 				Shared/LiveActivity/ScheduleTimeText.swift,
 				Shared/LiveActivity/ShiftCalendarMonthIntent.swift,
 				Shared/Widget/AllDayStripLimits.swift,
+				Shared/Widget/CalendarWidgetKind.swift,
 				Shared/Widget/DayTimelineLayout.swift,
 				Shared/Widget/DayTimelineMetrics.swift,
 				Shared/Widget/ISOWeekNumber.swift,

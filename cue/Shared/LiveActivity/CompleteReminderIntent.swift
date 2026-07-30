@@ -7,6 +7,7 @@
 import AppIntents
 import EventKit
 import Foundation
+import WidgetKit
 
 // MARK: - 타깃 멤버십
 //
@@ -35,6 +36,17 @@ struct CompleteReminderIntent: LiveActivityIntent {
         // 본앱 스키마(reminderCompleted(source:))와 이름·파라미터를 맞춘다 — 익스텐션 프로세스에선 no-op.
         LiveActivityAnalyticsBridge.log?("reminder_completed", ["source": "live_activity"])
         await removeFromLiveActivity(id: reminderID)
+        // 홈 화면 캘린더 위젯도 함께 갱신 — 위젯은 완료된 할 일을 지우는 게 아니라 **체크된
+        // 모습으로** 그리므로(`WidgetCalendarDataSource.showsReminder`) 여기서 갱신하지 않으면
+        // LA에서는 사라진 항목이 위젯에는 미완료로 남는다. 잠금화면에 LA와 위젯이 함께 있을 수
+        // 있어 그 불일치가 눈앞에 보이고, LA 체크는 앱을 열 이유가 없는 동작이라
+        // `scenePhase` 이탈 갱신(cueApp)이 구제해주지 않는다.
+        //
+        // 캘린더 위젯만 집는다 — `reloadAllTimelines()`는 LA까지 재생성해 갱신 예산을 태우고,
+        // 예산이 마르면 자정·정시 타임라인이 미뤄져 오히려 더 낡는다.
+        for kind in CalendarWidgetKind.all {
+            WidgetCenter.shared.reloadTimelines(ofKind: kind)
+        }
         return .result()
     }
 
