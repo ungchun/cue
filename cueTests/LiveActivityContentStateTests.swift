@@ -119,45 +119,88 @@ struct LiveActivityContentStateTests {
         #expect(decoded.calendarMonthOffset == 5)
     }
 
-    /// `showsCalendarOverride` 키가 없는 옛 상태는 nil로 디코딩 — 위젯이 설정 미러를 따르는 기존 동작 유지.
-    @Test func scheduleStateDecodesLegacyWithoutCalendarOverrideAsNil() throws {
+    // MARK: - 캘린더 표시 결정(showsCalendar) · 예시 마커(isSample)
+    //
+    // 캘린더를 그릴지는 **게시 시점에 앱이 정해 상태에 싣는다**. 위젯이 렌더 시점에 App Group
+    // 미러를 읽던 방식은 미러가 어긋나면 "설정 ON인데 캘린더 없음"이 되고, 위젯 쪽에선 검증도
+    // 복구도 불가능했다. nil은 이 필드가 없던 옛 활성 LA뿐 — 그때만 위젯이 미러로 폴백한다.
+    // 예시(온보딩 목업) 판별은 `isSample`로 분리한다 — 예전엔 옵셔널 하나가 표시 강제와 예시
+    // 마커를 겸해서, 실사용 게시에 표시값을 실으면 예시 판별이 깨지는 구조였다.
+
+    /// 새 키가 없는 옛 일정 상태는 `showsCalendar` nil(= 미러 폴백) · `isSample` false로 디코딩된다.
+    @Test func scheduleStateDecodesLegacyCalendarKeysWithFallback() throws {
         let legacy = Data(##"{"days":[]}"##.utf8)
 
         let state = try JSONDecoder().decode(ScheduleLiveActivityAttributes.ContentState.self, from: legacy)
 
-        #expect(state.showsCalendarOverride == nil)
+        #expect(state.showsCalendar == nil)   // 위젯이 미러를 따르는 기존 동작으로 폴백
+        #expect(state.isSample == false)      // 실사용 게시로 취급 — 자동 정리 대상이 아니다
     }
 
-    /// 온보딩 목업이 켠 캘린더 오버라이드가 왕복에서 보존된다 — 위젯이 미러 대신 이 값을 따라야 함.
-    @Test func scheduleStateRoundTripsCalendarOverride() throws {
+    /// 게시 시점 결정값과 예시 마커가 왕복에서 보존된다 — 위젯이 미러 대신 이 값을 따라야 한다.
+    @Test func scheduleStateRoundTripsCalendarDecisionAndSampleMarker() throws {
         var state = ScheduleLiveActivityAttributes.ContentState(days: [], todayCount: 0)
-        state.showsCalendarOverride = true
+        state.showsCalendar = true
+        state.isSample = true
 
         let data = try JSONEncoder().encode(state)
         let decoded = try JSONDecoder().decode(ScheduleLiveActivityAttributes.ContentState.self, from: data)
 
-        #expect(decoded.showsCalendarOverride == true)
+        #expect(decoded.showsCalendar == true)
+        #expect(decoded.isSample == true)
     }
 
-    // MARK: - 할일 ContentState (캘린더 오버라이드)
+    /// 표시 OFF 결정(false)이 미러 폴백(nil)과 구별돼 보존된다 — 이 둘이 섞이면 설정을 끈
+    /// 사용자의 LA가 미러 값에 따라 캘린더를 다시 그린다.
+    @Test func scheduleStateDistinguishesOffDecisionFromMirrorFallback() throws {
+        var state = ScheduleLiveActivityAttributes.ContentState(days: [], todayCount: 0)
+        state.showsCalendar = false
 
-    /// `showsCalendarOverride` 키가 없는 옛 할일 상태도 nil로 디코딩 — 설정 미러를 따르는 기존 동작 유지.
-    @Test func reminderStateDecodesLegacyWithoutCalendarOverrideAsNil() throws {
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(ScheduleLiveActivityAttributes.ContentState.self, from: data)
+
+        #expect(decoded.showsCalendar == false)
+    }
+
+    /// 할일 상태도 동일 계약 — 옛 상태는 폴백, 새 상태는 게시 시점 결정값을 싣는다.
+    @Test func reminderStateDecodesLegacyCalendarKeysWithFallback() throws {
         let legacy = Data(##"{"items":[],"remaining":0}"##.utf8)
 
         let state = try JSONDecoder().decode(ReminderLiveActivityAttributes.ContentState.self, from: legacy)
 
-        #expect(state.showsCalendarOverride == nil)
+        #expect(state.showsCalendar == nil)
+        #expect(state.isSample == false)
     }
 
-    /// 온보딩 목업 할일 카드의 캘린더 오버라이드가 왕복에서 보존된다.
-    @Test func reminderStateRoundTripsCalendarOverride() throws {
+    @Test func reminderStateRoundTripsCalendarDecisionAndSampleMarker() throws {
         var state = ReminderLiveActivityAttributes.ContentState(items: [], remaining: 0, todayCount: 0, weekEventDots: [])
-        state.showsCalendarOverride = true
+        state.showsCalendar = true
+        state.isSample = true
 
         let data = try JSONEncoder().encode(state)
         let decoded = try JSONDecoder().decode(ReminderLiveActivityAttributes.ContentState.self, from: data)
 
-        #expect(decoded.showsCalendarOverride == true)
+        #expect(decoded.showsCalendar == true)
+        #expect(decoded.isSample == true)
+    }
+
+    /// 메모 상태도 게시 시점 결정값을 싣는다(메모엔 예시 게시가 없어 마커는 없다).
+    @Test func memoStateRoundTripsCalendarDecision() throws {
+        var state = MemoLiveActivityAttributes.ContentState(text: "메모", colorHex: "#123456")
+        state.showsCalendar = false
+
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(MemoLiveActivityAttributes.ContentState.self, from: data)
+
+        #expect(decoded.showsCalendar == false)
+    }
+
+    /// 옛 메모 상태는 nil로 디코딩 — 미러 폴백(기존 동작).
+    @Test func memoStateDecodesLegacyCalendarDecisionAsNil() throws {
+        let legacy = Data(##"{"text":"메모","colorHex":"#123456"}"##.utf8)
+
+        let state = try JSONDecoder().decode(MemoLiveActivityAttributes.ContentState.self, from: legacy)
+
+        #expect(state.showsCalendar == nil)
     }
 }

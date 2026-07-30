@@ -55,15 +55,15 @@ private struct ReminderLockScreenView: View {
     let state: ReminderLiveActivityAttributes.ContentState
 
     var body: some View {
-        // 설정 "할일 + 캘린더"(App Group 미러)면 왼쪽 반을 월간 캘린더로, 할일은 오른쪽 1열로.
+        // "할일 + 캘린더"면 왼쪽 반을 월간 캘린더로, 할일은 오른쪽 1열로.
         if showsCalendar() {
             HStack(alignment: .top, spacing: Spacing.md) {
                 MonthCalendarView(
                     grid: MonthCalendarGrid(now: .now, monthOffset: state.calendarMonthOffset),
                     intentTarget: ShiftCalendarMonthIntent.reminderTarget,
                     eventDots: state.monthEventDots,
-                    // 목업(오버라이드) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
-                    allowsMonthShift: state.showsCalendarOverride == nil
+                    // 목업(예시) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
+                    allowsMonthShift: !state.isSample
                 )
                 .frame(maxWidth: .infinity)
                 // 캘린더 모드는 1열 세로 나열이라 많으면 LA 높이를 넘는다 — 3개로 제한.
@@ -114,10 +114,11 @@ private struct ReminderLockScreenView: View {
         }
     }
 
-    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
-    /// ContentState 오버라이드(온보딩 목업)가 있으면 미러 대신 그 값을 따른다.
+    /// 표시 결정은 게시 시점에 앱이 정해 ContentState로 실어 보낸다 — 미러 읽기는 결정이
+    /// 없던 **옛 활성 LA**의 폴백일 뿐이다(렌더 시점 미러 읽기가 "설정 ON인데 캘린더 없음"의
+    /// 원인이었고, 위젯 프로세스에선 검증도 복구도 불가능했다).
     private func showsCalendar() -> Bool {
-        state.showsCalendarOverride
+        state.showsCalendar
             ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
     }
 }

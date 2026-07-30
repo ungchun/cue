@@ -18,7 +18,8 @@ struct ScheduleLiveActivityWidget: Widget {
                 days: context.state.days,
                 calendarMonthOffset: context.state.calendarMonthOffset,
                 monthEventDots: context.state.monthEventDots,
-                showsCalendarOverride: context.state.showsCalendarOverride
+                showsCalendarDecision: context.state.showsCalendar,
+                isSample: context.state.isSample
             )
             .padding(.vertical, ScheduleMetrics.outerPadding)
             .padding(.horizontal, ScheduleMetrics.outerHorizontalPadding)
@@ -67,12 +68,16 @@ private struct ScheduleLockScreenView: View {
     let days: [LiveScheduleDay]
     let calendarMonthOffset: Int
     var monthEventDots: [LiveMonthDot] = []
-    /// ContentState의 캘린더 표시 오버라이드(온보딩 목업) — nil이면 설정 미러를 따른다.
-    var showsCalendarOverride: Bool? = nil
+    /// 게시 시점에 앱이 정한 캘린더 표시 결정. nil은 이 필드가 없던 옛 활성 LA뿐.
+    var showsCalendarDecision: Bool? = nil
+    /// 온보딩 목업 게시 여부 — 월 이동 셰브런을 숨긴다(정적 목업).
+    var isSample: Bool = false
 
-    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더). 오버라이드가 있으면 우선.
+    /// 표시 결정은 상태에 실려 온다 — 미러 읽기는 결정이 없던 **옛 LA**의 폴백일 뿐이다.
+    /// 렌더 시점에 미러를 읽는 방식은 미러가 어긋나면 "설정 ON인데 캘린더 없음"이 됐고,
+    /// 위젯 프로세스에선 그걸 검증할 수도 고칠 수도 없었다.
     private var showsCalendar: Bool {
-        showsCalendarOverride
+        showsCalendarDecision
             ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
     }
 
@@ -85,8 +90,8 @@ private struct ScheduleLockScreenView: View {
                     grid: MonthCalendarGrid(now: .now, monthOffset: calendarMonthOffset),
                     intentTarget: ShiftCalendarMonthIntent.scheduleTarget,
                     eventDots: monthEventDots,
-                    // 목업(오버라이드) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
-                    allowsMonthShift: showsCalendarOverride == nil
+                    // 목업(예시) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
+                    allowsMonthShift: !isSample
                 )
                 .frame(maxWidth: .infinity)
                 // 달력 높이를 예산으로 **클램프** — 아래 `.fixedSize(vertical:)`는 자식의 자연

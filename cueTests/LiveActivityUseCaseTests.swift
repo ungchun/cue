@@ -201,6 +201,26 @@ struct LiveActivityUseCaseTests {
         #expect(dots.allSatisfy { !cal.isDate($0.dayStart, inSameDayAs: now) })
     }
 
+    /// 실사용 게시는 예시 마커가 꺼진 채로 나간다 — 켜져 나가면 `endSamples`가 다음 앱 실행마다
+    /// 사용자의 라이브를 예시로 오인해 종료한다. 캘린더 표시 강제도 없어 설정을 따른다.
+    @Test func realPublishesAreNotMarkedAsSamples() async throws {
+        let service = RecordingLiveActivityService()
+        let now = Calendar.current.startOfDay(for: .now).addingTimeInterval(6 * 3600)
+
+        try await StartReminderLiveActivityUseCase(service: service)(
+            listTitle: "오늘", reminders: [reminder(id: "a", title: "할일")], listColors: [:], now: now
+        )
+        try await StartScheduleLiveActivityUseCase(service: service)(
+            events: [event(id: "e", title: "일정", start: now.addingTimeInterval(3600), end: now.addingTimeInterval(7200), colorHex: "#FF0000")],
+            now: now
+        )
+
+        #expect(await service.startReminderCalls.first?.isSample == false)
+        #expect(await service.startReminderCalls.first?.showsCalendarOverride == nil)
+        #expect(await service.startScheduleCalls.first?.isSample == false)
+        #expect(await service.startScheduleCalls.first?.showsCalendarOverride == nil)
+    }
+
     @Test func startScheduleCarriesTodayCount() async throws {
         let service = RecordingLiveActivityService()
         let cal = Calendar.current
@@ -508,7 +528,7 @@ struct LiveActivityUseCaseTests {
         #expect(await service.endScheduleCount == 1)
     }
 
-    /// 온보딩 예시 LA 정리 위임 — 마커(showsCalendarOverride) 스캔·종료는 서비스 구현의 몫.
+    /// 온보딩 예시 LA 정리 위임 — 마커(isSample) 스캔·종료는 서비스 구현의 몫.
     @Test func endSampleLiveActivitiesCallsServiceOnce() async {
         let service = RecordingLiveActivityService()
 
@@ -626,10 +646,10 @@ struct LiveActivityUseCaseTests {
 private final actor RecordingLiveActivityService: LiveActivityService {
     var isEnabled: Bool { true }
 
-    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?)] = []
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool)] = []
     private(set) var endReminderCount = 0
 
-    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?)] = []
+    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool)] = []
     private(set) var endScheduleCount = 0
 
     private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []
@@ -645,17 +665,18 @@ private final actor RecordingLiveActivityService: LiveActivityService {
         remaining: Int,
         todayCount: Int,
         weekEventDots: [LiveDayEventDots],
-        showsCalendarOverride: Bool?
+        showsCalendarOverride: Bool?,
+        isSample: Bool
     ) async throws {
-        startReminderCalls.append((listTitle, items, remaining, todayCount, weekEventDots, showsCalendarOverride))
+        startReminderCalls.append((listTitle, items, remaining, todayCount, weekEventDots, showsCalendarOverride, isSample))
     }
 
     func endReminder() async {
         endReminderCount += 1
     }
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
-        startScheduleCalls.append((days, todayCount, weekEventDots, showsCalendarOverride))
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
+        startScheduleCalls.append((days, todayCount, weekEventDots, showsCalendarOverride, isSample))
     }
 
     func endSchedule() async {
@@ -695,14 +716,15 @@ private final actor ScheduleFailingLiveActivityService: LiveActivityService {
         remaining: Int,
         todayCount: Int,
         weekEventDots: [LiveDayEventDots],
-        showsCalendarOverride: Bool?
+        showsCalendarOverride: Bool?,
+        isSample: Bool
     ) async throws {
         startReminderCount += 1
     }
 
     func endReminder() async {}
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
         throw DomainError.validation("test")
     }
 

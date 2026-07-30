@@ -29,10 +29,17 @@ struct ReminderLiveActivityAttributes: ActivityAttributes {
         var calendarMonthOffset: Int = 0
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot] = []
-        /// 잠금화면 월간 캘린더 표시를 설정 미러(App Group)와 무관하게 강제하는 오버라이드.
-        /// nil이면 위젯이 설정 미러를 따른다(기존 동작). 온보딩 목업 게시가 true로 켠다 —
-        /// 목업 캘린더는 점 없이 이번 달만 정적으로 그린다(월 이동 셰브런도 숨김).
-        var showsCalendarOverride: Bool? = nil
+        /// 잠금화면 월간 캘린더를 그릴지 — **게시 시점에 앱이 정해 싣는다**.
+        ///
+        /// 위젯이 렌더 시점에 App Group 미러를 직접 읽던 방식은, 미러가 저장값과 어긋나면
+        /// "설정은 ON인데 캘린더가 안 뜬다"가 되고 위젯 프로세스에선 검증도 복구도 불가능했다.
+        /// 결정을 상태에 실으면 표시가 게시 시점의 진실로 고정된다.
+        /// nil은 이 필드가 없던 **옛 활성 LA**뿐 — 그때만 위젯이 미러로 폴백한다(기존 동작).
+        var showsCalendar: Bool? = nil
+        /// 온보딩 목업 게시 마커 — 예시만 골라 정리(`endSamples`)하고 월 이동 셰브런을 숨긴다.
+        /// 표시 결정과 **분리한다**: 예전엔 옵셔널 하나(`showsCalendarOverride`)가 "표시 강제"와
+        /// "예시 마커"를 겸해, 실사용 게시에 표시값을 실으면 실사용이 예시로 오인돼 정리됐다.
+        var isSample: Bool = false
     }
 
     let listTitle: String
@@ -48,7 +55,11 @@ extension ReminderLiveActivityAttributes.ContentState {
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
-        showsCalendarOverride = try container.decodeIfPresent(Bool.self, forKey: .showsCalendarOverride)
+        // 옛 상태엔 두 키가 없다 → nil(미러 폴백) · false(실사용). 옛 `showsCalendarOverride`는
+        // 읽지 않는다 — 그 키가 박힌 건 온보딩 목업뿐이고, 목업은 첫 실행 세션에서만 살아
+        // 앱 업데이트를 넘어 재포착될 창이 사실상 없다(시스템이 8시간 뒤 자동 종료).
+        showsCalendar = try container.decodeIfPresent(Bool.self, forKey: .showsCalendar)
+        isSample = try container.decodeIfPresent(Bool.self, forKey: .isSample) ?? false
     }
 }
 

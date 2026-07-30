@@ -527,9 +527,9 @@ private final actor RefreshRecordingLiveActivityService: LiveActivityService {
 
     private(set) var refreshLayoutCount = 0
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {}
     func endReminder() async {}
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {}
     func endSchedule() async {}
     func endSamples() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}

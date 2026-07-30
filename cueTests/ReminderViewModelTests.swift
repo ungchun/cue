@@ -2006,11 +2006,11 @@ private actor RecordingReminderLiveActivity: LiveActivityService {
     var isEnabled: Bool { true }
     private(set) var startReminderCalls: [(items: [LiveReminderItem], remaining: Int)] = []
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
         startReminderCalls.append((items, remaining))
     }
     func endReminder() async {}
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {}
     func endSchedule() async {}
     func endSamples() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}

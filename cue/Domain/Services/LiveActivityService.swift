@@ -28,14 +28,17 @@ protocol LiveActivityService: Sendable {
     /// 미리알림 리스트 스냅샷을 라이브 액티비티로 게시.
     /// `items`가 시스템에 표시 가능한 한도(6)를 넘으면 구현이 잘라 사용하고 나머지 개수는
     /// `remaining`에 들어간 그대로 표시한다 — 잘라내기 결정은 호출처에서.
-    /// `showsCalendarOverride` — 잠금화면 월간 캘린더 표시 강제. nil이면 설정 미러를 따른다.
+    /// `showsCalendarOverride` — 잠금화면 월간 캘린더 표시 강제(온보딩 목업). nil이면 구현이
+    /// 설정 미러로 결정한다. 어느 쪽이든 **결정값은 ContentState에 실려** 위젯이 그대로 그린다.
+    /// `isSample` — 온보딩 예시 게시 마커. `endSamples`가 이 마커로만 예시를 골라 정리한다.
     func startReminder(
         listTitle: String,
         items: [LiveReminderItem],
         remaining: Int,
         todayCount: Int,
         weekEventDots: [LiveDayEventDots],
-        showsCalendarOverride: Bool?
+        showsCalendarOverride: Bool?,
+        isSample: Bool
     ) async throws
 
     /// 미리알림 라이브 액티비티 즉시 종료.
@@ -44,13 +47,13 @@ protocol LiveActivityService: Sendable {
     // MARK: - Schedule
 
     /// 일정 스냅샷(날짜별 묶음, 오늘부터)을 라이브 액티비티로 게시.
-    /// `showsCalendarOverride` — 잠금화면 월간 캘린더 표시 강제. nil이면 설정 미러(App Group)를
-    /// 따른다(기존 동작). 온보딩 목업 게시가 설정을 건드리지 않고 캘린더를 보여줄 때 true.
+    /// `showsCalendarOverride`·`isSample` — 할일 쪽과 동일(위 주석 참고).
     func startSchedule(
         days: [LiveScheduleDay],
         todayCount: Int,
         weekEventDots: [LiveDayEventDots],
-        showsCalendarOverride: Bool?
+        showsCalendarOverride: Bool?,
+        isSample: Bool
     ) async throws
 
     /// 일정 라이브 액티비티 즉시 종료.
@@ -58,8 +61,8 @@ protocol LiveActivityService: Sendable {
 
     // MARK: - 온보딩 예시 정리
 
-    /// 온보딩 예시 일정·할일 LA만 골라 종료 — `showsCalendarOverride`가 박힌 활동이 예시다
-    /// (실사용 게시는 항상 nil). 앱 재시작으로 핸들이 유실돼도 시스템 컬렉션에서 식별해
+    /// 온보딩 예시 일정·할일 LA만 골라 종료 — ContentState의 `isSample`이 켜진 활동이 예시다
+    /// (실사용 게시는 항상 false). 앱 재시작으로 핸들이 유실돼도 시스템 컬렉션에서 식별해
     /// 정리할 수 있고, 실사용 LA를 건드릴 위험이 구조적으로 없다.
     func endSamples() async
 

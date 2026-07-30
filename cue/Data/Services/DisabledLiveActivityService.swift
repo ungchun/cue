@@ -22,12 +22,13 @@ struct DisabledLiveActivityService: LiveActivityService {
         remaining: Int,
         todayCount: Int,
         weekEventDots: [LiveDayEventDots],
-        showsCalendarOverride: Bool?
+        showsCalendarOverride: Bool?,
+        isSample: Bool
     ) async throws {}
 
     func endReminder() async {}
 
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {}
 
     func endSchedule() async {}
     func endSamples() async {}

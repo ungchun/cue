@@ -20,11 +20,11 @@ struct MemoLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: MemoLiveActivityAttributes.self) { context in
             // 잠금화면 — 카드 배경을 사용자 색으로 칠하고 가운데 큰 텍스트(사용자 글자색).
-            // 설정 "메모 + 캘린더"(App Group 미러)면 왼쪽 반을 월간 캘린더로 분할.
+            // "메모 + 캘린더"면 왼쪽 반을 월간 캘린더로 분할.
             // 캘린더 모드는 패딩을 줄여 캘린더가 최대 크기로 그려지게 한다.
             lockScreen(context.state)
-                .padding(.horizontal, showsCalendar() ? Spacing.md : Spacing.lg)
-                .padding(.vertical, showsCalendar() ? Spacing.sm : Spacing.lg)
+                .padding(.horizontal, showsCalendar(context.state) ? Spacing.md : Spacing.lg)
+                .padding(.vertical, showsCalendar(context.state) ? Spacing.sm : Spacing.lg)
                 // 메모만 글래스 통일에서 제외 — "사용자 색 카드"가 메모 LA의 컨셉이라
                 // 배경을 사용자 지정 색으로 칠한다(일정·할일·뽀모도로는 .clear 글래스).
                 .activityBackgroundTint(cardColor(context.state.colorHex))
@@ -70,7 +70,7 @@ struct MemoLiveActivityWidget: Widget {
     @ViewBuilder
     private func lockScreen(_ state: MemoLiveActivityAttributes.ContentState) -> some View {
         let color = textColor(state.textColorHex)
-        if showsCalendar() {
+        if showsCalendar(state) {
             HStack(alignment: .center, spacing: Spacing.md) {
                 MonthCalendarView(
                     grid: MonthCalendarGrid(now: .now, monthOffset: state.calendarMonthOffset),
@@ -96,9 +96,11 @@ struct MemoLiveActivityWidget: Widget {
         }
     }
 
-    /// 설정 미러 — 위젯은 렌더 시점에 읽는다(상태 갱신 시 재렌더).
-    private func showsCalendar() -> Bool {
-        SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar)
+    /// 표시 결정은 게시 시점에 앱이 정해 ContentState로 실어 보낸다 — 미러 읽기는 결정이
+    /// 없던 **옛 활성 LA**의 폴백일 뿐이다(할일·일정 LA와 동일).
+    private func showsCalendar(_ state: MemoLiveActivityAttributes.ContentState) -> Bool {
+        state.showsCalendar
+            ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar)
     }
 
     /// 카드를 채우는 큰 텍스트 — 흰색, 긴 문장은 축소·줄바꿈.

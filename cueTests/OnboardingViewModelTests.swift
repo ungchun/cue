@@ -116,6 +116,10 @@ struct OnboardingViewModelTests {
         let reminderCalls = await service.startReminderCalls
         #expect(reminderCalls.count == 1)
         #expect(reminderCalls.first?.showsCalendarOverride == true)
+        // 예시 마커 — 정리(endSamples)가 이 마커로만 예시를 고른다. 표시 결정과 분리돼 있어야
+        // 실사용 게시(마커 false)가 앱 실행마다 예시로 오인돼 종료되지 않는다.
+        #expect(scheduleCalls.first?.isSample == true)
+        #expect(reminderCalls.first?.isSample == true)
     }
 
     /// 메모 게시가 실패하면 예시도 안 띄운다 — 주인공(첫 큐) 없이 조연만 뜨는 잠금화면 방지.
@@ -209,18 +213,18 @@ private actor RecordingOnboardingLiveActivity: LiveActivityService {
 
     func setStartFails(_ fails: Bool) { startFails = fails }
 
-    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], showsCalendarOverride: Bool?)] = []
-    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], showsCalendarOverride: Bool?)] = []
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], showsCalendarOverride: Bool?, isSample: Bool)] = []
+    private(set) var startScheduleCalls: [(days: [LiveScheduleDay], showsCalendarOverride: Bool?, isSample: Bool)] = []
     private(set) var endReminderCount = 0
     private(set) var endScheduleCount = 0
     private(set) var endMemoCount = 0
 
-    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
-        startReminderCalls.append((listTitle, items, showsCalendarOverride))
+    func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
+        startReminderCalls.append((listTitle, items, showsCalendarOverride, isSample))
     }
     func endReminder() async { endReminderCount += 1 }
-    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?) async throws {
-        startScheduleCalls.append((days, showsCalendarOverride))
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
+        startScheduleCalls.append((days, showsCalendarOverride, isSample))
     }
     func endSchedule() async { endScheduleCount += 1 }
     func endSamples() async {}

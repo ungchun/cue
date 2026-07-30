@@ -66,24 +66,27 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         remaining: Int,
         todayCount: Int,
         weekEventDots: [LiveDayEventDots],
-        showsCalendarOverride: Bool?
+        showsCalendarOverride: Bool?,
+        isSample: Bool
     ) async throws {
         guard await isEnabled else { return }
 
         // 캘린더 껐다 켤 때 원본에서 복원하도록 전체 items 보관(cap 이전).
         lastReminderItems = items
-        // 캘린더 ON이면 월간 점을 싣는다. 아이템은 예산에 맞는 만큼 최대로(안 들어가면 사다리로 축소).
-        // 오버라이드(온보딩 목업)면 미러 대신 그 값을 따르고, **점은 싣지 않는다** —
+        // 표시 여부는 **여기서 확정해 상태에 싣는다** — 위젯이 렌더 시점에 미러를 읽으면
+        // 미러가 어긋난 순간 "설정 ON인데 캘린더 없음"이 되고 위젯 쪽에선 복구가 불가능하다.
+        // 오버라이드(온보딩 목업)면 미러 대신 그 값을 따르고, 예시는 **점을 싣지 않는다** —
         // 목업 캘린더는 사용자 실데이터 없이 이번 달만 정적으로 보여준다.
         let showsCalendar = showsCalendarOverride
             ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
-        let monthDots = showsCalendar && showsCalendarOverride == nil
+        let monthDots = showsCalendar && !isSample
             ? CalendarMonthDots.dots(monthOffset: 0) : []
         var state = Self.fittedReminderState(
             items: items, remaining: remaining, todayCount: todayCount,
             weekEventDots: weekEventDots, monthEventDots: monthDots
         )
-        state.showsCalendarOverride = showsCalendarOverride
+        state.showsCalendar = showsCalendar
+        state.isSample = isSample
         // 시간 흐름과 무관 — staleDate 미지정. 사용자 동작 시점에만 update.
         // Dynamic Island 우선순위(relevanceScore): 집중(AlarmKit, 시스템 우선) > 메모(3) > 일정=할일(2).
         let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 2)
@@ -126,7 +129,8 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         days: [LiveScheduleDay],
         todayCount: Int,
         weekEventDots: [LiveDayEventDots],
-        showsCalendarOverride: Bool?
+        showsCalendarOverride: Bool?,
+        isSample: Bool
     ) async throws {
         guard await isEnabled else { return }
 
@@ -139,14 +143,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         // 캘린더 껐다 켤 때 원본에서 다시 계산하도록 전체 days를 보관한다(cap 이전 값).
         lastScheduleDays = days
-        // 캘린더 함께 보기 ON이면 월간 점을 싣는다. 이벤트는 예산에 맞는 만큼 최대로(안 들어가면 축소).
-        // 오버라이드(온보딩 목업)면 미러 대신 그 값을 따르고 점은 싣지 않는다(정적 목업 캘린더).
+        // 표시 여부를 여기서 확정해 상태에 싣는다(할일 쪽 주석 참고). 이벤트는 예산에 맞는
+        // 만큼 최대로. 예시(목업)는 점을 싣지 않는다 — 이번 달만 정적으로 보여준다.
         let showsCalendar = showsCalendarOverride
             ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
-        let monthDots = showsCalendar && showsCalendarOverride == nil
+        let monthDots = showsCalendar && !isSample
             ? CalendarMonthDots.dots(monthOffset: 0) : []
         var state = Self.fittedScheduleState(days: days, todayCount: todayCount, weekEventDots: weekEventDots, monthEventDots: monthDots)
-        state.showsCalendarOverride = showsCalendarOverride
+        state.showsCalendar = showsCalendar
+        state.isSample = isSample
         // staleDate = "이 시점 이후 정보는 오래됨"을 시스템에 알리는 미래 시각.
         // **과거 시각을 넣으면 request 직후 시스템이 즉시 stale로 처리해 화면에 표시 자체가
         // 안 뜬다** — 오늘 첫 이벤트가 이미 시작된 시각인 경우(오후에 토글)가 흔한 함정.
@@ -180,12 +185,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     // MARK: - 온보딩 예시 정리
 
-    /// 예시 마커(`showsCalendarOverride != nil`)가 박힌 일정·할일 활동만 종료한다.
+    /// 예시 마커(`isSample`)가 박힌 일정·할일 활동만 종료한다.
     /// 보관 중인 핸들이 아니라 시스템 컬렉션을 스캔 — 앱 재시작으로 핸들이 유실된
     /// 지난 실행의 예시도 정리된다. 실사용 게시는 마커가 항상 nil이라 안 걸린다.
     func endSamples() async {
         for activity in Activity<ScheduleLiveActivityAttributes>.activities
-        where activity.content.state.showsCalendarOverride != nil {
+        where activity.content.state.isSample {
             await activity.end(nil, dismissalPolicy: .immediate)
             // 예시도 `startSchedule`을 거치므로 기록이 남는다 — 사용자가 고른 적 없는
             // 것을 자동화가 8시간마다 되살리지 않도록 여기서 지운다.
@@ -196,7 +201,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             }
         }
         for activity in Activity<ReminderLiveActivityAttributes>.activities
-        where activity.content.state.showsCalendarOverride != nil {
+        where activity.content.state.isSample {
             await activity.end(nil, dismissalPolicy: .immediate)
             // 예시 기록 정리(위 주석 참고).
             LiveActivityIntentRecord.markEnded(.reminder)
@@ -212,8 +217,11 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
         guard await isEnabled else { return }
 
+        // 메모도 표시 여부를 게시 시점에 확정해 싣는다(할일·일정과 동일).
+        let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar)
         var state = MemoLiveActivityAttributes.ContentState(text: text, colorHex: colorHex, textColorHex: textColorHex)
-        state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.memoShowsCalendar)
+        state.showsCalendar = showsCalendar
+        state.monthEventDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
         // 시간 흐름과 무관 — staleDate 미지정. 사용자가 텍스트·색을 바꿀 때만 update.
         // 메모는 일정·할일보다 높은 우선순위(3) — 집중(AlarmKit) 다음으로 앞에 뜬다.
         let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 3)
@@ -251,12 +259,6 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 갱신(update)이 아닌 새 게시(`Activity.request`) 직전에만 호출해 기준점을 재설정한다.
     private func stampRingAnchor() {
         SharedAppGroup.defaults.set(Date.now.timeIntervalSince1970, forKey: SharedAppGroup.Keys.ringAnchor)
-    }
-
-    /// 캘린더 함께 보기가 켜진 경우에만 표시 월(`offset`)의 일정 점을 계산한다. 꺼져 있으면 빈 배열.
-    private static func monthDots(showKey: String, offset: Int = 0) -> [LiveMonthDot] {
-        guard SharedAppGroup.defaults.bool(forKey: showKey) else { return [] }
-        return CalendarMonthDots.dots(monthOffset: offset)
     }
 
     /// ContentState 인코딩 크기 예산 — ActivityKit ~4KB 한도에 여유(그 자체 인코딩 오버헤드 대비).
@@ -346,37 +348,45 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         if let reminder = reminderActivity {
             let prev = reminder.content.state
-            // 오버라이드(온보딩 목업)가 있으면 미러 대신 유지하고 점은 계속 비워둔다(정적 목업).
-            let showsCalendar = prev.showsCalendarOverride
-                ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
+            // 예시(목업)는 게시 시점 결정을 유지하고 점은 계속 비워둔다(정적 목업).
+            // 실사용은 최신 설정으로 다시 결정한다 — 설정 토글 직후 재게시가 이 경로다.
+            let showsCalendar = prev.isSample
+                ? (prev.showsCalendar ?? false)
+                : SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
             let source = lastReminderItems.isEmpty ? prev.items : lastReminderItems
-            let monthDots = showsCalendar && prev.showsCalendarOverride == nil
+            let monthDots = showsCalendar && !prev.isSample
                 ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
             var state = Self.fittedReminderState(
                 items: source, remaining: prev.remaining, todayCount: prev.todayCount,
                 weekEventDots: prev.weekEventDots, monthEventDots: monthDots
             )
             state.calendarMonthOffset = prev.calendarMonthOffset
-            state.showsCalendarOverride = prev.showsCalendarOverride
+            state.showsCalendar = showsCalendar
+            state.isSample = prev.isSample
             await reminder.update(ActivityContent(state: state, staleDate: reminder.content.staleDate, relevanceScore: 2))
         }
         if let memo = memoActivity {
             var state = memo.content.state
-            state.monthEventDots = Self.monthDots(showKey: SharedAppGroup.Keys.memoShowsCalendar, offset: state.calendarMonthOffset)
+            let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar)
+            state.showsCalendar = showsCalendar
+            state.monthEventDots = showsCalendar
+                ? CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset) : []
             await memo.update(ActivityContent(state: state, staleDate: memo.content.staleDate, relevanceScore: 3))
         }
         if let schedule = scheduleActivity {
             let prev = schedule.content.state
-            // 오버라이드(온보딩 목업)가 있으면 설정 미러 대신 유지 — 재게시로 목업 캘린더가 꺼지지 않게.
-            let showsCalendar = prev.showsCalendarOverride
-                ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
+            // 예시(목업)는 게시 시점 결정을 유지 — 재게시로 목업 캘린더가 꺼지지 않게.
+            let showsCalendar = prev.isSample
+                ? (prev.showsCalendar ?? false)
+                : SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
             // 게시된(cap됐을 수 있는) days가 아니라 보관해 둔 원본에서 다시 계산 — 껐다 켤 때 복원.
             let source = lastScheduleDays.isEmpty ? prev.days : lastScheduleDays
-            let monthDots = showsCalendar && prev.showsCalendarOverride == nil
+            let monthDots = showsCalendar && !prev.isSample
                 ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
             var state = Self.fittedScheduleState(days: source, todayCount: prev.todayCount, weekEventDots: prev.weekEventDots, monthEventDots: monthDots)
             state.calendarMonthOffset = prev.calendarMonthOffset
-            state.showsCalendarOverride = prev.showsCalendarOverride
+            state.showsCalendar = showsCalendar
+            state.isSample = prev.isSample
             await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: 2))
         }
     }

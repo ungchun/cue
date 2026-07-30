@@ -26,13 +26,15 @@ struct StartScheduleLiveActivityUseCase: Sendable {
     /// - Parameter weekEvents: 이번 주 캘린더 이벤트(과거 날짜 포함) — 주간 스트립 날짜별 점 계산용.
     ///   `events`(다가오는 일정)와 달리 이번 주 전체를 받아 지난 날짜에도 점을 그린다. 비면 점 없음.
     /// - Parameter showsCalendarOverride: 잠금화면 월간 캘린더 표시 강제(온보딩 목업용).
-    ///   nil이면 설정 미러를 따른다(기존 동작).
+    ///   nil이면 서비스가 설정 미러로 결정한다. 결정값은 ContentState에 실려 게시된다.
+    /// - Parameter isSample: 온보딩 예시 게시 마커 — `endSamples`가 이 마커로만 예시를 정리한다.
     @discardableResult
     func callAsFunction(
         events: [CalendarEvent],
         weekEvents: [CalendarEvent] = [],
         now: Date = .now,
-        showsCalendarOverride: Bool? = nil
+        showsCalendarOverride: Bool? = nil,
+        isSample: Bool = false
     ) async throws -> Bool {
         let days = Self.groupIntoDays(events, now: now)
         guard !days.isEmpty else { return false }   // 다가오는 일정 없으면 LA 안 띄움
@@ -40,7 +42,8 @@ struct StartScheduleLiveActivityUseCase: Sendable {
             days: days,
             todayCount: Self.todayEventCount(events, now: now),
             weekEventDots: WeekEventDotsBuilder.build(events: weekEvents, now: now),
-            showsCalendarOverride: showsCalendarOverride
+            showsCalendarOverride: showsCalendarOverride,
+            isSample: isSample
         )
         return true
     }

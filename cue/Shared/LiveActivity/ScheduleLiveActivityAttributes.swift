@@ -29,10 +29,12 @@ struct ScheduleLiveActivityAttributes: ActivityAttributes {
         var weekEventDots: [LiveDayEventDots] = []
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot] = []
-        /// 잠금화면 월간 캘린더 표시를 설정 미러(App Group)와 무관하게 강제하는 오버라이드.
-        /// nil이면 위젯이 설정 미러를 따른다(기존 동작). 온보딩 목업 게시가 true로 켜 —
-        /// 설정을 건드리지 않고 이 LA 한정으로 캘린더를 보여준다(전역 상태 오염·원복 누락 없음).
-        var showsCalendarOverride: Bool? = nil
+        /// 잠금화면 월간 캘린더를 그릴지 — **게시 시점에 앱이 정해 싣는다**.
+        /// nil은 이 필드가 없던 옛 활성 LA뿐(위젯이 미러로 폴백). 배경은 할일 LA와 동일 —
+        /// `ReminderLiveActivityAttributes.ContentState.showsCalendar` 주석 참고.
+        var showsCalendar: Bool? = nil
+        /// 온보딩 목업 게시 마커 — 예시만 골라 정리하고 월 이동 셰브런을 숨긴다(표시 결정과 분리).
+        var isSample: Bool = false
     }
 
     let startedAt: Date
@@ -49,6 +51,9 @@ extension ScheduleLiveActivityAttributes.ContentState {
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
         monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
-        showsCalendarOverride = try container.decodeIfPresent(Bool.self, forKey: .showsCalendarOverride)
+        // 옛 상태엔 두 키가 없다 → nil(미러 폴백) · false(실사용). 옛 `showsCalendarOverride`를
+        // 읽지 않는 이유는 할일 쪽 주석 참고(목업은 앱 업데이트를 넘어 살 창이 사실상 없다).
+        showsCalendar = try container.decodeIfPresent(Bool.self, forKey: .showsCalendar)
+        isSample = try container.decodeIfPresent(Bool.self, forKey: .isSample) ?? false
     }
 }

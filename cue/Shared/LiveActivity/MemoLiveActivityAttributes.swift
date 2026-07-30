@@ -25,13 +25,25 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
         var calendarMonthOffset: Int
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot]
+        /// 잠금화면 월간 캘린더를 그릴지 — **게시 시점에 앱이 정해 싣는다**.
+        /// nil은 이 필드가 없던 옛 활성 LA뿐(위젯이 미러로 폴백). 배경은 할일 LA와 동일 —
+        /// `ReminderLiveActivityAttributes.ContentState.showsCalendar` 주석 참고.
+        var showsCalendar: Bool?
 
-        init(text: String, colorHex: String, textColorHex: String = "#FFFFFF", calendarMonthOffset: Int = 0, monthEventDots: [LiveMonthDot] = []) {
+        init(
+            text: String,
+            colorHex: String,
+            textColorHex: String = "#FFFFFF",
+            calendarMonthOffset: Int = 0,
+            monthEventDots: [LiveMonthDot] = [],
+            showsCalendar: Bool? = nil
+        ) {
             self.text = text
             self.colorHex = colorHex
             self.textColorHex = textColorHex
             self.calendarMonthOffset = calendarMonthOffset
             self.monthEventDots = monthEventDots
+            self.showsCalendar = showsCalendar
         }
 
         /// 전방 호환 디코딩 — 앱 업데이트 전 게시된 활성 LA의 옛 상태에 `textColorHex`·
@@ -43,6 +55,8 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
             textColorHex = try container.decodeIfPresent(String.self, forKey: .textColorHex) ?? "#FFFFFF"
             calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
             monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
+            // 옛 상태엔 없다 → nil(위젯이 미러로 폴백, 기존 동작).
+            showsCalendar = try container.decodeIfPresent(Bool.self, forKey: .showsCalendar)
         }
     }
 

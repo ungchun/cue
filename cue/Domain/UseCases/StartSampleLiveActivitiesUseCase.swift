@@ -30,13 +30,19 @@ struct StartSampleLiveActivitiesUseCase: Sendable {
         // 일정이 실패해도 할일은 계속 시도한다.
         // 캘린더는 **할일 카드에만**(일정 카드는 일정 목록만) — 둘 다 명시적 오버라이드로,
         // 사용자 설정 미러가 어떻든 목업 구성이 결정적이다. 목업 캘린더는 점 없이 이번 달만.
-        try? await startSchedule(events: Self.sampleEvents(now: now), now: now, showsCalendarOverride: false)
+        // `isSample`은 정리(endSamples)용 마커 — 표시 결정과 분리해, 실사용 게시가 예시로
+        // 오인될 여지를 없앤다.
+        try? await startSchedule(
+            events: Self.sampleEvents(now: now), now: now,
+            showsCalendarOverride: false, isSample: true
+        )
         try? await startReminder(
             listTitle: String(localized: "Sample"),
             reminders: Self.sampleReminders(),
             listColors: [:],
             now: now,
-            showsCalendarOverride: true
+            showsCalendarOverride: true,
+            isSample: true
         )
     }
 
