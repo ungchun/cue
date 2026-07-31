@@ -8,6 +8,25 @@
 
 import Observation
 import SwiftUI
+import WidgetKit
+
+/// 확정 판정을 위젯에 흘리는 통로 — App Group 미러 읽기·쓰기와 위젯 리로드.
+///
+/// 실제 구현은 전역 `SharedAppGroup`과 `WidgetCenter`를 건드리는 프로세스 밖 부수효과라,
+/// 테스트가 진짜 미러를 오염시키지 않도록(그리고 병렬 실행에서 서로 간섭하지 않도록)
+/// 이 좁은 통로 하나만 주입 가능하게 둔다.
+struct PremiumMirror: Sendable {
+    var read: @Sendable () -> Bool
+    var write: @Sendable (Bool) -> Void
+    var reloadWidgets: @Sendable () -> Void
+
+    /// 프로덕션 통로 — 위젯이 실제로 읽는 App Group 미러.
+    static let appGroup = PremiumMirror(
+        read: { SharedAppGroup.isPremium },
+        write: { SharedAppGroup.isPremium = $0 },
+        reloadWidgets: { WidgetCenter.shared.reloadAllTimelines() }
+    )
+}
 
 @MainActor
 @Observable
@@ -17,26 +36,52 @@ final class PremiumStore {
     private(set) var isPremium: Bool = false
     /// **확정** 판정 — 값이 있으면 마지막 조회가 신뢰 가능했다는 뜻. nil이면 판정 불가.
     /// 강등 정리·자동 복구(reconcile) 같은 파괴적/영속적 동작은 이 값이 있을 때만 실행한다.
-    private(set) var confirmedIsPremium: Bool?
+    ///
+    /// 확정될 때마다 App Group 미러에 그대로 흘린다(`didSet`) — 위젯은 StoreKit을 직접 못
+    /// 보고 이 미러만 읽는다. 미러 쓰기를 RootView의 `onChange`(값 **변화**)에만 두면
+    /// 판정이 바뀌지 않는 실행에서는 한 번도 안 쓰이고, 기본값 false 탓에 유료 사용자에게
+    /// 위젯 잠금이 뜬다(앱은 유료인데 위젯만 잠김). 변화가 아니라 확정이 쓰기 조건이다.
+    private(set) var confirmedIsPremium: Bool? {
+        didSet {
+            // nil(판정 불가)이면 직전 확정값을 남긴다 — 일시적 조회 실패로 강등 금지.
+            guard let confirmedIsPremium else { return }
+            // 미러가 실제로 틀렸을 때만 쓰고 위젯을 다시 그린다. 판정이 그대로인 실행에서도
+            // 여기까지는 오지만, 값이 같으면 리로드는 위젯 예산만 태운다.
+            guard mirror.read() != confirmedIsPremium else { return }
+            mirror.write(confirmedIsPremium)
+            // 미러가 바뀌었으면 위젯이 낡은 잠금 상태를 들고 있다 — 판정 자체는 안 바뀐
+            // 실행(재설치 후 첫 확정 등)이라 RootView의 onChange는 안 돌 수 있어 여기서 민다.
+            mirror.reloadWidgets()
+        }
+    }
     /// 페이월에 표시할 상품(가격) 목록.
     private(set) var products: [PurchasableProduct] = []
 
     private let service: any PurchaseService
     private let analytics: any AnalyticsService
+    private let mirror: PremiumMirror
     private var updatesTask: Task<Void, Never>?
 
     /// 저장 프로퍼티만 세팅하므로 nonisolated — Environment `@Entry` 기본값 등 비격리 컨텍스트에서도
     /// 생성 가능하게 한다(엔타이틀먼트 로드는 `start()`에서 main actor로 수행).
-    nonisolated init(service: any PurchaseService, analytics: any AnalyticsService = DisabledAnalyticsService()) {
+    nonisolated init(
+        service: any PurchaseService,
+        analytics: any AnalyticsService = DisabledAnalyticsService(),
+        mirror: PremiumMirror = .appGroup
+    ) {
         self.service = service
         self.analytics = analytics
+        self.mirror = mirror
     }
 
     /// 프리뷰·테스트 편의 — 비동기 로드 없이 초기 프리미엄 상태를 즉시 세팅한다.
+    ///
+    /// `confirmedIsPremium`은 건드리지 않는다 — convenience init은 `self.init` 이후라
+    /// `didSet`이 돌고, 프리뷰·테스트가 실기기의 App Group 미러를 덮어써 위젯 잠금 상태를
+    /// 오염시킨다. 프리뷰가 필요한 건 게이트가 읽는 `isPremium`뿐이다.
     convenience init(previewIsPremium: Bool) {
         self.init(service: DisabledPurchaseService())
         self.isPremium = previewIsPremium
-        self.confirmedIsPremium = previewIsPremium
     }
 
     /// 앱 시작 시 1회 — 상품 로드 + 현재 엔타이틀먼트 반영 + 변경 스트림 구독.
