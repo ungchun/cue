@@ -61,8 +61,12 @@ struct CompleteReminderIntent: LiveActivityIntent {
     }
 
     /// 완료된 항목을 살아있는 미리알림 LA에서 제거(표시 카운트도 함께 감소).
+    ///
+    /// `activities.first`가 아니라 `liveActivity`를 쓴다 — 목록엔 시스템이 종료한
+    /// (`.ended`) · 사용자가 치운(`.dismissed`) 인스턴스도 남아 있고, 거기 보낸 update는
+    /// 예외 없이 무시된다. 오래된 LA에서 체크가 안 먹던 원인이 이것이다.
     private func removeFromLiveActivity(id: String) async {
-        guard let activity = Activity<ReminderLiveActivityAttributes>.activities.first else { return }
+        guard let activity = Activity<ReminderLiveActivityAttributes>.liveActivity else { return }
         let next = activity.content.state.removingItem(id: id)
         await activity.update(ActivityContent(state: next, staleDate: nil))
     }

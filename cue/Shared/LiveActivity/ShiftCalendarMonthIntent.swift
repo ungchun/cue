@@ -52,7 +52,7 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
     }
 
     private func shiftMemo() async {
-        guard let activity = Activity<MemoLiveActivityAttributes>.activities.first else { return }
+        guard let activity = Activity<MemoLiveActivityAttributes>.liveActivity else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
         // 이동한 달의 일정 점을 그 자리에서 재조회해 함께 갱신 — 어느 달로 넘겨도 점이 뜬다.
@@ -63,7 +63,7 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
     }
 
     private func shiftSchedule() async {
-        guard let activity = Activity<ScheduleLiveActivityAttributes>.activities.first else { return }
+        guard let activity = Activity<ScheduleLiveActivityAttributes>.liveActivity else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
         state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
@@ -72,7 +72,7 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
     }
 
     private func shiftReminder() async {
-        guard let activity = Activity<ReminderLiveActivityAttributes>.activities.first else { return }
+        guard let activity = Activity<ReminderLiveActivityAttributes>.liveActivity else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
         state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)

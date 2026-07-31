@@ -332,9 +332,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
     func sync() async {
         // 시스템에 살아있는 첫 번째 인스턴스를 재포착. kind당 1개 정책이라 first로 충분.
-        reminderActivity = Activity<ReminderLiveActivityAttributes>.activities.first
-        scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
-        memoActivity = Activity<MemoLiveActivityAttributes>.activities.first
+        reminderActivity = Activity<ReminderLiveActivityAttributes>.liveActivity
+        scheduleActivity = Activity<ScheduleLiveActivityAttributes>.liveActivity
+        memoActivity = Activity<MemoLiveActivityAttributes>.liveActivity
     }
 
     // MARK: - Refresh
@@ -342,9 +342,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     func refreshLayout() async {
         // 캘린더 함께 표시 설정의 대상인 메모·일정·할일을 재게시한다. 핸들이 유실됐을 수 있어
         // (설정 화면이 sync보다 먼저 쓰이는 경우) 재포착 후 갱신. 캘린더 점도 표시 월 기준 재계산.
-        reminderActivity = Activity<ReminderLiveActivityAttributes>.activities.first
-        memoActivity = Activity<MemoLiveActivityAttributes>.activities.first
-        scheduleActivity = Activity<ScheduleLiveActivityAttributes>.activities.first
+        reminderActivity = Activity<ReminderLiveActivityAttributes>.liveActivity
+        memoActivity = Activity<MemoLiveActivityAttributes>.liveActivity
+        scheduleActivity = Activity<ScheduleLiveActivityAttributes>.liveActivity
 
         if let reminder = reminderActivity {
             let prev = reminder.content.state
@@ -353,7 +353,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             let showsCalendar = prev.isSample
                 ? (prev.showsCalendar ?? false)
                 : SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
-            let source = lastReminderItems.isEmpty ? prev.items : lastReminderItems
+            // 보관본을 그대로 쓰면 LA에서 체크해 지운 항목이 되살아난다 — 체크는 서비스를
+            // 거치지 않고 Activity를 직접 갱신하므로 보관본이 그 삭제를 모른다.
+            // 화면과 대조해 지운 것은 빼고 cap으로 잘린 것만 되살린다.
+            let source = LiveActivityRefreshSource.reminderItems(
+                backup: lastReminderItems, onScreen: prev.items
+            )
             let monthDots = showsCalendar && !prev.isSample
                 ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
             var state = Self.fittedReminderState(
