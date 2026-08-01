@@ -56,16 +56,12 @@ enum LiveMonthCalendarProvider {
         var order: [Int] = []
         var byDay: [Int: [String]] = [:]
         var holidays = Set<Int>()
-        // [진단용 임시] 어느 캘린더가 공휴일로 잡혔는지 — 기기에서 "대한민국 공휴일"이
-        // 실제로 걸리는지 확인하는 용도. 판정이 실기기로 확인되면 이 변수와 로그를 뺀다.
-        var holidayCalendarTitles = Set<String>()
         for event in events {
             guard !hidden.contains(event.calendar.calendarIdentifier) else { continue }
 
             if event.showsAsHoliday {
                 // 여러 날짜짜리 공휴일(연휴가 이벤트 하나로 오는 경우)도 걸치는 날을 모두 칠한다.
                 holidays.formUnion(days(from: event, within: month, calendar: calendar))
-                holidayCalendarTitles.insert(event.calendar.title)
             }
 
             let dayStart = calendar.startOfDay(for: event.startDate)
@@ -77,7 +73,7 @@ enum LiveMonthCalendarProvider {
         log.info("""
         [진단] offset=\(monthOffset) process=\(processName) status=\(status.rawValue) \
         조회이벤트=\(events.count) 숨김캘린더=\(hidden.count) 점날짜=\(order.count) \
-        공휴일=\(holidays.count) 공휴일캘린더=\(holidayCalendarTitles.sorted().joined(separator: ","))
+        공휴일=\(holidays.count)
         """)
         return LiveMonthCalendar(
             dots: order.sorted().map {
