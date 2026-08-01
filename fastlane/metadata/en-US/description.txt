@@ -1,6 +1,6 @@
 The one thing you can't forget right now — keep it on your Lock Screen. Your todos, memos, and schedule stay visible without opening the app.
 
-Notifications disappear once they pass, and memo apps only show things when you open them. Cue is different. Pick one thing, put it on your Lock Screen and Dynamic Island, and it quietly stays there until you're done.
+Notifications disappear once they pass, and memo apps only show things when you open them. Cue is different. Pick one thing, put it on your Lock Screen, and it quietly stays there until you're done.
 
 [Live]
 Put a todo or memo on your Lock Screen with a single tap. It's right there every time you wake your screen. It doesn't vanish like a notification.

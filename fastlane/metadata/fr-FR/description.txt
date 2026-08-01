@@ -1,6 +1,6 @@
 Une seule chose à ne pas oublier, affichée sur votre écran verrouillé. Tâches, mémos, agenda : tout reste visible sans ouvrir l'app.
 
-Les notifications disparaissent, et les apps de notes doivent être ouvertes. Cue est différent : vous choisissez une chose, elle s'affiche sur l'écran verrouillé et dans la Dynamic Island, et elle y reste tranquillement jusqu'à ce que ce soit terminé.
+Les notifications disparaissent, et les apps de notes doivent être ouvertes. Cue est différent : vous choisissez une chose, elle s'affiche sur l'écran verrouillé, et elle y reste tranquillement jusqu'à ce que ce soit terminé.
 
 [En direct]
 Affichez une tâche ou un mémo sur l'écran verrouillé en un seul tap. Visible à chaque fois que vous allumez l'écran. Ça ne disparaît pas comme une notification.

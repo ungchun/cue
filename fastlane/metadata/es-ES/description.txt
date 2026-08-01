@@ -1,6 +1,6 @@
 Esa única cosa que no puedes olvidar, fija en tu pantalla bloqueada. Tareas, notas y agenda: todo sigue visible sin abrir la app.
 
-Las notificaciones desaparecen, y las apps de notas hay que abrirlas. Cue es diferente: eliges una cosa, la fijas en la pantalla bloqueada y en la Dynamic Island, y ahí se queda, en silencio, hasta que la termines.
+Las notificaciones desaparecen, y las apps de notas hay que abrirlas. Cue es diferente: eliges una cosa, la fijas en la pantalla bloqueada, y ahí se queda, en silencio, hasta que la termines.
 
 [En vivo]
 Fija una tarea o una nota en la pantalla bloqueada con un solo toque. La ves cada vez que enciendes la pantalla. No desaparece como una notificación.

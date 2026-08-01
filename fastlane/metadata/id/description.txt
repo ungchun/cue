@@ -1,6 +1,6 @@
 Satu hal yang tak boleh kamu lupakan sekarang — pasang di Layar Terkunci. Tugas, catatan, jadwal — semuanya terlihat tanpa membuka aplikasi.
 
-Notifikasi hilang begitu lewat, dan aplikasi catatan harus dibuka dulu. Cue berbeda. Satu hal yang kamu pilih sendiri tampil di Layar Terkunci dan Dynamic Island, dan tetap di sana sampai selesai.
+Notifikasi hilang begitu lewat, dan aplikasi catatan harus dibuka dulu. Cue berbeda. Satu hal yang kamu pilih sendiri tampil di Layar Terkunci, dan tetap di sana sampai selesai.
 
 [Live]
 Tampilkan tugas atau catatan ke Layar Terkunci dengan satu ketukan. Setiap kali layar menyala, langsung terlihat. Tidak hilang seperti notifikasi.

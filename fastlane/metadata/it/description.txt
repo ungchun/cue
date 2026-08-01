@@ -1,6 +1,6 @@
 Quell'unica cosa da non dimenticare, sempre sulla schermata di blocco. Attività, memo e impegni: tutto resta visibile senza aprire l'app.
 
-Le notifiche spariscono, e le app di note vanno aperte. Cue è diverso: scegli una cosa, la fissi sulla schermata di blocco e nella Dynamic Island, e resta lì, in silenzio, finché non hai finito.
+Le notifiche spariscono, e le app di note vanno aperte. Cue è diverso: scegli una cosa, la fissi sulla schermata di blocco, e resta lì, in silenzio, finché non hai finito.
 
 [Live]
 Fissa un'attività o un memo sulla schermata di blocco con un solo tocco. La vedi ogni volta che accendi lo schermo. Non sparisce come una notifica.

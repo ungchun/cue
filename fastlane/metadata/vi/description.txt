@@ -1,6 +1,6 @@
 Một điều bạn không được quên lúc này — hãy để nó trên Màn hình khóa. Việc cần làm, ghi chú, lịch trình — luôn hiển thị mà không cần mở ứng dụng.
 
-Thông báo trôi qua là biến mất, còn ứng dụng ghi chú thì phải mở mới thấy. Cue thì khác. Một điều bạn tự chọn sẽ hiện trên Màn hình khóa và Dynamic Island, lặng lẽ ở đó cho đến khi bạn hoàn thành.
+Thông báo trôi qua là biến mất, còn ứng dụng ghi chú thì phải mở mới thấy. Cue thì khác. Một điều bạn tự chọn sẽ hiện trên Màn hình khóa, lặng lẽ ở đó cho đến khi bạn hoàn thành.
 
 [Live]
 Đưa việc cần làm hoặc ghi chú lên Màn hình khóa chỉ với một chạm. Mỗi lần bật màn hình là thấy ngay. Không biến mất như thông báo.
