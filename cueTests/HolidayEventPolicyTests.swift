@@ -8,98 +8,66 @@ import Testing
 
 struct HolidayEventPolicyTests {
 
-    // MARK: - 빨간색을 칠할 지역인가
+    private let koreanHolidays = "대한민국 공휴일"
 
-    @Test func koreaShowsHolidayColor() {
-        #expect(HolidayEventPolicy.showsHolidayColor(regionCode: "KR"))
+    private func shows(
+        region: String? = "KR",
+        title: String? = nil,
+        isAllDay: Bool = true
+    ) -> Bool {
+        HolidayEventPolicy.showsAsHoliday(
+            regionCode: region,
+            calendarTitle: title ?? koreanHolidays,
+            isAllDay: isAllDay
+        )
     }
 
-    @Test func otherRegionsDoNotShowHolidayColor() {
-        // 애플 공휴일 캘린더의 내용이 지역마다 달라 한국 밖에서는 신뢰할 수 없다 —
-        // 미국은 밸런타인데이·핼러윈, 대만은 24절기까지 같은 캘린더에 들어 있다.
-        for region in ["US", "TW", "CN", "JP", "DE", "GB"] {
-            #expect(
-                !HolidayEventPolicy.showsHolidayColor(regionCode: region),
-                "\(region)에서 빨간날이 켜지면 안 된다"
-            )
+    // MARK: - 통과하는 경우
+
+    @Test func koreanHolidayCalendarAllDayEventShows() {
+        #expect(shows())
+    }
+
+    @Test func deviceLanguageDoesNotMatter() {
+        // 애플은 한국 공휴일을 **한국어판 하나로만** 배포한다(kr_ko만 존재, kr_en·kr_ja·kr_zh는
+        // 404). 그래서 기기 언어가 영어여도 캘린더 제목은 "대한민국 공휴일" 그대로다 —
+        // 판정에 언어가 등장하지 않는 근거.
+        #expect(shows(region: "kr"))
+    }
+
+    // MARK: - 막는 경우
+
+    @Test func otherSubscribedCalendarsDoNotShow() {
+        // 예전 판정(구독형 + 읽기전용 + 종일)은 이것들을 전부 통과시켰다 — 제목으로 좁혀
+        // 오검출을 없앤다.
+        for title in ["학사일정", "회사 일정", "사내 휴무일", "절기달력", "프로야구 일정"] {
+            #expect(!shows(title: title), "\(title)이 공휴일로 잡히면 안 된다")
         }
     }
 
-    @Test func koreanHolidaySubscriptionAbroadStaysUncolored() {
-        // 대만·미국 사용자가 한국 공휴일 캘린더를 구독하고 있어도 빨갛게 칠하지 않는다.
-        // 판정(`isHoliday`)은 통과해도 표시(`showsHolidayColor`)에서 막힌다.
-        #expect(HolidayEventPolicy.isHoliday(
-            isSubscribed: true, isSubscriptionType: true,
-            allowsContentModifications: false, isAllDay: true
-        ))
-        #expect(!HolidayEventPolicy.showsHolidayColor(regionCode: "TW"))
+    @Test func otherCountriesHolidayCalendarsDoNotShow() {
+        // 한국 기기에서 일본·미국·대만 공휴일 캘린더를 구독해도 빨갛게 칠하지 않는다.
+        // 실제 애플 캘린더 제목들이다.
+        for title in ["日本の祝日", "Japan Holidays", "US Holidays", "台灣節日"] {
+            #expect(!shows(title: title), "\(title)이 한국에서 빨개지면 안 된다")
+        }
     }
 
-    @Test func unknownRegionDoesNotShowHolidayColor() {
+    @Test func timedEventDoesNotShow() {
+        // 공휴일은 하루 전체다. 같은 캘린더에 시각 있는 항목이 들어와도 날짜를 칠하지 않는다.
+        #expect(!shows(isAllDay: false))
+    }
+
+    @Test func otherRegionsDoNotShow() {
+        // 미국(밸런타인데이·핼러윈·Daylight Saving Time)과 대만(24절기 24개)은 공휴일
+        // 캘린더에 안 쉬는 날이 대량으로 섞여 있어 켜지 않는다 — 애플 원본 ICS로 확인.
+        for region in ["US", "TW", "JP", "CN", "DE", "GB"] {
+            #expect(!shows(region: region), "\(region)에서 빨간날이 켜지면 안 된다")
+        }
+    }
+
+    @Test func unknownRegionDoesNotShow() {
         // 지역을 못 읽으면 끈다 — 켜는 쪽이 기본값이면 엉뚱한 나라에서 빨개진다.
-        #expect(!HolidayEventPolicy.showsHolidayColor(regionCode: nil))
-    }
-
-    @Test func regionCodeIsCaseInsensitive() {
-        // `Locale.Region.identifier`는 대문자를 주지만, 소문자로 오는 경로가 생겨도 같게 본다.
-        #expect(HolidayEventPolicy.showsHolidayColor(regionCode: "kr"))
-    }
-
-
-    // MARK: - 공휴일로 인정하는 경우
-
-    @Test func subscriptionTypeReadOnlyAllDayEventIsHoliday() {
-        // `type == .subscription`으로 들어오는 경우 — 애플 지원 문서가 공휴일 캘린더를
-        // "subscription calendar"라고 부르는 그 형태.
-        #expect(HolidayEventPolicy.isHoliday(
-            isSubscribed: false, isSubscriptionType: true,
-            allowsContentModifications: false, isAllDay: true
-        ))
-    }
-
-    @Test func calDAVSubscribedReadOnlyAllDayEventIsHoliday() {
-        // CalDAV로 들어오며 isSubscribed만 서는 경우 — 애플 문서: "CalDAV subscribed
-        // calendars have type EKCalendarTypeCalDAV with isSubscribed = YES".
-        // 기본 공휴일 캘린더가 기기에서 어느 쪽으로 오는지 확정할 수 없어 둘 다 통과시킨다.
-        #expect(HolidayEventPolicy.isHoliday(
-            isSubscribed: true, isSubscriptionType: false,
-            allowsContentModifications: false, isAllDay: true
-        ))
-    }
-
-    // MARK: - 배제하는 경우
-
-    @Test func timedEventInSubscribedCalendarIsNotHoliday() {
-        // 스포츠 일정 같은 구독 캘린더는 대부분 시각이 있다 — 종일이 아니면 공휴일이 아니다.
-        // 이 조건이 구독 캘린더 오검출을 막는 주된 방어선이다.
-        #expect(!HolidayEventPolicy.isHoliday(
-            isSubscribed: true, isSubscriptionType: true,
-            allowsContentModifications: false, isAllDay: false
-        ))
-    }
-
-    @Test func ownCalendarAllDayEventIsNotHoliday() {
-        // 내가 만든 종일 일정(휴가·출장)이 날짜를 빨갛게 만들면 안 된다.
-        #expect(!HolidayEventPolicy.isHoliday(
-            isSubscribed: false, isSubscriptionType: false,
-            allowsContentModifications: true, isAllDay: true
-        ))
-    }
-
-    @Test func writableSubscribedCalendarIsNotHoliday() {
-        // 공휴일 캘린더는 사용자가 고칠 수 없다 — 쓰기가 열려 있으면 공유 캘린더 쪽이다.
-        #expect(!HolidayEventPolicy.isHoliday(
-            isSubscribed: true, isSubscriptionType: true,
-            allowsContentModifications: true, isAllDay: true
-        ))
-    }
-
-    @Test func readOnlyButNotSubscribedIsNotHoliday() {
-        // 생일 캘린더(.birthday)가 여기 걸린다 — 읽기 전용이지만 구독이 아니다.
-        // 생일마다 날짜가 빨개지면 안 된다.
-        #expect(!HolidayEventPolicy.isHoliday(
-            isSubscribed: false, isSubscriptionType: false,
-            allowsContentModifications: false, isAllDay: true
-        ))
+        #expect(!shows(region: nil))
     }
 }
