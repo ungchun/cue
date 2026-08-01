@@ -276,12 +276,15 @@ struct DayCalendarEntryView: View {
 
     private func isToday(_ day: Date) -> Bool { calendar.startOfDay(for: day) == today }
 
+    /// 날짜 머리글의 숫자 색 — 일요일·공휴일 빨강, 토요일 파랑.
+    ///
+    /// 공휴일 판정은 **잠금과 무관하게** 스냅샷 원본에서 읽는다. 시간표는 가려도 날짜 머리글은
+    /// 남기는 화면이라(→ `body` 주석), 여기서 색까지 빠지면 무료 사용자에게는 공휴일이 없는
+    /// 달력이 된다. 공휴일은 어차피 공개 정보라 가릴 것도 없다.
     private func dayColor(_ day: Date) -> Color {
-        let parts = calendar.dateComponents([.year, .month, .day, .weekday], from: day)
-        let isHoliday = KoreanHolidayCalculator
-            .holidayDays(year: parts.year ?? 0, month: parts.month ?? 0, calendar: calendar)
-            .contains(parts.day ?? 0)
-        return WidgetCalendarTheme.weekdayColor(parts.weekday ?? 0, isHoliday: isHoliday)
+        let isHoliday = entry.snapshot.items(on: day, calendar: calendar).contains(where: \.isHoliday)
+        let weekday = calendar.component(.weekday, from: day)
+        return WidgetCalendarTheme.weekdayColor(weekday, isHoliday: isHoliday)
     }
 
     /// 1일 위젯 부제 — 오늘이면 "Today · 월요일", 아니면 요일만.

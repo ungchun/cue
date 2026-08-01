@@ -79,11 +79,11 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 목업 캘린더는 사용자 실데이터 없이 이번 달만 정적으로 보여준다.
         let showsCalendar = showsCalendarOverride
             ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar)
-        let monthDots = showsCalendar && !isSample
-            ? CalendarMonthDots.dots(monthOffset: 0) : []
+        let month = showsCalendar && !isSample
+            ? LiveMonthCalendarProvider.month(monthOffset: 0) : .empty
         var state = Self.fittedReminderState(
             items: items, remaining: remaining, todayCount: todayCount,
-            weekEventDots: weekEventDots, monthEventDots: monthDots
+            weekEventDots: weekEventDots, month: month
         )
         state.showsCalendar = showsCalendar
         state.isSample = isSample
@@ -147,9 +147,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 만큼 최대로. 예시(목업)는 점을 싣지 않는다 — 이번 달만 정적으로 보여준다.
         let showsCalendar = showsCalendarOverride
             ?? SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
-        let monthDots = showsCalendar && !isSample
-            ? CalendarMonthDots.dots(monthOffset: 0) : []
-        var state = Self.fittedScheduleState(days: days, todayCount: todayCount, weekEventDots: weekEventDots, monthEventDots: monthDots)
+        let month = showsCalendar && !isSample
+            ? LiveMonthCalendarProvider.month(monthOffset: 0) : .empty
+        var state = Self.fittedScheduleState(days: days, todayCount: todayCount, weekEventDots: weekEventDots, month: month)
         state.showsCalendar = showsCalendar
         state.isSample = isSample
         // staleDate = "이 시점 이후 정보는 오래됨"을 시스템에 알리는 미래 시각.
@@ -221,7 +221,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar)
         var state = MemoLiveActivityAttributes.ContentState(text: text, colorHex: colorHex, textColorHex: textColorHex)
         state.showsCalendar = showsCalendar
-        state.monthEventDots = showsCalendar ? CalendarMonthDots.dots(monthOffset: 0) : []
+        state.applyMonthCalendar(showsCalendar ? LiveMonthCalendarProvider.month(monthOffset: 0) : .empty)
         // 시간 흐름과 무관 — staleDate 미지정. 사용자가 텍스트·색을 바꿀 때만 update.
         // 메모는 일정·할일보다 높은 우선순위(3) — 집중(AlarmKit) 다음으로 앞에 뜬다.
         let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 3)
@@ -276,13 +276,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 예산에 맞는 가장 큰 할일 ContentState — 전체부터 시도해 안 들어가면 사다리대로 줄인다.
     private static func fittedReminderState(
         items: [LiveReminderItem], remaining: Int, todayCount: Int,
-        weekEventDots: [LiveDayEventDots], monthEventDots: [LiveMonthDot]
+        weekEventDots: [LiveDayEventDots], month: LiveMonthCalendar
     ) -> ReminderLiveActivityAttributes.ContentState {
         func make(_ n: Int) -> ReminderLiveActivityAttributes.ContentState {
             var s = ReminderLiveActivityAttributes.ContentState(
                 items: Array(items.prefix(n)), remaining: remaining, todayCount: todayCount, weekEventDots: weekEventDots
             )
-            s.monthEventDots = monthEventDots
+            s.applyMonthCalendar(month)
             return s
         }
         let candidates = [items.count] + itemCapLadder.filter { $0 < items.count }
@@ -296,13 +296,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 예산에 맞는 가장 큰 일정 ContentState — 이벤트 총량을 전체부터 사다리대로 줄인다.
     private static func fittedScheduleState(
         days: [LiveScheduleDay], todayCount: Int,
-        weekEventDots: [LiveDayEventDots], monthEventDots: [LiveMonthDot]
+        weekEventDots: [LiveDayEventDots], month: LiveMonthCalendar
     ) -> ScheduleLiveActivityAttributes.ContentState {
         func make(_ n: Int) -> ScheduleLiveActivityAttributes.ContentState {
             var s = ScheduleLiveActivityAttributes.ContentState(
                 days: cappingEvents(days, max: n), todayCount: todayCount, weekEventDots: weekEventDots
             )
-            s.monthEventDots = monthEventDots
+            s.applyMonthCalendar(month)
             return s
         }
         let total = days.reduce(0) { $0 + $1.events.count }
@@ -359,11 +359,11 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             let source = LiveActivityRefreshSource.reminderItems(
                 backup: lastReminderItems, onScreen: prev.items
             )
-            let monthDots = showsCalendar && !prev.isSample
-                ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
+            let month = showsCalendar && !prev.isSample
+                ? LiveMonthCalendarProvider.month(monthOffset: prev.calendarMonthOffset) : .empty
             var state = Self.fittedReminderState(
                 items: source, remaining: prev.remaining, todayCount: prev.todayCount,
-                weekEventDots: prev.weekEventDots, monthEventDots: monthDots
+                weekEventDots: prev.weekEventDots, month: month
             )
             state.calendarMonthOffset = prev.calendarMonthOffset
             state.showsCalendar = showsCalendar
@@ -374,8 +374,10 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             var state = memo.content.state
             let showsCalendar = SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.memoShowsCalendar)
             state.showsCalendar = showsCalendar
-            state.monthEventDots = showsCalendar
-                ? CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset) : []
+            state.applyMonthCalendar(
+                showsCalendar
+                    ? LiveMonthCalendarProvider.month(monthOffset: state.calendarMonthOffset) : .empty
+            )
             await memo.update(ActivityContent(state: state, staleDate: memo.content.staleDate, relevanceScore: 3))
         }
         if let schedule = scheduleActivity {
@@ -386,9 +388,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
                 : SharedAppGroup.defaults.bool(forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
             // 게시된(cap됐을 수 있는) days가 아니라 보관해 둔 원본에서 다시 계산 — 껐다 켤 때 복원.
             let source = lastScheduleDays.isEmpty ? prev.days : lastScheduleDays
-            let monthDots = showsCalendar && !prev.isSample
-                ? CalendarMonthDots.dots(monthOffset: prev.calendarMonthOffset) : []
-            var state = Self.fittedScheduleState(days: source, todayCount: prev.todayCount, weekEventDots: prev.weekEventDots, monthEventDots: monthDots)
+            let month = showsCalendar && !prev.isSample
+                ? LiveMonthCalendarProvider.month(monthOffset: prev.calendarMonthOffset) : .empty
+            var state = Self.fittedScheduleState(days: source, todayCount: prev.todayCount, weekEventDots: prev.weekEventDots, month: month)
             state.calendarMonthOffset = prev.calendarMonthOffset
             state.showsCalendar = showsCalendar
             state.isSample = prev.isSample

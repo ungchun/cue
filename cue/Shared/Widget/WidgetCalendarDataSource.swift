@@ -90,7 +90,12 @@ enum WidgetCalendarDataSource {
                 end: end,
                 kind: event.isAllDay ? .allDayEvent : .timedEvent,
                 colorHex: hex(from: event.calendar.cgColor),
-                isHighPriority: false
+                isHighPriority: false,
+                isHoliday: HolidayEventPolicy.isHoliday(
+                    isSubscribed: event.calendar.isSubscribed,
+                    allowsContentModifications: event.calendar.allowsContentModifications,
+                    isAllDay: event.isAllDay
+                )
             )
         }
     }
@@ -188,12 +193,12 @@ enum WidgetCalendarDataSource {
 
     // MARK: - 공유 설정
 
-    /// 앱에서 숨긴 캘린더 — LA 월간 점(`CalendarMonthDots`)과 같은 App Group 키를 읽는다.
+    /// 앱에서 숨긴 캘린더 — LA 월간 캘린더(`LiveMonthCalendarProvider`)와 같은 App Group 키를 읽는다.
     private static func hiddenCalendarIDs() -> Set<String> {
         Set(SharedAppGroup.defaults.stringArray(forKey: SharedAppGroup.Keys.hiddenCalendarIDs) ?? [])
     }
 
-    /// `CGColor` → "#RRGGBB". `CalendarMonthDots.hex`와 같은 규칙.
+    /// `CGColor` → "#RRGGBB". `LiveMonthCalendarProvider.hex`와 같은 규칙.
     private static func hex(from cgColor: CGColor?) -> String? {
         guard let components = cgColor?.components, components.count >= 3 else { return nil }
         let channel: (CGFloat) -> Int = { Int(round(max(0, min(1, $0)) * 255)) }

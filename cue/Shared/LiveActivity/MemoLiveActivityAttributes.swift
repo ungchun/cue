@@ -13,7 +13,7 @@ import Foundation
 ///
 /// 시간 흐름과 무관 — `staleDate`는 service 구현에서 nil(사용자 동작에서만 갱신).
 struct MemoLiveActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable, Sendable {
+    struct ContentState: Codable, Hashable, Sendable, MonthCalendarCarrying {
         /// 카드 가운데 큰 텍스트. use case가 빈 값 검증·길이 제한을 마친 값.
         var text: String
         /// 카드 배경 색("#RRGGBB"). 파싱 실패 시 위젯이 시스템 accent로 폴백.
@@ -25,6 +25,9 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
         var calendarMonthOffset: Int
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot]
+        /// 잠금화면 월간 캘린더에서 빨갛게 칠할 공휴일(표시 월 기준 일 숫자) — 게시 시점에
+        /// 앱이 사용자 캘린더에서 뽑아 싣는다. 판정 기준은 `HolidayEventPolicy`.
+        var monthHolidays: [Int]
         /// 잠금화면 월간 캘린더를 그릴지 — **게시 시점에 앱이 정해 싣는다**.
         /// nil은 이 필드가 없던 옛 활성 LA뿐(위젯이 미러로 폴백). 배경은 할일 LA와 동일 —
         /// `ReminderLiveActivityAttributes.ContentState.showsCalendar` 주석 참고.
@@ -36,6 +39,7 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
             textColorHex: String = "#FFFFFF",
             calendarMonthOffset: Int = 0,
             monthEventDots: [LiveMonthDot] = [],
+            monthHolidays: [Int] = [],
             showsCalendar: Bool? = nil
         ) {
             self.text = text
@@ -43,6 +47,7 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
             self.textColorHex = textColorHex
             self.calendarMonthOffset = calendarMonthOffset
             self.monthEventDots = monthEventDots
+            self.monthHolidays = monthHolidays
             self.showsCalendar = showsCalendar
         }
 
@@ -55,6 +60,7 @@ struct MemoLiveActivityAttributes: ActivityAttributes {
             textColorHex = try container.decodeIfPresent(String.self, forKey: .textColorHex) ?? "#FFFFFF"
             calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
             monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
+            monthHolidays = try container.decodeIfPresent([Int].self, forKey: .monthHolidays) ?? []
             // 옛 상태엔 없다 → nil(위젯이 미러로 폴백, 기존 동작).
             showsCalendar = try container.decodeIfPresent(Bool.self, forKey: .showsCalendar)
         }

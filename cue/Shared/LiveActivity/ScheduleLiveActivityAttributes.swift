@@ -14,7 +14,7 @@ import Foundation
 ///
 /// 시스템 timer 표현(`Text(_:style: .relative)`)이 매 프레임 자동 갱신하므로 매초 update 금지.
 struct ScheduleLiveActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable, Sendable {
+    struct ContentState: Codable, Hashable, Sendable, MonthCalendarCarrying {
         /// 날짜순 day 묶음(오늘부터). 위젯이 2열에 들어가는 만큼만 그린다.
         var days: [LiveScheduleDay]
         /// 오늘 일정 수(종일 전부 + 종료 안 지난 시간 이벤트) — Dynamic Island 주간 캘린더
@@ -29,6 +29,9 @@ struct ScheduleLiveActivityAttributes: ActivityAttributes {
         var weekEventDots: [LiveDayEventDots] = []
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot] = []
+        /// 잠금화면 월간 캘린더에서 빨갛게 칠할 공휴일(표시 월 기준 일 숫자) — 게시 시점에
+        /// 앱이 사용자 캘린더에서 뽑아 싣는다. 판정 기준은 `HolidayEventPolicy`.
+        var monthHolidays: [Int] = []
         /// 잠금화면 월간 캘린더를 그릴지 — **게시 시점에 앱이 정해 싣는다**.
         /// nil은 이 필드가 없던 옛 활성 LA뿐(위젯이 미러로 폴백). 배경은 할일 LA와 동일 —
         /// `ReminderLiveActivityAttributes.ContentState.showsCalendar` 주석 참고.
@@ -51,6 +54,7 @@ extension ScheduleLiveActivityAttributes.ContentState {
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
         monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
+        monthHolidays = try container.decodeIfPresent([Int].self, forKey: .monthHolidays) ?? []
         // 옛 상태엔 두 키가 없다 → nil(미러 폴백) · false(실사용). 옛 `showsCalendarOverride`를
         // 읽지 않는 이유는 할일 쪽 주석 참고(목업은 앱 업데이트를 넘어 살 창이 사실상 없다).
         showsCalendar = try container.decodeIfPresent(Bool.self, forKey: .showsCalendar)

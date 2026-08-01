@@ -13,7 +13,7 @@ import Foundation
 ///
 /// 시간 흐름과 무관 — `staleDate`는 service 구현에서 nil 또는 매우 멀리 둔다.
 struct ReminderLiveActivityAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable, Sendable {
+    struct ContentState: Codable, Hashable, Sendable, MonthCalendarCarrying {
         var items: [LiveReminderItem]
         var remaining: Int
         /// 오늘 처리할 할일 수(오늘 마감 + 마감 미지정, 지난·완료 제외) — Dynamic Island 주간
@@ -29,6 +29,11 @@ struct ReminderLiveActivityAttributes: ActivityAttributes {
         var calendarMonthOffset: Int = 0
         /// 잠금화면 월간 캘린더(캘린더 함께 보기)의 날짜별 일정 점 — 표시 월 기준. 기본값 빈 배열.
         var monthEventDots: [LiveMonthDot] = []
+        /// 잠금화면 월간 캘린더에서 빨갛게 칠할 공휴일(표시 월 기준 일 숫자).
+        ///
+        /// **게시 시점에 앱이 사용자 캘린더에서 뽑아 싣는다** — 위젯은 렌더 시점에 EventKit을
+        /// 읽을 수 없다. 판정 기준은 `HolidayEventPolicy`. 기본값 빈 배열 — 전방 디코딩 호환.
+        var monthHolidays: [Int] = []
         /// 잠금화면 월간 캘린더를 그릴지 — **게시 시점에 앱이 정해 싣는다**.
         ///
         /// 위젯이 렌더 시점에 App Group 미러를 직접 읽던 방식은, 미러가 저장값과 어긋나면
@@ -55,6 +60,7 @@ extension ReminderLiveActivityAttributes.ContentState {
         weekEventDots = try container.decodeIfPresent([LiveDayEventDots].self, forKey: .weekEventDots) ?? []
         calendarMonthOffset = try container.decodeIfPresent(Int.self, forKey: .calendarMonthOffset) ?? 0
         monthEventDots = try container.decodeIfPresent([LiveMonthDot].self, forKey: .monthEventDots) ?? []
+        monthHolidays = try container.decodeIfPresent([Int].self, forKey: .monthHolidays) ?? []
         // 옛 상태엔 두 키가 없다 → nil(미러 폴백) · false(실사용). 옛 `showsCalendarOverride`는
         // 읽지 않는다 — 그 키가 박힌 건 온보딩 목업뿐이고, 목업은 첫 실행 세션에서만 살아
         // 앱 업데이트를 넘어 재포착될 창이 사실상 없다(시스템이 8시간 뒤 자동 종료).

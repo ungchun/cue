@@ -18,6 +18,7 @@ struct ScheduleLiveActivityWidget: Widget {
                 days: context.state.days,
                 calendarMonthOffset: context.state.calendarMonthOffset,
                 monthEventDots: context.state.monthEventDots,
+                monthHolidays: context.state.monthHolidays,
                 showsCalendarDecision: context.state.showsCalendar,
                 isSample: context.state.isSample
             )
@@ -68,6 +69,8 @@ private struct ScheduleLockScreenView: View {
     let days: [LiveScheduleDay]
     let calendarMonthOffset: Int
     var monthEventDots: [LiveMonthDot] = []
+    /// 표시 월의 공휴일(일 숫자) — 게시 시점에 앱이 사용자 캘린더에서 뽑아 실은 값.
+    var monthHolidays: [Int] = []
     /// 게시 시점에 앱이 정한 캘린더 표시 결정. nil은 이 필드가 없던 옛 활성 LA뿐.
     var showsCalendarDecision: Bool? = nil
     /// 온보딩 목업 게시 여부 — 월 이동 셰브런을 숨긴다(정적 목업).
@@ -90,6 +93,7 @@ private struct ScheduleLockScreenView: View {
                     grid: MonthCalendarGrid(now: .now, monthOffset: calendarMonthOffset),
                     intentTarget: ShiftCalendarMonthIntent.scheduleTarget,
                     eventDots: monthEventDots,
+                    holidays: monthHolidays,
                     // 목업(예시) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
                     allowsMonthShift: !isSample
                 )

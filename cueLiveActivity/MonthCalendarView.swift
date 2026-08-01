@@ -3,8 +3,8 @@
 //  cueLiveActivity
 //
 //  잠금화면 LA 왼쪽 반쪽의 월간 캘린더 — 요일 헤더 + 4~6주 그리드.
-//  메모/일정 위젯이 공유한다. 날짜 계산은 `MonthCalendarGrid`, 공휴일은
-//  `KoreanHolidayCalculator`(둘 다 듀얼 타깃 공유 로직)에 위임하고, 이 뷰는 그리기만 한다.
+//  메모/일정 위젯이 공유한다. 날짜 계산은 `MonthCalendarGrid`(듀얼 타깃 공유 로직)에
+//  위임하고, 일정 점·공휴일은 ContentState로 받아, 이 뷰는 그리기만 한다.
 //
 //  월 이동은 좌우 ‹ › 셰브런(Button(intent:)) — 잠금화면 공간이 좁아 레이아웃에 끼우지 않고
 //  overlay로 공중에 띄운다(공간 미점유, 흐릿하게). 현재 월은 그리드 뒤 고스트 워터마크.
@@ -22,13 +22,13 @@ struct MonthCalendarView: View {
     var secondaryForeground: Color = .secondary
     /// 표시 월의 날짜별 일정 점(일 정수 기준) — 각 날 숫자 아래에 캘린더 색 동그라미. 오늘은 제외.
     var eventDots: [LiveMonthDot] = []
+    /// 표시 월의 공휴일(일 숫자) — 일요일과 같은 빨강으로 칠한다.
+    ///
+    /// **앱이 게시 시점에 사용자 캘린더에서 뽑아 실어 보낸 값**이다(→ `HolidayEventPolicy`).
+    /// LA 위젯은 렌더 시점에 EventKit을 읽을 수 없어 여기서 직접 조회할 수 없다.
+    var holidays: [Int] = []
     /// 월 이동 셰브런 표시 여부 — 온보딩 목업의 정적 캘린더는 false로 이동을 막는다.
     var allowsMonthShift: Bool = true
-
-    /// 표시 월의 공휴일(일 숫자) — 일요일과 같은 빨강으로 칠한다.
-    private var holidays: Set<Int> {
-        KoreanHolidayCalculator.holidayDays(year: grid.year, month: grid.month)
-    }
 
     var body: some View {
         VStack(spacing: Spacing.xxs) {

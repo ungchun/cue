@@ -77,7 +77,8 @@ struct MemoLiveActivityWidget: Widget {
                     intentTarget: ShiftCalendarMonthIntent.memoTarget,
                     foreground: color,
                     secondaryForeground: color.opacity(0.55),
-                    eventDots: state.monthEventDots
+                    eventDots: state.monthEventDots,
+                    holidays: state.monthHolidays
                 )
                 .frame(maxWidth: .infinity)
                 // 일정 LA와 동일한 클램프 — 6주 달의 자연 높이가 fixedSize를 타고 예산을

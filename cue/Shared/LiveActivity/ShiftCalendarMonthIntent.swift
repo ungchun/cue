@@ -55,8 +55,10 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         guard let activity = Activity<MemoLiveActivityAttributes>.liveActivity else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
-        // 이동한 달의 일정 점을 그 자리에서 재조회해 함께 갱신 — 어느 달로 넘겨도 점이 뜬다.
-        state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
+        // 이동한 달의 점·공휴일을 그 자리에서 재조회해 함께 갱신 — 어느 달로 넘겨도 뜬다.
+        state.applyMonthCalendar(
+            LiveMonthCalendarProvider.month(monthOffset: state.calendarMonthOffset)
+        )
         // staleDate는 기존 값 보존 — 월 이동이 신선도 정책을 바꾸면 안 된다.
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
         logShift()
@@ -66,7 +68,9 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         guard let activity = Activity<ScheduleLiveActivityAttributes>.liveActivity else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
-        state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
+        state.applyMonthCalendar(
+            LiveMonthCalendarProvider.month(monthOffset: state.calendarMonthOffset)
+        )
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
         logShift()
     }
@@ -75,7 +79,9 @@ struct ShiftCalendarMonthIntent: LiveActivityIntent {
         guard let activity = Activity<ReminderLiveActivityAttributes>.liveActivity else { return }
         var state = activity.content.state
         state.calendarMonthOffset = MonthCalendarGrid.clampedOffset(state.calendarMonthOffset + delta)
-        state.monthEventDots = CalendarMonthDots.dots(monthOffset: state.calendarMonthOffset)
+        state.applyMonthCalendar(
+            LiveMonthCalendarProvider.month(monthOffset: state.calendarMonthOffset)
+        )
         await activity.update(ActivityContent(state: state, staleDate: activity.content.staleDate))
         logShift()
     }

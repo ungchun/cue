@@ -44,5 +44,11 @@ struct WidgetCalendarItem: Identifiable, Hashable, Sendable {
     /// 정보다. 지나간 것만 숨겨 위젯이 과거로 채워지는 걸 막는다(→ `WidgetCalendarDataSource`).
     var isCompleted: Bool = false
 
+    /// 공휴일 캘린더에서 온 항목인지 — 달력이 그날 날짜 숫자를 빨갛게 칠할 근거가 된다.
+    ///
+    /// 판정은 `HolidayEventPolicy`가 하고 `WidgetCalendarDataSource`가 여기 실어 보낸다.
+    /// 미리알림에는 의미가 없어 항상 `false`.
+    var isHoliday: Bool = false
+
     var isAllDay: Bool { kind == .allDayEvent }
 }

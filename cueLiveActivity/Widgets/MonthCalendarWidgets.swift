@@ -81,6 +81,11 @@ struct MonthWidgetEntryView: View {
         return result
     }
 
+    /// 표시 월의 공휴일(일 숫자) — 사용자가 구독한 공휴일 캘린더의 종일 항목이 있는 날.
+    private var holidays: Set<Int> {
+        Set(itemsByDay.filter { $0.value.contains(where: \.isHoliday) }.keys)
+    }
+
     var body: some View {
         // 간격 0 — 헤더가 자기 아래 구분선까지 소유하므로, 여기에 간격을 주면
         // 선과 격자 사이가 떠서 위젯 4종의 상단 바 높이가 어긋난다.
@@ -95,7 +100,13 @@ struct MonthWidgetEntryView: View {
                 // 알 수 있고, 날짜 격자도 비쳐 보여야 "무엇을 잃고 있는지"가 전달된다.
                 // 잠겼으면 **항목을 아예 넘기지 않는다.** 재질로 덮기만 하면 흐릿하게나마
                 // 제목이 비쳐, 돈을 안 낸 사람에게 내용이 새어 나간다.
-                MonthWidgetView(grid: grid, itemsByDay: entry.isLocked ? [:] : itemsByDay)
+                // 공휴일은 **잠겨도 그대로 넘긴다** — 유료로 가리는 건 사용자의 일정·할일이지
+                // 달력의 공휴일이 아니다. 빨간 날짜가 사라지면 그냥 고장 난 달력으로 보인다.
+                MonthWidgetView(
+                    grid: grid,
+                    itemsByDay: entry.isLocked ? [:] : itemsByDay,
+                    holidays: holidays
+                )
                     .premiumLocked(entry.isLocked)
             } else {
                 // 헤더 VStack의 간격이 0이라 안내문 위 여백을 여기서 준다.

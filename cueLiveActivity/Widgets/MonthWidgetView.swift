@@ -3,8 +3,8 @@
 //  cueLiveActivity
 //
 //  월 캘린더 위젯 본문 — 요일 헤더 + 주 행 그리드. 이동형/고정형 위젯이 공유한다.
-//  날짜 계산은 `MonthCalendarGrid`, 공휴일은 `KoreanHolidayCalculator`,
-//  높이 예산은 `MonthWidgetMetrics`, 셀 채우기는 `MonthWidgetPacker`에 위임한다.
+//  날짜 계산은 `MonthCalendarGrid`, 높이 예산은 `MonthWidgetMetrics`,
+//  셀 채우기는 `MonthWidgetPacker`에 위임한다.
 //
 //  ⚠️ 레이아웃 원칙 — **그리드는 절대 자기 높이를 스스로 정하지 않는다.**
 //  `.frame(maxHeight: .infinity)`만으로 주 행을 늘리던 시절엔, 셀마다 칩이 강제로 들어가
@@ -27,10 +27,11 @@ struct MonthWidgetView: View {
     let grid: MonthCalendarGrid
     /// 표시 월의 **일(day-of-month) → 그날 항목들**. 표시 월 밖의 날은 담지 않는다.
     let itemsByDay: [Int: [WidgetCalendarItem]]
-
-    private var holidays: Set<Int> {
-        KoreanHolidayCalculator.holidayDays(year: grid.year, month: grid.month)
-    }
+    /// 표시 월의 공휴일(일 숫자) — 사용자가 구독한 공휴일 캘린더에서 나온다(→ `HolidayEventPolicy`).
+    ///
+    /// `itemsByDay`와 따로 받는 이유: 잠긴 위젯은 항목을 통째로 비워 넘기는데(유료 내용 차단)
+    /// 공휴일 색까지 같이 사라지면 무료 사용자에게는 격자가 평일뿐인 달력이 된다.
+    let holidays: Set<Int>
 
     private var weekCount: Int { max(1, grid.weeks.count) }
 

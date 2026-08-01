@@ -62,6 +62,7 @@ private struct ReminderLockScreenView: View {
                     grid: MonthCalendarGrid(now: .now, monthOffset: state.calendarMonthOffset),
                     intentTarget: ShiftCalendarMonthIntent.reminderTarget,
                     eventDots: state.monthEventDots,
+                    holidays: state.monthHolidays,
                     // 목업(예시) 캘린더는 정적 — 월 이동 셰브런을 숨긴다.
                     allowsMonthShift: !state.isSample
                 )

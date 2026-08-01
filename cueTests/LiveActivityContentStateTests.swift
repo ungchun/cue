@@ -41,10 +41,14 @@ struct LiveActivityContentStateTests {
         let weekDots = (0..<7).map { i in
             LiveDayEventDots(dayStart: Date(timeIntervalSince1970: 1_784_000_000 + Double(i) * 86_400), colorHexes: ["#FF3B30", "#34C759"])
         }
-        let monthDots = (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) }
+        // worst-case — 한 달 모든 날에 점이 있고, 모든 날이 공휴일인 극단값.
+        let month = LiveMonthCalendar(
+            dots: (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) },
+            holidays: Array(1...31)
+        )
 
         var state = ScheduleLiveActivityAttributes.ContentState(days: days, todayCount: 14, weekEventDots: weekDots)
-        state.monthEventDots = monthDots
+        state.applyMonthCalendar(month)
 
         let size = try JSONEncoder().encode(state).count
         #expect(size < 4096, "일정 ContentState가 \(size) 바이트로 4KB 한도를 넘음")
@@ -61,10 +65,14 @@ struct LiveActivityContentStateTests {
         let weekDots = (0..<7).map { i in
             LiveDayEventDots(dayStart: Date(timeIntervalSince1970: 1_784_000_000 + Double(i) * 86_400), colorHexes: ["#FF3B30", "#34C759"])
         }
-        let monthDots = (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) }
+        // worst-case — 한 달 모든 날에 점이 있고, 모든 날이 공휴일인 극단값.
+        let month = LiveMonthCalendar(
+            dots: (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) },
+            holidays: Array(1...31)
+        )
 
         var state = ReminderLiveActivityAttributes.ContentState(items: items, remaining: 30, todayCount: 30, weekEventDots: weekDots)
-        state.monthEventDots = monthDots
+        state.applyMonthCalendar(month)
 
         let size = try JSONEncoder().encode(state).count
         #expect(size < 4096, "할일 ContentState가 \(size) 바이트로 4KB 한도를 넘음")
@@ -81,6 +89,20 @@ struct LiveActivityContentStateTests {
         #expect(state.text == "메모")
         #expect(state.textColorHex == "#FFFFFF")   // 기존 전방 호환 유지
         #expect(state.calendarMonthOffset == 0)
+        // 공휴일이 캘린더 기반으로 바뀌기 전에 게시된 LA — 키가 없어도 빈 배열로 살아남는다.
+        // 이 값이 nil로 터지면 옛 LA 재포착(sync)이 통째로 실패한다.
+        #expect(state.monthHolidays.isEmpty)
+    }
+
+    /// 공휴일이 인코딩·디코딩 왕복에서 보존된다 — 잠금화면 캘린더의 빨간 날짜가 update를 넘어 남는다.
+    @Test func memoStateRoundTripsHolidays() throws {
+        var state = MemoLiveActivityAttributes.ContentState(text: "메모", colorHex: "#123456")
+        state.applyMonthCalendar(LiveMonthCalendar(dots: [], holidays: [1, 3, 15]))
+
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(MemoLiveActivityAttributes.ContentState.self, from: data)
+
+        #expect(decoded.monthHolidays == [1, 3, 15])
     }
 
     /// 오프셋이 인코딩·디코딩 왕복에서 보존된다 — 월 이동 상태가 update를 넘어 살아남는다.
