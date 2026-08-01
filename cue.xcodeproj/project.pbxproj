@@ -69,6 +69,7 @@
 				"Presentation/DesignSystem/Foundation/Color+Hex.swift",
 				Presentation/DesignSystem/Foundation/Spacing.swift,
 				Shared/AppGroup/SharedAppGroup.swift,
+				"Shared/Calendar/EKEvent+Holiday.swift",
 				Shared/Calendar/HolidayEventPolicy.swift,
 				"Shared/LiveActivity/Activity+LiveHandle.swift",
 				Shared/LiveActivity/CompleteReminderIntent.swift,

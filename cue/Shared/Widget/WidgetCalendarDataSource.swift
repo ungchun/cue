@@ -91,11 +91,7 @@ enum WidgetCalendarDataSource {
                 kind: event.isAllDay ? .allDayEvent : .timedEvent,
                 colorHex: hex(from: event.calendar.cgColor),
                 isHighPriority: false,
-                isHoliday: HolidayEventPolicy.isHoliday(
-                    isSubscribed: event.calendar.isSubscribed,
-                    allowsContentModifications: event.calendar.allowsContentModifications,
-                    isAllDay: event.isAllDay
-                )
+                isHoliday: event.isHolidayEvent
             )
         }
     }
