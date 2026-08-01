@@ -34,9 +34,12 @@ struct CalendarWidgetHeader: View {
         // 셰브런을 좌우 끝에 고정하고 제목은 폭 중앙에 — 제목 길이가 로케일마다 달라도
         // 가운데가 흔들리지 않게 overlay로 겹친다.
         HStack(spacing: Spacing.zero) {
-            chevron("chevron.left", delta: -shiftStep)
+            // `.left`/`.right`가 아니라 `.backward`/`.forward` — RTL(아랍어)에서 HStack은
+            // 자동으로 뒤집히는데 방향 고정 심볼은 글리프가 그대로라, "이전"이 오른쪽 끝에서
+            // 왼쪽 화살표로 남아 방향이 거꾸로 읽힌다. 이 둘은 레이아웃 방향을 따라 미러링된다.
+            chevron("chevron.backward", delta: -shiftStep)
             Spacer(minLength: Spacing.zero)
-            chevron("chevron.right", delta: shiftStep)
+            chevron("chevron.forward", delta: shiftStep)
         }
         .overlay {
             // 월과 연도를 한 단어처럼 붙여 놓으면 "7월2026년"으로 읽힌다 — 한 칸 더 띄운다.
