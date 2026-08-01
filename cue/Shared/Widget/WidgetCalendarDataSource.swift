@@ -170,17 +170,11 @@ enum WidgetCalendarDataSource {
         var result: [Date: [WidgetCalendarItem]] = [:]
 
         for item in items {
-            // 종일 일정의 endDate는 마지막 날 23:59:59라 그대로 쓰면 되지만, 시간 일정이 자정
-            // 정각에 끝나면 다음 날까지 번진다 — 1초 당겨 끝나는 날을 제 날에 묶는다.
-            let rawEnd = max(item.start, item.end)
-            let lastMoment = rawEnd > item.start ? rawEnd.addingTimeInterval(-1) : rawEnd
-
-            var day = max(calendar.startOfDay(for: item.start), lowerBound)
-            let lastDay = calendar.startOfDay(for: lastMoment)
-            while day <= lastDay, day < to {
+            // 걸치는 날 계산은 `DaySpan`에 맡긴다 — LA 월간 캘린더와 **같은 규칙**을 써야
+            // 한다. 갈리면 같은 일정이 두 화면에서 다른 날짜에 걸린다(끝 날짜 해석은 그 주석).
+            for day in DaySpan.days(from: item.start, to: item.end, calendar: calendar)
+            where day >= lowerBound && day < to {
                 result[day, default: []].append(item)
-                guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
-                day = next
             }
         }
 

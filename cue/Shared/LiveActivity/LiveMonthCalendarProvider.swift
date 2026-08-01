@@ -89,23 +89,16 @@ enum LiveMonthCalendarProvider {
 
     /// 이벤트가 걸치는 **표시 월 안의** 일 숫자들.
     ///
-    /// 종일 이벤트의 `endDate`는 마지막 날 안쪽을 가리키므로 그 날짜까지 포함한다.
+    /// 걸치는 날 계산은 `DaySpan`에 맡긴다 — 위젯 격자와 같은 규칙이어야 같은 공휴일이
+    /// 두 화면에서 다른 날짜로 칠해지지 않는다(끝 날짜 해석은 그 주석 참고).
     private static func days(
         from event: EKEvent,
         within month: DateInterval,
         calendar: Calendar
     ) -> [Int] {
-        var result: [Int] = []
-        var cursor = calendar.startOfDay(for: event.startDate)
-        let last = calendar.startOfDay(for: event.endDate)
-        while cursor <= last {
-            if cursor >= month.start, cursor < month.end {
-                result.append(calendar.component(.day, from: cursor))
-            }
-            guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
-            cursor = next
-        }
-        return result
+        DaySpan.days(from: event.startDate, to: event.endDate, calendar: calendar)
+            .filter { $0 >= month.start && $0 < month.end }
+            .map { calendar.component(.day, from: $0) }
     }
 
     private static func hiddenCalendarIDs() -> Set<String> {
