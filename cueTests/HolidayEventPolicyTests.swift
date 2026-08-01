@@ -8,6 +8,44 @@ import Testing
 
 struct HolidayEventPolicyTests {
 
+    // MARK: - 빨간색을 칠할 지역인가
+
+    @Test func koreaShowsHolidayColor() {
+        #expect(HolidayEventPolicy.showsHolidayColor(regionCode: "KR"))
+    }
+
+    @Test func otherRegionsDoNotShowHolidayColor() {
+        // 애플 공휴일 캘린더의 내용이 지역마다 달라 한국 밖에서는 신뢰할 수 없다 —
+        // 미국은 밸런타인데이·핼러윈, 대만은 24절기까지 같은 캘린더에 들어 있다.
+        for region in ["US", "TW", "CN", "JP", "DE", "GB"] {
+            #expect(
+                !HolidayEventPolicy.showsHolidayColor(regionCode: region),
+                "\(region)에서 빨간날이 켜지면 안 된다"
+            )
+        }
+    }
+
+    @Test func koreanHolidaySubscriptionAbroadStaysUncolored() {
+        // 대만·미국 사용자가 한국 공휴일 캘린더를 구독하고 있어도 빨갛게 칠하지 않는다.
+        // 판정(`isHoliday`)은 통과해도 표시(`showsHolidayColor`)에서 막힌다.
+        #expect(HolidayEventPolicy.isHoliday(
+            isSubscribed: true, isSubscriptionType: true,
+            allowsContentModifications: false, isAllDay: true
+        ))
+        #expect(!HolidayEventPolicy.showsHolidayColor(regionCode: "TW"))
+    }
+
+    @Test func unknownRegionDoesNotShowHolidayColor() {
+        // 지역을 못 읽으면 끈다 — 켜는 쪽이 기본값이면 엉뚱한 나라에서 빨개진다.
+        #expect(!HolidayEventPolicy.showsHolidayColor(regionCode: nil))
+    }
+
+    @Test func regionCodeIsCaseInsensitive() {
+        // `Locale.Region.identifier`는 대문자를 주지만, 소문자로 오는 경로가 생겨도 같게 본다.
+        #expect(HolidayEventPolicy.showsHolidayColor(regionCode: "kr"))
+    }
+
+
     // MARK: - 공휴일로 인정하는 경우
 
     @Test func subscriptionTypeReadOnlyAllDayEventIsHoliday() {

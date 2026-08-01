@@ -62,7 +62,7 @@ enum LiveMonthCalendarProvider {
         for event in events {
             guard !hidden.contains(event.calendar.calendarIdentifier) else { continue }
 
-            if event.isHolidayEvent {
+            if event.showsAsHoliday {
                 // 여러 날짜짜리 공휴일(연휴가 이벤트 하나로 오는 경우)도 걸치는 날을 모두 칠한다.
                 holidays.formUnion(days(from: event, within: month, calendar: calendar))
                 holidayCalendarTitles.insert(event.calendar.title)
