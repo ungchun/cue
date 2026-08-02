@@ -479,6 +479,40 @@ struct ScheduleViewModelTests {
         #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["existing"])
     }
 
+    /// 표시할 일정이 없어도 페이지네이션은 **지평에서 멈춘다**.
+    ///
+    /// 목록이 비면 바닥 trigger가 화면에 계속 머물고, `fetchedUntil`이 바뀔 때마다 row
+    /// identity가 갈려 `onAppear`가 다시 불린다 → 상한이 없으면 2주씩 영원히 전진한다.
+    /// 실기기에서 2041년까지 가며 EventKit 조회를 끝없이 반복했다(볼 캘린더를 대부분 숨겨
+    /// 결과가 늘 0건인 계정).
+    @Test func loadMoreStopsAdvancingWhenNothingLiesAhead() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: []), now: { today })
+        await viewModel.onAppear()
+
+        // 바닥 trigger가 반복 호출되는 상황 — 상한이 없으면 7년 이상 전진한다.
+        for _ in 0..<200 {
+            await viewModel.loadMore()
+        }
+
+        let horizon = Calendar.current.date(byAdding: .day, value: 365, to: today) ?? today
+        #expect(viewModel.fetchedUntil == horizon)   // 지평에서 정확히 멈춘다(넘기지 않는다).
+        #expect(viewModel.canLoadMore == false)      // 뷰가 바닥 스피너를 지우는 근거.
+    }
+
+    /// 지평 안에서는 계속 이어 붙일 수 있어야 한다 — 상한이 정상 페이지네이션을 막으면 안 된다.
+    @Test func canLoadMoreStaysTrueInsideHorizon() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: []), now: { today })
+        await viewModel.onAppear()
+
+        #expect(viewModel.canLoadMore)   // 첫 페이지(+30일)는 지평(+365일) 한참 안쪽.
+
+        await viewModel.loadMore()
+
+        #expect(viewModel.canLoadMore)
+    }
+
     @Test func presentEditIgnoresReadOnlyEvent() {
         // 구독 캘린더의 공휴일 같은 read-only 이벤트는 탭해도 시트가 안 떠야 한다.
         let today = Calendar.current.startOfDay(for: Date())

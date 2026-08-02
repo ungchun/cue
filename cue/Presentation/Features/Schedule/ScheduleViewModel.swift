@@ -67,6 +67,19 @@ final class ScheduleViewModel {
     /// 동시 중복 fetch를 막는다.
     private(set) var isLoadingMore = false
 
+    /// 페이지네이션이 더 갈 수 있는지. `false`면 뷰가 바닥 trigger(스피너)를 아예 그리지
+    /// 않는다 — 더 부를 데가 없는데 스피너만 도는 화면은 "로딩 중"이라는 거짓말이다.
+    var canLoadMore: Bool { fetchedUntil < horizon }
+
+    /// 조회 지평 — 오늘로부터 1년. 그 뒤 일정까지 타임라인으로 훑는 사용자는 없고,
+    /// 상한이 없으면 빈 화면에서 페이지네이션이 영원히 돈다(→ `loadMore`).
+    private var horizon: Date {
+        let today = Calendar.current.startOfDay(for: now())
+        return Calendar.current.date(byAdding: .day, value: Self.horizonDays, to: today) ?? today
+    }
+
+    private static let horizonDays = 365
+
     /// 현재 시각 공급자 — "종료 지난 일정 숨김" 필터의 기준. 테스트에서 고정값 주입.
     private let now: () -> Date
 
@@ -301,14 +314,23 @@ final class ScheduleViewModel {
     /// 바닥 trigger가 viewport에 들어오면 호출 — 다음 2주를 fetch해 이어 붙인다.
     /// 권한 없거나 이미 로딩 중이면 no-op. 실패 시 `fetchedUntil`을 갱신하지 않아
     /// 다음 호출에서 같은 범위로 재시도된다.
+    ///
+    /// 지평(`horizon`)을 넘어서면 더 부르지 않는다 — 화면이 비어 있으면 바닥 trigger가
+    /// viewport에 계속 머물고, 페이지를 가져올 때마다 `fetchedUntil`이 바뀌어 trigger의
+    /// identity가 갈리므로 `onAppear`가 무한히 재호출된다. 실기기에서 2041년까지 2주씩
+    /// 전진하며 EventKit 조회를 끝없이 반복했다(볼 캘린더를 대부분 숨겨 결과가 늘 0건인 경우).
     func loadMore() async {
-        guard access == .granted, !isLoadingMore else { return }
+        guard access == .granted, !isLoadingMore, canLoadMore else { return }
         isLoadingMore = true
         defer { isLoadingMore = false }
 
         let nowDate = now()
         let from = fetchedUntil
-        let to = Calendar.current.date(byAdding: .day, value: Self.pageDays, to: from) ?? from
+        let next = Calendar.current.date(byAdding: .day, value: Self.pageDays, to: from) ?? from
+        // 마지막 페이지는 지평에서 잘린다 — 지평을 넘겨 조회하면 `canLoadMore`가 이미
+        // false인데도 그 범위가 fetchedUntil에 남아 다음 판정이 흔들린다.
+        let to = min(next, horizon)
+        guard from < to else { return }
         do {
             let events = try await fetchEventsUseCase(from: from, to: to)
             eventsByDay = Self.merge(existing: eventsByDay, new: Self.groupByDay(visible(events), now: nowDate))

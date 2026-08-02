@@ -43,7 +43,9 @@ struct ScheduleView: View {
             ForEach(viewModel.eventsByDay) { group in
                 daySection(group)
             }
-            if viewModel.access == .granted {
+            // 지평 끝까지 갔으면 trigger를 아예 빼 스피너도 사라진다 — 더 부를 데가 없는데
+            // 도는 스피너는 "곧 뭔가 온다"는 거짓 신호다.
+            if viewModel.access == .granted, viewModel.canLoadMore {
                 loadMoreTrigger
                     // fetchedUntil이 바뀔 때마다 row identity가 바뀌어 onAppear가 재호출
                     // → trigger가 viewport 안에 머무는 동안 자동으로 다음 페이지를 이어
@@ -206,7 +208,8 @@ struct ScheduleView: View {
         .background(Color(.systemBackground))
     }
 
-    /// 권한은 있는데 향후 30일 동안 이벤트가 한 건도 없을 때.
+    /// 권한은 있는데 목록이 빈 경우 — 이유(일정이 없음/숨긴 캘린더에 들어 있음)를 가르지 않고
+    /// 한 화면으로 통일한다. 사용자 결정.
     private var emptyTimelinePlaceholder: some View {
         ContentUnavailableView(
             "No events yet",
