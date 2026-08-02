@@ -37,6 +37,11 @@ enum SharedAppGroup {
         static let reminderShowsCalendar = "cue.la.reminderShowsCalendar.v1"
         /// 숨긴 캘린더 id 목록(`[String]`) — LA 월간 캘린더 점이 숨긴 캘린더 이벤트를 거를 때 읽는다.
         static let hiddenCalendarIDs = "cue.la.hiddenCalendarIDs.v1"
+        /// 숨긴 할일 목록 id(`[String]`) — 홈 위젯이 미리알림을 거를 때 읽는다.
+        ///
+        /// 캘린더와 **별도 키**여야 한다: 미리알림 목록도 `EKCalendar`지만 식별자 공간이 달라,
+        /// 캘린더 목록으로 대조하면 영원히 일치하지 않아 필터가 통째로 무력화된다.
+        static let hiddenReminderListIDs = "cue.la.hiddenReminderListIDs.v1"
         /// 가장 최근 LA 게시 시각(`timeIntervalSince1970`) — 진행 링의 8시간 기준점.
         static let ringAnchor = "cue.la.ringAnchor.v1"
         /// 프리미엄 구독 여부(`Bool`) — 위젯이 잠금 화면을 띄울지 가른다.

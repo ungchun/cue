@@ -175,6 +175,24 @@ struct AppSettingsRepositoryTests {
         #expect(group.stringArray(forKey: SharedAppGroup.Keys.hiddenCalendarIDs) == ["cal-work"])
     }
 
+    /// 숨긴 **할일 목록**도 미러 대상 — 홈 위젯이 미리알림을 거를 때 이 값을 읽는다.
+    ///
+    /// 이게 없어서 위젯만 설정을 못 따라갔다: 앱·LA는 `AppSettings`를 직접 읽어 정상이었지만
+    /// 별도 프로세스인 위젯은 미러밖에 볼 수 없는데 이 키가 실리지 않았다. 그래서 체크를
+    /// 해제한 목록의 할일이 위젯에 계속 떴다.
+    @Test func fetchRepairsHiddenReminderListMirror() async {
+        let (repo, _, group) = makeRepo()
+        var settings = AppSettings.default
+        settings.hiddenReminderListIDs = ["list-personal"]
+        await repo.save(settings)
+
+        group.set(["list-stale"], forKey: SharedAppGroup.Keys.hiddenReminderListIDs)
+
+        _ = await repo.fetch()
+
+        #expect(group.stringArray(forKey: SharedAppGroup.Keys.hiddenReminderListIDs) == ["list-personal"])
+    }
+
     /// 재동기 여부를 가르는 판정 — fetch는 화면 진입마다 불리므로, 맞을 때는 쓰지 않아야
     /// 한다(같은 App Group 도메인을 쓰는 위젯 프로세스와 무의미하게 경합하지 않게).
     @Test func mirrorMatchesDetectsDivergence() async {
@@ -183,6 +201,7 @@ struct AppSettingsRepositoryTests {
         settings.memoShowsCalendar = true
         settings.memoTextSize = .small
         settings.hiddenCalendarIDs = ["cal-work"]
+        settings.hiddenReminderListIDs = ["list-personal"]
 
         #expect(repo.mirrorMatches(settings) == false)   // 미러 비어 있음 → 재동기 필요
         await repo.save(settings)
@@ -190,5 +209,9 @@ struct AppSettingsRepositoryTests {
 
         group.set(false, forKey: SharedAppGroup.Keys.memoShowsCalendar)
         #expect(repo.mirrorMatches(settings) == false)   // 한 키만 어긋나도 감지
+
+        await repo.save(settings)
+        group.set(["list-stale"], forKey: SharedAppGroup.Keys.hiddenReminderListIDs)
+        #expect(repo.mirrorMatches(settings) == false)   // 할일 목록 키도 판정에 포함
     }
 }

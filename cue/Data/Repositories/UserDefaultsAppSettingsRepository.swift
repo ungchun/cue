@@ -64,6 +64,7 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
             && group.bool(forKey: SharedAppGroup.Keys.reminderShowsCalendar) == settings.reminderShowsCalendar
             // 순서는 의미 없다(집합) — 배열 비교로 오탐하지 않게 집합으로 견준다.
             && Set(group.stringArray(forKey: SharedAppGroup.Keys.hiddenCalendarIDs) ?? []) == settings.hiddenCalendarIDs
+            && Set(group.stringArray(forKey: SharedAppGroup.Keys.hiddenReminderListIDs) ?? []) == settings.hiddenReminderListIDs
     }
 
     /// 위젯(다른 프로세스)이 읽을 LA 관련 설정을 App Group에 미러링한다 — 위젯은 Domain 타입을
@@ -74,5 +75,6 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
         group.set(settings.scheduleShowsCalendar, forKey: SharedAppGroup.Keys.scheduleShowsCalendar)
         group.set(settings.reminderShowsCalendar, forKey: SharedAppGroup.Keys.reminderShowsCalendar)
         group.set(Array(settings.hiddenCalendarIDs), forKey: SharedAppGroup.Keys.hiddenCalendarIDs)
+        group.set(Array(settings.hiddenReminderListIDs), forKey: SharedAppGroup.Keys.hiddenReminderListIDs)
     }
 }

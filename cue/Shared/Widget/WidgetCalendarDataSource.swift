@@ -42,14 +42,16 @@ enum WidgetCalendarDataSource {
         guard eventsAllowed || remindersAllowed else { return .empty }
 
         let store = EKEventStore()
-        let hidden = hiddenCalendarIDs()
         var items: [WidgetCalendarItem] = []
 
         if eventsAllowed {
-            items += events(store: store, from: from, to: to, hidden: hidden)
+            items += events(store: store, from: from, to: to, hidden: hiddenCalendarIDs())
         }
         if remindersAllowed {
-            items += reminders(store: store, from: from, to: to, hidden: hidden)
+            // 미리알림에는 **할일 목록용** 숨김 집합을 준다. 예전엔 캘린더 집합을 그대로
+            // 넘겼는데, 미리알림 목록도 EKCalendar지만 식별자 공간이 달라 어떤 항목도
+            // 일치하지 않았다 — 필터가 늘 통과라 설정에서 끈 목록이 위젯에 계속 떴다.
+            items += reminders(store: store, from: from, to: to, hidden: hiddenReminderListIDs())
         }
 
         return WidgetCalendarSnapshot(
@@ -186,6 +188,12 @@ enum WidgetCalendarDataSource {
     /// 앱에서 숨긴 캘린더 — LA 월간 캘린더(`LiveMonthCalendarProvider`)와 같은 App Group 키를 읽는다.
     private static func hiddenCalendarIDs() -> Set<String> {
         Set(SharedAppGroup.defaults.stringArray(forKey: SharedAppGroup.Keys.hiddenCalendarIDs) ?? [])
+    }
+
+    /// 앱에서 숨긴 할일 목록. 앱이 설정을 저장·조회할 때마다 미러가 맞춰지므로
+    /// (`UserDefaultsAppSettingsRepository.repairMirrorIfNeeded`) 위젯은 읽기만 한다.
+    private static func hiddenReminderListIDs() -> Set<String> {
+        Set(SharedAppGroup.defaults.stringArray(forKey: SharedAppGroup.Keys.hiddenReminderListIDs) ?? [])
     }
 
     /// `CGColor` → "#RRGGBB". `LiveMonthCalendarProvider.hex`와 같은 규칙.
