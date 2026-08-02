@@ -97,14 +97,22 @@ struct FocusAlarmLiveActivityWidget: Widget {
         timeSize: CGFloat
     ) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Spacing.smd) {
+            // 라벨은 언어마다 길이가 크게 다르다 — 한국어 "휴식"(2자) 대비 베트남어
+            // "Tập trung"·인니어 "Istirahat"·포르투갈어 "Intervalo"는 9자다. 버튼 묶음과 숫자는
+            // 폭이 고정이라 좁아질 때 양보하는 쪽은 라벨뿐인데, 제한이 없으면 두 줄로 접히며
+            // baseline 정렬이 무너진다. 한 줄로 묶고 모자라면 줄여서 카드 밖으로 나가지 않게 한다.
             Text(phaseLabel(context))
                 .font(.headline)
                 .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             liveCountdown(
                 context.state,
                 font: .system(size: timeSize, weight: .regular, design: .rounded),
                 tint: tint
             )
+            // 숫자는 줄어들지 않는다 — 공간 부족은 항상 라벨이 흡수한다.
+            .layoutPriority(1)
         }
     }
 
