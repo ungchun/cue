@@ -133,15 +133,21 @@ struct FocusAlarmLiveActivityWidget: Widget {
         Text(verbatim: FocusCountdownFormat.widthTemplate(remaining(state)))
             .font(font)
             .monospacedDigit()
+            .lineLimit(1)
             .hidden()
             .overlay(alignment: .trailing) {
                 countdown(state)
                     .font(font)
                     .monospacedDigit()
+                    .lineLimit(1)
                     .foregroundStyle(tint)
                     .multilineTextAlignment(.trailing)
             }
             .clipped()
+            // 숫자 폭은 하한선이다 — 좁아지면 라벨이 줄어들 뿐 시간은 접히지도 잘리지도 않는다.
+            // 프레임을 정하는 건 이제 평범한 문자열 템플릿이라 `fixedSize`가 안전하다
+            // (`Text(timerInterval:)`에 직접 걸면 h:mm:ss 자연폭으로 부풀어 clip에 잘린다).
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     // MARK: - compactLeading 진행 ring (시간초에 맞춰 줄어듦)
