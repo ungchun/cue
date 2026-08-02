@@ -60,6 +60,8 @@ enum FocusAlarmScheduling {
     /// **예약 직전 기존 알람을 전부 취소**한다 — 단계 전환 시(포그라운드 자동전환이든, 잠금화면
     /// "다음 단계" 탭이든) 이전 알람이 남아 Live Activity가 여러 개 쌓이는 걸 막는다. 이 앱은
     /// 한 번에 한 개의 집중 알람만 두는 정책이라 전부 취소해도 안전하다.
+    /// 예약에 성공하면 **plan의 기대 단계를 전진**시킨다 — 방금 건 단계의 다음이 유일하게 허용되는
+    /// 단계가 되므로, 이전 경계에 남아 있던 잠금화면 카드는 그 순간 무효가 된다(유령 세션 차단).
     @discardableResult
     static func schedule(phase: FocusAlarmMetadata.Phase, cycle: Int) async -> UUID? {
         guard let plan = FocusAlarmPlan.load() else { return nil }
@@ -68,6 +70,11 @@ enum FocusAlarmScheduling {
         let config = makeConfig(id: id, phase: phase, cycle: cycle, plan: plan)
         do {
             _ = try await AlarmManager.shared.schedule(id: id, configuration: config)
+            let next = nextStep(after: phase, cycle: cycle, totalCycles: plan.totalCycles)
+            plan.expecting(
+                next.map { FocusAlarmPlan.Step(phase: $0.phase, cycle: $0.cycle) },
+                currentAlarmID: id
+            ).save()
             return id
         } catch {
             return nil
@@ -75,8 +82,16 @@ enum FocusAlarmScheduling {
     }
 
     /// 이 앱이 예약한 알람을 전부 취소 — 단계 전환·종료에서 LA 누적을 막는다.
+    ///
+    /// 목록 조회가 실패하면 아무것도 취소하지 않고 **성공한 척** 끝나 종료가 먹지 않는다.
+    /// 그때는 plan에 적어둔 현재 알람 id로라도 취소한다.
     static func cancelAll() {
-        guard let existing = try? AlarmManager.shared.alarms else { return }
+        guard let existing = try? AlarmManager.shared.alarms else {
+            if let id = FocusAlarmPlan.load()?.currentAlarmID {
+                try? AlarmManager.shared.cancel(id: id)
+            }
+            return
+        }
         for alarm in existing { try? AlarmManager.shared.cancel(id: alarm.id) }
     }
 

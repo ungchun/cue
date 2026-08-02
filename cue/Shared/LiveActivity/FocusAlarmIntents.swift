@@ -36,7 +36,15 @@ struct FocusAlarmAdvanceIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         guard let phase = FocusAlarmMetadata.Phase(rawValue: nextPhaseRaw) else { return .result() }
-        // 설정은 App Group의 FocusAlarmPlan에서 읽는다(메인 앱이 세션 시작 시 저장).
+        // 설정·진행 상태는 App Group의 FocusAlarmPlan에서 읽는다(메인 앱이 세션 시작 시 저장).
+        //
+        // **자격 검사** — 이 버튼은 앱 없이도 알람을 예약하므로, 카드가 요구하는 단계가 지금
+        // 허용된 단계와 일치할 때만 통과시킨다. 없으면 끝난 세션이 남긴 잠금화면 카드가 며칠 뒤
+        // 스치기만 해도 새 세션이 시작된다(유령 세션). 예약에 성공하면 `schedule`이 기대값을
+        // 전진시키므로 같은 카드는 두 번 먹지 않는다.
+        guard let plan = FocusAlarmPlan.load(), plan.accepts(phase: phase, cycle: nextCycle) else {
+            return .result()
+        }
         if await FocusAlarmScheduling.schedule(phase: phase, cycle: nextCycle) != nil {
             LiveActivityAnalyticsBridge.log?("focus_phase_advanced", ["source": "live_activity"])
         }
@@ -75,7 +83,11 @@ struct FocusAlarmResumeIntent: LiveActivityIntent {
     }
 }
 
-/// 정지 버튼 — 이 알람을 취소한다(세션 종료). 다음 단계를 잇지 않는다.
+/// 정지 버튼 — 이 알람을 취소하고 **세션을 닫는다**. 다음 단계를 잇지 않는다.
+///
+/// plan까지 지우는 게 핵심이다. 알람만 취소하면 App Group에 plan이 남아, 잠금화면에 남은 이전
+/// 경계의 카드가 계속 유효한 예약 허가증을 들고 있게 된다(유령 세션). 인앱 종료
+/// (`tearDownSession`)와 대칭을 맞춘다.
 struct FocusAlarmStopIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "End"
     static let isDiscoverable = false
@@ -86,6 +98,7 @@ struct FocusAlarmStopIntent: LiveActivityIntent {
         if let id = UUID(uuidString: alarmID), (try? AlarmManager.shared.cancel(id: id)) != nil {
             LiveActivityAnalyticsBridge.log?("focus_ended", ["source": "live_activity"])
         }
+        FocusAlarmPlan.clear()
         return .result()
     }
 }
