@@ -32,7 +32,8 @@ struct FocusAlarmLiveActivityWidget: Widget {
             // 좌(버튼)·우(시간)를 leading/trailing 리전에 둔다 — 이 둘은 카메라 양옆의 "L자"
             // 영역으로 **위쪽부터** 채워져 상단 여백이 없다(애플 기본 타이머와 동일). `.center`
             // 단독은 카메라 아래에만 놓여 상단 공백이 생기므로 쓰지 않는다. 시간은 liveCountdown
-            // 으로 폭이 5자에 고정돼 좁아, trailing 리전에서 줄바꿈되지 않는다.
+            // 으로 폭이 실제 자릿수에 고정돼 좁아, trailing 리전에서 줄바꿈되지 않는다(단계 길이는
+            // 편집 시트가 1~59분으로 제한하므로 최대 5자).
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     buttonGroup(context.state, tint: tint)
@@ -108,16 +109,20 @@ struct FocusAlarmLiveActivityWidget: Widget {
     }
 
     /// `Text(timerInterval:)`은 시:분:초(h:mm:ss) 기준으로 폭을 넓게 예약해, mm:ss만 보일 땐
-    /// 라벨과 숫자 사이에 빈 칸이 생긴다. 보이지 않는 "00:00" 템플릿으로 프레임을 mm:ss 실제
-    /// 폭에 고정하고(타이머가 이 제안 폭에 맞춰 좁게 렌더), 그 위에 우측정렬 overlay — 라벨이
+    /// 라벨과 숫자 사이에 빈 칸이 생긴다. 보이지 않는 템플릿 텍스트로 프레임을 실제 폭에
+    /// 고정하고(타이머가 이 제안 폭에 맞춰 좁게 렌더), 그 위에 우측정렬 overlay — 라벨이
     /// 숫자 바로 옆에 붙고 숫자는 오른쪽 끝에 정렬된다. `clipped`는 혹시 모를 폭 초과 안전망.
     /// (`fixedSize`는 타이머를 거대한 자연폭으로 부풀려 clip에 잘려 사라지므로 쓰지 않는다.)
+    ///
+    /// 템플릿은 **지금 남은 시간의 자릿수**에 맞춘다. "00:00"으로 고정하면 `4:50`처럼 4자인
+    /// 값이 오른쪽 끝에 정렬되며 한 자리 폭이 라벨 쪽에 빈칸으로 남는다 — 집중(24:57)은 붙는데
+    /// 휴식(4:50)만 떨어져 보이던 원인.
     private func liveCountdown(
         _ state: AlarmPresentationState,
         font: Font,
         tint: Color
     ) -> some View {
-        Text(verbatim: "00:00")
+        Text(verbatim: FocusCountdownFormat.widthTemplate(remaining(state)))
             .font(font)
             .monospacedDigit()
             .hidden()
@@ -173,14 +178,26 @@ struct FocusAlarmLiveActivityWidget: Widget {
             if c.fireDate > now {
                 Text(timerInterval: now...c.fireDate, countsDown: true)
             } else {
-                Text("00:00")
+                Text(verbatim: FocusCountdownFormat.text(0))
             }
         case .paused(let p):
-            Text(format(max(0, p.totalCountdownDuration - p.previouslyElapsedDuration)))
+            // 일시정지는 시스템 타이머가 아니라 우리가 그린다 — 진행 중 표기(앞자리 0 없음)와
+            // 같은 모양이어야 정지·재개에서 숫자가 튀지 않는다.
+            Text(verbatim: FocusCountdownFormat.text(p.totalCountdownDuration - p.previouslyElapsedDuration))
         case .alert:
-            Text("00:00")
+            Text(verbatim: FocusCountdownFormat.text(0))
         @unknown default:
-            Text("--:--")
+            Text(verbatim: FocusCountdownFormat.text(0))
+        }
+    }
+
+    /// 폭 템플릿을 고르기 위한 현재 남은 시간 — 표시되는 숫자와 자릿수가 같아야 한다.
+    private func remaining(_ state: AlarmPresentationState) -> TimeInterval {
+        switch state.mode {
+        case .countdown(let c): return max(0, c.fireDate.timeIntervalSinceNow)
+        case .paused(let p): return max(0, p.totalCountdownDuration - p.previouslyElapsedDuration)
+        case .alert: return 0
+        @unknown default: return 0
         }
     }
 
@@ -238,10 +255,5 @@ struct FocusAlarmLiveActivityWidget: Widget {
     private func phaseLabel(_ context: ActivityViewContext<AlarmAttributes<FocusAlarmMetadata>>) -> LocalizedStringKey {
         guard let meta = context.attributes.metadata else { return "" }
         return meta.phase == .focus ? "Focus" : "Break"
-    }
-
-    private func format(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds.rounded())
-        return String(format: "%02d:%02d", total / 60, total % 60)
     }
 }

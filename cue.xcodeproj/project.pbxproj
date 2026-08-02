@@ -78,6 +78,7 @@
 				Shared/LiveActivity/FocusAlarmMetadata.swift,
 				Shared/LiveActivity/FocusAlarmPlan.swift,
 				Shared/LiveActivity/FocusAlarmScheduling.swift,
+				Shared/LiveActivity/FocusCountdownFormat.swift,
 				Shared/LiveActivity/LiveActivityAnalyticsBridge.swift,
 				Shared/LiveActivity/LiveActivityHandlePicker.swift,
 				Shared/LiveActivity/LiveDayEventDots.swift,
