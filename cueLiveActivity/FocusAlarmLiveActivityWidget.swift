@@ -96,7 +96,7 @@ struct FocusAlarmLiveActivityWidget: Widget {
         tint: Color,
         timeSize: CGFloat
     ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.smd) {
             Text(phaseLabel(context))
                 .font(.headline)
                 .foregroundStyle(tint)
