@@ -78,9 +78,9 @@ struct WidgetItemChip: View {
     /// 한두 글자만 남는다. 이상적 폭을 그대로 주고 칩 바깥 `.clipped()`가 끝에서 잘라내면
     /// 같은 자리에 글자가 더 들어간다(시간표 블록과 같은 규칙 → `DayTimelineView`).
     ///
-    /// 정렬은 넘칠 때도 그대로다 — 종일 칩은 가운데를 유지하고(양끝이 잘린다), 나머지는
-    /// 왼쪽에서 시작해 뒤가 잘린다. 종일 칩이 격자 안에서 가운데로 서는 리듬이 제목 길이에
-    /// 따라 흔들리지 않는 쪽을 택했다(사용자 결정).
+    /// 가운데 정렬은 **들어갈 때만** 유지된다. Spacer 둘로 가운데를 잡으면, 제목이 넘칠 땐
+    /// Spacer가 0으로 눌리며 글자가 왼쪽 끝에서 시작해 뒤쪽만 잘린다. `alignment: .center`
+    /// 프레임으로는 넘칠 때 앞뒤가 같이 잘려 제목 첫 글자부터 사라진다.
     ///
     /// 폭을 만드는 뷰(`Color.clear`)와 글자를 **분리**한다 — 글자는 overlay로 얹는다.
     /// `.frame(maxWidth: .infinity)`만으로는 못 막는다: 그 프레임은 자식이 제안보다 크면
@@ -90,7 +90,15 @@ struct WidgetItemChip: View {
     private func titleRow(centered: Bool) -> some View {
         Color.clear
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: centered ? .center : .leading) { title }
+            // 넘칠 때는 **왼쪽 끝에서 시작**해 뒤만 잘려야 한다. 가운데 정렬은 안쪽
+            // Spacer가 맡아서, 들어갈 때만 가운데로 서고 넘치면 0으로 눌린다.
+            .overlay(alignment: .leading) {
+                HStack(spacing: Spacing.zero) {
+                    if centered { Spacer(minLength: Spacing.zero) }
+                    title
+                    Spacer(minLength: Spacing.zero)
+                }
+            }
             .clipped()
     }
 
