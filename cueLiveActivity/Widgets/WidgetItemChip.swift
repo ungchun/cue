@@ -63,11 +63,8 @@ struct WidgetItemChip: View {
             if showsMarker {
                 barMarker(fill: WidgetCalendarTheme.filledChipForeground(of: item))
             }
-            title
+            titleRow(centered: centersTitle)
                 .foregroundStyle(WidgetCalendarTheme.filledChipForeground(of: item))
-                // 왼쪽 정렬일 때는 시간 일정 칩과 글자 시작점이 맞는다 — 배경색만 종일
-                // 스타일이고 읽는 흐름은 다른 칩과 같아야 격자가 한 덩어리로 읽힌다.
-                .frame(maxWidth: .infinity, alignment: centersTitle ? .center : .leading)
         }
         // 시간 일정 칩(`marked`)과 같은 여백 — 왼쪽 시작점이 어긋나면 정렬을 맞춘 의미가 없다.
         .padding(.horizontal, Spacing.xxs)
@@ -75,18 +72,47 @@ struct WidgetItemChip: View {
         .background(shape.fill(color))
     }
 
+    /// 제목 한 줄을 칩 폭 안에 앉힌다 — 넘치면 **말줄임표 없이 끝을 자른다**.
+    ///
+    /// 칩 폭이 좁아(3일 위젯 종일 칩은 50pt) `...`가 폭의 상당 부분을 먹으면 정작 제목은
+    /// 한두 글자만 남는다. 이상적 폭을 그대로 주고 칩 바깥 `.clipped()`가 끝에서 잘라내면
+    /// 같은 자리에 글자가 더 들어간다(시간표 블록과 같은 규칙 → `DayTimelineView`).
+    ///
+    /// 가운데 정렬은 **들어갈 때만** 유지된다. Spacer 둘로 가운데를 잡으면, 제목이 넘칠 땐
+    /// Spacer가 0으로 눌리며 글자가 왼쪽 끝에서 시작해 뒤쪽만 잘린다. `alignment: .center`
+    /// 프레임으로는 넘칠 때 앞뒤가 같이 잘려 제목 첫 글자부터 사라진다.
+    ///
+    /// 폭을 만드는 뷰(`Color.clear`)와 글자를 **분리**한다 — 글자는 overlay로 얹는다.
+    /// `.frame(maxWidth: .infinity)`만으로는 못 막는다: 그 프레임은 자식이 제안보다 크면
+    /// **자식 크기까지 같이 늘어나서**, 클립 기준 프레임 자체가 커져 칩이 옆 날짜 열을
+    /// 뚫고 나갔다(실기기에서 확인). overlay는 부모 크기에 영향을 주지 않으므로,
+    /// 이 줄의 폭은 언제나 칩이 받은 몫 그대로이고 넘치는 글자만 여기서 잘린다.
+    private func titleRow(centered: Bool) -> some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 넘칠 때는 **왼쪽 끝에서 시작**해 뒤만 잘려야 한다. 가운데 정렬은 안쪽
+            // Spacer가 맡아서, 들어갈 때만 가운데로 서고 넘치면 0으로 눌린다.
+            .overlay(alignment: .leading) {
+                HStack(spacing: Spacing.zero) {
+                    if centered { Spacer(minLength: Spacing.zero) }
+                    title
+                    Spacer(minLength: Spacing.zero)
+                }
+            }
+            .clipped()
+    }
+
     private var title: some View {
         Text(item.title)
             .font(.caption)
             .lineLimit(1)
-            .truncationMode(.tail)
-            // 칩 높이는 셀에 들어갈 개수에 맞춰 눌리므로(5주 달이면 약 11.7pt) 11pt 글자의
-            // 줄높이(13.1pt)보다 얇아진다. 그때 글자가 셀을 뚫는 대신 따라 줄어들게 한다.
-            //
-            // 그래서 **보이는 크기는 선언값 11pt가 아니라 행 높이가 정한다** — 5주 달이면
-            // 11.7/13.1 ≈ 0.89배로 눌려 약 9.8pt, 행이 넉넉한 4주 달이면 11pt 그대로다.
-            // 0.8은 그 자연 축소값보다 낮은 안전망일 뿐이라 평소엔 걸리지 않는다.
+            // 폭이 모자랄 때의 안전망으로만 남긴다. 아래 `fixedSize`가 폭 제안을 없애므로
+            // 평소엔 걸리지 않는다 — 칩 높이가 줄높이(13.1pt)보다 얇아지는 5주 달에서는
+            // 글자가 줄지 않고 줄 상자 위아래 여백부터 잘린다(글자 자체는 11pt로 남는다).
             .minimumScaleFactor(0.8)
+            // 이상적 폭을 그대로 받는다 — 폭이 모자라도 줄이거나 말줄임하지 않고, 넘치는
+            // 만큼은 칩의 `.clipped()`가 끝에서 잘라낸다(→ `titleRow`).
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     /// 마커 + 제목 한 줄 — 시간 일정과 미리알림이 공유하는 뼈대.
@@ -94,11 +120,10 @@ struct WidgetItemChip: View {
         // 마커가 얇은 세로 막대라 간격이 좁으면 제목의 첫 글자에 붙어 획처럼 읽힌다.
         HStack(spacing: Spacing.xs) {
             marker()
-            title
+            titleRow(centered: false)
                 // 완료된 할일은 한 단계 물러난다 — 지나간 일이라 지금 해야 할 것보다
                 // 눈에 덜 띄어야 한다.
                 .foregroundStyle(item.isCompleted ? .secondary : .primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, Spacing.xxs)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
