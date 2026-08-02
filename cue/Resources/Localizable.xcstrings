@@ -3159,7 +3159,7 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "استراحة"
+            "value" : "راحة"
           }
         },
         "de" : {
@@ -3171,7 +3171,7 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Descanso"
+            "value" : "Pausa"
           }
         },
         "fr" : {
@@ -3189,7 +3189,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Istirahat"
+            "value" : "Rehat"
           }
         },
         "it" : {
@@ -3219,13 +3219,13 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Intervalo"
+            "value" : "Pausa"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Перерыв"
+            "value" : "Отдых"
           }
         },
         "th" : {
