@@ -49,7 +49,7 @@ struct MemoLiveActivityWidget: Widget {
                 // 메모 텍스트 — Reminder 위젯처럼 bottom 리전(full폭, 위 코너 아래)에 둔다.
                 // center에 큰 텍스트를 두면 위 코너(leading/trailing)와 겹쳐 가려진다.
                 DynamicIslandExpandedRegion(.bottom) {
-                    bigText(context.state.text, size: 24 * memoSizeScale(), color: textColor(context.state.textColorHex))
+                    bigText(context.state.text, size: memoSize(MemoTextMetrics.dynamicIslandBase), color: textColor(context.state.textColorHex))
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.horizontal, Spacing.sm)
                 }
@@ -84,15 +84,15 @@ struct MemoLiveActivityWidget: Widget {
                 // 일정 LA와 동일한 클램프 — 6주 달의 자연 높이가 fixedSize를 타고 예산을
                 // 밀어올려 하단이 잘리는 것을 막는다(ScheduleLiveActivityWidget 참고).
                 .frame(height: ScheduleMetrics.columnMax)
-                // 반쪽에선 44가 과해 한 단계 줄인다(설정 배율은 그대로 곱해짐).
-                bigText(state.text, size: 32 * memoSizeScale(), color: color)
+                // 반쪽에선 단독 기준이 과해 한 단계 작은 기준을 쓴다(설정 배율은 그대로 곱해짐).
+                bigText(state.text, size: memoSize(MemoTextMetrics.withCalendarBase), color: color)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             // 캘린더 모드에선 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다(일정과 동일).
             .frame(minHeight: ScheduleMetrics.columnMax, alignment: .center)
             .fixedSize(horizontal: false, vertical: true)
         } else {
-            bigText(state.text, size: 44 * memoSizeScale(), color: color)
+            bigText(state.text, size: memoSize(MemoTextMetrics.textOnlyBase), color: color)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -108,7 +108,9 @@ struct MemoLiveActivityWidget: Widget {
     /// 줄 정렬은 `.leading`(왼쪽부터) — 여러 줄일 때 들쭉날쭉하지 않고 단락처럼 채워진다.
     /// 블록 자체는 호출처 frame이 가운데 두므로, 한두 줄 짧은 메모는 가운데로 보인다.
     private func bigText(_ text: String, size: CGFloat, color: Color) -> some View {
-        Text(text)
+        // 공백 없는 긴 토큰은 통째로 다음 줄로 밀려 "첫 줄에 자리가 남는데도 끊기는" 모양을
+        // 만든다 — 표시 직전에 끊을 기회를 심는다(→ `MemoDisplayText`).
+        Text(MemoDisplayText.breakable(text))
             .font(.system(size: size, weight: .heavy, design: .rounded))
             .foregroundStyle(color)
             .multilineTextAlignment(.leading)
@@ -117,13 +119,16 @@ struct MemoLiveActivityWidget: Widget {
             // 축소는 자연 높이가 예산을 넘을 때만 걸린다 — 세 호출 지점 × 기기 × 글자 크기
             // 252개 조합을 CoreText로 실측해 줄 수·유효 폰트가 4일 때와 동일함을 확인했다.
             //
-            // 6줄 이상은 의미가 없다. 병목이 줄 수가 아니라 LA 높이(160pt)라, 기본 설정
-            // (medium)에선 `minimumScaleFactor` 하한 0.5까지 줄여도 5.4줄이 한계다.
-            // `large`(44pt)는 4.6줄이 한계라 5줄에서도 4줄에 머문다 — 정상이다.
+            // 6줄 이상은 의미가 없다 — 병목이 줄 수가 아니라 LA 높이(160pt)다.
+            // (위 실측은 기준 pt가 44였을 때 값이다. 지금은 메모 탭과 맞춘 34가 기준이라
+            //  같은 메모가 더 적게 줄어들고, 줄 수 여유는 그때보다 늘었다 — 상한은 그대로 둔다.)
             .lineLimit(5)
             // 1줄 짧은 메모는 기본 크기 그대로, 여러 줄로 길어져도 0.5배까지만 줄어 너무
             // 작아지지 않게 — "1줄은 크고 멀티라인은 작은" 편차를 줄인다.
             .minimumScaleFactor(0.5)
+            // 읽어주는 문장은 ZWSP를 심지 않은 원문 — 보조기술이 끊을 기회를 낱말 구분으로
+            // 오해할 여지를 없앤다.
+            .accessibilityLabel(Text(text))
     }
 
     /// 카드 배경 색 — 사용자 지정 hex. 비었거나 파싱 실패면 시스템 accent.
@@ -143,13 +148,12 @@ struct MemoLiveActivityWidget: Widget {
         return max(0, Int(ceil(range.upperBound.timeIntervalSince(now) / 3600)))
     }
 
-    /// 메모 글자 크기 배율 — 설정(App Group 미러 "small"/"medium"/"large")을 읽어 큰 텍스트를 줄인다.
-    /// 키가 없으면(첫 실행·미저장) 기본 `.medium` = 0.85로, AppSettings 기본값과 일치시킨다.
-    private func memoSizeScale() -> CGFloat {
-        switch SharedAppGroup.defaults.string(forKey: SharedAppGroup.Keys.memoTextSize) {
-        case "small": 0.7
-        case "large": 1.0
-        default: 0.85   // "medium" 또는 키 미저장(첫 실행)
-        }
+    /// 설정 글자 크기를 적용한 실제 pt — 기준·배율 표는 `MemoTextMetrics`에 하나만 둔다
+    /// (미리보기와 어긋나지 않게). 설정 미러 키가 없으면 표가 보통으로 떨어진다.
+    private func memoSize(_ base: CGFloat) -> CGFloat {
+        MemoTextMetrics.size(
+            base: base,
+            textSize: SharedAppGroup.defaults.string(forKey: SharedAppGroup.Keys.memoTextSize)
+        )
     }
 }

@@ -55,14 +55,14 @@ struct MemoLivePreviewCard: View {
             HStack(alignment: .center, spacing: Spacing.md) {
                 emptyCalendar
                     .frame(maxWidth: .infinity)
-                bigText(size: 32 * scale)
+                bigText(size: memoSize(MemoTextMetrics.withCalendarBase))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
         } else {
             // 텍스트 단독 — 위젯과 같은 패딩만 두고 높이는 텍스트가 결정한다.
-            bigText(size: 44 * scale)
+            bigText(size: memoSize(MemoTextMetrics.textOnlyBase))
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.vertical, Spacing.lg)
@@ -73,12 +73,16 @@ struct MemoLivePreviewCard: View {
     /// `lineLimit`은 위젯(`MemoLiveActivityWidget.bigText`)과 반드시 같은 값이어야 한다 —
     /// 다르면 미리보기가 실제 잠금화면과 다른 줄 수·글자 크기를 보여준다.
     private func bigText(size: CGFloat) -> some View {
-        Text(displayText)
+        // 위젯과 같은 줄바꿈 규칙 — 긴 토큰에 끊을 기회를 심는다. 빠뜨리면 미리보기만
+        // 실제 잠금화면과 다른 줄 모양을 보여준다(→ `MemoDisplayText`).
+        Text(MemoDisplayText.breakable(displayText))
             .font(.system(size: size, weight: .heavy, design: .rounded))
             .foregroundStyle(fontColor)
             .multilineTextAlignment(.leading)
             .lineLimit(5)
             .minimumScaleFactor(0.5)
+            // 위젯과 동일 — 읽어주는 문장은 ZWSP 없는 원문.
+            .accessibilityLabel(Text(displayText))
     }
 
     // MARK: - 빈 캘린더
@@ -135,12 +139,9 @@ struct MemoLivePreviewCard: View {
         return fontColor
     }
 
-    /// 글자 크기 배율 — 위젯 `memoSizeScale`와 동일(small 0.7 / medium 0.85 / large 1.0).
-    private var scale: CGFloat {
-        switch textSize {
-        case .small: 0.7
-        case .medium: 0.85
-        case .large: 1.0
-        }
+    /// 설정 글자 크기를 적용한 실제 pt — 위젯과 같은 표(`MemoTextMetrics`)를 쓴다.
+    /// 표를 공유해야 미리보기가 실제 잠금화면과 같은 크기를 보여준다.
+    private func memoSize(_ base: CGFloat) -> CGFloat {
+        MemoTextMetrics.size(base: base, textSize: textSize.rawValue)
     }
 }

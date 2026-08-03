@@ -105,6 +105,8 @@ struct MemoView: View {
     }
 
     /// 설정 글자 크기에 맞춘 굵은 제목 글꼴 — 텍스트 스타일 기반 UIFont(Dynamic Type 반영).
+    /// LA·미리보기 기준(`MemoTextMetrics.textOnlyBase` = 34)이 여기 "크게"(`.largeTitle`)에
+    /// 맞춰져 있다 — 설정의 "작게/보통/크게"가 세 화면에서 한 가지 크기를 뜻하게 하기 위함.
     private var memoFont: UIFont {
         let base = UIFont.preferredFont(forTextStyle: viewModel.textSize.inputTextStyle)
         let descriptor = base.fontDescriptor.withSymbolicTraits(.traitBold) ?? base.fontDescriptor
