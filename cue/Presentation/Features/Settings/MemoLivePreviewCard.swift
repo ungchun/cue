@@ -70,12 +70,14 @@ struct MemoLivePreviewCard: View {
     }
 
     /// 카드를 채우는 큰 텍스트 — 위젯 `bigText`와 동일 규칙(heavy rounded, 좌측정렬, 축소).
+    /// `lineLimit`은 위젯(`MemoLiveActivityWidget.bigText`)과 반드시 같은 값이어야 한다 —
+    /// 다르면 미리보기가 실제 잠금화면과 다른 줄 수·글자 크기를 보여준다.
     private func bigText(size: CGFloat) -> some View {
         Text(displayText)
             .font(.system(size: size, weight: .heavy, design: .rounded))
             .foregroundStyle(fontColor)
             .multilineTextAlignment(.leading)
-            .lineLimit(4)
+            .lineLimit(5)
             .minimumScaleFactor(0.5)
     }
 

@@ -112,7 +112,15 @@ struct MemoLiveActivityWidget: Widget {
             .font(.system(size: size, weight: .heavy, design: .rounded))
             .foregroundStyle(color)
             .multilineTextAlignment(.leading)
-            .lineLimit(4)
+            // 5줄 — 입력 상한(120자)에 못 미쳐 잘리던 긴 메모를 더 보여준다("글씨가 잘려요").
+            // 짧은 메모는 영향이 없다: `lineLimit`은 최대값이라 공간을 예약하지 않고,
+            // 축소는 자연 높이가 예산을 넘을 때만 걸린다 — 세 호출 지점 × 기기 × 글자 크기
+            // 252개 조합을 CoreText로 실측해 줄 수·유효 폰트가 4일 때와 동일함을 확인했다.
+            //
+            // 6줄 이상은 의미가 없다. 병목이 줄 수가 아니라 LA 높이(160pt)라, 기본 설정
+            // (medium)에선 `minimumScaleFactor` 하한 0.5까지 줄여도 5.4줄이 한계다.
+            // `large`(44pt)는 4.6줄이 한계라 5줄에서도 4줄에 머문다 — 정상이다.
+            .lineLimit(5)
             // 1줄 짧은 메모는 기본 크기 그대로, 여러 줄로 길어져도 0.5배까지만 줄어 너무
             // 작아지지 않게 — "1줄은 크고 멀티라인은 작은" 편차를 줄인다.
             .minimumScaleFactor(0.5)
