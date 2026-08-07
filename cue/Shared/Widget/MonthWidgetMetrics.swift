@@ -71,6 +71,11 @@ enum MonthWidgetMetrics {
     /// 얹히므로 이 간격이 곧 밑줄과 칩 사이의 전부다.
     static let dayNumberGap: CGFloat = Spacing.xs
 
+    /// 날짜 숫자 줄 좌우 여백 — 숫자가 세로 그리드 선에 붙으면 실제보다 커 보이고
+    /// 옆 셀 숫자와 뭉쳐 읽힌다. 칩 들여쓰기(`chipSpacing`)보다 넉넉해야 숫자가 칩보다
+    /// 안쪽에 서서 열의 오른쪽 정렬선이 하나로 읽힌다.
+    static let dayNumberSideInset: CGFloat = Spacing.xs
+
     private static let compactTraits = UITraitCollection(preferredContentSizeCategory: .extraSmall)
 
     /// 칩 제목 한 줄 높이(xSmall 고정) — 뷰의 `.font(.caption)`과 **같은 스타일**이어야 한다.

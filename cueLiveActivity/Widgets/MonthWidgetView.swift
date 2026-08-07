@@ -221,7 +221,7 @@ struct MonthWidgetView: View {
                     // textScale은 한 단계뿐이라 그보다 더 줄이는 수단은 scaleEffect밖에 없다.
                     // 레이아웃 폭은 원래 크기대로 잡히지만 배지 오른쪽은 Spacer가 흡수한다.
                     .textScale(.secondary)
-                    .scaleEffect(0.85, anchor: .leading)
+                    .scaleEffect(0.75, anchor: .leading)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -257,8 +257,8 @@ struct MonthWidgetView: View {
                 }
         }
         // 숫자가 세로 그리드 선에 붙지 않게 — 붙어 있으면 실제 크기보다 커 보이고 옆 셀
-        // 숫자와 뭉쳐 읽힌다. 셀에 이미 들어간 패딩만큼 뺀 나머지를 여기서 준다.
-        .padding(.horizontal, Spacing.xs - MonthWidgetMetrics.chipSpacing)
+        // 숫자와 뭉쳐 읽힌다. 값의 근거는 `dayNumberSideInset` 주석에.
+        .padding(.horizontal, MonthWidgetMetrics.dayNumberSideInset)
         .frame(maxWidth: .infinity)
         .frame(height: MonthWidgetMetrics.dayNumberHeight)
     }
