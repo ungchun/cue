@@ -31,6 +31,8 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 메타데이터만 App Store Connect에 업로드한다 (바이너리·스크린샷 제외)
 
+버전 지정: fastlane upload_metadata version:1.0.9
+
 ### ios upload_screenshots
 
 ```sh

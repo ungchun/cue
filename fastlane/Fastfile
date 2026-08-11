@@ -38,12 +38,17 @@ platform :ios do
     UI.success("App Info 현지화 생성 완료 — 이어서 'fastlane upload_metadata'를 실행하세요")
   end
   desc "메타데이터만 App Store Connect에 업로드한다 (바이너리·스크린샷 제외)"
-  lane :upload_metadata do
-    deliver(
+  desc "버전 지정: fastlane upload_metadata version:1.0.9"
+  lane :upload_metadata do |options|
+    # 버전을 명시하지 않으면 deliver가 ASC의 '준비 중' 버전을 알아서 고른다.
+    # 여러 버전이 열려 있을 때 엉뚱한 쪽에 릴리스 노트가 올라가지 않게 지정할 수 있게 둔다.
+    params = {
       skip_screenshots: true,
       skip_binary_upload: true,
       force: true
-    )
+    }
+    params[:app_version] = options[:version] if options[:version]
+    deliver(params)
   end
 
   desc "스크린샷만 App Store Connect에 업로드한다 (메타데이터 제외, 기존 스크린샷 덮어씀)"
