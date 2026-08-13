@@ -29,11 +29,17 @@ enum CalendarWidgetRange {
     case month(shift: WidgetRangeKind?)
     /// 오늘부터 `days`일. 항상 이동 가능.
     case days(count: Int, shift: WidgetRangeKind)
+    /// 이번 달 격자 + 앞으로의 목록을 함께 그리는 위젯 — 이동하지 않는다.
+    ///
+    /// 조회 구간이 **이번 달과 앞으로 며칠의 합집합**이라 위 둘로 표현되지 않는다.
+    /// 격자는 이번 달 전체가 필요하고, 옆 목록은 달을 넘겨 다음 달 초까지 이어질 수 있다.
+    case upcoming
 
     var shiftKind: WidgetRangeKind? {
         switch self {
         case .month(let shift): return shift
         case .days(_, let shift): return shift
+        case .upcoming: return nil
         }
     }
 }
@@ -128,8 +134,26 @@ struct CalendarWidgetProvider: TimelineProvider {
             let start = CalendarWidgetProvider.firstDay(now: now, offset: offset, calendar: calendar)
             let end = calendar.date(byAdding: .day, value: count, to: start) ?? start
             return (start, end)
+        case .upcoming:
+            // 이번 달 **전체**(격자용)와 앞으로 며칠(목록용)의 합집합.
+            //
+            // 목록은 달을 넘어갈 수 있다 — 월말에 열면 이번 달엔 남은 게 없고 다음 달
+            // 초의 일정이 올라와야 한다. 그때 구간을 이번 달로 끊으면 목록이 "없음"으로
+            // 비는데, 실제로는 이틀 뒤에 일정이 있다.
+            let base = calendar.startOfDay(for: now)
+            let month = calendar.dateInterval(of: .month, for: base)
+            let start = min(month?.start ?? base, base)
+            let lookahead = calendar.date(byAdding: .day, value: Self.lookaheadDays, to: base) ?? base
+            return (start, max(month?.end ?? lookahead, lookahead))
         }
     }
+
+    /// 사이드 목록이 앞을 내다보는 날수.
+    ///
+    /// 목록은 오늘 것이 없으면 다음 날들로 채운다(→ `UpcomingItemPicker`). 너무 짧으면
+    /// 한가한 주에 위젯이 비고, 너무 길면 조회 비용만 늘고 정작 "다음"이라 부르기 어려운
+    /// 먼 일정이 올라온다. 2주면 네 줄을 채우기에 충분하다.
+    private static let lookaheadDays = 14
 
     /// 1일·3일 위젯이 그리는 첫 날 — 오늘에서 오프셋(일)만큼 민 날의 자정.
     static func firstDay(now: Date, offset: Int, calendar: Calendar) -> Date {
@@ -151,7 +175,9 @@ struct CalendarWidgetProvider: TimelineProvider {
         switch range {
         case .month:
             return midnight
-        case .days:
+        // 목록은 시각이 지나면 항목이 빠져야 하므로 시간표와 같은 주기로 본다 —
+        // 자정까지 두면 이미 끝난 일정이 오후 내내 목록 맨 위에 남는다.
+        case .days, .upcoming:
             let nextHour = calendar.nextDate(
                 after: date, matching: DateComponents(minute: 0), matchingPolicy: .nextTime
             ) ?? date.addingTimeInterval(3600)

@@ -20,6 +20,21 @@ enum CalendarWidgetKind {
     /// 항상 이번 달만 보여주는 고정형 — 이동하지 않으므로 `WidgetRangeKind`에 대응이 없다.
     static let fixedMonth = "azhy.cue.widget.monthFixed"
 
+    /// 이번 달 격자 + 다가오는 일정 목록(medium).
+    static let eventList = "azhy.cue.widget.eventList"
+
+    /// 이번 달 격자 + 다가오는 할일 목록(medium).
+    static let reminderList = "azhy.cue.widget.reminderList"
+
+    /// 이번 달 격자만 담는 작은 캘린더(small).
+    static let smallMonth = "azhy.cue.widget.smallMonth"
+
+    /// 오늘 날짜만 크게 보여주는 위젯(small).
+    static let today = "azhy.cue.widget.today"
+
+    /// 이동하지 않는 위젯들 — `WidgetRangeKind`에 대응 case가 없어 여기서만 알 수 있다.
+    private static let fixed: [String] = [fixedMonth, eventList, reminderList, smallMonth, today]
+
     /// 캘린더 위젯 전체. 이동형은 `WidgetRangeKind`에서 가져와 두 곳이 갈라지지 않게 한다.
-    static let all: [String] = [fixedMonth] + WidgetRangeKind.allCases.map(\.widgetKind)
+    static let all: [String] = fixed + WidgetRangeKind.allCases.map(\.widgetKind)
 }
