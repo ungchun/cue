@@ -154,6 +154,9 @@ enum WidgetCalendarDataSource {
                 colorHex: hex(from: reminder.calendar.cgColor),
                 // EventKit 우선순위는 0=미지정, 1~9=높음~낮음. 지정된 것만 마커를 채운다.
                 isHighPriority: reminder.priority != 0,
+                // 마감 "날짜만" 지정한 할일은 컴포넌트에 hour가 없다 — `date`로 굽는 순간
+                // 자정이 되므로, 시각 유무는 여기서만 알 수 있다(목록이 "0:00"을 걸러낼 근거).
+                hasTime: reminder.dueDateComponents?.hour != nil,
                 isCompleted: reminder.isCompleted
             )
         }

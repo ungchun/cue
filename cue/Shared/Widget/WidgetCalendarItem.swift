@@ -38,6 +38,11 @@ struct WidgetCalendarItem: Identifiable, Hashable, Sendable {
     /// 일정에는 의미가 없어 항상 `false`.
     let isHighPriority: Bool
 
+    /// `start`에 의미 있는 시각이 있는지. 마감 "날짜만" 지정한 할일은 EventKit이 자정을
+    /// 돌려주므로, 이 플래그 없이 시각을 그대로 그리면 목록에 "0:00"이 찍힌다.
+    /// 일정은 항상 `true` — 종일 일정은 `kind`가 이미 가른다.
+    var hasTime: Bool = true
+
     /// 완료된 미리알림인지. 일정에는 의미가 없어 항상 `false`.
     ///
     /// 완료해도 **오늘 이후 마감이면 계속 보여준다** — 오늘 할 일을 끝냈다는 사실 자체가
@@ -52,4 +57,7 @@ struct WidgetCalendarItem: Identifiable, Hashable, Sendable {
     var isHoliday: Bool = false
 
     var isAllDay: Bool { kind == .allDayEvent }
+
+    /// 목록의 시각 줄을 **날짜+요일**로 그릴지(시각 대신) — 종일 일정, 날짜만 지정한 할일.
+    var displaysAsDateOnly: Bool { isAllDay || !hasTime }
 }

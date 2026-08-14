@@ -163,11 +163,13 @@ struct WidgetItemListView: View {
     ///
     /// 포맷 자체(12/24시간·오전오후)는 `ScheduleTimeText`와 같은 `j` 템플릿이라 갈리지 않는다.
     static func timeText(for item: WidgetCalendarItem, calendar: Calendar = .current) -> String {
-        // 종일은 시각이 없어 줄이 날짜뿐이다 — "하루 종일" 대신 요일을 붙여 빈자리를
-        // 정보로 채운다("8월 15일 토요일"). 약칭(E)이 아니라 전체 요일명(EEEE)이다 —
-        // 시각 일정의 시각 자리에 서는 줄이라 "(토)"로는 너무 짧아 잘린 것처럼 보인다.
-        // 순서·구두점은 로케일이 정하도록 한 템플릿에 담는다(영어는 요일이 앞: "Saturday, Aug 15").
-        guard !item.isAllDay else {
+        // 종일 일정·날짜만 지정한 할일은 시각이 없어 줄이 날짜뿐이다 — "하루 종일" 대신
+        // 요일을 붙여 빈자리를 정보로 채운다("8월 15일 토요일"). 시각 분기로 흘리면 날짜만
+        // 지정한 할일은 EventKit이 준 자정이 "0:00"으로 찍힌다(실기기 확인).
+        // 약칭(E)이 아니라 전체 요일명(EEEE)이다 — 시각 일정의 시각 자리에 서는 줄이라
+        // "(토)"로는 너무 짧아 잘린 것처럼 보인다. 순서·구두점은 로케일이 정하도록
+        // 한 템플릿에 담는다(영어는 요일이 앞: "Saturday, Aug 15").
+        guard !item.displaysAsDateOnly else {
             return formatted(item.start, template: "MMMdEEEE", calendar: calendar)
         }
         let day = formatted(item.start, template: "MMMd", calendar: calendar)
