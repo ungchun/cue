@@ -34,6 +34,12 @@ struct CompactMonthGrid: View {
     /// 빠듯해서 같은 비율로 빼면 날짜가 눌린다.
     private static let verticalInsetRatio: CGFloat = 0.03
 
+    /// 요일 글자 축소율 — 뷰와 높이 예산이 **같은 값**을 써야 빈 자리가 안 생긴다.
+    ///
+    /// 1.0에 가까울수록 요일이 날짜와 비슷해져 격자의 머리글로 읽히지 않는다.
+    /// 날짜(`caption2`)보다는 작되 읽히는 선.
+    private static let weekdayScale: CGFloat = 0.88
+
     var body: some View {
         // 높이를 **재서 나눈다.**
         //
@@ -45,11 +51,19 @@ struct CompactMonthGrid: View {
         // 여기서 `GeometryReader`가 안전한 이유: 이 뷰는 부모가 폭·높이를 확정해 주는
         // 자리에 놓인다(작은 캘린더는 `VStack`의 마지막 칸, 사이드 위젯은 `HStack`의 한 칸).
         GeometryReader { geometry in
-            let headerHeight = CompactMonthMetrics.dayNumberLine + Spacing.xxs
-            // 위아래 여백을 **먼저 빼고** 나눈다. 남는 높이 전체를 나누면 그 여백만큼
+            // 요일 줄 높이는 **축소된 글자 크기**로 잡는다.
+            //
+            // `scaleEffect`는 레이아웃 크기를 바꾸지 않아서, 줄높이 그대로(13.1pt) 주면
+            // 실제 글자(0.78배 ≈ 10pt)보다 3pt가 남아 위아래로 갈라진다. 그 위쪽 몫이
+            // 제목과 요일 줄 사이를 벌렸다.
+            let headerHeight = CompactMonthMetrics.dayNumberLine * Self.weekdayScale
+            // 아래 여백을 **먼저 빼고** 나눈다. 남는 높이 전체를 나누면 그 여백만큼
             // 넘쳐 마지막 주가 카드 밖으로 밀린다.
+            //
+            // 위쪽은 빼지 않는다 — 그 여백이 제목과 요일 줄 사이를 벌려, 제목이 격자에서
+            // 떨어져 보였다. 제목은 격자의 머리글이라 붙어 있어야 한다.
             let inset = geometry.size.height * Self.verticalInsetRatio
-            let gridHeight = geometry.size.height - inset * 2
+            let gridHeight = geometry.size.height - inset
             let rowSlot = max(1, (gridHeight - headerHeight) / CGFloat(weekCount))
 
             VStack(spacing: Spacing.zero) {
@@ -81,7 +95,8 @@ struct CompactMonthGrid: View {
             // 크기에 **비례**해 좁힌다. 고정값을 빼면 작은 캘린더(폭·높이 좁음)에서는
             // 과하게 좁아지고 사이드 위젯에서는 티가 안 난다.
             .padding(.horizontal, geometry.size.width * Self.horizontalInsetRatio)
-            .padding(.vertical, geometry.size.height * Self.verticalInsetRatio)
+            // 아래만 준다 — 위에 주면 제목과 요일 줄 사이가 벌어진다(위 `inset` 주석 참고).
+            .padding(.bottom, geometry.size.height * Self.verticalInsetRatio)
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
         }
     }
@@ -93,7 +108,7 @@ struct CompactMonthGrid: View {
             ForEach(Array(grid.weekdaySymbols.enumerated()), id: \.offset) { column, symbol in
                 Text(symbol)
                     .font(.caption2)
-                    .scaleEffect(0.78)
+                    .scaleEffect(Self.weekdayScale)
                     .foregroundStyle(WidgetCalendarTheme.weekdayColor(grid.weekdayIndex(column: column)))
                     .frame(maxWidth: .infinity)
             }

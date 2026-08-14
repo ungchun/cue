@@ -172,20 +172,25 @@ struct SideListEntryView: View {
 
     /// 격자 위 왼쪽에 앉는 "8월 2026년" — 월은 굵게, 연도는 흐리게.
     private var monthTitle: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-            // 제목은 격자의 머리글일 뿐이라 물러나 있어야 한다 — 크면 그만큼 달력이
-            // 쓸 높이를 가져간다. 굵기로만 위계를 준다.
+        // 월과 연도를 붙여 놓으면 "8월2026년"으로 읽힌다 — 월 위젯 헤더와 같은 값으로 띄운다.
+        HStack(alignment: .firstTextBaseline, spacing: WidgetCalendarTheme.headerTitleGap) {
+            // 월이 이 줄의 머리다 — 연도보다 한 단계 크게 잡아 먼저 읽히게 한다.
             Text(WidgetCalendarTheme.monthName(for: displayedMonth, calendar: calendar))
-                .font(.caption.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
             Text(WidgetCalendarTheme.yearName(for: displayedMonth, calendar: calendar))
+                // 월(`.subheadline`)보다 두 단계 작게 — 이 위젯은 폭이 절반뿐이라
+                // 제목이 커지면 격자가 쓸 자리를 그만큼 잃는다.
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(WidgetCalendarTheme.headerYear)
         }
         .lineLimit(1)
         // 제목을 격자 첫 열(일요일)보다 더 들인다 — 정확히 맞추면 카드 왼쪽
         // 가장자리에 붙어 보인다.
         .padding(.leading, Spacing.sm)
+        // 요일 줄이 자기 글자 크기만큼만 자리를 잡으므로(→ `CompactMonthGrid`)
+        // 여기 값이 곧 제목과 요일 줄 사이의 전부다. 음수까지 주면 겹친다.
+        .padding(.top, Spacing.xs)
         .padding(.bottom, Spacing.xs)
     }
 

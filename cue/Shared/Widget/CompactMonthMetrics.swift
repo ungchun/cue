@@ -37,6 +37,7 @@ enum CompactMonthMetrics {
         abs(UIFont.preferredFont(forTextStyle: .caption2, compatibleWith: compactTraits).descender)
     }
 
+
     /// 날짜 숫자 한 줄 높이 — 뷰가 `.caption2`로 그린다.
     ///
     /// 뷰도 `.dynamicTypeSize(.xSmall)`로 렌더를 고정하므로 추정 = 렌더가 유지된다

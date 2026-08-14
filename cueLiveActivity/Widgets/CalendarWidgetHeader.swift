@@ -42,16 +42,17 @@ struct CalendarWidgetHeader: View {
             chevron("chevron.forward", delta: shiftStep)
         }
         .overlay {
-            // 월과 연도를 한 단어처럼 붙여 놓으면 "7월2026년"으로 읽힌다 — 한 칸 더 띄운다.
-            HStack(spacing: Spacing.sm) {
+            // 월과 연도를 붙여 놓으면 "7월2026년"으로 읽힌다 — 한 칸 띄운다.
+            HStack(spacing: WidgetCalendarTheme.headerTitleGap) {
                 Text(month)
-                    // 연도와 같은 크기지만 굵기로 위계를 준다 — 캘린더 헤더는 격자보다
-                    // 물러나 있어야 해서 크기로 강조하지 않는다.
-                    .font(.footnote.weight(.semibold))
+                    // 위계는 **크기와 굵기**가 만든다 — 색은 연도와 같다.
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Text(year)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    // 월보다 한 단계 작게 — 연도는 월을 보완하는 정보다.
+                    // (새 위젯 3종의 제목도 같은 규칙: 월 `.subheadline` + 연도 `.caption`)
+                    .font(.caption)
+                    .foregroundStyle(WidgetCalendarTheme.headerYear)
             }
             .lineLimit(1)
         }

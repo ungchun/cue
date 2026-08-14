@@ -45,6 +45,15 @@ enum WidgetCalendarTheme {
     /// 시간축 눈금·구분선 색. 시스템 구분선 계열이라 라이트/다크 모두 자동 대응한다.
     static let gridLine: Color = .primary.opacity(0.18)
 
+    /// 헤더의 **연도** 글자색 — 본문색 그대로.
+    ///
+    /// 투명도를 두지 않는다. 위젯 배경이 `.systemBackground`가 아니라 순수 검정/흰색이라
+    /// 조금만 흐려도 회색이 떠 보인다 — `.secondary`는 물론 `0.85`까지 올려도 그랬다.
+    ///
+    /// 위계는 **크기**가 만든다: 월은 `.footnote.semibold`, 연도는 `.caption2`.
+    /// 색까지 낮추면 연도만 배경으로 가라앉는다.
+    static let headerYear: Color = .primary
+
     /// 눈금·구분선 두께. `Divider`는 자체 여백이 붙어 눈금 위치가 어긋나므로 직접 그린다 —
     /// 월 격자와 시간표가 같은 값을 써야 두 위젯이 나란히 놓였을 때 선 굵기가 튀지 않는다.
     static let hairline: CGFloat = 0.5
@@ -101,6 +110,12 @@ enum WidgetCalendarTheme {
     static let chipCornerRadius: CGFloat = 2
     /// 오늘 날짜 밑줄 바 두께 — LA 월간 캘린더와 같은 표현.
     static let todayUnderlineHeight: CGFloat = 2
+
+    /// 헤더의 월 ↔ 연도 사이 간격.
+    ///
+    /// `Spacing` 4/8pt 그리드의 중간값이라 토큰이 없다 — 4pt는 "8월2026년"으로 붙어
+    /// 읽히고 8pt는 두 단어가 따로 놀아서, 그 사이에서 잡는다.
+    static let headerTitleGap: CGFloat = 6
 
     // MARK: - 타임라인 블록 임계값
     //

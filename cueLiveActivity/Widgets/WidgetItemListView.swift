@@ -73,18 +73,18 @@ struct WidgetItemListView: View {
             // 상자에 위아래 여백이 이미 들어 있어서다 — 0으로 두면 그 여백만큼 떠 보인다.
             VStack(alignment: .leading, spacing: -Spacing.xs) {
                 Text(item.title)
-                    // 제목이 이 줄의 머리다 — 크기를 키우면 폭의 절반 안에서 긴 제목이
-                    // 잘리므로, 크기는 두고 **굵기로** 시각과 가른다.
-                    .font(.footnote.weight(.medium))
+                    // 제목이 이 줄의 머리다 — 시각보다 크고 굵게.
+                    //
+                    // 폭이 위젯의 절반뿐이라 긴 제목은 잘린다. `minimumScaleFactor`로
+                    // 폭 안에서 줄여 담되, 너무 작아지기 전에 멈춘다.
+                    .font(.subheadline.weight(.medium))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     // 완료된 할일은 한 단계 물러난다 — 월 셀 칩과 같은 규칙.
                     .foregroundStyle(item.isCompleted ? .secondary : .primary)
                 Text(WidgetItemListView.timeText(for: item, calendar: calendar))
-                    // 시각은 보조 정보다. `caption2`가 텍스트 스타일 램프의 바닥이라
-                    // 그 아래로 내리는 수단은 `scaleEffect`뿐이다(월 위젯 날짜 줄과 같은 규칙).
-                    // 줄 시작점이 밀리지 않게 축소 기준점을 leading으로 잡는다.
+                    // 시각은 보조 정보라 제목보다 두 단계 아래로 둔다.
                     .font(.caption2)
-                    .scaleEffect(0.92, anchor: .leading)
                     // `.secondary`는 이 크기에서 너무 흐려 시각이 읽히지 않는다.
                     // 본문색을 직접 낮춰 쓴다 — 제목보다는 물러나되 읽히는 선을 지킨다.
                     .foregroundStyle(Color.primary.opacity(0.65))
@@ -136,9 +136,9 @@ struct WidgetItemListView: View {
     ///
     /// 칸(`slot`)을 꽉 채우지 않는 이유는 남는 높이가 줄 **사이**로 흩어져 목록이
     /// 성기게 보이기 때문이다. 이 값으로 눌러 담고 남는 건 아래에 모은다.
-    private static let rowContentHeight: CGFloat = 30
+    private static let rowContentHeight: CGFloat = 32
     /// 줄 사이 간격.
-    private static let rowSpacing: CGFloat = Spacing.xs
+    private static let rowSpacing: CGFloat = Spacing.xxs
 
     private static let markerDiameter: CGFloat = 16
     /// 빈 원의 테두리 두께 — 지름이 커진 만큼 같이 올린다. 얇으면 큰 원이 흐려 보인다.
