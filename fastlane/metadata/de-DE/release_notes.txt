@@ -1,1 +1,1 @@
-Versteckte Bugs behoben und die Stabilität verbessert. Wenn etwas nicht rund läuft, sag uns jederzeit Bescheid — wir lesen jede Nachricht und bessern nach.
+Vier neue Homescreen-Widgets: anstehende Termine oder Erinnerungen neben einem Monatskalender, ein kleiner Kalender und ein großes Heute-Widget. Dazu viel Feinschliff. Wenn etwas nicht rund läuft, sag uns jederzeit Bescheid.

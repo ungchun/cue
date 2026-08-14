@@ -1,1 +1,1 @@
-Fixed hidden bugs and improved stability. If anything feels off, let us know anytime — we read every message and keep improving.
+Four new home screen widgets: upcoming events or reminders beside a monthly calendar, a small calendar, and a big today widget. Plus plenty of visual polish. If anything feels off, let us know anytime — we read every message and keep improving.

@@ -1,1 +1,1 @@
-Kami memperbaiki bug tersembunyi dan meningkatkan stabilitas. Jika ada yang mengganggu, beri tahu kami kapan saja — setiap masukan kami baca dan terus kami perbaiki.
+Empat widget layar utama baru: acara atau pengingat mendatang di samping kalender bulanan, kalender kecil, dan widget besar untuk tanggal hari ini. Ditambah banyak penyempurnaan tampilan. Jika ada yang mengganggu, beri tahu kami kapan saja.

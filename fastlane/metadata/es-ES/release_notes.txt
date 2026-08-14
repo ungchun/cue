@@ -1,1 +1,1 @@
-Hemos corregido errores ocultos y mejorado la estabilidad. Si algo no funciona bien, cuéntanoslo cuando quieras: leemos cada mensaje y seguimos mejorando.
+Cuatro nuevos widgets de pantalla de inicio: próximos eventos o recordatorios junto a un calendario mensual, un calendario pequeño y un widget grande con la fecha de hoy. Además de muchos retoques visuales. Si algo no funciona bien, cuéntanoslo cuando quieras.
