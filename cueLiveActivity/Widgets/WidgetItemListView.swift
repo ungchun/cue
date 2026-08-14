@@ -163,9 +163,17 @@ struct WidgetItemListView: View {
     ///
     /// 포맷 자체(12/24시간·오전오후)는 `ScheduleTimeText`와 같은 `j` 템플릿이라 갈리지 않는다.
     static func timeText(for item: WidgetCalendarItem, calendar: Calendar = .current) -> String {
+        // 종일은 시각이 없어 줄이 날짜뿐이다 — "하루 종일" 대신 요일을 붙여 빈자리를
+        // 정보로 채운다("8월 15일 토요일"). 약칭(E)이 아니라 전체 요일명(EEEE)이다 —
+        // 시각 일정의 시각 자리에 서는 줄이라 "(토)"로는 너무 짧아 잘린 것처럼 보인다.
+        // 순서·구두점은 로케일이 정하도록 한 템플릿에 담는다(영어는 요일이 앞: "Saturday, Aug 15").
+        guard !item.isAllDay else {
+            return formatted(item.start, template: "MMMdEEEE", calendar: calendar)
+        }
         let day = formatted(item.start, template: "MMMd", calendar: calendar)
-        guard !item.isAllDay else { return "\(day) \(String(localized: "All day"))" }
-        let time = formatted(item.start, template: "jmm", calendar: calendar)
+        // `j`(기기 12/24시간 설정 추종)가 아니라 `H` — "오전/오후" 접두가 날짜와 겹치면
+        // 줄이 길어져 위젯 절반 폭에서 잘린다. 24시간 고정("22:00")이 짧고 어느 로케일에서도 같다.
+        let time = formatted(item.start, template: "Hmm", calendar: calendar)
         return "\(day) \(time)"
     }
 
