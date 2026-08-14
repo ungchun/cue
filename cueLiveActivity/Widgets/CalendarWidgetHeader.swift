@@ -75,9 +75,11 @@ struct CalendarWidgetHeader: View {
                     // 격자보다 튀어서 시선이 셰브런으로 먼저 간다.
                     .foregroundStyle(.tertiary)
                     // 탭 영역을 아이콘보다 넓게 — 위젯 버튼은 한 번에 맞히기 어렵다.
-                    .padding(.horizontal, Spacing.xs)
-                    .padding(.vertical, Spacing.xxs)
-                    .contentShape(Rectangle())
+                    .padding(Spacing.xs)
+                    // LA 캘린더 셰브런과 같은 유리 칩 — 진짜 glassEffect는 위젯 프로세스에서
+                    // 렌더되지 않아(아예 안 보임) 반투명 원형 칩으로 유리 느낌만 낸다.
+                    .background(Circle().fill(Color.primary.opacity(0.12)))
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
         } else {
