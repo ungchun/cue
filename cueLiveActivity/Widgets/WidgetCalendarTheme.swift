@@ -186,10 +186,13 @@ enum WidgetCalendarTheme {
 extension View {
     /// 캘린더 위젯의 배경.
     ///
-    /// `Color(.systemBackground)`가 아니라 순수 검정/흰색을 쓴다. 다크 모드에서
-    /// `.systemBackground`는 완전한 검정이 아니라 살짝 뜬 회색이라, 그 위에 캘린더 색 칩이
-    /// 깔리면 카드 전체가 부옇게 밝아진다(실기기에서 레퍼런스와 나란히 놓고 확인).
-    /// 격자가 배경 그 자체인 화면이라 배경은 최대한 뒤로 물러나 있어야 한다.
+    /// 다크는 살짝 띄운 그레이스케일(≈#121212) — 순수 검정은 홈 화면에서 카드가
+    /// 구멍처럼 보이고, 시맨틱 다음 단계인 `secondarySystemBackground`(#1C1C1E)는 반대로
+    /// 너무 밝아 캘린더 색 칩이 부옇게 떴다(둘 다 실기기 확인). 그 사이 톤은 시맨틱에
+    /// 없어서 그레이스케일로 직접 잡는다 — hex 금지 조항이 겨냥하는 브랜드색이 아니라
+    /// 무채색 밝기 하나를 고르는 일이다.
+    /// 라이트는 흰색 유지 — 라이트의 secondary(#F2F2F7)는 회색이 떠서 격자보다 배경이
+    /// 먼저 읽힌다.
     ///
     /// 같은 색을 **두 번** 칠한다. `containerBackground`만 주면 시스템이 그 위에 위젯 재질을
     /// 얹어 상단이 하단보다 밝게 뜬다(실기기에서 확인 — 코드엔 그라데이션이 없다).
@@ -199,7 +202,9 @@ extension View {
     /// 여기서 한 겹 더 깎으면 넘친 콘텐츠까지 같이 숨겨져, 레이아웃이 넘치고 있다는
     /// 사실 자체가 보이지 않는다(마지막 주가 사라진 걸 하단 여백으로 오진하게 만들었다).
     func calendarWidgetBackground(_ colorScheme: ColorScheme) -> some View {
-        let color = colorScheme == .dark ? Color.black : Color.white
+        let color: Color = colorScheme == .dark
+            ? Color(white: 0.07)
+            : .white
         return frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(color)
             .containerBackground(for: .widget) { color }
