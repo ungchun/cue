@@ -176,10 +176,10 @@ struct SideListEntryView: View {
         HStack(alignment: .firstTextBaseline, spacing: WidgetCalendarTheme.headerTitleGap) {
             // 월이 이 줄의 머리다 — 연도보다 한 단계 크게 잡아 먼저 읽히게 한다.
             Text(WidgetCalendarTheme.monthName(for: displayedMonth, calendar: calendar))
-                .font(.subheadline.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(.primary)
             Text(WidgetCalendarTheme.yearName(for: displayedMonth, calendar: calendar))
-                // 월(`.subheadline`)보다 두 단계 작게 — 이 위젯은 폭이 절반뿐이라
+                // 월(`.footnote`)보다 한 단계 작게 — 이 위젯은 폭이 절반뿐이라
                 // 제목이 커지면 격자가 쓸 자리를 그만큼 잃는다.
                 .font(.caption2)
                 .foregroundStyle(WidgetCalendarTheme.headerYear)

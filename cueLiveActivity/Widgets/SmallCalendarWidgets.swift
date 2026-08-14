@@ -81,10 +81,10 @@ struct SmallCalendarEntryView: View {
             HStack(alignment: .firstTextBaseline, spacing: WidgetCalendarTheme.headerTitleGap) {
                 // 사이드 위젯 제목과 같은 크기 — 위젯 묶음에서 머리글이 한 가지로 읽힌다.
                 Text(WidgetCalendarTheme.monthName(for: displayedMonth, calendar: calendar))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(.primary)
                 Text(WidgetCalendarTheme.yearName(for: displayedMonth, calendar: calendar))
-                    // 사이드 위젯 제목과 같은 규칙 — 월보다 두 단계 작게.
+                    // 사이드 위젯 제목과 같은 규칙 — 월보다 한 단계 작게.
                     .font(.caption2)
                     .foregroundStyle(WidgetCalendarTheme.headerYear)
                 Spacer(minLength: Spacing.zero)
@@ -144,16 +144,17 @@ struct TodayEntryView: View {
         //
         // 음수 간격인 건 글자 줄 상자에 위아래 여백이 이미 들어 있어서다. 0으로 두면
         // 그 여백만큼 떠서 두 줄이 따로 놀고, 위젯의 중심이 흐려진다.
-        VStack(spacing: -Spacing.xxs) {
+        VStack(spacing: -Spacing.sm) {
             HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
                 Text(WidgetCalendarTheme.weekdayName(for: entry.date, calendar: calendar))
+                    // 큰 숫자와 나란히 서는 줄의 머리라 굵게 — 숫자에 눌려 사라지지 않게.
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
                 Text(WidgetCalendarTheme.monthName(for: entry.date, calendar: calendar))
-                    // 헤더의 연도와 같은 농도 — 요일보다 물러나되 회색으로 죽지 않는다.
-                    .foregroundStyle(WidgetCalendarTheme.headerYear)
+                    // 요일보다 한 단계 작고 회색으로 — 월은 맥락일 뿐 이 줄의 주인공이 아니다.
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.secondary)
             }
-            // 큰 숫자와 나란히 서는 줄이라 굵게 — 숫자에 눌려 사라지지 않게.
-            .font(.title3.weight(.semibold))
             .lineLimit(1)
             // 로케일에 따라 요일+월이 길어질 수 있다("Wednesday September"). 줄이 넘치면
             // 두 줄로 접히며 아래 숫자를 밀어내므로, 폭 안에서 줄여 한 줄을 지킨다.
@@ -165,14 +166,20 @@ struct TodayEntryView: View {
                 // 텍스트 스타일 램프의 가장 큰 값(`largeTitle` 34pt)으로도 이 크기가
                 // 안 나온다. 위젯은 사용자 글자 크기를 따르지 않고(`dynamicTypeSize`를
                 // 고정한다) 이 숫자가 곧 위젯 자체라, 여기서는 크기를 직접 잡는다.
-                .font(.system(size: Self.dayNumberSize, weight: .semibold))
-                .monospacedDigit()
+                .font(.system(size: Self.dayNumberSize, weight: .light))
+                // monospacedDigit을 쓰지 않는다 — 고정폭은 "1" 양옆에 빈 공백을 만들어
+                // 숫자가 뻣뻣해 보인다(기본 캘린더 위젯과 나란히 두면 바로 티가 났다).
+                // 하루에 한 번 바뀌는 숫자라 폭 흔들림을 막을 이유도 없다.
                 .foregroundStyle(.primary)
                 // 폭이 좁은 기기에서 두 자리 숫자가 잘리지 않게 — 크기를 직접 잡았으므로
                 // 넘칠 때 줄여줄 안전망이 필요하다.
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
         }
+        // 숫자 줄 상자는 베이스라인 아래 디센더 공간이 통째로 비어 있어(숫자엔 디센더가
+        // 없다) 잉크가 상자 위쪽에 몰린다 — 기하 중앙에 놓으면 위로 떠 보여서, 그 절반만큼
+        // 내려 시각 중앙을 맞춘다. 레이아웃엔 영향 없는 순수 시각 보정이라 offset을 쓴다.
+        .offset(y: Spacing.sm)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .dynamicTypeSize(.xSmall)
         .calendarWidgetBackground(colorScheme)
@@ -181,5 +188,5 @@ struct TodayEntryView: View {
     /// 날짜 숫자 크기 — small 위젯(가장 좁은 기기 141pt)에서도 카드의 절반쯤을 차지한다.
     ///
     /// 간격이 아니라 **레이아웃 치수**라 `Spacing` 토큰을 쓰지 않는다.
-    private static let dayNumberSize: CGFloat = 72
+    private static let dayNumberSize: CGFloat = 100
 }

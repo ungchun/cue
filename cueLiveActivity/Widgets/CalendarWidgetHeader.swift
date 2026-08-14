@@ -46,11 +46,11 @@ struct CalendarWidgetHeader: View {
             HStack(spacing: WidgetCalendarTheme.headerTitleGap) {
                 Text(month)
                     // 위계는 **크기와 굵기**가 만든다 — 색은 연도와 같다.
-                    .font(.subheadline.weight(.semibold))
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(.primary)
                 Text(year)
                     // 월보다 한 단계 작게 — 연도는 월을 보완하는 정보다.
-                    // (새 위젯 3종의 제목도 같은 규칙: 월 `.subheadline` + 연도 `.caption`)
+                    // (새 위젯 3종의 제목도 같은 규칙: 월 `.footnote` + 연도 한 단계 아래)
                     .font(.caption)
                     .foregroundStyle(WidgetCalendarTheme.headerYear)
             }
