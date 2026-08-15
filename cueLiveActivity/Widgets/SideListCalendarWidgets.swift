@@ -18,7 +18,7 @@ struct CalendarEventListWidget: Widget {
         ) { entry in
             SideListEntryView(entry: entry, mode: .events)
         }
-        .configurationDisplayName(widgetGalleryName("Today's Events", requiresPremium: false))
+        .configurationDisplayName(widgetGalleryName("Upcoming Events", requiresPremium: false))
         .description("")
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
@@ -34,7 +34,7 @@ struct CalendarReminderListWidget: Widget {
         ) { entry in
             SideListEntryView(entry: entry, mode: .reminders)
         }
-        .configurationDisplayName(widgetGalleryName("Today's Reminders", requiresPremium: false))
+        .configurationDisplayName(widgetGalleryName("Upcoming Reminders", requiresPremium: false))
         .description("")
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()

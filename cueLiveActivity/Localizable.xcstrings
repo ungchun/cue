@@ -3367,202 +3367,202 @@
         }
       }
     },
-    "Today's Events" : {
+    "Upcoming Events" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أحداث اليوم"
+            "value" : "الأحداث القادمة"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Termine heute"
+            "value" : "Anstehende Termine"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eventos de hoy"
+            "value" : "Próximos eventos"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Événements du jour"
+            "value" : "Événements à venir"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आज के इवेंट"
+            "value" : "आगामी इवेंट"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Acara Hari Ini"
+            "value" : "Acara Mendatang"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eventi di oggi"
+            "value" : "Eventi in arrivo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日の予定"
+            "value" : "今後の予定"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘의 일정"
+            "value" : "다가오는 일정"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Acara Hari Ini"
+            "value" : "Acara Akan Datang"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eventos de hoje"
+            "value" : "Próximos eventos"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "События сегодня"
+            "value" : "Предстоящие события"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "กิจกรรมวันนี้"
+            "value" : "กิจกรรมที่กำลังจะมาถึง"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sự kiện hôm nay"
+            "value" : "Sự kiện sắp tới"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日日程"
+            "value" : "即将到来的日程"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日行程"
+            "value" : "即將到來的行程"
           }
         }
       }
     },
-    "Today's Reminders" : {
+    "Upcoming Reminders" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تذكيرات اليوم"
+            "value" : "التذكيرات القادمة"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erinnerungen heute"
+            "value" : "Anstehende Erinnerungen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recordatorios de hoy"
+            "value" : "Próximos recordatorios"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rappels du jour"
+            "value" : "Rappels à venir"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आज के रिमाइंडर"
+            "value" : "आगामी रिमाइंडर"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pengingat Hari Ini"
+            "value" : "Pengingat Mendatang"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Promemoria di oggi"
+            "value" : "Promemoria in arrivo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日のリマインダー"
+            "value" : "今後のリマインダー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘의 할 일"
+            "value" : "다가오는 할 일"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Peringatan Hari Ini"
+            "value" : "Peringatan Akan Datang"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lembretes de hoje"
+            "value" : "Próximos lembretes"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Напоминания сегодня"
+            "value" : "Предстоящие напоминания"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "รายการเตือนวันนี้"
+            "value" : "รายการเตือนที่กำลังจะมาถึง"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lời nhắc hôm nay"
+            "value" : "Lời nhắc sắp tới"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日提醒"
+            "value" : "即将到来的提醒"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今日提醒"
+            "value" : "即將到來的提醒"
           }
         }
       }
