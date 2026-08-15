@@ -181,14 +181,16 @@ struct SideListEntryView: View {
                 .padding(.vertical, Spacing.xs)
                 // 잰 크기를 그대로 채운다 — 자식이 넘쳐도 카드 밖으로 나가지 않는다.
                 .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+                // 무료 사용자의 유료 위젯은 격자·날짜는 비치되 항목 없이 잠금 안내가 덮인다.
+                // 콘텐츠 분기에만 붙인다 — 루트에 붙이면 권한 안내까지 잠금이 가려,
+                // 정작 해야 할 일(앱 열어 권한 허용)이 안 보인다(월 위젯과 같은 규칙).
+                .premiumLocked(entry.isLocked)
             } else {
                 WidgetAccessPrompt()
                     .frame(width: geometry.size.width, height: geometry.size.height)
             }
         }
         .dynamicTypeSize(.xSmall)
-        // 무료 사용자의 유료 위젯은 격자·날짜는 비치되 항목 없이 잠금 안내가 덮인다.
-        .premiumLocked(entry.isLocked)
         .calendarWidgetBackground(colorScheme)
     }
 
