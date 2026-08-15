@@ -156,7 +156,11 @@ struct SettingsView: View {
                     NavigationLink {
                         CalendarSelectionView(viewModel: viewModel)
                     } label: {
-                        LabeledContent("Calendars", value: calendarsSummary)
+                        // 값을 본문색으로 — `LabeledContent` 기본(회색)은 비활성처럼 읽힌다.
+                        // 같은 화면의 라이브 종류 행이 본문색이라 이 행만 죽어 보였다.
+                        LabeledContent("Calendars") {
+                            Text(calendarsSummary).foregroundStyle(.primary)
+                        }
                     }
                 }
                 premiumGated(feature: "show_calendar_schedule") {
@@ -174,7 +178,10 @@ struct SettingsView: View {
                     NavigationLink {
                         ReminderListSelectionView(viewModel: viewModel)
                     } label: {
-                        LabeledContent("Lists", value: reminderListsSummary)
+                        // 캘린더 행과 같은 이유 — 값이 회색이면 비활성처럼 읽힌다.
+                        LabeledContent("Lists") {
+                            Text(reminderListsSummary).foregroundStyle(.primary)
+                        }
                     }
                 }
                 // 할일 탭에 진입했을 때 가장 먼저 보여줄 화면 — 오늘/예정/전체 또는 사용자 리스트.
