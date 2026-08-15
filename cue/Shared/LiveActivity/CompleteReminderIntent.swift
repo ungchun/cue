@@ -32,7 +32,7 @@ struct CompleteReminderIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         // EventKit 완료가 성공한 경우에만 LA에서 제거 — 실패 시 화면-시스템 불일치 방지.
-        guard completeReminder(id: reminderID) else { return .result() }
+        guard EventKitReminderCompleter.complete(id: reminderID) else { return .result() }
         // 본앱 스키마(reminderCompleted(source:))와 이름·파라미터를 맞춘다 — 익스텐션 프로세스에선 no-op.
         LiveActivityAnalyticsBridge.log?("reminder_completed", ["source": "live_activity"])
         await removeFromLiveActivity(id: reminderID)
@@ -48,16 +48,6 @@ struct CompleteReminderIntent: LiveActivityIntent {
             WidgetCenter.shared.reloadTimelines(ofKind: kind)
         }
         return .result()
-    }
-
-    /// EventKit에서 해당 미리알림을 완료 처리. 성공하면 `true`.
-    private func completeReminder(id: String) -> Bool {
-        let store = EKEventStore()
-        guard EKEventStore.authorizationStatus(for: .reminder) == .fullAccess,
-              let reminder = store.calendarItem(withIdentifier: id) as? EKReminder
-        else { return false }
-        reminder.isCompleted = true
-        return (try? store.save(reminder, commit: true)) != nil
     }
 
     /// 완료된 항목을 살아있는 미리알림 LA에서 제거(표시 카운트도 함께 감소).

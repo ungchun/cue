@@ -69,11 +69,12 @@ struct WidgetItemListView: View {
     private func row(_ item: WidgetCalendarItem) -> some View {
         // 마커와 글자 사이 — 붙어 있으면 원·사각이 제목의 첫 글자처럼 읽힌다.
         HStack(alignment: .center, spacing: Spacing.sm) {
-            // 미완료 할일의 원은 **완료 버튼**이다 — LA 체크박스와 같은 문법
-            // (`CompleteReminderIntent`는 앱 프로세스에서 돌아 EventKit 완료 후 캘린더
-            // 위젯들을 갱신한다). 제목 쪽 탭은 지금처럼 앱을 연다.
+            // 미완료 할일의 원은 **완료 버튼**이다 — LA 체크박스와 같은 문법.
+            // LA의 인텐트가 아니라 위젯 전용(`CompleteReminderWidgetIntent`)을 쓴다 —
+            // LA 쪽은 앱 프로세스에서 돌아 콜드 런치가 끼면 완료가 수 초 늦었다.
+            // 제목 쪽 탭은 지금처럼 앱을 연다.
             if item.supportsCompletion, let reminderID = item.reminderID {
-                Button(intent: CompleteReminderIntent(reminderID: reminderID)) {
+                Button(intent: CompleteReminderWidgetIntent(reminderID: reminderID)) {
                     marker(for: item)
                         // 탭 영역을 마커(16pt)보다 넓게 — 위젯 버튼은 한 번에 맞히기 어렵다.
                         .padding(Spacing.xs)
@@ -83,6 +84,9 @@ struct WidgetItemListView: View {
                 // 패딩이 레이아웃을 밀지 않게 마커 크기만 차지한다 — 버튼이 아닌 행과
                 // 제목 시작점이 같아야 목록이 한 줄로 읽힌다.
                 .frame(width: Self.markerDiameter, height: Self.markerDiameter)
+                // 탭 즉시 시스템이 이 영역을 "갱신 중"으로 표시한다 — 새 타임라인이
+                // 오기 전까지 화면이 그대로면 눌린 건지 알 수 없다.
+                .invalidatableContent()
             } else {
                 marker(for: item)
             }
