@@ -5,7 +5,6 @@
 
 @preconcurrency import ActivityKit
 import AppIntents
-import EventKit
 import Foundation
 import WidgetKit
 
