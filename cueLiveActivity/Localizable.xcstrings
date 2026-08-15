@@ -1906,7 +1906,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "예정된 할 일 없음"
+            "value" : "예정된 할일 없음"
           }
         },
         "ms" : {
@@ -3115,7 +3115,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "구독하면 일정과 할 일이 표시됩니다"
+            "value" : "구독하면 일정과 할일이 표시됩니다"
           }
         },
         "ms" : {
@@ -3720,7 +3720,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다가오는 할 일"
+            "value" : "다가오는 할일"
           }
         },
         "ms" : {
