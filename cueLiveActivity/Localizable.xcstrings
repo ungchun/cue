@@ -365,7 +365,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Journée"
+            "value" : "Jour entier"
           }
         },
         "hi" : {
@@ -795,7 +795,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "미리알림 완료"
+            "value" : "할일 완료"
           }
         },
         "ms" : {
@@ -2024,7 +2024,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нет предстоящих пунктов"
+            "value" : "Нет предстоящих элементов"
           }
         },
         "th" : {
@@ -3139,7 +3139,7 @@
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "สมัครสมาชิกเพื่อดูกิจกรรมและการเตือน"
+            "value" : "สมัครสมาชิกเพื่อดูกิจกรรมและรายการเตือน"
           }
         },
         "vi" : {
@@ -3638,7 +3638,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Предстоящие пункты"
+            "value" : "Предстоящие элементы"
           }
         },
         "th" : {
