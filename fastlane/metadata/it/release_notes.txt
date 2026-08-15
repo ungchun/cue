@@ -1,1 +1,1 @@
-Quattro nuovi widget per la schermata Home: eventi o promemoria in arrivo accanto a un calendario mensile, un calendario piccolo e un grande widget di oggi. E tanti ritocchi visivi. Se qualcosa non va, faccelo sapere in qualsiasi momento.
+Abbiamo corretto bug nascosti e migliorato la stabilità. Se qualcosa non va, faccelo sapere in qualsiasi momento: leggiamo ogni messaggio e continuiamo a migliorare.

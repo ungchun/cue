@@ -1,1 +1,1 @@
-Bốn tiện ích màn hình chính mới: sự kiện hoặc lời nhắc sắp tới bên cạnh lịch tháng, lịch nhỏ gọn và tiện ích hiển thị ngày hôm nay cỡ lớn. Cùng nhiều cải tiến hiển thị. Nếu có điều gì bất tiện, hãy cho chúng tôi biết bất cứ lúc nào.
+Đã sửa các lỗi ẩn và cải thiện độ ổn định. Nếu có điều gì bất tiện, hãy cho chúng tôi biết bất cứ lúc nào — chúng tôi đọc từng phản hồi và không ngừng cải thiện.

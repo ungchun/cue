@@ -1,1 +1,1 @@
-Quatre nouveaux widgets d'écran d'accueil : vos événements ou rappels à venir à côté d'un calendrier mensuel, un petit calendrier et un grand widget du jour. Avec de nombreuses finitions visuelles. Si quelque chose vous gêne, dites-le-nous à tout moment.
+Correction de bugs cachés et amélioration de la stabilité. Si quelque chose vous gêne, dites-le-nous à tout moment : nous lisons chaque message et continuons d'améliorer l'app.
