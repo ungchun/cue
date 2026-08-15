@@ -157,6 +157,8 @@ enum WidgetCalendarDataSource {
                 // 마감 "날짜만" 지정한 할일은 컴포넌트에 hour가 없다 — `date`로 굽는 순간
                 // 자정이 되므로, 시각 유무는 여기서만 알 수 있다(목록이 "0:00"을 걸러낼 근거).
                 hasTime: reminder.dueDateComponents?.hour != nil,
+                // 완료 인텐트용 원본 식별자 — 표시 `id`는 회차 구분용 합성값이라 따로 싣는다.
+                reminderID: reminder.calendarItemIdentifier,
                 isCompleted: reminder.isCompleted
             )
         }

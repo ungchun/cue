@@ -6,6 +6,7 @@
 //  무엇을 담을지는 `UpcomingItemPicker`가 정하고, 여기서는 그리기만 한다.
 //
 
+import AppIntents
 import SwiftUI
 
 struct WidgetItemListView: View {
@@ -68,7 +69,23 @@ struct WidgetItemListView: View {
     private func row(_ item: WidgetCalendarItem) -> some View {
         // 마커와 글자 사이 — 붙어 있으면 원·사각이 제목의 첫 글자처럼 읽힌다.
         HStack(alignment: .center, spacing: Spacing.sm) {
-            marker(for: item)
+            // 미완료 할일의 원은 **완료 버튼**이다 — LA 체크박스와 같은 문법
+            // (`CompleteReminderIntent`는 앱 프로세스에서 돌아 EventKit 완료 후 캘린더
+            // 위젯들을 갱신한다). 제목 쪽 탭은 지금처럼 앱을 연다.
+            if item.supportsCompletion, let reminderID = item.reminderID {
+                Button(intent: CompleteReminderIntent(reminderID: reminderID)) {
+                    marker(for: item)
+                        // 탭 영역을 마커(16pt)보다 넓게 — 위젯 버튼은 한 번에 맞히기 어렵다.
+                        .padding(Spacing.xs)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                // 패딩이 레이아웃을 밀지 않게 마커 크기만 차지한다 — 버튼이 아닌 행과
+                // 제목 시작점이 같아야 목록이 한 줄로 읽힌다.
+                .frame(width: Self.markerDiameter, height: Self.markerDiameter)
+            } else {
+                marker(for: item)
+            }
             // 제목과 시각은 **한 덩어리**로 붙어 읽혀야 한다. 음수 간격인 건 글자 줄
             // 상자에 위아래 여백이 이미 들어 있어서다 — 0으로 두면 그 여백만큼 떠 보인다.
             VStack(alignment: .leading, spacing: -Spacing.xs) {
