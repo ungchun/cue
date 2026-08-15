@@ -29,6 +29,7 @@ struct cueLiveActivityBundle: WidgetBundle {
         // 큰 위젯 뒤에 medium·small — 갤러리에서 크기가 큰 것부터 작은 것 순으로 내려간다.
         CalendarEventListWidget()
         CalendarReminderListWidget()
+        CalendarUpcomingListWidget()
         SmallCalendarWidget()
         TodayWidget()
     }

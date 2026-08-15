@@ -71,6 +71,25 @@ struct UpcomingItemPickerTests {
         #expect(picked.map(\.id) == ["soon", "later"])
     }
 
+    /// 합본(다가오는 항목) 위젯 — 일정과 할일이 **한 목록에서 시간순으로 섞인다**.
+    /// 종류별 묶음이 아니라 순수 시간 순서다: 할일이 일정 사이에 끼어들 수 있어야 한다.
+    @Test func mergesEventsAndRemindersInTimeOrder() {
+        let meeting = item(id: "meeting", .timedEvent, start: date(day: 13, hour: 15), end: date(day: 13, hour: 16))
+        let todo = item(id: "todo", .reminder, start: date(day: 13, hour: 17))
+        let dinner = item(id: "dinner", .timedEvent, start: date(day: 13, hour: 19), end: date(day: 13, hour: 20))
+        let tomorrowTodo = item(id: "tmr-todo", .reminder, start: date(day: 14, hour: 9))
+
+        let picked = UpcomingItemPicker.items(
+            from: snapshot([dinner, tomorrowTodo, meeting, todo]),
+            kinds: [.timedEvent, .allDayEvent, .reminder],
+            now: now,
+            limit: 4,
+            calendar: calendar
+        )
+
+        #expect(picked.map(\.id) == ["meeting", "todo", "dinner", "tmr-todo"])
+    }
+
     /// **진행 중**인 일정은 남는다 — 시작은 지났어도 아직 끝나지 않았으면 지금의 관심사다.
     @Test func keepsAnEventThatIsStillRunning() {
         let running = item(id: "running", .timedEvent, start: date(day: 13, hour: 13), end: date(day: 13, hour: 15))

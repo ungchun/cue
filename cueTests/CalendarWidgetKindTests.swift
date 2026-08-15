@@ -14,16 +14,17 @@ import Testing
 /// `WidgetRangeKind`가 알지만 고정형은 대응 case가 없어 이 목록이 유일한 단일 출처다.
 struct CalendarWidgetKindTests {
 
-    /// 등록된 캘린더 위젯 8종이 빠짐없이 들어 있어야 한다 — 하나라도 빠지면 그 위젯만
+    /// 등록된 캘린더 위젯 9종이 빠짐없이 들어 있어야 한다 — 하나라도 빠지면 그 위젯만
     /// 조용히 낡은 그림을 들고 있게 되고, 목록을 보는 쪽에서는 알 방법이 없다.
     @Test func coversEveryCalendarWidget() {
-        #expect(CalendarWidgetKind.all.count == 8)
+        #expect(CalendarWidgetKind.all.count == 9)
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.monthFixed"))
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.month"))
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.threeDay"))
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.oneDay"))
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.eventList"))
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.reminderList"))
+        #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.upcomingItems"))
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.smallMonth"))
         #expect(CalendarWidgetKind.all.contains("azhy.cue.widget.today"))
     }
@@ -46,6 +47,7 @@ struct CalendarWidgetKindTests {
             "azhy.cue.widget.monthFixed",
             "azhy.cue.widget.eventList",
             "azhy.cue.widget.reminderList",
+            "azhy.cue.widget.upcomingItems",
             "azhy.cue.widget.smallMonth",
             "azhy.cue.widget.today",
         ])

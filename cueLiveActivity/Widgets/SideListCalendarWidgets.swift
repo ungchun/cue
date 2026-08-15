@@ -41,18 +41,37 @@ struct CalendarReminderListWidget: Widget {
     }
 }
 
-/// 두 사이드 리스트 위젯이 공유하는 본문.
+/// 이번 달 격자 + 다가오는 **일정·할일 합본** 목록 — 시간순으로 섞인다. 유료.
+struct CalendarUpcomingListWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(
+            kind: CalendarWidgetKind.upcomingItems,
+            provider: CalendarWidgetProvider(range: .upcoming, requiresPremium: true)
+        ) { entry in
+            SideListEntryView(entry: entry, mode: .combined)
+        }
+        .configurationDisplayName(widgetGalleryName("Upcoming Items", requiresPremium: true))
+        .description("")
+        .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()
+    }
+}
+
+/// 사이드 리스트 위젯들이 공유하는 본문.
 struct SideListEntryView: View {
 
     /// 오른쪽 목록에 무엇을 담는지 — 위젯 두 종을 가르는 유일한 축.
     enum Mode {
         case events
         case reminders
+        /// 일정 + 할일 합본 — 시간순으로 섞인다(정렬은 `UpcomingItemPicker`가 한다).
+        case combined
 
         var kinds: Set<WidgetCalendarItem.Kind> {
             switch self {
             case .events: return [.allDayEvent, .timedEvent]
             case .reminders: return [.reminder]
+            case .combined: return [.allDayEvent, .timedEvent, .reminder]
             }
         }
 
@@ -60,6 +79,7 @@ struct SideListEntryView: View {
             switch self {
             case .events: return "No upcoming events"
             case .reminders: return "No upcoming reminders"
+            case .combined: return "No upcoming items"
             }
         }
     }
@@ -80,7 +100,9 @@ struct SideListEntryView: View {
     }
 
     /// 격자에 그릴 표시 월의 항목 — **일 숫자 키**로 눕힌다(월 위젯과 같은 규칙).
+    /// 잠긴 위젯은 빈 격자 — 항목이 비쳐 보이면 잠글 이유가 없다(월 위젯과 같은 규칙).
     private var itemsByDay: [Int: [WidgetCalendarItem]] {
+        guard !entry.isLocked else { return [:] }
         var result: [Int: [WidgetCalendarItem]] = [:]
         for (day, items) in entry.snapshot.itemsByDay {
             let parts = calendar.dateComponents([.year, .month, .day], from: day)
@@ -94,9 +116,10 @@ struct SideListEntryView: View {
         Set(itemsByDay.filter { $0.value.contains(where: \.isHoliday) }.keys)
     }
 
-    /// 오른쪽 목록에 세울 항목 — 지금 이후로 다가오는 순.
+    /// 오른쪽 목록에 세울 항목 — 지금 이후로 다가오는 순. 잠긴 위젯은 빈 목록.
     private var listItems: [WidgetCalendarItem] {
-        UpcomingItemPicker.items(
+        guard !entry.isLocked else { return [] }
+        return UpcomingItemPicker.items(
             from: entry.snapshot,
             kinds: mode.kinds,
             now: entry.date,
@@ -164,6 +187,8 @@ struct SideListEntryView: View {
             }
         }
         .dynamicTypeSize(.xSmall)
+        // 무료 사용자의 유료 위젯은 격자·날짜는 비치되 항목 없이 잠금 안내가 덮인다.
+        .premiumLocked(entry.isLocked)
         .calendarWidgetBackground(colorScheme)
     }
 
