@@ -107,6 +107,17 @@ struct EventDetailSheet: View {
                             Text("Delete Event")
                                 .frame(maxWidth: .infinity)
                         }
+                        // 다이얼로그는 **여는 버튼에** 붙인다 — 루트(Form)에 붙이면 앵커가
+                        // 버튼과 무관한 자리라 확인 창이 화면 중간에 동떠 보인다(실기기).
+                        // 삭제 — 반복이면 범위까지 묻는다.
+                        .confirmationDialog("Delete Event", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+                            if editingEvent?.hasRecurrenceRules == true {
+                                Button("Delete This Event Only", role: .destructive) { delete(span: .thisEvent) }
+                                Button("Delete All Future Events", role: .destructive) { delete(span: .futureEvents) }
+                            } else {
+                                Button("Delete Event", role: .destructive) { delete(span: .thisEvent) }
+                            }
+                        }
                     }
                 }
             }
@@ -139,23 +150,15 @@ struct EventDetailSheet: View {
                     }
                     .buttonStyle(.glassProminent)
                     .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    // 반복 이벤트 저장 범위 — Apple 캘린더와 동일한 질문. 여는 버튼(저장)에
+                    // 붙여야 그 위에 앵커된다(삭제 다이얼로그와 같은 이유).
+                    .confirmationDialog("This is a repeating event.", isPresented: $showingSaveSpanDialog, titleVisibility: .visible) {
+                        Button("Save for This Event Only") { save(span: .thisEvent) }
+                        Button("Save for Future Events") { save(span: .futureEvents) }
+                    }
                 }
             }
             .keyboardDismissToolbar()
-            // 반복 이벤트 저장 범위 — Apple 캘린더와 동일한 질문.
-            .confirmationDialog("This is a repeating event.", isPresented: $showingSaveSpanDialog, titleVisibility: .visible) {
-                Button("Save for This Event Only") { save(span: .thisEvent) }
-                Button("Save for Future Events") { save(span: .futureEvents) }
-            }
-            // 삭제 — 반복이면 범위까지 묻는다.
-            .confirmationDialog("Delete Event", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
-                if editingEvent?.hasRecurrenceRules == true {
-                    Button("Delete This Event Only", role: .destructive) { delete(span: .thisEvent) }
-                    Button("Delete All Future Events", role: .destructive) { delete(span: .futureEvents) }
-                } else {
-                    Button("Delete Event", role: .destructive) { delete(span: .thisEvent) }
-                }
-            }
             .alert("Error", isPresented: errorBinding) {
                 Button("OK", role: .cancel) {}
             } message: {
