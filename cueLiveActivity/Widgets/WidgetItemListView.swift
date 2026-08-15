@@ -84,9 +84,8 @@ struct WidgetItemListView: View {
                 // 패딩이 레이아웃을 밀지 않게 마커 크기만 차지한다 — 버튼이 아닌 행과
                 // 제목 시작점이 같아야 목록이 한 줄로 읽힌다.
                 .frame(width: Self.markerDiameter, height: Self.markerDiameter)
-                // 탭 즉시 시스템이 이 영역을 "갱신 중"으로 표시한다 — 새 타임라인이
-                // 오기 전까지 화면이 그대로면 눌린 건지 알 수 없다.
-                .invalidatableContent()
+                // `invalidatableContent()`는 쓰지 않는다 — 버튼별이 아니라 **위젯 단위**로
+                // 무효화가 걸려, 하나를 탭해도 표시된 원 네 개가 전부 깜빡였다(실기기).
             } else {
                 marker(for: item)
             }
