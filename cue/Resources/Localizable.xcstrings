@@ -10963,102 +10963,102 @@
         }
       }
     },
-    "Go to the ‘Automation’ tab in the Shortcuts app and create a new automation." : {
+    "Open the Shortcuts app and create a new automation in the ‘Automation’ tab." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "انتقل إلى علامة التبويب ‘الأتمتة’ في تطبيق الاختصارات وأنشئ أتمتة جديدة."
+            "value" : "افتح تطبيق الاختصارات وأنشئ أتمتة جديدة في علامة التبويب «الأتمتة»."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gehe in der Kurzbefehle-App zum Tab „Automation“ und erstelle eine neue Automation."
+            "value" : "Öffne die Kurzbefehle-App und erstelle im Tab „Automation“ eine neue Automation."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ve a la pestaña ‘Automatización’ en la app Atajos y crea una nueva automatización."
+            "value" : "Abre la app Atajos y crea una automatización en la pestaña ‘Automatización’."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allez dans l'onglet « Automatisation » de l'app Raccourcis et créez une nouvelle automatisation."
+            "value" : "Ouvrez l’app Raccourcis et créez une automatisation dans l’onglet « Automatisation »."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "शॉर्टकट ऐप में ‘ऑटोमेशन’ टैब पर जाएं और नया ऑटोमेशन बनाएं।"
+            "value" : "Shortcuts ऐप खोलें और ‘Automation’ टैब में नई ऑटोमेशन बनाएं।"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka tab ‘Otomasi’ di aplikasi Pintasan dan buat otomasi baru."
+            "value" : "Buka app Pintasan dan buat otomasi baru di tab ‘Otomasi’."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vai alla scheda ‘Automazione’ nell'app Comandi Rapidi e crea una nuova automazione."
+            "value" : "Apri l’app Comandi Rapidi e crea una nuova automazione nel pannello “Automazione”."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ショートカットアプリの「オートメーション」タブを開き、新しいオートメーションを作成します。"
+            "value" : "ショートカットAppを開き、「オートメーション」タブで新規オートメーションを作成します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "단축어 앱의 ‘자동화’ 탭으로 이동하여 새로운 자동화를 생성합니다."
+            "value" : "단축어 앱을 열고 ‘자동화’ 탭에서 새 자동화를 만드세요."
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pergi ke tab ‘Automasi’ dalam aplikasi Pintasan dan cipta automasi baharu."
+            "value" : "Buka app Pintasan dan cipta automasi baharu dalam tab ‘Automasi’."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vá até a aba ‘Automação’ no app Atalhos e crie uma nova automação."
+            "value" : "Abra o app Atalhos e crie uma automação na aba ‘Automação’."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Откройте вкладку «Автоматизация» в приложении «Быстрые команды» и создайте новую автоматизацию."
+            "value" : "Откройте приложение «Команды» и создайте новую автоматизацию во вкладке «Автоматизация»."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ไปที่แท็บ ‘ระบบอัตโนมัติ’ ในแอปทางลัดแล้วสร้างระบบอัตโนมัติใหม่"
+            "value" : "เปิดแอปคำสั่งลัด แล้วสร้างการทำงานอัตโนมัติใหม่ในแท็บ ‘การทำงานอัตโนมัติ’"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vào tab ‘Tự động hóa’ trong ứng dụng Phím tắt và tạo tự động hóa mới."
+            "value" : "Mở ứng dụng Phím tắt và tạo tự động hóa mới trong thẻ ‘Tự động hóa’."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开“快捷指令”App 的“自动化”标签，新建一个自动化。"
+            "value" : "打开“快捷指令”App，在“自动化”标签页中创建新的自动化。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打開「捷徑」App 的「自動化操作」標籤頁，並建立新的自動化操作。"
+            "value" : "開啟「捷徑」App，在「自動化」標籤頁中建立新的自動化。"
           }
         }
       }
@@ -19190,102 +19190,102 @@
         }
       }
     },
-    "Repeat twice more to create three automations running 8 hours apart. e.g. 00:00, 08:00, 16:00" : {
+    "Repeat to create three automations 8 hours apart. e.g. 00:01, 08:01, 16:01" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "كرّر العملية مرتين أخريين لإنشاء ثلاث أتمتات تعمل بفارق 8 ساعات. مثال: 00:00، 08:00، 16:00"
+            "value" : "كرر الخطوات لإنشاء ثلاث أتمتات بفارق 8 ساعات. مثال: 00:01، 08:01، 16:01"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wiederhole das zweimal, um drei Automationen im Abstand von 8 Stunden zu erstellen. Z. B. 00:00, 08:00, 16:00"
+            "value" : "Wiederhole das Ganze, bis drei Automationen im 8-Stunden-Abstand bestehen. z. B. 00:01, 08:01, 16:01"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Repite dos veces más para crear tres automatizaciones que se ejecuten con 8 horas de diferencia. Ej.: 00:00, 08:00, 16:00"
+            "value" : "Repite el proceso para crear tres automatizaciones con 8 horas de diferencia. P. ej.: 00:01, 08:01, 16:01"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Répétez deux fois de plus pour créer trois automatisations espacées de 8 heures. Ex. 00:00, 08:00, 16:00"
+            "value" : "Répétez l’opération pour créer trois automatisations espacées de 8 heures. Ex. : 00:01, 08:01, 16:01"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "8 घंटे के अंतर पर चलने वाले तीन ऑटोमेशन बनाने के लिए इसे दो बार और दोहराएं। जैसे 00:00, 08:00, 16:00"
+            "value" : "8 घंटे के अंतराल पर कुल तीन ऑटोमेशन बनाने के लिए दोहराएं। जैसे: 00:01, 08:01, 16:01"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ulangi dua kali lagi untuk membuat tiga otomasi yang berjalan dengan jarak 8 jam. mis. 00:00, 08:00, 16:00"
+            "value" : "Ulangi untuk membuat tiga otomasi berjarak 8 jam. cth: 00:01, 08:01, 16:01"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ripeti altre due volte per creare tre automazioni distanziate di 8 ore. Es.: 00:00, 08:00, 16:00"
+            "value" : "Ripeti per creare tre automazioni a distanza di 8 ore. Es.: 00:01, 08:01, 16:01"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同じ手順をあと2回繰り返し、8時間間隔で実行される3つのオートメーションを作成します。例）00:00、08:00、16:00"
+            "value" : "同じ手順で8時間おきのオートメーションを合計3つ作成します。例: 00:01、08:01、16:01"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "같은 과정을 두 번 더 반복하여 8시간 간격으로 실행되는 3개의 자동화를 만듭니다. 예) 00:00, 08:00, 16:00"
+            "value" : "같은 방법으로 8시간 간격 자동화를 두 개 더 만드세요. 예: 00:01, 08:01, 16:01"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ulang dua kali lagi untuk mencipta tiga automasi yang berjalan dengan jarak 8 jam. cth. 00:00, 08:00, 16:00"
+            "value" : "Ulang untuk mencipta tiga automasi berjarak 8 jam. cth: 00:01, 08:01, 16:01"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Repita mais duas vezes para criar três automações executadas com 8 horas de intervalo. Ex.: 00:00, 08:00, 16:00"
+            "value" : "Repita para criar três automações com 8 horas de intervalo. Ex.: 00:01, 08:01, 16:01"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Повторите ещё дважды, чтобы создать три автоматизации с интервалом 8 часов. Напр., 00:00, 08:00, 16:00"
+            "value" : "Повторите, чтобы создать три автоматизации с интервалом 8 часов. Напр.: 00:01, 08:01, 16:01"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ทำซ้ำอีกสองครั้งเพื่อสร้างระบบอัตโนมัติสามชุดที่ทำงานห่างกัน 8 ชั่วโมง เช่น 00:00, 08:00, 16:00"
+            "value" : "ทำซ้ำเพื่อสร้างการทำงานอัตโนมัติ 3 รายการ ห่างกัน 8 ชั่วโมง เช่น 00:01, 08:01, 16:01"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lặp lại hai lần nữa để tạo ba tự động hóa chạy cách nhau 8 giờ. VD: 00:00, 08:00, 16:00"
+            "value" : "Lặp lại để tạo ba tự động hóa cách nhau 8 giờ. VD: 00:01, 08:01, 16:01"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "再重复两次，创建 3 个每隔 8 小时运行的自动化。例如 00:00、08:00、16:00"
+            "value" : "重复以上步骤，创建 3 个间隔 8 小时的自动化。例如：00:01、08:01、16:01"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "再重複兩次，建立 3 個每隔 8 小時執行的自動化操作。例如 00:00、08:00、16:00"
+            "value" : "重複以上步驟，建立 3 個間隔 8 小時的自動化。例如：00:01、08:01、16:01"
           }
         }
       }
@@ -20990,102 +20990,102 @@
         }
       }
     },
-    "Select Cue’s ‘Refresh Live’ from the list." : {
+    "On the next screen, search for “Cue” and select ‘Refresh Live’." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اختر ‘تحديث Live’ الخاص بـ Cue من القائمة."
+            "value" : "في الشاشة التالية، ابحث عن «Cue» واختر «تحديث Live»."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähle in der Liste „Live aktualisieren“ von cue aus."
+            "value" : "Suche im nächsten Bildschirm nach „Cue“ und wähle „Live aktualisieren“."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selecciona ‘Actualizar Live’ de Cue en la lista."
+            "value" : "En la siguiente pantalla, busca “Cue” y selecciona ‘Actualizar Live’."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sélectionnez « Actualiser Live » de cue dans la liste."
+            "value" : "Sur l’écran suivant, recherchez « Cue » et sélectionnez « Actualiser Live »."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "सूची में से Cue का ‘Live रिफ़्रेश करें’ चुनें।"
+            "value" : "अगली स्क्रीन पर “Cue” खोजें और ‘Live रिफ़्रेश करें’ चुनें।"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pilih ‘Segarkan Live’ milik Cue dari daftar."
+            "value" : "Di layar berikutnya, cari “Cue” dan pilih ‘Segarkan Live’."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seleziona ‘Aggiorna Live’ di Cue dall'elenco."
+            "value" : "Nella schermata successiva cerca “Cue” e seleziona “Aggiorna Live”."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "リストから Cue の「Liveを更新」を選択します。"
+            "value" : "次の画面の検索欄に「Cue」と入力し、「Liveを更新」を選択します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "목록에서 Cue의 ‘라이브 새로고침’을 선택합니다."
+            "value" : "다음 화면의 검색창에 “Cue”를 입력하고 ‘라이브 새로고침’을 선택하세요."
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pilih ‘Segarkan Live’ Cue dari senarai."
+            "value" : "Pada skrin seterusnya, cari “Cue” dan pilih ‘Segarkan Live’."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Selecione ‘Atualizar Live’ do Cue na lista."
+            "value" : "Na próxima tela, busque “Cue” e selecione ‘Atualizar Live’."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Выберите «Обновить Live» от cue в списке."
+            "value" : "На следующем экране найдите «Cue» и выберите «Обновить Live»."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เลือก ‘รีเฟรช Live’ ของ Cue จากรายการ"
+            "value" : "ในหน้าถัดไป ค้นหา “Cue” แล้วเลือก ‘รีเฟรช Live’"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chọn ‘Làm mới Live’ của Cue từ danh sách."
+            "value" : "Ở màn hình tiếp theo, tìm “Cue” và chọn ‘Làm mới Live’."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在列表中选择 Cue 的“刷新 Live”。"
+            "value" : "在下一个页面的搜索栏输入“Cue”，然后选择“刷新 Live”。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在列表中選擇 Cue 的「重新整理 Live」。"
+            "value" : "在下一個畫面的搜尋欄輸入「Cue」，然後選擇「重新整理 Live」。"
           }
         }
       }
@@ -25505,102 +25505,102 @@
         }
       }
     },
-    "Under ‘Time of Day’, choose ‘Daily’ and ‘Run Immediately’." : {
+    "Choose ‘Time of Day’, set a time, then select ‘Daily’ and ‘Run Immediately’." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ضمن ‘وقت اليوم’، اختر ‘يومياً’ و‘التشغيل فوراً’."
+            "value" : "اختر «وقت من اليوم»، وحدد الوقت، ثم اختر «يوميًا» و«تشغيل فورًا»."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wähle unter „Tageszeit“ die Optionen „Täglich“ und „Sofort ausführen“."
+            "value" : "Wähle „Tageszeit“, lege eine Uhrzeit fest und wähle dann „Täglich“ und „Sofort ausführen“."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En ‘Hora del día’, elige ‘Cada día’ y ‘Ejecutar inmediatamente’."
+            "value" : "Elige ‘Hora del día’, define una hora y selecciona ‘Diariamente’ y ‘Ejecutar de inmediato’."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sous « Heure de la journée », choisissez « Tous les jours » et « Exécuter immédiatement »."
+            "value" : "Choisissez « Heure de la journée », définissez une heure, puis sélectionnez « Tous les jours » et « Exécuter immédiatement »."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "‘समय’ के अंतर्गत ‘रोज़ाना’ और ‘तुरंत चलाएं’ चुनें।"
+            "value" : "‘Time of Day’ चुनें, समय सेट करें, फिर ‘Daily’ और ‘Run Immediately’ चुनें।"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Di bagian ‘Waktu Hari’, pilih ‘Harian’ dan ‘Jalankan Segera’."
+            "value" : "Pilih ‘Waktu’, atur jam, lalu pilih ‘Harian’ dan ‘Jalankan Segera’."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In ‘Ora del giorno’, scegli ‘Ogni giorno’ e ‘Esegui subito’."
+            "value" : "Scegli “Ora del giorno”, imposta un orario, poi seleziona “Ogni giorno” e “Esegui subito”."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「時刻」で「毎日」と「すぐに実行」を選択します。"
+            "value" : "「時刻」を選んで時間を設定し、「毎日」と「すぐに実行」を選択します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "‘특정 시간’에서 ‘매일’, ‘즉시 실행’을 선택합니다."
+            "value" : "‘특정 시간’을 선택하고 시각을 정한 뒤, ‘매일’과 ‘즉시 실행’을 선택하세요."
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Di bahagian ‘Masa Hari’, pilih ‘Harian’ dan ‘Jalankan Segera’."
+            "value" : "Pilih ‘Masa Hari’, tetapkan masa, kemudian pilih ‘Harian’ dan ‘Jalankan Serta-merta’."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Em ‘Hora do dia’, escolha ‘Diariamente’ e ‘Executar imediatamente’."
+            "value" : "Escolha ‘Horário’, defina um horário e selecione ‘Diariamente’ e ‘Executar Imediatamente’."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "В разделе «Время дня» выберите «Ежедневно» и «Выполнить сразу»."
+            "value" : "Выберите «Время суток», задайте время, затем выберите «Ежедневно» и «Выполнять сразу»."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ใต้ ‘เวลาของวัน’ เลือก ‘รายวัน’ และ ‘เรียกใช้ทันที’"
+            "value" : "เลือก ‘เวลาของวัน’ ตั้งเวลา แล้วเลือก ‘ทุกวัน’ และ ‘เรียกใช้ทันที’"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trong ‘Thời gian trong ngày’, chọn ‘Hằng ngày’ và ‘Chạy ngay’."
+            "value" : "Chọn ‘Thời gian trong ngày’, đặt giờ, rồi chọn ‘Hằng ngày’ và ‘Chạy ngay’."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在“时刻”中选择“每天”和“立即运行”。"
+            "value" : "选择“特定时间”，设定时间后选择“每天”和“立即运行”。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在「時刻」中選擇「每天」和「立即執行」。"
+            "value" : "選擇「特定時間」，設定時間後選擇「每天」和「立即執行」。"
           }
         }
       }

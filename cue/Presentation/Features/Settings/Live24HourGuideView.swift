@@ -75,10 +75,10 @@ struct Live24HourGuideView: View {
 
     private var steps: some View {
         VStack(alignment: .leading, spacing: Spacing.smd) {
-            stepRow(1, "Go to the ‘Automation’ tab in the Shortcuts app and create a new automation.")
-            stepRow(2, "Under ‘Time of Day’, choose ‘Daily’ and ‘Run Immediately’.")
-            stepRow(3, "Select Cue’s ‘Refresh Live’ from the list.")
-            stepRow(4, "Repeat twice more to create three automations running 8 hours apart. e.g. 00:00, 08:00, 16:00")
+            stepRow(1, "Open the Shortcuts app and create a new automation in the ‘Automation’ tab.")
+            stepRow(2, "Choose ‘Time of Day’, set a time, then select ‘Daily’ and ‘Run Immediately’.")
+            stepRow(3, "On the next screen, search for “Cue” and select ‘Refresh Live’.")
+            stepRow(4, "Repeat to create three automations 8 hours apart. e.g. 00:01, 08:01, 16:01")
         }
     }
 
