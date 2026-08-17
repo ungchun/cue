@@ -168,6 +168,7 @@ struct SideListEntryView: View {
                     WidgetItemListView(
                         items: listItems,
                         emptyText: mode.emptyText,
+                        now: entry.date,
                         calendar: calendar
                     )
                     // 왼쪽 격자와 붙어 보이지 않게 띄운다 — 두 영역을 가르는 선이 없어서

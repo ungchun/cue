@@ -70,4 +70,13 @@ struct WidgetCalendarItem: Identifiable, Hashable, Sendable {
     /// 목록의 마커를 완료 버튼으로 감쌀지 — 미완료 할일이면서 인텐트에 넘길
     /// EventKit 식별자가 있을 때만. 표본(갤러리)·일정·완료된 항목은 해당 없다.
     var supportsCompletion: Bool { kind == .reminder && reminderID != nil && !isCompleted }
+
+    /// 마감 시각이 지났는데 아직 안 한 할일인지 — 목록의 시각 줄을 빨갛게 칠할 근거.
+    ///
+    /// 할일만의 개념이다: 시간 일정은 끝나면 목록에서 빠지고(→ `UpcomingItemPicker`),
+    /// 오늘 마감 할일은 지나도 남는다 — 남았는데 시각이 평소 색이면 "아직 안 지났다"로
+    /// 읽힌다. 날짜만 지정한 할일은 자정이 마감 시각이 아니므로 하루 안에는 늦지 않았다.
+    func isOverdue(now: Date) -> Bool {
+        kind == .reminder && !isCompleted && hasTime && start < now
+    }
 }

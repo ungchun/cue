@@ -13,6 +13,8 @@ struct WidgetItemListView: View {
     let items: [WidgetCalendarItem]
     /// 항목이 하나도 없을 때 띄울 문구 — "오늘 일정 없음" / "할 일 없음".
     let emptyText: LocalizedStringKey
+    /// 지남(overdue) 판정 기준 시각 — 타임라인 entry의 시각을 그대로 받는다.
+    let now: Date
     let calendar: Calendar
 
     var body: some View {
@@ -105,9 +107,12 @@ struct WidgetItemListView: View {
                 Text(WidgetItemListView.timeText(for: item, calendar: calendar))
                     // 시각은 보조 정보라 제목보다 두 단계 아래로 둔다.
                     .font(.caption2)
-                    // `.secondary`는 이 크기에서 너무 흐려 시각이 읽히지 않는다.
-                    // 본문색을 직접 낮춰 쓴다 — 제목보다는 물러나되 읽히는 선을 지킨다.
-                    .foregroundStyle(Color.primary.opacity(0.65))
+                    // 마감이 지난 할일은 시각을 빨갛게 — 오늘 마감은 시각이 지나도 목록에
+                    // 남는데(→ `UpcomingItemPicker`) 평소 색이면 "아직 안 지났다"로 읽힌다.
+                    // 평소엔 `.secondary`가 이 크기에서 너무 흐려 본문색을 직접 낮춰 쓴다.
+                    .foregroundStyle(
+                        item.isOverdue(now: now) ? Color.red : Color.primary.opacity(0.65)
+                    )
                     .lineLimit(1)
             }
             Spacer(minLength: Spacing.zero)
