@@ -7,106 +7,6 @@
     " " : {
       "shouldTranslate" : false
     },
-    "Lives for the items you turn on appear automatically when you open Cue." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تظهر Live للعناصر المفعّلة تلقائيًا عند فتح Cue."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lives für aktivierte Einträge werden beim Öffnen von Cue automatisch angezeigt."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Los Lives de los elementos activados se muestran automáticamente al abrir Cue."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Les Lives des éléments activés s'affichent automatiquement à l'ouverture de Cue."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "चालू किए गए आइटम के Live, Cue खोलने पर अपने आप दिखाई देते हैं।"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live untuk item yang diaktifkan muncul otomatis saat membuka Cue."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "I Live degli elementi attivati vengono mostrati automaticamente all'apertura di Cue."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オンにした項目のライブは、Cueを開くと自動的に表示されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "켠 항목의 라이브가 앱을 열 때 자동으로 표시됩니다."
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live untuk item yang diaktifkan dipaparkan secara automatik apabila membuka Cue."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Os Lives dos itens ativados aparecem automaticamente ao abrir o Cue."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live для включённых пунктов появляются автоматически при открытии Cue."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live ของรายการที่เปิดไว้จะแสดงโดยอัตโนมัติเมื่อเปิด Cue"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Live của các mục đã bật sẽ tự động hiển thị khi mở Cue."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开 Cue 时，已开启项目的 Live 会自动显示。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開啟 Cue 時，已開啟項目的 Live 會自動顯示。"
-          }
-        }
-      }
-    },
     "·" : {
       "shouldTranslate" : false
     },
@@ -4256,6 +4156,106 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "看看你的鎖定畫面"
+          }
+        }
+      }
+    },
+    "Choose ‘Time of Day’, set a time, then select ‘Daily’ and ‘Run Immediately’." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اختر «وقت من اليوم»، وحدد الوقت، ثم اختر «يوميًا» و«تشغيل فورًا»."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle „Tageszeit“, lege eine Uhrzeit fest und wähle dann „Täglich“ und „Sofort ausführen“."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige ‘Hora del día’, define una hora y selecciona ‘Diariamente’ y ‘Ejecutar de inmediato’."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez « Heure de la journée », définissez une heure, puis sélectionnez « Tous les jours » et « Exécuter immédiatement »."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘Time of Day’ चुनें, समय सेट करें, फिर ‘Daily’ और ‘Run Immediately’ चुनें।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih ‘Waktu’, atur jam, lalu pilih ‘Harian’ dan ‘Jalankan Segera’."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli “Ora del giorno”, imposta un orario, poi seleziona “Ogni giorno” e “Esegui subito”."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「時刻」を選んで時間を設定し、「毎日」と「すぐに実行」を選択します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘특정 시간’을 선택하고 시각을 정한 뒤, ‘매일’과 ‘즉시 실행’을 선택하세요."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih ‘Masa Hari’, tetapkan masa, kemudian pilih ‘Harian’ dan ‘Jalankan Serta-merta’."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escolha ‘Horário’, defina um horário e selecione ‘Diariamente’ e ‘Executar Imediatamente’."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите «Время суток», задайте время, затем выберите «Ежедневно» и «Выполнять сразу»."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลือก ‘เวลาของวัน’ ตั้งเวลา แล้วเลือก ‘ทุกวัน’ และ ‘เรียกใช้ทันที’"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn ‘Thời gian trong ngày’, đặt giờ, rồi chọn ‘Hằng ngày’ và ‘Chạy ngay’."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择“特定时间”，设定时间后选择“每天”和“立即运行”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇「特定時間」，設定時間後選擇「每天」和「立即執行」。"
           }
         }
       }
@@ -11063,106 +11063,6 @@
         }
       }
     },
-    "Open the Shortcuts app and create a new automation in the ‘Automation’ tab." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "افتح تطبيق الاختصارات وأنشئ أتمتة جديدة في علامة التبويب «الأتمتة»."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Öffne die Kurzbefehle-App und erstelle im Tab „Automation“ eine neue Automation."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abre la app Atajos y crea una automatización en la pestaña ‘Automatización’."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ouvrez l’app Raccourcis et créez une automatisation dans l’onglet « Automatisation »."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shortcuts ऐप खोलें और ‘Automation’ टैब में नई ऑटोमेशन बनाएं।"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buka app Pintasan dan buat otomasi baru di tab ‘Otomasi’."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apri l’app Comandi Rapidi e crea una nuova automazione nel pannello “Automazione”."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ショートカットAppを開き、「オートメーション」タブで新規オートメーションを作成します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "단축어 앱을 열고 ‘자동화’ 탭에서 새 자동화를 만드세요."
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Buka app Pintasan dan cipta automasi baharu dalam tab ‘Automasi’."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abra o app Atalhos e crie uma automação na aba ‘Automação’."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Откройте приложение «Команды» и создайте новую автоматизацию во вкладке «Автоматизация»."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เปิดแอปคำสั่งลัด แล้วสร้างการทำงานอัตโนมัติใหม่ในแท็บ ‘การทำงานอัตโนมัติ’"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mở ứng dụng Phím tắt và tạo tự động hóa mới trong thẻ ‘Tự động hóa’."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开“快捷指令”App，在“自动化”标签页中创建新的自动化。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開啟「捷徑」App，在「自動化」標籤頁中建立新的自動化。"
-          }
-        }
-      }
-    },
     "Gray" : {
       "localizations" : {
         "ar" : {
@@ -12369,6 +12269,7 @@
       "shouldTranslate" : false
     },
     "Items" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -12467,9 +12368,6 @@
           }
         }
       }
-    },
-    "kind" : {
-      "shouldTranslate" : false
     },
     "Keeping your Live running 24 hours is a Premium feature." : {
       "localizations" : {
@@ -12570,6 +12468,9 @@
           }
         }
       }
+    },
+    "kind" : {
+      "shouldTranslate" : false
     },
     "Large" : {
       "localizations" : {
@@ -13979,6 +13880,106 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "即時動態已開啟"
+          }
+        }
+      }
+    },
+    "Selected items appear on your Lock Screen when you open Cue." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تظهر العناصر المحددة على شاشة القفل عند فتح Cue."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgewählte Einträge erscheinen beim Öffnen von Cue auf dem Sperrbildschirm."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los elementos seleccionados aparecen en la pantalla bloqueada al abrir Cue."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les éléments sélectionnés s'affichent sur l'écran verrouillé à l'ouverture de Cue."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चुने गए आइटम Cue खोलने पर लॉक स्क्रीन पर दिखाई देते हैं।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item yang dipilih muncul di Layar Kunci saat membuka Cue."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli elementi selezionati appaiono nella schermata di blocco all'apertura di Cue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択した項目は、Cueを開くとロック画面に表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택한 항목은 앱을 열 때 잠금화면에 표시됩니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item yang dipilih dipaparkan pada Skrin Kunci apabila membuka Cue."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os itens selecionados aparecem na Tela Bloqueada ao abrir o Cue."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбранные пункты появляются на экране блокировки при открытии Cue."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "รายการที่เลือกจะแสดงบนหน้าจอล็อกเมื่อเปิด Cue"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Các mục đã chọn sẽ hiển thị trên Màn hình khóa khi mở Cue."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 Cue 时，所选项目会显示在锁定屏幕上。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟 Cue 時，所選項目會顯示在鎖定畫面上。"
           }
         }
       }
@@ -16983,6 +16984,106 @@
         }
       }
     },
+    "On the next screen, search for “Cue” and select ‘Refresh Live’." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في الشاشة التالية، ابحث عن «Cue» واختر «تحديث Live»."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suche im nächsten Bildschirm nach „Cue“ und wähle „Live aktualisieren“."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En la siguiente pantalla, busca “Cue” y selecciona ‘Actualizar Live’."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur l’écran suivant, recherchez « Cue » et sélectionnez « Actualiser Live »."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अगली स्क्रीन पर “Cue” खोजें और ‘Live रिफ़्रेश करें’ चुनें।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di layar berikutnya, cari “Cue” dan pilih ‘Segarkan Live’."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nella schermata successiva cerca “Cue” e seleziona “Aggiorna Live”."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の画面の検索欄に「Cue」と入力し、「Liveを更新」を選択します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 화면의 검색창에 “Cue”를 입력하고 ‘라이브 새로고침’을 선택하세요."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pada skrin seterusnya, cari “Cue” dan pilih ‘Segarkan Live’."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na próxima tela, busque “Cue” e selecione ‘Atualizar Live’."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На следующем экране найдите «Cue» и выберите «Обновить Live»."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ในหน้าถัดไป ค้นหา “Cue” แล้วเลือก ‘รีเฟรช Live’"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ở màn hình tiếp theo, tìm “Cue” và chọn ‘Làm mới Live’."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在下一个页面的搜索栏输入“Cue”，然后选择“刷新 Live”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在下一個畫面的搜尋欄輸入「Cue」，然後選擇「重新整理 Live」。"
+          }
+        }
+      }
+    },
     "On the..." : {
       "localizations" : {
         "ar" : {
@@ -17679,6 +17780,106 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打開捷徑"
+          }
+        }
+      }
+    },
+    "Open the Shortcuts app and create a new automation in the ‘Automation’ tab." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "افتح تطبيق الاختصارات وأنشئ أتمتة جديدة في علامة التبويب «الأتمتة»."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffne die Kurzbefehle-App und erstelle im Tab „Automation“ eine neue Automation."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre la app Atajos y crea una automatización en la pestaña ‘Automatización’."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrez l’app Raccourcis et créez une automatisation dans l’onglet « Automatisation »."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts ऐप खोलें और ‘Automation’ टैब में नई ऑटोमेशन बनाएं।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka app Pintasan dan buat otomasi baru di tab ‘Otomasi’."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apri l’app Comandi Rapidi e crea una nuova automazione nel pannello “Automazione”."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカットAppを開き、「オートメーション」タブで新規オートメーションを作成します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단축어 앱을 열고 ‘자동화’ 탭에서 새 자동화를 만드세요."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka app Pintasan dan cipta automasi baharu dalam tab ‘Automasi’."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abra o app Atalhos e crie uma automação na aba ‘Automação’."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Откройте приложение «Команды» и создайте новую автоматизацию во вкладке «Автоматизация»."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เปิดแอปคำสั่งลัด แล้วสร้างการทำงานอัตโนมัติใหม่ในแท็บ ‘การทำงานอัตโนมัติ’"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở ứng dụng Phím tắt và tạo tự động hóa mới trong thẻ ‘Tự động hóa’."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开“快捷指令”App，在“自动化”标签页中创建新的自动化。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟「捷徑」App，在「自動化」標籤頁中建立新的自動化。"
           }
         }
       }
@@ -21086,106 +21287,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請先選擇一個列表。"
-          }
-        }
-      }
-    },
-    "On the next screen, search for “Cue” and select ‘Refresh Live’." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "في الشاشة التالية، ابحث عن «Cue» واختر «تحديث Live»."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suche im nächsten Bildschirm nach „Cue“ und wähle „Live aktualisieren“."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En la siguiente pantalla, busca “Cue” y selecciona ‘Actualizar Live’."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sur l’écran suivant, recherchez « Cue » et sélectionnez « Actualiser Live »."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "अगली स्क्रीन पर “Cue” खोजें और ‘Live रिफ़्रेश करें’ चुनें।"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Di layar berikutnya, cari “Cue” dan pilih ‘Segarkan Live’."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nella schermata successiva cerca “Cue” e seleziona “Aggiorna Live”."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "次の画面の検索欄に「Cue」と入力し、「Liveを更新」を選択します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다음 화면의 검색창에 “Cue”를 입력하고 ‘라이브 새로고침’을 선택하세요."
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pada skrin seterusnya, cari “Cue” dan pilih ‘Segarkan Live’."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Na próxima tela, busque “Cue” e selecione ‘Atualizar Live’."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "На следующем экране найдите «Cue» и выберите «Обновить Live»."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ในหน้าถัดไป ค้นหา “Cue” แล้วเลือก ‘รีเฟรช Live’"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ở màn hình tiếp theo, tìm “Cue” và chọn ‘Làm mới Live’."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在下一个页面的搜索栏输入“Cue”，然后选择“刷新 Live”。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在下一個畫面的搜尋欄輸入「Cue」，然後選擇「重新整理 Live」。"
           }
         }
       }
@@ -25601,106 +25702,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開啟即時訊息"
-          }
-        }
-      }
-    },
-    "Choose ‘Time of Day’, set a time, then select ‘Daily’ and ‘Run Immediately’." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اختر «وقت من اليوم»، وحدد الوقت، ثم اختر «يوميًا» و«تشغيل فورًا»."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wähle „Tageszeit“, lege eine Uhrzeit fest und wähle dann „Täglich“ und „Sofort ausführen“."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elige ‘Hora del día’, define una hora y selecciona ‘Diariamente’ y ‘Ejecutar de inmediato’."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisissez « Heure de la journée », définissez une heure, puis sélectionnez « Tous les jours » et « Exécuter immédiatement »."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "‘Time of Day’ चुनें, समय सेट करें, फिर ‘Daily’ और ‘Run Immediately’ चुनें।"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih ‘Waktu’, atur jam, lalu pilih ‘Harian’ dan ‘Jalankan Segera’."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Scegli “Ora del giorno”, imposta un orario, poi seleziona “Ogni giorno” e “Esegui subito”."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「時刻」を選んで時間を設定し、「毎日」と「すぐに実行」を選択します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "‘특정 시간’을 선택하고 시각을 정한 뒤, ‘매일’과 ‘즉시 실행’을 선택하세요."
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih ‘Masa Hari’, tetapkan masa, kemudian pilih ‘Harian’ dan ‘Jalankan Serta-merta’."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escolha ‘Horário’, defina um horário e selecione ‘Diariamente’ e ‘Executar Imediatamente’."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Выберите «Время суток», задайте время, затем выберите «Ежедневно» и «Выполнять сразу»."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เลือก ‘เวลาของวัน’ ตั้งเวลา แล้วเลือก ‘ทุกวัน’ และ ‘เรียกใช้ทันที’"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn ‘Thời gian trong ngày’, đặt giờ, rồi chọn ‘Hằng ngày’ và ‘Chạy ngay’."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择“特定时间”，设定时间后选择“每天”和“立即运行”。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇「特定時間」，設定時間後選擇「每天」和「立即執行」。"
           }
         }
       }

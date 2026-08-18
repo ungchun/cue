@@ -111,7 +111,7 @@ struct SettingsView: View {
             } footer: {
                 // 선택이 "잠금화면 게시"로 이어진다는 걸 여기서만 말할 수 있다 —
                 // 메뉴를 행으로 펴도 결과까지는 행이 못 말한다(VOC의 두 번째 절반).
-                sectionFooter("Lives for the items you turn on appear automatically when you open Cue.")
+                sectionFooter("Selected items appear on your Lock Screen when you open Cue.")
             }
 
             // 24시간 안내는 **헤더 없는 단독 섹션** — 라이브 섹션은 상태 설정(토글·값)만
