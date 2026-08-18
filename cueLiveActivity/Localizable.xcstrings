@@ -3578,7 +3578,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anstehende Termine & Erinnerungen"
+            "value" : "Termine & Erinnerungen"
           }
         },
         "es" : {
@@ -3638,13 +3638,13 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Предстоящие события и напоминания"
+            "value" : "События и напоминания"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "กิจกรรมและรายการเตือนที่กำลังจะมาถึง"
+            "value" : "กิจกรรมและรายการเตือน"
           }
         },
         "vi" : {
