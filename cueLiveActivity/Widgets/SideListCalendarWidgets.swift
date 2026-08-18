@@ -50,7 +50,7 @@ struct CalendarUpcomingListWidget: Widget {
         ) { entry in
             SideListEntryView(entry: entry, mode: .combined)
         }
-        .configurationDisplayName(widgetGalleryName("Upcoming Items", requiresPremium: true))
+        .configurationDisplayName(widgetGalleryName("Upcoming Events & Reminders", requiresPremium: true))
         .description("")
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()

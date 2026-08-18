@@ -3567,102 +3567,102 @@
         }
       }
     },
-    "Upcoming Items" : {
+    "Upcoming Events & Reminders" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "العناصر القادمة"
+            "value" : "الأحداث والتذكيرات القادمة"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anstehende Einträge"
+            "value" : "Anstehende Termine & Erinnerungen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Próximos elementos"
+            "value" : "Próximos eventos y recordatorios"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Éléments à venir"
+            "value" : "Événements et rappels à venir"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आगामी आइटम"
+            "value" : "आगामी इवेंट और रिमाइंडर"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Item Mendatang"
+            "value" : "Acara & Pengingat Mendatang"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elementi in arrivo"
+            "value" : "Eventi e promemoria in arrivo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今後の項目"
+            "value" : "今後の予定・リマインダー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다가오는 항목"
+            "value" : "다가오는 일정, 할일"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Item Akan Datang"
+            "value" : "Acara & Peringatan Akan Datang"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Próximos itens"
+            "value" : "Próximos eventos e lembretes"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Предстоящие элементы"
+            "value" : "Предстоящие события и напоминания"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "รายการที่กำลังจะมาถึง"
+            "value" : "กิจกรรมและรายการเตือนที่กำลังจะมาถึง"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mục sắp tới"
+            "value" : "Sự kiện & lời nhắc sắp tới"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "即将到来的项目"
+            "value" : "即将到来的日程与提醒"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "即將到來的項目"
+            "value" : "即將到來的行程與提醒"
           }
         }
       }
