@@ -88,16 +88,24 @@ struct SettingsView: View {
                     .disabled(!viewModel.settings.liveAlwaysOn)
                 // 할일은 켬·끔에 범위(오늘/예정/전체/리스트)가 붙어 있어 토글이 아니라
                 // 값 행이다 — "할일: 오늘"이 문장처럼 읽힌다. "끄기"가 곧 끔.
-                Picker("Tasks", selection: reminderScopeMenuBinding) {
-                    Text("Off").tag("off")
-                    Text("Today").tag("today")
-                    Text("Scheduled").tag("scheduled")
-                    Text("All").tag("all")
-                    ForEach(viewModel.reminderLists, id: \.id) { list in
-                        Text(list.title).tag(list.id)
+                //
+                // 항상 표시가 꺼져 있으면 Picker를 **그리지 않는다** — 메뉴 스타일 Picker는
+                // `.disabled`를 걸어도 메뉴가 열리는 SwiftUI 버그가 있어(실기기, Group 전파와
+                // 직접 부착 모두 확인), 비활성일 땐 같은 모양의 값 표시 행으로 교체한다.
+                if viewModel.settings.liveAlwaysOn {
+                    Picker("Tasks", selection: reminderScopeMenuBinding) {
+                        Text("Off").tag("off")
+                        Text("Today").tag("today")
+                        Text("Scheduled").tag("scheduled")
+                        Text("All").tag("all")
+                        ForEach(viewModel.reminderLists, id: \.id) { list in
+                            Text(list.title).tag(list.id)
+                        }
                     }
+                } else {
+                    LabeledContent("Tasks", value: reminderScopeValueLabel)
+                        .foregroundStyle(.secondary)
                 }
-                .disabled(!viewModel.settings.liveAlwaysOn)
             } header: {
                 sectionHeader("Live")
             } footer: {
@@ -286,6 +294,18 @@ struct SettingsView: View {
             get: { viewModel.settings.liveAlwaysOnSchedule },
             set: { newValue in Task { await viewModel.setLiveAlwaysOnSchedule(newValue) } }
         )
+    }
+
+    /// 비활성 상태에서 보여줄 할일 범위 라벨 — Picker와 같은 값을 정적으로 표시한다.
+    private var reminderScopeValueLabel: String {
+        guard viewModel.settings.liveAlwaysOnReminder else { return String(localized: "Off") }
+        switch viewModel.settings.liveAlwaysOnReminderScopeID {
+        case "today": return String(localized: "Today")
+        case "scheduled": return String(localized: "Scheduled")
+        case "all": return String(localized: "All")
+        case let id:
+            return viewModel.reminderLists.first { $0.id == id }?.title ?? String(localized: "All")
+        }
     }
 
     /// 할일 단일 선택 — "off"는 할일 항목 끔, 나머지는 켬 + 범위 지정.
