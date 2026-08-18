@@ -72,36 +72,28 @@ struct SettingsView: View {
                     Toggle("Always Show Live", isOn: liveAlwaysOnBinding)
                         .tint(.green)
                 }
-                // 대상 선택 — 평면 메뉴 한 번에 열림. 서브메뉴 펼침이 없어서 메뉴 재배치
-                // 점프(iOS가 서브메뉴 확장 시 메뉴를 위로 밀어 올리는 동작)가 원천적으로 없다.
-                // 길어지면 메뉴가 내부 스크롤(시스템 표준).
-                LabeledContent("Items") {
-                    Menu {
-                        Toggle("Memo", isOn: liveAlwaysOnMemoBinding)
-                        Toggle("Schedule", isOn: liveAlwaysOnScheduleBinding)
-                        Section("Tasks") {
-                            Picker("Tasks", selection: reminderScopeMenuBinding) {
-                                Text("Off").tag("off")
-                                Text("Today").tag("today")
-                                Text("Scheduled").tag("scheduled")
-                                Text("All").tag("all")
-                                ForEach(viewModel.reminderLists, id: \.id) { list in
-                                    Text(list.title).tag(list.id)
-                                }
-                            }
+                // 대상은 **개별 행**으로 편다 — 예전엔 한 메뉴에 토글(메모·일정)과
+                // 라디오(할일 범위)가 섞여, "Today 체크 = 할일 라이브 게시"가 안 읽혔다
+                // (VOC: 할일이 왜 뜨냐는 문의). 행으로 펴면 켬·끔이 메뉴를 열지 않아도
+                // 보이고, 같은 컨트롤(토글)은 같은 뜻만 갖는다.
+                Group {
+                    Toggle("Memo", isOn: liveAlwaysOnMemoBinding)
+                        .tint(.green)
+                    Toggle("Schedule", isOn: liveAlwaysOnScheduleBinding)
+                        .tint(.green)
+                    // 할일은 켬·끔에 범위(오늘/예정/전체/리스트)가 붙어 있어 토글이 아니라
+                    // 값 행이다 — "할일: 오늘"이 문장처럼 읽힌다. "끄기"가 곧 끔.
+                    Picker("Tasks", selection: reminderScopeMenuBinding) {
+                        Text("Off").tag("off")
+                        Text("Today").tag("today")
+                        Text("Scheduled").tag("scheduled")
+                        Text("All").tag("all")
+                        ForEach(viewModel.reminderLists, id: \.id) { list in
+                            Text(list.title).tag(list.id)
                         }
-                    } label: {
-                        HStack(spacing: Spacing.xs) {
-                            Text(liveKindsSummary)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.footnote.weight(.medium))
-                        }
-                        // 항상 표시가 켜져 있을 때만 또렷하게 — 꺼져 있으면 이 행은 조작 대상이
-                        // 아니므로 회색으로 물러난다(비활성 자체보다 대비를 더 벌린다).
-                        .foregroundStyle(viewModel.settings.liveAlwaysOn ? .primary : .secondary)
                     }
-                    .menuOrder(.fixed)
                 }
+                // 항상 표시가 꺼져 있으면 대상 행 전체가 조작 대상이 아니다.
                 .disabled(!viewModel.settings.liveAlwaysOn)
                 Button {
                     dependencies.analytics.log(.live24hGuideOpened)
@@ -112,6 +104,10 @@ struct SettingsView: View {
                 .foregroundStyle(.primary)
             } header: {
                 sectionHeader("Live")
+            } footer: {
+                // 선택이 "잠금화면 게시"로 이어진다는 걸 여기서만 말할 수 있다 —
+                // 메뉴를 행으로 펴도 결과까지는 행이 못 말한다(VOC의 두 번째 절반).
+                sectionFooter("Lives for the items you turn on appear automatically when you open Cue.")
             }
 
             // 라이브 액티비티 미리보기 — row는 셀 코너 마스크로 잘리지만, 카드 반경을 마스크 반경보다
@@ -267,20 +263,6 @@ struct SettingsView: View {
 
     /// 표시 대상 요약 — 선택된 종류를 행 우측에 보여준다("메모, 할일" / 셋 다면 "전체").
     /// 할일 범위는 병기하지 않는다(서브메뉴 값으로 확인).
-    private var liveKindsSummary: String {
-        let settings = viewModel.settings
-        let selected = [
-            settings.liveAlwaysOnMemo ? String(localized: "Memo") : nil,
-            settings.liveAlwaysOnReminder ? String(localized: "Tasks") : nil,
-            settings.liveAlwaysOnSchedule ? String(localized: "Schedule") : nil,
-        ].compactMap(\.self)
-        if selected.count == 3 { return String(localized: "All") }
-        return selected.joined(separator: ", ")
-    }
-
-
-
-
 
     private var liveAlwaysOnMemoBinding: Binding<Bool> {
         Binding(

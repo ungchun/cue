@@ -7,6 +7,106 @@
     " " : {
       "shouldTranslate" : false
     },
+    "Lives for the items you turn on appear automatically when you open Cue." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تظهر Live للعناصر المفعّلة تلقائيًا عند فتح Cue."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lives für aktivierte Einträge werden beim Öffnen von Cue automatisch angezeigt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los Lives de los elementos activados se muestran automáticamente al abrir Cue."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les Lives des éléments activés s'affichent automatiquement à l'ouverture de Cue."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चालू किए गए आइटम के Live, Cue खोलने पर अपने आप दिखाई देते हैं।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live untuk item yang diaktifkan muncul otomatis saat membuka Cue."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I Live degli elementi attivati vengono mostrati automaticamente all'apertura di Cue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オンにした項目のライブは、Cueを開くと自動的に表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "켠 항목의 라이브가 앱을 열 때 자동으로 표시됩니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live untuk item yang diaktifkan dipaparkan secara automatik apabila membuka Cue."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os Lives dos itens ativados aparecem automaticamente ao abrir o Cue."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live для включённых пунктов появляются автоматически при открытии Cue."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live ของรายการที่เปิดไว้จะแสดงโดยอัตโนมัติเมื่อเปิด Cue"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live của các mục đã bật sẽ tự động hiển thị khi mở Cue."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 Cue 时，已开启项目的 Live 会自动显示。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟 Cue 時，已開啟項目的 Live 會自動顯示。"
+          }
+        }
+      }
+    },
     "·" : {
       "shouldTranslate" : false
     },
