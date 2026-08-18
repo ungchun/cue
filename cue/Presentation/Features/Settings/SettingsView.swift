@@ -76,24 +76,27 @@ struct SettingsView: View {
                 // 라디오(할일 범위)가 섞여, "Today 체크 = 할일 라이브 게시"가 안 읽혔다
                 // (VOC: 할일이 왜 뜨냐는 문의). 행으로 펴면 켬·끔이 메뉴를 열지 않아도
                 // 보이고, 같은 컨트롤(토글)은 같은 뜻만 갖는다.
-                Group {
-                    Toggle("Memo", isOn: liveAlwaysOnMemoBinding)
-                        .tint(.green)
-                    Toggle("Schedule", isOn: liveAlwaysOnScheduleBinding)
-                        .tint(.green)
-                    // 할일은 켬·끔에 범위(오늘/예정/전체/리스트)가 붙어 있어 토글이 아니라
-                    // 값 행이다 — "할일: 오늘"이 문장처럼 읽힌다. "끄기"가 곧 끔.
-                    Picker("Tasks", selection: reminderScopeMenuBinding) {
-                        Text("Off").tag("off")
-                        Text("Today").tag("today")
-                        Text("Scheduled").tag("scheduled")
-                        Text("All").tag("all")
-                        ForEach(viewModel.reminderLists, id: \.id) { list in
-                            Text(list.title).tag(list.id)
-                        }
+                // 항상 표시가 꺼져 있으면 대상 행 전체가 조작 대상이 아니다.
+                // `.disabled`는 Group이 아니라 **컨트롤마다 직접** 건다 — 메뉴 스타일
+                // Picker가 List 안에서 부모로 전파된 disabled 환경을 무시하고 열리는
+                // SwiftUI 문제가 있다(실기기). 바인딩 setter의 가드가 최후 방어선.
+                Toggle("Memo", isOn: liveAlwaysOnMemoBinding)
+                    .tint(.green)
+                    .disabled(!viewModel.settings.liveAlwaysOn)
+                Toggle("Schedule", isOn: liveAlwaysOnScheduleBinding)
+                    .tint(.green)
+                    .disabled(!viewModel.settings.liveAlwaysOn)
+                // 할일은 켬·끔에 범위(오늘/예정/전체/리스트)가 붙어 있어 토글이 아니라
+                // 값 행이다 — "할일: 오늘"이 문장처럼 읽힌다. "끄기"가 곧 끔.
+                Picker("Tasks", selection: reminderScopeMenuBinding) {
+                    Text("Off").tag("off")
+                    Text("Today").tag("today")
+                    Text("Scheduled").tag("scheduled")
+                    Text("All").tag("all")
+                    ForEach(viewModel.reminderLists, id: \.id) { list in
+                        Text(list.title).tag(list.id)
                     }
                 }
-                // 항상 표시가 꺼져 있으면 대상 행 전체가 조작 대상이 아니다.
                 .disabled(!viewModel.settings.liveAlwaysOn)
                 Button {
                     dependencies.analytics.log(.live24hGuideOpened)
@@ -287,6 +290,9 @@ struct SettingsView: View {
                     : "off"
             },
             set: { newValue in
+                // 항상 표시가 꺼져 있으면 무시 — 비활성이어야 할 행이 SwiftUI 문제로
+                // 열리더라도 값은 바뀌지 않는다(뷰의 .disabled와 이중 방어).
+                guard viewModel.settings.liveAlwaysOn else { return }
                 Task {
                     if newValue == "off" {
                         await viewModel.setLiveAlwaysOnReminder(false)
