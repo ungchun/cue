@@ -98,6 +98,19 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(!viewModel.settings.liveAlwaysOn)
+            } header: {
+                sectionHeader("Live")
+            } footer: {
+                // 선택이 "잠금화면 게시"로 이어진다는 걸 여기서만 말할 수 있다 —
+                // 메뉴를 행으로 펴도 결과까지는 행이 못 말한다(VOC의 두 번째 절반).
+                sectionFooter("Lives for the items you turn on appear automatically when you open Cue.")
+            }
+
+            // 24시간 안내는 **헤더 없는 단독 섹션** — 라이브 섹션은 상태 설정(토글·값)만
+            // 남기고, 시트를 여는 내비게이션 행은 결이 달라 밖으로 뺀다. 바로 아래 붙여
+            // "자동 표시는 됐고, 더 오래 유지하려면?"의 읽기 흐름은 유지한다.
+            // 항상 표시가 꺼져 있어도 활성 — 안내는 언제든 열람 가능해야 한다.
+            Section {
                 Button {
                     dependencies.analytics.log(.live24hGuideOpened)
                     shows24HourSheet = true
@@ -105,12 +118,6 @@ struct SettingsView: View {
                     chevronRowLabel("Use 24 Hours")
                 }
                 .foregroundStyle(.primary)
-            } header: {
-                sectionHeader("Live")
-            } footer: {
-                // 선택이 "잠금화면 게시"로 이어진다는 걸 여기서만 말할 수 있다 —
-                // 메뉴를 행으로 펴도 결과까지는 행이 못 말한다(VOC의 두 번째 절반).
-                sectionFooter("Lives for the items you turn on appear automatically when you open Cue.")
             }
 
             // 라이브 액티비티 미리보기 — row는 셀 코너 마스크로 잘리지만, 카드 반경을 마스크 반경보다
