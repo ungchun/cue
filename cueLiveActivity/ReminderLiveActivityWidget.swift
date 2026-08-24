@@ -16,7 +16,11 @@ struct ReminderLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ReminderLiveActivityAttributes.self) { context in
             ReminderLockScreenView(state: context.state)
-                .padding(Spacing.md)
+                // 상하는 일정 LA와 같은 `outerPadding`(12) — 캘린더 예산(columnMax)이
+                // "160 − 상하 패딩×2"로 잡혀 있어, 상하를 16으로 주면 합이 168pt가 되어
+                // 시스템이 하단 8pt를 잘랐다(목록 마지막 줄과 6주 달 점이 밀림).
+                .padding(.vertical, ScheduleMetrics.outerPadding)
+                .padding(.horizontal, Spacing.md)
                 // 시스템 글래스(블러) 재질 배경 — 일정 LA와 동일한 반투명 카드 톤(전 LA 통일).
                 .activityBackgroundTint(.clear)
         } dynamicIsland: { context in
@@ -67,8 +71,14 @@ private struct ReminderLockScreenView: View {
                     allowsMonthShift: !state.isSample
                 )
                 .frame(maxWidth: .infinity)
-                // 캘린더 모드는 1열 세로 나열이라 많으면 LA 높이를 넘는다 — 3개로 제한.
-                content(columns: 1, limit: 3)
+                // 달력 높이를 예산으로 클램프 — 일정·메모 LA와 같은 이유(6주 달의 자연
+                // 높이가 fixedSize를 타고 예산을 밀어올리는 것을 막는다).
+                .frame(height: ScheduleMetrics.columnMax)
+                // 캘린더와 목록 사이 세로 디바이더 — 일정 LA와 동일.
+                Divider()
+                // 캘린더 모드는 1열 세로 나열이라 많으면 LA 높이를 넘는다 — 카운터가
+                // 우상단에 있으므로 3개(4개면 첫 행이 카운터와 겹친다).
+                calendarModeList(limit: 3)
                     .frame(maxWidth: .infinity)
             }
             // 캘린더 모드에선 카드를 LA 최대 높이까지 늘려 캘린더를 최대 크기로 그린다(일정과 동일).
@@ -79,7 +89,29 @@ private struct ReminderLockScreenView: View {
         }
     }
 
-    /// 카운트 + 체크리스트. `columns`는 열 수(2열 기본, 캘린더 모드 1열), `limit`은 표시 개수.
+    /// 캘린더 모드의 오른쪽 1열 — 카운터를 첫 줄로 쌓고, 그 아래 행들이 남는 높이를
+    /// 고르게 나눠 앉는다.
+    private func calendarModeList(limit: Int) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.zero) {
+            HStack {
+                Spacer(minLength: Spacing.zero)
+                Text("\(ReminderDynamicIsland.incompleteCount(state))")
+                    .font(.title.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+            }
+            // 카운터 줄 상자를 아래로 살짝 좁혀 첫 행을 숫자 쪽으로 끌어올린다.
+            .padding(.bottom, -Spacing.xs)
+
+            ForEach(state.items.prefix(limit)) { item in
+                ReminderItemCell(item: item)
+                    .frame(maxHeight: .infinity)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// 카운트 + 체크리스트 — 캘린더 없는 2열 모드 전용(캘린더 모드는 `calendarModeList`).
     private func content(columns: Int, limit: Int) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             // 좌상단은 비움, 우상단에 미완료 카운트.
@@ -90,6 +122,8 @@ private struct ReminderLockScreenView: View {
                     .monospacedDigit()
                     .foregroundStyle(.primary)
             }
+            // 카운터 줄 상자를 아래로 살짝 좁혀 목록을 숫자 쪽으로 끌어올린다(캘린더 모드와 같은 값).
+            .padding(.bottom, -Spacing.xs)
 
             Grid(alignment: .leading, horizontalSpacing: Spacing.md, verticalSpacing: Spacing.smd) {
                 ForEach(rows(columns: columns, limit: limit), id: \.first?.id) { row in

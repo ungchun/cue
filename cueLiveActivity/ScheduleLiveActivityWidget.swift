@@ -106,6 +106,9 @@ private struct ScheduleLockScreenView: View {
                 .frame(height: ScheduleMetrics.columnMax)
                 Divider()
                 column(SchedulePacker.packSingleColumn(days))
+                    // 디바이더 ↔ 목록 간격을 할일 LA(16)와 맞춘다 — HStack spacing(12)에
+                    // 4를 보태 두 LA를 겹쳐 봐도 세로선 오른쪽 여백이 같게.
+                    .padding(.leading, Spacing.xs)
             } else {
                 let columns = SchedulePacker.pack(days)
                 column(columns.left)

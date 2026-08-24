@@ -82,28 +82,34 @@ struct MonthCalendarView: View {
     @ViewBuilder
     private func dayCell(_ day: Int?, column: Int) -> some View {
         if let day {
-            VStack(spacing: 1) {
-                // 오늘 표시 — WeekCalendarStrip과 같은 밑줄 바(숫자 정중앙 아래).
-                Text("\(day)")
-                    .font(.footnote.weight(grid.isToday(day: day) ? .bold : .regular))
-                    .monospacedDigit()
-                    .foregroundStyle(dayColor(day, column: column))
-                    .overlay(alignment: .bottom) {
+            // 오늘 표시 — WeekCalendarStrip과 같은 밑줄 바(숫자 정중앙 아래).
+            //
+            // 점도 밑줄과 같은 자리(overlay)에 얹는다 — 별도 줄로 쌓지 않는다. 쌓으면
+            // 줄당 4pt, 6주 달엔 24pt가 더 들어 고유 높이가 LA 예산(columnMax)을 넘고,
+            // 위(요일 줄)와 아래(마지막 주 점)가 잘렸다. 숫자에는 디센더가 없어 줄 상자
+            // 아래가 늘 비므로 그 공짜 높이를 쓴다(`CompactMonthGrid`와 같은 수법).
+            // 오늘은 점을 찍지 않으므로(빌더에서 제외) 밑줄과 겹칠 일이 없다.
+            Text("\(day)")
+                .font(.footnote.weight(grid.isToday(day: day) ? .bold : .regular))
+                .monospacedDigit()
+                .foregroundStyle(dayColor(day, column: column))
+                .overlay(alignment: .bottom) {
+                    if grid.isToday(day: day) {
                         RoundedRectangle(cornerRadius: 1)
-                            .fill(grid.isToday(day: day) ? foreground : Color.clear)
+                            .fill(foreground)
                             .frame(width: 14, height: 2)
                             .offset(y: Spacing.xxs)
+                    } else {
+                        dots(for: day)
+                            .offset(y: Spacing.xxs)
                     }
-                // 점 — 그날 항목 한 건당 하나(일정·할일 공통). 오늘은 빌더에서 제외돼 점 없음.
-                dots(for: day)
-            }
+                }
         } else {
             Text(" ").font(.footnote)   // 빈 칸도 같은 높이 유지.
         }
     }
 
-    /// 날짜 숫자 아래 점 한 줄 — 좁은 셀이라 작게(3pt). 점이 없어도 같은 높이를 예약해
-    /// 모든 셀의 숫자가 같은 세로 기준선에 정렬되게 한다.
+    /// 날짜 숫자 아래 점 한 줄 — 좁은 셀이라 작게(3pt).
     private func dots(for day: Int) -> some View {
         HStack(spacing: 1) {
             ForEach(Array(colorHexes(forDay: day).enumerated()), id: \.offset) { _, hex in
