@@ -165,16 +165,15 @@ struct CompactMonthGrid: View {
             .frame(maxHeight: .infinity)
     }
 
-    /// 그날 항목을 알리는 점 — **캘린더 색마다 하나씩**, 최대 `maximumDots`개.
+    /// 그날 항목을 알리는 점 — **한 건당 하나**, 최대 `MonthDotColors.maximum`개.
     ///
-    /// 개수가 아니라 "무엇이 있는지"를 색으로 전한다(레퍼런스와 같은 표현). 같은 캘린더
-    /// 일정이 세 건이어도 점은 하나다 — 20pt 폭에 점 셋이 붙으면 하나의 선으로 보이고,
-    /// 그 길이 차를 읽어낼 사람은 없다.
+    /// 색을 고르는 규칙은 `MonthDotColors`가 단일 출처다 — LA 월간 캘린더가 같은 달을
+    /// 그리므로 규칙이 갈리면 같은 날이 두 화면에서 다른 점으로 보인다.
     private func dots(for day: Int) -> some View {
         HStack(spacing: Self.dotGap) {
-            ForEach(colors(for: day), id: \.self) { hex in
+            ForEach(Array(MonthDotColors.colors(for: itemsByDay[day] ?? []).enumerated()), id: \.offset) { _, hex in
                 Circle()
-                    .fill(Color(hex: hex) ?? .accentColor)
+                    .fill(hex.flatMap { Color(hex: $0) } ?? .accentColor)
                     .frame(width: CompactMonthMetrics.dotSize, height: CompactMonthMetrics.dotSize)
             }
         }
@@ -182,24 +181,6 @@ struct CompactMonthGrid: View {
         .frame(height: CompactMonthMetrics.dotSize)
     }
 
-    /// 그날 항목의 캘린더 색들 — 중복은 접고 등장 순서를 지킨다.
-    private func colors(for day: Int) -> [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-        for item in itemsByDay[day] ?? [] {
-            // 색이 없는 항목은 뷰가 accent로 폴백하므로 키도 하나로 묶는다.
-            let hex = item.colorHex ?? Self.accentKey
-            guard seen.insert(hex).inserted else { continue }
-            result.append(hex)
-            if result.count == Self.maximumDots { break }
-        }
-        return result
-    }
-
-    /// 색이 없는 항목을 한 묶음으로 세는 키 — hex가 아니라서 실제 색과 부딪히지 않는다.
-    private static let accentKey = "accent"
-    /// 한 셀에 찍는 점의 최대 개수 — 셀 폭이 20pt 남짓이라 셋을 넘기면 서로 붙는다.
-    private static let maximumDots = 3
     /// 점 **사이** 가로 간격. 세로 높이를 정하는 값(지름·줄 간격)은 예산과 갈라지면
     /// 안 되므로 `CompactMonthMetrics`가 단일 출처다.
     private static let dotGap: CGFloat = 1.5

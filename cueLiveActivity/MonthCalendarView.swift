@@ -20,7 +20,9 @@ struct MonthCalendarView: View {
     /// 기본은 시스템 컬러. 메모 LA는 카드가 사용자 색이라 사용자 글자색을 주입한다.
     var foreground: Color = .primary
     var secondaryForeground: Color = .secondary
-    /// 표시 월의 날짜별 일정 점(일 정수 기준) — 각 날 숫자 아래에 캘린더 색 동그라미. 오늘은 제외.
+    /// 표시 월의 날짜별 점(일 정수 기준) — 각 날 숫자 아래에 캘린더·할일 목록 색 동그라미.
+    /// 일정과 할일을 함께, 한 건당 한 점 센다(→ `MonthDotColors`).
+    /// 오늘은 밑줄로 표시하므로 점에서 제외.
     var eventDots: [LiveMonthDot] = []
     /// 표시 월의 공휴일(일 숫자) — 일요일과 같은 빨강으로 칠한다.
     ///
@@ -92,7 +94,7 @@ struct MonthCalendarView: View {
                             .frame(width: 14, height: 2)
                             .offset(y: Spacing.xxs)
                     }
-                // 일정 점 — 그날 이벤트마다 한 점(캘린더 색). 오늘은 빌더에서 제외돼 점 없음.
+                // 점 — 그날 항목 한 건당 하나(일정·할일 공통). 오늘은 빌더에서 제외돼 점 없음.
                 dots(for: day)
             }
         } else {
@@ -100,7 +102,7 @@ struct MonthCalendarView: View {
         }
     }
 
-    /// 날짜 숫자 아래 일정 점 한 줄 — 좁은 셀이라 작게(3pt). 점이 없어도 같은 높이를 예약해
+    /// 날짜 숫자 아래 점 한 줄 — 좁은 셀이라 작게(3pt). 점이 없어도 같은 높이를 예약해
     /// 모든 셀의 숫자가 같은 세로 기준선에 정렬되게 한다.
     private func dots(for day: Int) -> some View {
         HStack(spacing: 1) {
@@ -113,7 +115,7 @@ struct MonthCalendarView: View {
         .frame(height: 3)
     }
 
-    /// 그날(표시 월 기준 일 숫자)의 일정 점 색 목록 — `eventDots`는 표시 월만 담아 일 숫자로 매칭.
+    /// 그날(표시 월 기준 일 숫자)의 점 색 목록 — `eventDots`는 표시 월만 담아 일 숫자로 매칭.
     private func colorHexes(forDay day: Int) -> [String] {
         eventDots.first { $0.day == day }?.colorHexes ?? []
     }

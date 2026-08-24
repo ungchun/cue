@@ -41,9 +41,12 @@ struct LiveActivityContentStateTests {
         let weekDots = (0..<7).map { i in
             LiveDayEventDots(dayStart: Date(timeIntervalSince1970: 1_784_000_000 + Double(i) * 86_400), colorHexes: ["#FF3B30", "#34C759"])
         }
-        // worst-case — 한 달 모든 날에 점이 있고, 모든 날이 공휴일인 극단값.
+        // worst-case — 한 달 모든 날에 점이 **상한(3개)까지** 있고, 모든 날이 공휴일인 극단값.
+        // 점은 일정과 할일을 함께 세므로(→ `MonthDotColors`) 상한까지 차는 날이 드물지 않다.
         let month = LiveMonthCalendar(
-            dots: (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) },
+            dots: (1...31).map {
+                LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759", "#007AFF"])
+            },
             holidays: Array(1...31)
         )
 
@@ -65,9 +68,12 @@ struct LiveActivityContentStateTests {
         let weekDots = (0..<7).map { i in
             LiveDayEventDots(dayStart: Date(timeIntervalSince1970: 1_784_000_000 + Double(i) * 86_400), colorHexes: ["#FF3B30", "#34C759"])
         }
-        // worst-case — 한 달 모든 날에 점이 있고, 모든 날이 공휴일인 극단값.
+        // worst-case — 한 달 모든 날에 점이 **상한(3개)까지** 있고, 모든 날이 공휴일인 극단값.
+        // 점은 일정과 할일을 함께 세므로(→ `MonthDotColors`) 상한까지 차는 날이 드물지 않다.
         let month = LiveMonthCalendar(
-            dots: (1...31).map { LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759"]) },
+            dots: (1...31).map {
+                LiveMonthDot(day: $0, colorHexes: ["#FF3B30", "#34C759", "#007AFF"])
+            },
             holidays: Array(1...31)
         )
 
