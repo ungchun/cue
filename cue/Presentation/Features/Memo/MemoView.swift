@@ -18,6 +18,11 @@ import UIKit
 struct MemoView: View {
     @Bindable var viewModel: MemoViewModel
     @State private var inputFocused = false
+    /// 첫 로드가 끝났는지 — 끝나기 전엔 이 화면의 애니메이션을 전부 차단한다(밑줄
+    /// 겹층의 `.animation`도 이 값으로 함께 끈다). 앱 첫 진입에 저장 메모가 비동기로
+    /// 로드되며 `hasText`가 뒤집히는데, 그 전환이 애니메이션 허용 상태로 그려지면
+    /// 같은 트랜잭션에 처음 배치되는 밑줄 겹층의 프레임까지 보간돼 좌상단에서 날아온다.
+    @State private var hasCompletedFirstLoad = false
     /// 앱 공통 토스트 — "켜기"로 라이브가 켜지면 상단 토스트를 띄운다.
     @Environment(\.toastCenter) private var toastCenter
     @Environment(\.dependencies) private var dependencies
@@ -52,10 +57,29 @@ struct MemoView: View {
                         .disabled(!hasText)
                 }
                 // 입력 공간임을 알리는 밑줄 — 비었을 땐 옅게, 한 글자라도 적히면 primary로.
+                //
+                // 애니메이션은 **진해지는 겹층의 opacity에만** 건다. 밑줄 자체에 걸면
+                // 위치·크기까지 애니메이션 대상이 되어, 앱 첫 진입에 저장 메모가 로드되며
+                // `hasText`가 바뀌는 순간(레이아웃이 처음 잡히는 그 트랜잭션) 밑줄이
+                // 좌상단 원점에서 정중앙까지 날아왔다.
                 Rectangle()
-                    .fill(hasText ? Color.primary : Color.primary.opacity(0.3))
+                    .fill(Color.primary.opacity(0.3))
                     .frame(height: 1)
-                    .animation(.easeInOut(duration: 0.2), value: hasText)
+                    .overlay {
+                        Rectangle()
+                            .fill(Color.primary)
+                            .opacity(hasText ? 1 : 0)
+                            // 첫 로드 전엔 애니메이션 없음(nil) — 저장 메모 로드로
+                            // `hasText`가 뒤집힐 때 이 애니메이션이 색뿐 아니라 같은
+                            // 트랜잭션에 처음 배치되는 이 겹층의 **프레임(원점 0크기 →
+                            // 최종)까지** 보간해, 밑줄이 좌상단에서 0.2초간 날아왔다
+                            // (실기기 영상 프레임 분석으로 확정). 조상의 `.transaction`
+                            // 차단은 여기 더 깊은 `.animation`이 도로 덮어써 소용없었다.
+                            .animation(
+                                hasCompletedFirstLoad ? .easeInOut(duration: 0.2) : nil,
+                                value: hasText
+                            )
+                    }
 
                 // 밑줄 아래 — 켜기(우). 입력 있을 때만 활성.
                 liveButtonRow
@@ -67,8 +91,19 @@ struct MemoView: View {
         .contentShape(Rectangle())
         .onTapGesture { inputFocused = true }
         .navigationBarTitleDisplayMode(.inline)
+        // 첫 로드가 끝날 때까지 화면 전체의 애니메이션 차단 — 시작 전환 중의 레이아웃
+        // 재배치가 애니메이션을 물려받지 않게. 로드 후엔 원래대로(밑줄 색 페이드 등은
+        // 각자의 `.animation(value:)`가 담당).
+        .transaction { transaction in
+            if !hasCompletedFirstLoad { transaction.animation = nil }
+        }
         .task {
             await viewModel.onAppear()
+            // 게이트 열기는 **다음 렌더로 미룬다** — 같은 태스크에서 곧장 true로 두면
+            // 텍스트 로드와 게이트 해제가 한 렌더로 묶여, 로드 시점의 `hasText` 전환이
+            // 애니메이션 허용 상태로 그려진다(밑줄 날아오는 버그의 재발 경로).
+            try? await Task.sleep(for: .milliseconds(100))
+            hasCompletedFirstLoad = true
         }
     }
 
