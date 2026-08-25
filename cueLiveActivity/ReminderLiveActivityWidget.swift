@@ -89,10 +89,13 @@ private struct ReminderLockScreenView: View {
         }
     }
 
-    /// 캘린더 모드의 오른쪽 1열 — 카운터를 첫 줄로 쌓고, 그 아래 행들이 남는 높이를
-    /// 고르게 나눠 앉는다.
+    /// 캘린더 모드의 오른쪽 1열 — 카운터를 첫 줄로 쌓고, 그 아래는 **슬롯 `limit`개**가
+    /// 남는 높이를 고르게 나눈다. 항목은 **아래 슬롯부터** 채운다 — 슬롯 자리가 개수와
+    /// 무관하게 고정이라, 항목이 3개 미만이어도 3개일 때의 배치에서 위쪽만 빈다
+    /// (균등 분할을 항목 수로 하면 개수가 줄수록 간격이 비례해 벌어졌다).
     private func calendarModeList(limit: Int) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.zero) {
+        let shown = Array(state.items.prefix(limit))
+        return VStack(alignment: .leading, spacing: Spacing.zero) {
             HStack {
                 Spacer(minLength: Spacing.zero)
                 Text("\(ReminderDynamicIsland.incompleteCount(state))")
@@ -103,9 +106,16 @@ private struct ReminderLockScreenView: View {
             // 카운터 줄 상자를 아래로 살짝 좁혀 첫 행을 숫자 쪽으로 끌어올린다.
             .padding(.bottom, -Spacing.xs)
 
-            ForEach(state.items.prefix(limit)) { item in
-                ReminderItemCell(item: item)
-                    .frame(maxHeight: .infinity)
+            ForEach(0..<limit, id: \.self) { slot in
+                let itemIndex = slot - (limit - shown.count)
+                Group {
+                    if itemIndex >= 0, shown.indices.contains(itemIndex) {
+                        ReminderItemCell(item: shown[itemIndex])
+                    } else {
+                        Color.clear   // 빈 슬롯 — 자리는 그대로 차지한다.
+                    }
+                }
+                .frame(maxHeight: .infinity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
