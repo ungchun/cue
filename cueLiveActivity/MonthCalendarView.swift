@@ -126,11 +126,11 @@ struct MonthCalendarView: View {
         eventDots.first { $0.day == day }?.colorHexes ?? []
     }
 
-    /// 일요일·공휴일 빨강, 토요일 옅게, 평일은 본문 색.
+    /// 일요일·공휴일 빨강, 토요일 파랑(홈 위젯 `WidgetCalendarTheme`과 동일), 평일은 본문 색.
     private func dayColor(_ day: Int, column: Int) -> Color {
         let weekday = grid.weekdayIndex(column: column)
         if weekday == 1 || holidays.contains(day) { return .red }
-        if weekday == 7 { return secondaryForeground }
+        if weekday == 7 { return .blue }
         return foreground
     }
 
