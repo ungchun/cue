@@ -124,9 +124,9 @@ final class MemoViewModel {
         // 구독 만료·과거 저장값(liveAlwaysOn=true 잔존)이 무료로 무제한 게시되는 걸 못 막는다.
         guard premiumStore.isPremium else { return }
         guard force || !liveActivityActive else { return }
-        // force 재게시는 **끝내고 새로 시작**한다 — 살아 있는 LA는 서비스가 제자리
-        // update로 처리해(깜빡임 방지) 잠금화면 쌓임 순서가 안 바뀐다. 순서는 게시
-        // 시점이 정하므로, 순서 변경 반영은 재요청만이 유일한 길이다.
+        // force 재게시는 **끝내고 새로 시작**한다 — 잠금화면 정렬 근거인 relevanceScore를
+        // 새 요청에 확실히 싣는, 실기기로 검증된 경로다(산 LA의 제자리 update만으로
+        // 시스템이 재정렬해 주는지는 보증이 없다).
         if force, liveActivityActive {
             await endLiveActivityUseCase()
             liveActivityActive = false

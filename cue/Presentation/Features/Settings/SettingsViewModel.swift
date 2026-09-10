@@ -137,9 +137,9 @@ final class SettingsViewModel {
         guard settings.liveAlwaysOnOrder != resolved else { return }
         analytics.log(.liveOrderChanged(order: resolved.map(\.rawValue).joined(separator: ",")))
         await update { $0.liveAlwaysOnOrder = resolved }
-        // 켜져 있는 LA에 새 점수(relevanceScore)를 실어 즉시 재정렬 — 항상 표시가 꺼진
-        // 채 **수동으로 켠** 라이브도 이 경로로 순서가 반영된다(재시작 없이 update만).
-        // 항상 표시 사용자는 RootView의 onChange가 강제 재게시로 한 번 더 확실히 맞춘다.
+        // 켜져 있는 LA에 새 점수(relevanceScore)를 update로 실어 둔다 — 항상 표시가
+        // 꺼진 채 **수동으로 켠** 라이브가 재정렬될 유일한 경로다(재시작 없음).
+        // 항상 표시 사용자는 RootView의 onChange가 강제 재게시로 확실히 맞춘다.
         await refreshLiveActivityLayout()
     }
 

@@ -45,8 +45,9 @@ enum RefreshLiveActivityRunner {
                 isPremium: isPremium, kind: kind, wanted: wanted
             )
         }
-        // 설정의 표시 순서대로 재게시 — 먼저 게시한 라이브가 잠금화면 위이므로,
-        // 이 순회 순서가 곧 잠금화면 순서다(항상 표시 경로 `startAlwaysOnActivities`와 동일).
+        // 설정의 표시 순서대로 재게시 — 정렬 자체는 각 게시에 실리는 relevanceScore가
+        // 정하고, 순회는 게시 시점(동점의 보조 기준)까지 화면과 맞추기 위해 같은 순서로
+        // 돈다(항상 표시 경로 `startAlwaysOnActivities`와 동일).
         for kind in settings.resolvedLiveOrder where allows(kind) {
             switch kind {
             case .memo:

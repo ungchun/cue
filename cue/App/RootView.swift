@@ -236,8 +236,8 @@ struct RootView: View {
             }
             let scopeChanged = new.liveAlwaysOn && new.liveAlwaysOnReminder
                 && old.liveAlwaysOnReminderScopeID != new.liveAlwaysOnReminderScopeID
-            // 표시 순서 변경은 켜진 라이브 **전부**를 새 순서로 재게시해야 반영된다 —
-            // 잠금화면 순서는 게시 시점이 정하므로, 일부만 재게시하면 그 종류만 내려간다.
+            // 표시 순서 변경 — 잠금화면 정렬은 각 LA에 실린 relevanceScore가 정하므로
+            // (→ ActivityKitLiveActivityService), 켜진 라이브 전부를 새 점수로 재게시한다.
             let orderChanged = new.liveAlwaysOn && old.liveAlwaysOnOrder != new.liveAlwaysOnOrder
             Task {
                 if orderChanged {
@@ -260,9 +260,10 @@ struct RootView: View {
     /// **Premium 여부**를 거른다. 콜드런치에 `start()`(cueApp)보다 먼저 돌 수 있어, 게시 전
     /// 엔타이틀먼트를 직접 새로고침해 프리미엄 사용자의 첫 게시가 레이스로 빠지지 않게 한다.
     ///
-    /// 게시는 설정의 **표시 순서대로** — 먼저 게시한 라이브가 잠금화면 위이므로 이 순회
-    /// 순서가 곧 화면 순서다. `force`면 이미 켜진 것도 재게시한다(순서 변경 직후, 새 순서로
-    /// 다시 쌓기 위함 — 일부만 재게시하면 그 종류만 아래로 내려가 순서가 어긋난다).
+    /// 게시는 설정의 **표시 순서대로** 순회한다 — 정렬 자체는 각 게시에 실리는
+    /// relevanceScore(첫 번째=3…)가 정하지만, 순회도 같은 순서여야 게시 시점(동점의
+    /// 보조 기준)이 화면과 갈라지지 않는다. `force`면 이미 켜진 것도 끝내고 재게시한다
+    /// (순서 변경 반영 — 일부만 재게시하면 옛 점수가 남은 종류가 어긋난다).
     private func startAlwaysOnActivities(_ settings: AppSettings, force: Bool = false) async {
         guard settings.liveAlwaysOn else { return }
         // 시스템에 살아있는 LA 핸들을 먼저 재포착한다 — 콜드런치 직후엔 서비스 핸들이
