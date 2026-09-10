@@ -213,5 +213,11 @@ struct AppSettingsRepositoryTests {
         await repo.save(settings)
         group.set(["list-stale"], forKey: SharedAppGroup.Keys.hiddenReminderListIDs)
         #expect(repo.mirrorMatches(settings) == false)   // 할일 목록 키도 판정에 포함
+
+        // 라이브 표시 순서 — 서비스가 relevanceScore(잠금화면 정렬)를 이 미러로 계산하므로
+        // 어긋나면 안 된다. 집합이 아니라 **배열**로 견준다(순서 자체가 값이다).
+        await repo.save(settings)
+        group.set(["schedule", "memo", "reminder"], forKey: SharedAppGroup.Keys.liveOrder)
+        #expect(repo.mirrorMatches(settings) == false)   // 순서 키도 판정에 포함
     }
 }

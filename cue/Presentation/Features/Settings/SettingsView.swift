@@ -106,6 +106,14 @@ struct SettingsView: View {
                     LabeledContent("Tasks", value: reminderScopeValueLabel)
                         .foregroundStyle(.secondary)
                 }
+                // 표시 순서 — 잠금화면 정렬(relevanceScore)은 항상 표시뿐 아니라 **수동으로
+                // 켠 라이브에도** 적용되는 전역 규칙이라, 위 대상 행들과 달리 항상 표시가
+                // 꺼져 있어도 활성으로 둔다(끄고 수동+단축어로만 쓰는 사용자도 순서는 필요).
+                NavigationLink {
+                    LiveOrderEditView(viewModel: viewModel)
+                } label: {
+                    Text("Display Order")
+                }
             } header: {
                 sectionHeader("Live")
             } footer: {

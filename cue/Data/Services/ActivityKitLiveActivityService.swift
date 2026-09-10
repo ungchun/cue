@@ -88,8 +88,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         state.showsCalendar = showsCalendar
         state.isSample = isSample
         // 시간 흐름과 무관 — staleDate 미지정. 사용자 동작 시점에만 update.
-        // Dynamic Island 우선순위(relevanceScore): 집중(AlarmKit, 시스템 우선) > 메모(3) > 일정=할일(2).
-        let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 2)
+        let content = ActivityContent(state: state, staleDate: nil, relevanceScore: relevanceScore(for: .reminder))
 
         // 같은 리스트로 이미 떠 있으면 **부드럽게 update** — 재시작은 깜빡임 + 새 인스턴스 발생.
         // listTitle은 attributes(불변)라, 리스트가 바뀐 경우엔 end 후 새로 request해야 한다.
@@ -163,7 +162,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             .filter { $0 > now }
             .min()
         // 일정은 할일과 동일 우선순위(2) — Dynamic Island 표시가 같아 함께 둔다.
-        let content = ActivityContent(state: state, staleDate: upcomingStart, relevanceScore: 2)
+        let content = ActivityContent(state: state, staleDate: upcomingStart, relevanceScore: relevanceScore(for: .schedule))
 
         stampRingAnchor()
         scheduleActivity = try Activity.request(
@@ -224,7 +223,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         state.applyMonthCalendar(showsCalendar ? LiveMonthCalendarProvider.month(monthOffset: 0) : .empty)
         // 시간 흐름과 무관 — staleDate 미지정. 사용자가 텍스트·색을 바꿀 때만 update.
         // 메모는 일정·할일보다 높은 우선순위(3) — 집중(AlarmKit) 다음으로 앞에 뜬다.
-        let content = ActivityContent(state: state, staleDate: nil, relevanceScore: 3)
+        let content = ActivityContent(state: state, staleDate: nil, relevanceScore: relevanceScore(for: .memo))
 
         // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
         if let existing = memoActivity {
@@ -259,6 +258,22 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 갱신(update)이 아닌 새 게시(`Activity.request`) 직전에만 호출해 기준점을 재설정한다.
     private func stampRingAnchor() {
         SharedAppGroup.defaults.set(Date.now.timeIntervalSince1970, forKey: SharedAppGroup.Keys.ringAnchor)
+    }
+
+    // MARK: - 잠금화면 정렬(relevanceScore)
+
+    /// 잠금화면에 여러 LA가 쌓일 때 시스템은 **relevanceScore 내림차순**으로 정렬한다 —
+    /// 게시 순서는 동점끼리의 보조 기준일 뿐이다(실기기 확인: 메모=3 고정이던 시절 메모가
+    /// 게시 순서와 무관하게 항상 맨 위였다). 그래서 사용자 표시 순서는 점수로 옮겨야 한다.
+    ///
+    /// 순서는 설정 미러(App Group)에서 읽는다 — 이 서비스는 인텐트(단축어) 경로에서도
+    /// 새로 조립되므로 화면 상태를 주입받을 수 없다. 첫 번째=3 … 마지막=1.
+    /// 집중 LA(AlarmKit)는 이 축 밖 — 시스템이 알람을 항상 우선한다.
+    private func relevanceScore(for kind: LiveActivityKind) -> Double {
+        let stored = SharedAppGroup.defaults.stringArray(forKey: SharedAppGroup.Keys.liveOrder) ?? []
+        let order = AppSettings.resolveLiveOrder(stored.compactMap(LiveActivityKind.init(rawValue:)))
+        let index = order.firstIndex(of: kind) ?? order.count
+        return Double(order.count - index)
     }
 
     /// ContentState 인코딩 크기 예산 — ActivityKit ~4KB 한도에 여유(그 자체 인코딩 오버헤드 대비).
@@ -368,7 +383,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             state.calendarMonthOffset = prev.calendarMonthOffset
             state.showsCalendar = showsCalendar
             state.isSample = prev.isSample
-            await reminder.update(ActivityContent(state: state, staleDate: reminder.content.staleDate, relevanceScore: 2))
+            await reminder.update(ActivityContent(state: state, staleDate: reminder.content.staleDate, relevanceScore: relevanceScore(for: .reminder)))
         }
         if let memo = memoActivity {
             var state = memo.content.state
@@ -378,7 +393,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
                 showsCalendar
                     ? LiveMonthCalendarProvider.month(monthOffset: state.calendarMonthOffset) : .empty
             )
-            await memo.update(ActivityContent(state: state, staleDate: memo.content.staleDate, relevanceScore: 3))
+            await memo.update(ActivityContent(state: state, staleDate: memo.content.staleDate, relevanceScore: relevanceScore(for: .memo)))
         }
         if let schedule = scheduleActivity {
             let prev = schedule.content.state
@@ -394,7 +409,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             state.calendarMonthOffset = prev.calendarMonthOffset
             state.showsCalendar = showsCalendar
             state.isSample = prev.isSample
-            await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: 2))
+            await schedule.update(ActivityContent(state: state, staleDate: schedule.content.staleDate, relevanceScore: relevanceScore(for: .schedule)))
         }
     }
 }

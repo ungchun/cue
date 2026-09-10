@@ -65,6 +65,9 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
             // 순서는 의미 없다(집합) — 배열 비교로 오탐하지 않게 집합으로 견준다.
             && Set(group.stringArray(forKey: SharedAppGroup.Keys.hiddenCalendarIDs) ?? []) == settings.hiddenCalendarIDs
             && Set(group.stringArray(forKey: SharedAppGroup.Keys.hiddenReminderListIDs) ?? []) == settings.hiddenReminderListIDs
+            // 표시 순서는 **배열 그대로** 견준다 — 순서 자체가 값이다.
+            && (group.stringArray(forKey: SharedAppGroup.Keys.liveOrder) ?? [])
+                == settings.resolvedLiveOrder.map(\.rawValue)
     }
 
     /// 위젯(다른 프로세스)이 읽을 LA 관련 설정을 App Group에 미러링한다 — 위젯은 Domain 타입을
@@ -76,5 +79,7 @@ struct UserDefaultsAppSettingsRepository: AppSettingsRepository, @unchecked Send
         group.set(settings.reminderShowsCalendar, forKey: SharedAppGroup.Keys.reminderShowsCalendar)
         group.set(Array(settings.hiddenCalendarIDs), forKey: SharedAppGroup.Keys.hiddenCalendarIDs)
         group.set(Array(settings.hiddenReminderListIDs), forKey: SharedAppGroup.Keys.hiddenReminderListIDs)
+        // 정제본을 실어 둔다 — 서비스는 미러를 그대로 신뢰하고 relevanceScore를 계산한다.
+        group.set(settings.resolvedLiveOrder.map(\.rawValue), forKey: SharedAppGroup.Keys.liveOrder)
     }
 }

@@ -106,6 +106,7 @@
 				Shared/Widget/DayTimelineMetrics.swift,
 				Shared/Widget/EventKitReminderCompleter.swift,
 				Shared/Widget/ISOWeekNumber.swift,
+				Shared/Widget/MonthDotColors.swift,
 				Shared/Widget/MonthWeekPacker.swift,
 				Shared/Widget/MonthWidgetMetrics.swift,
 				Shared/Widget/MonthWidgetPacker.swift,

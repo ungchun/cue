@@ -81,6 +81,8 @@ enum AnalyticsEvent: Equatable, Sendable {
     case liveItemToggled(kind: String, on: Bool)
     case liveScopeChanged(scope: String)
     case liveColorChanged(kind: String)
+    /// 항상 표시 라이브의 게시 순서 변경 — `order`는 rawValue를 쉼표로 이은 문자열.
+    case liveOrderChanged(order: String)
     case tasksDefaultViewChanged(view: String)
     case focusEndSoundToggled(on: Bool)
     case calendarVisibilityToggled(kind: String, on: Bool)
@@ -155,6 +157,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .liveItemToggled: "live_item_toggled"
         case .liveScopeChanged: "live_scope_changed"
         case .liveColorChanged: "live_color_changed"
+        case .liveOrderChanged: "live_order_changed"
         case .tasksDefaultViewChanged: "tasks_default_view_changed"
         case .focusEndSoundToggled: "focus_end_sound_toggled"
         case .calendarVisibilityToggled: "calendar_visibility_toggled"
@@ -200,6 +203,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .liveItemToggled(let kind, let on): ["kind": kind, "on": String(on)]
         case .liveScopeChanged(let scope): ["scope": scope]
         case .liveColorChanged(let kind): ["kind": kind]
+        case .liveOrderChanged(let order): ["order": order]
         case .tasksDefaultViewChanged(let view): ["view": view]
         case .focusEndSoundToggled(let on): ["on": String(on)]
         case .calendarVisibilityToggled(let kind, let on): ["kind": kind, "on": String(on)]

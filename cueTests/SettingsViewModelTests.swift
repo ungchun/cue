@@ -118,6 +118,21 @@ struct SettingsViewModelTests {
         #expect(reloaded.settings.focusEndSound == true)
     }
 
+    /// 라이브 표시 순서 변경이 영속화되고, 저장 전에 정제(집중 제외·빠진 종류 보충)를 거친다.
+    @Test func setLiveAlwaysOnOrderPersistsResolved() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        // 뷰가 어떤 배열을 보내든 세 종류가 정확히 한 번씩인 상태만 저장된다.
+        await viewModel.setLiveAlwaysOnOrder([.focus, .schedule, .memo])
+        #expect(viewModel.settings.liveAlwaysOnOrder == [.schedule, .memo, .reminder])
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        #expect(reloaded.settings.liveAlwaysOnOrder == [.schedule, .memo, .reminder])
+    }
+
     /// 할일 탭 기본 화면 스코프 변경이 영속화된다.
     @Test func setTasksDefaultScopePersists() async {
         let repository = InMemoryAppSettingsRepository()

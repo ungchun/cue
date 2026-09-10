@@ -50,6 +50,11 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// 항상 표시 할일 LA의 범위 — "today"/"scheduled"/"all" 또는 사용자 리스트 id.
     /// Domain은 Presentation의 필터 타입을 모르므로 문자열로 보관(startTabID 전례). 기본 전체.
     var liveAlwaysOnReminderScopeID: String
+    /// 항상 표시 라이브의 게시 순서 — **먼저 게시한 라이브가 잠금화면 위**이므로(실기기
+    /// 검증) 이 배열이 곧 잠금화면 순서다. 기본은 필드가 없던 시절의 실제 게시 순서
+    /// (메모→할일→일정) — 업데이트로 기존 사용자의 화면 순서가 소리 없이 바뀌면 안 된다.
+    /// 게시 경로는 저장값을 그대로 쓰지 말고 `resolveLiveOrder`로 정제해 쓴다.
+    var liveAlwaysOnOrder: [LiveActivityKind]
     /// 할일 탭에 진입했을 때 처음 보여줄 범위 — "today"/"scheduled"/"all" 또는 사용자 리스트 id.
     /// 인코딩은 `liveAlwaysOnReminderScopeID`와 동일하나, 이쪽은 LA가 아니라 **화면 진입 시
     /// 초기 선택**을 정한다("Off" 없음 — 항상 무언가는 보여야 하므로). 기본 전체.
@@ -94,12 +99,31 @@ struct AppSettings: Codable, Equatable, Sendable {
         liveAlwaysOnReminder: true,
         liveAlwaysOnSchedule: true,
         liveAlwaysOnReminderScopeID: "all",
+        liveAlwaysOnOrder: [.memo, .reminder, .schedule],
         tasksDefaultScopeID: "all",
         hiddenCalendarIDs: [],
         hiddenReminderListIDs: [],
         hasCompletedOnboarding: false,
         hasStartedOnboarding: false
     )
+}
+
+extension AppSettings {
+    /// 항상 표시 대상이 될 수 있는 종류 — 집중은 AlarmKit 엔진의 라이브라 제외.
+    /// 순서가 곧 기본 게시 순서다.
+    static let liveOrderKinds: [LiveActivityKind] = [.memo, .reminder, .schedule]
+
+    /// 저장된 게시 순서를 게시 경로가 쓸 수 있게 정제한다 — 대상 아닌 종류(집중)와
+    /// 중복은 버리고, 빠진 종류는 기본 순서로 뒤에 보충한다. 사용자 편집·구버전·미래
+    /// 버전을 거친 저장본이 무엇이든, 결과는 항상 세 종류가 정확히 한 번씩이다.
+    static func resolveLiveOrder(_ stored: [LiveActivityKind]) -> [LiveActivityKind] {
+        var seen = Set<LiveActivityKind>()
+        let valid = stored.filter { liveOrderKinds.contains($0) && seen.insert($0).inserted }
+        return valid + liveOrderKinds.filter { !valid.contains($0) }
+    }
+
+    /// 이 설정이 실제로 쓸 게시 순서 — 저장값 정제본.
+    var resolvedLiveOrder: [LiveActivityKind] { Self.resolveLiveOrder(liveAlwaysOnOrder) }
 }
 
 extension AppSettings {
@@ -132,6 +156,8 @@ extension AppSettings {
             ?? fallback.liveAlwaysOnSchedule
         liveAlwaysOnReminderScopeID = try container.decodeIfPresent(String.self, forKey: .liveAlwaysOnReminderScopeID)
             ?? fallback.liveAlwaysOnReminderScopeID
+        liveAlwaysOnOrder = try container.decodeIfPresent([LiveActivityKind].self, forKey: .liveAlwaysOnOrder)
+            ?? fallback.liveAlwaysOnOrder
         tasksDefaultScopeID = try container.decodeIfPresent(String.self, forKey: .tasksDefaultScopeID)
             ?? fallback.tasksDefaultScopeID
         hiddenCalendarIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenCalendarIDs)

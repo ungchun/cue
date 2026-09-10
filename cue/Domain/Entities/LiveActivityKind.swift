@@ -10,7 +10,7 @@ import Foundation
 /// cue 컨셉상 이 영역들만 라이브 액티비티 대상이다. 시스템 한도(앱당 5개, Dynamic Island
 /// 표시 2개) 안에서 각 kind는 동시 최대 1개 — 같은 kind로 다시 start하면 구현이 기존
 /// 인스턴스를 먼저 end하고 새로 시작한다.
-enum LiveActivityKind: String, Sendable, CaseIterable {
+enum LiveActivityKind: String, Codable, Sendable, CaseIterable {
     case focus
     case reminder
     case schedule

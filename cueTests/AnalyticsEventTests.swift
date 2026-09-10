@@ -88,6 +88,7 @@ struct AnalyticsEventTests {
         #expect(AnalyticsEvent.liveItemToggled(kind: "memo", on: true).name == "live_item_toggled")
         #expect(AnalyticsEvent.liveScopeChanged(scope: "today").name == "live_scope_changed")
         #expect(AnalyticsEvent.liveColorChanged(kind: "background").name == "live_color_changed")
+        #expect(AnalyticsEvent.liveOrderChanged(order: "memo,schedule,reminder").name == "live_order_changed")
         #expect(AnalyticsEvent.tasksDefaultViewChanged(view: "today").name == "tasks_default_view_changed")
         #expect(AnalyticsEvent.focusEndSoundToggled(on: false).name == "focus_end_sound_toggled")
         #expect(AnalyticsEvent.calendarVisibilityToggled(kind: "calendar", on: true).name
@@ -148,6 +149,8 @@ struct AnalyticsEventTests {
                 == ["kind": "tasks", "on": "false"])
         #expect(AnalyticsEvent.liveScopeChanged(scope: "all").parameters == ["scope": "all"])
         #expect(AnalyticsEvent.liveColorChanged(kind: "font").parameters == ["kind": "font"])
+        #expect(AnalyticsEvent.liveOrderChanged(order: "memo,schedule,reminder").parameters
+                == ["order": "memo,schedule,reminder"])
         #expect(AnalyticsEvent.tasksDefaultViewChanged(view: "upcoming").parameters
                 == ["view": "upcoming"])
         #expect(AnalyticsEvent.focusEndSoundToggled(on: true).parameters == ["on": "true"])

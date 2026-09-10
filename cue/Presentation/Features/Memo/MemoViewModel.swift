@@ -117,11 +117,20 @@ final class MemoViewModel {
     /// 항상 표시 자동 게시 — 앱 시작·포그라운드 복귀·설정 켬에서 호출.
     /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다(항상 표시는 Premium 전용 기능).
     /// 이 실행에서 이미 켜져 있으면 건너뛴다(복귀마다 재시작 방지). 빈 메모도 건너뛴다.
-    func startAlwaysOnLiveActivity() async {
+    /// `force`면 이미 활성이어도 다시 게시한다 — 설정에서 표시 순서를 바꾼 직후,
+    /// 새 순서로 다시 쌓기 위해 전 종류를 재게시하는 경로(할일 VM의 force와 동일).
+    func startAlwaysOnLiveActivity(force: Bool = false) async {
         // 항상 표시는 Premium 전용 — 게시 시점에 재확인한다. 설정 켜기 게이트만으로는
         // 구독 만료·과거 저장값(liveAlwaysOn=true 잔존)이 무료로 무제한 게시되는 걸 못 막는다.
         guard premiumStore.isPremium else { return }
-        guard !liveActivityActive else { return }
+        guard force || !liveActivityActive else { return }
+        // force 재게시는 **끝내고 새로 시작**한다 — 살아 있는 LA는 서비스가 제자리
+        // update로 처리해(깜빡임 방지) 잠금화면 쌓임 순서가 안 바뀐다. 순서는 게시
+        // 시점이 정하므로, 순서 변경 반영은 재요청만이 유일한 길이다.
+        if force, liveActivityActive {
+            await endLiveActivityUseCase()
+            liveActivityActive = false
+        }
         memo = await fetchMemoUseCase()
         guard canStartLiveActivity else { return }
         do {

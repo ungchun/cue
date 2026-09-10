@@ -130,6 +130,19 @@ final class SettingsViewModel {
         }
     }
 
+    /// 항상 표시 라이브의 게시 순서(=잠금화면 순서). 저장은 정제본으로 한다 —
+    /// 뷰의 onMove 결과가 어떤 배열이든 세 종류가 정확히 한 번씩인 상태만 영속된다.
+    func setLiveAlwaysOnOrder(_ order: [LiveActivityKind]) async {
+        let resolved = AppSettings.resolveLiveOrder(order)
+        guard settings.liveAlwaysOnOrder != resolved else { return }
+        analytics.log(.liveOrderChanged(order: resolved.map(\.rawValue).joined(separator: ",")))
+        await update { $0.liveAlwaysOnOrder = resolved }
+        // 켜져 있는 LA에 새 점수(relevanceScore)를 실어 즉시 재정렬 — 항상 표시가 꺼진
+        // 채 **수동으로 켠** 라이브도 이 경로로 순서가 반영된다(재시작 없이 update만).
+        // 항상 표시 사용자는 RootView의 onChange가 강제 재게시로 한 번 더 확실히 맞춘다.
+        await refreshLiveActivityLayout()
+    }
+
     /// 항상 표시 할일 LA의 범위("today"/"scheduled"/"all"/리스트 id).
     /// 기록은 범위가 실제로 바뀔 때만 — off→같은 범위 재선택 경로의 중복을 막는다.
     func setLiveAlwaysOnReminderScopeID(_ id: String) async {

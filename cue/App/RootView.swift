@@ -236,7 +236,18 @@ struct RootView: View {
             }
             let scopeChanged = new.liveAlwaysOn && new.liveAlwaysOnReminder
                 && old.liveAlwaysOnReminderScopeID != new.liveAlwaysOnReminderScopeID
+            // 표시 순서 변경은 켜진 라이브 **전부**를 새 순서로 재게시해야 반영된다 —
+            // 잠금화면 순서는 게시 시점이 정하므로, 일부만 재게시하면 그 종류만 내려간다.
+            let orderChanged = new.liveAlwaysOn && old.liveAlwaysOnOrder != new.liveAlwaysOnOrder
             Task {
+                if orderChanged {
+                    // 저장 체인(설정 → App Group 미러)이 끝날 틈을 준다 — 재게시의
+                    // relevanceScore는 미러에서 읽으므로, 미러가 아직 옛 순서면 새 순서로
+                    // 재게시해도 점수가 옛 값이라 화면이 그대로다.
+                    try? await Task.sleep(for: .milliseconds(150))
+                    await startAlwaysOnActivities(new, force: true)
+                    return
+                }
                 if newlyOn(\.liveAlwaysOnMemo) { await memoViewModel.startAlwaysOnLiveActivity() }
                 if newlyOn(\.liveAlwaysOnReminder) { await reminderViewModel.startAlwaysOnLiveActivity() }
                 else if scopeChanged { await reminderViewModel.startAlwaysOnLiveActivity(force: true) }
@@ -248,12 +259,30 @@ struct RootView: View {
     /// 항상 표시 설정에 따라 선택된 항목의 LA를 자동 게시한다 — 각 VM이 중복·권한·빈 데이터·
     /// **Premium 여부**를 거른다. 콜드런치에 `start()`(cueApp)보다 먼저 돌 수 있어, 게시 전
     /// 엔타이틀먼트를 직접 새로고침해 프리미엄 사용자의 첫 게시가 레이스로 빠지지 않게 한다.
-    private func startAlwaysOnActivities(_ settings: AppSettings) async {
+    ///
+    /// 게시는 설정의 **표시 순서대로** — 먼저 게시한 라이브가 잠금화면 위이므로 이 순회
+    /// 순서가 곧 화면 순서다. `force`면 이미 켜진 것도 재게시한다(순서 변경 직후, 새 순서로
+    /// 다시 쌓기 위함 — 일부만 재게시하면 그 종류만 아래로 내려가 순서가 어긋난다).
+    private func startAlwaysOnActivities(_ settings: AppSettings, force: Bool = false) async {
         guard settings.liveAlwaysOn else { return }
+        // 시스템에 살아있는 LA 핸들을 먼저 재포착한다 — 콜드런치 직후엔 서비스 핸들이
+        // 비어 있어, 이전 세션의 LA가 아직 떠 있으면 그걸 못 보고 **같은 종류를 하나 더**
+        // 게시한다(실기기: 일정 LA 2개). `start()`(cueApp)의 sync와 경합해도 무해 — 둘 다
+        // 같은 재포착이고 멱등이다.
+        await dependencies.syncLiveActivities()
         await premiumStore.refresh()
-        if settings.liveAlwaysOnMemo { await memoViewModel.startAlwaysOnLiveActivity() }
-        if settings.liveAlwaysOnReminder { await reminderViewModel.startAlwaysOnLiveActivity() }
-        if settings.liveAlwaysOnSchedule { await scheduleViewModel.startAlwaysOnLiveActivity() }
+        for kind in settings.resolvedLiveOrder {
+            switch kind {
+            case .memo where settings.liveAlwaysOnMemo:
+                await memoViewModel.startAlwaysOnLiveActivity(force: force)
+            case .reminder where settings.liveAlwaysOnReminder:
+                await reminderViewModel.startAlwaysOnLiveActivity(force: force)
+            case .schedule where settings.liveAlwaysOnSchedule:
+                await scheduleViewModel.startAlwaysOnLiveActivity(force: force)
+            default:
+                break
+            }
+        }
     }
 
     /// 탭에 대응하는 화면을 만든다.

@@ -215,6 +215,13 @@ final class ReminderViewModel {
         // 항상 표시는 Premium 전용 — 게시 시점에 재확인(구독 만료·과거 저장값 잔존 방어).
         guard premiumStore.isPremium else { return }
         guard force || !liveActivityActive else { return }
+        // force 재게시는 **끝내고 새로 시작**한다 — 살아 있는 LA는 서비스가 제자리
+        // update로 처리해(깜빡임 방지) 잠금화면 쌓임 순서가 안 바뀐다. 순서는 게시
+        // 시점이 정하므로, 순서 변경 반영은 재요청만이 유일한 길이다.
+        if force, liveActivityActive {
+            await endLiveActivityUseCase()
+            liveActivityActive = false
+        }
         await onAppear()
         guard access == .granted else { return }
 

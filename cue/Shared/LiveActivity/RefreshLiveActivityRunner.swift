@@ -45,20 +45,25 @@ enum RefreshLiveActivityRunner {
                 isPremium: isPremium, kind: kind, wanted: wanted
             )
         }
-        if allows(.memo) {
-            await republishMemo(memoRepository: memoRepository, service: service)
-        }
-        if allows(.reminder) {
-            await republishReminder(
-                settings: settings, repository: remindersRepository,
-                eventsRepository: eventsRepository, service: service, now: now
-            )
-        }
-        if allows(.schedule) {
-            await republishSchedule(
-                settings: settings, eventsRepository: eventsRepository,
-                service: service, now: now
-            )
+        // 설정의 표시 순서대로 재게시 — 먼저 게시한 라이브가 잠금화면 위이므로,
+        // 이 순회 순서가 곧 잠금화면 순서다(항상 표시 경로 `startAlwaysOnActivities`와 동일).
+        for kind in settings.resolvedLiveOrder where allows(kind) {
+            switch kind {
+            case .memo:
+                await republishMemo(memoRepository: memoRepository, service: service)
+            case .reminder:
+                await republishReminder(
+                    settings: settings, repository: remindersRepository,
+                    eventsRepository: eventsRepository, service: service, now: now
+                )
+            case .schedule:
+                await republishSchedule(
+                    settings: settings, eventsRepository: eventsRepository,
+                    service: service, now: now
+                )
+            case .focus:
+                break
+            }
         }
     }
 
