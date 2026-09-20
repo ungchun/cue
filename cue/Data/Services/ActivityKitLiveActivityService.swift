@@ -19,8 +19,12 @@ import Foundation
 /// 갖고 Non-Sendable property를 안전하게 보관할 수 있으며, protocol `Sendable` 요구도 actor가
 /// 자동 만족한다.
 ///
-/// 각 kind당 동시 1개 인스턴스만 보관 — 같은 kind로 start가 들어오면 기존을 `.immediate`로
-/// 종료하고 새로 시작한다(토글성 트리거에서 호출처 부담 제거).
+/// **각 kind당 동시 1개** — 같은 kind로 start가 들어오면 시스템 컬렉션에 살아있는 같은
+/// kind를 **전부** `.immediate`로 종료하고 새로 시작한다(제자리 update로 이어받는 하나는
+/// 예외). 보관 핸들 1개만 끝내면 어떤 이유로든 2개가 된 순간부터 자가 복구가 안 된다 —
+/// 실제 증상: 앱을 열었다 닫을 때마다 일정 카드가 쌓여 최대 4개, 단축어 「라이브 새로고침」
+/// 을 돌려도 옛 카드가 남음(2026-09-20 보고). 종료(`end*`)도 같은 이유로 전부 끝낸다.
+/// 단축어 러너가 별도 서비스 인스턴스를 쓰더라도 이 규칙이 시스템 컬렉션 기준이라 무해하다.
 ///
 /// **타이머 매초 update 금지** — Focus는 `phaseEndDate`·`pauseTime`만 ContentState에 두고
 /// 위젯에서 `Text(timerInterval:pauseTime:)` / `ProgressView(timerInterval:)`이 시스템
@@ -92,15 +96,17 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         // 같은 리스트로 이미 떠 있으면 **부드럽게 update** — 재시작은 깜빡임 + 새 인스턴스 발생.
         // listTitle은 attributes(불변)라, 리스트가 바뀐 경우엔 end 후 새로 request해야 한다.
-        if let existing = reminderActivity, existing.attributes.listTitle == listTitle {
-            await existing.update(content)
+        // 어느 쪽이든 그 하나를 뺀 같은 종류는 전부 끝낸다(종류당 1개).
+        let live = Activity<ReminderLiveActivityAttributes>.liveActivities
+        let survivor = live.first { $0.attributes.listTitle == listTitle }
+        await endAll(live, except: survivor)
+        if let survivor {
+            reminderActivity = survivor
+            await survivor.update(content)
+            LiveActivityIntentRecord.markStarted(.reminder)
             return
         }
-
-        if let existing = reminderActivity {
-            await existing.end(nil, dismissalPolicy: .immediate)
-            reminderActivity = nil
-        }
+        reminderActivity = nil
 
         let attributes = ReminderLiveActivityAttributes(listTitle: listTitle)
         stampRingAnchor()
@@ -116,8 +122,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 기록은 핸들 유무와 무관하게 지운다 — 사용자가 잠금화면에서 직접 밀어 없앤 뒤라
         // 핸들이 이미 비어 있어도 "끄겠다"는 의사는 기록에 반영돼야 한다.
         LiveActivityIntentRecord.markEnded(.reminder)
-        guard let activity = reminderActivity else { return }
-        await activity.end(nil, dismissalPolicy: .immediate)
+        await endAll(Activity<ReminderLiveActivityAttributes>.liveActivities)
         reminderActivity = nil
         lastReminderItems = []
     }
@@ -133,10 +138,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     ) async throws {
         guard await isEnabled else { return }
 
-        if let existing = scheduleActivity {
-            await existing.end(nil, dismissalPolicy: .immediate)
-            scheduleActivity = nil
-        }
+        // 종류당 1개 — 보관 핸들이 아니라 시스템에 살아있는 일정 LA를 전부 끝낸다.
+        await endAll(Activity<ScheduleLiveActivityAttributes>.liveActivities)
+        scheduleActivity = nil
 
         let attributes = ScheduleLiveActivityAttributes(startedAt: .now)
 
@@ -176,8 +180,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     func endSchedule() async {
         // 기록은 핸들 유무와 무관하게 지운다(endReminder 주석 참고).
         LiveActivityIntentRecord.markEnded(.schedule)
-        guard let activity = scheduleActivity else { return }
-        await activity.end(nil, dismissalPolicy: .immediate)
+        await endAll(Activity<ScheduleLiveActivityAttributes>.liveActivities)
         scheduleActivity = nil
         lastScheduleDays = []
     }
@@ -226,7 +229,11 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         let content = ActivityContent(state: state, staleDate: nil, relevanceScore: relevanceScore(for: .memo))
 
         // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
-        if let existing = memoActivity {
+        // 이어받는 하나를 뺀 나머지 메모 LA는 전부 끝낸다(종류당 1개).
+        let survivor = Activity<MemoLiveActivityAttributes>.liveActivity
+        await endAll(Activity<MemoLiveActivityAttributes>.liveActivities, except: survivor)
+        if let existing = survivor {
+            memoActivity = existing
             await existing.update(content)
             // 갱신 경로에서도 기록을 다시 세운다 — 앱을 지웠다 깔거나 App Group이 비었을 때
             // 라이브는 떠 있는데 기록만 없는 상태가 되면 자동화가 그 라이브를 포기한다.
@@ -247,9 +254,23 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     func endMemo() async {
         // 기록은 핸들 유무와 무관하게 지운다(endReminder 주석 참고).
         LiveActivityIntentRecord.markEnded(.memo)
-        guard let activity = memoActivity else { return }
-        await activity.end(nil, dismissalPolicy: .immediate)
+        await endAll(Activity<MemoLiveActivityAttributes>.liveActivities)
         memoActivity = nil
+    }
+
+    // MARK: - 종류당 1개
+
+    /// 살아있는 같은 종류 인스턴스를 전부 `.immediate`로 끝낸다. `except`는 제자리 update로
+    /// 이어받을 하나 — 그것만 남긴다.
+    /// actor 인스턴스 메서드로 둔다 — static(비격리)이면 Non-Sendable `Activity` 배열이
+    /// 격리 경계를 넘어 Swift 6 strict가 잡는다.
+    private func endAll<Attrs: ActivityAttributes>(
+        _ activities: [Activity<Attrs>],
+        except survivor: Activity<Attrs>? = nil
+    ) async {
+        for activity in activities where activity.id != survivor?.id {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
     }
 
     // MARK: - Ring anchor

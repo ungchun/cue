@@ -58,4 +58,18 @@ enum LiveActivityHandlePicker {
     ) -> Handle? {
         handles.first { state($0).acceptsUpdates }
     }
+
+    /// 갱신을 받을 수 있는 핸들 **전부** — 컬렉션 순서 보존. 살아있는 게 없으면 빈 배열.
+    ///
+    /// **왜 필요한가** — 종류당 1개가 정책인데, 게시 경로가 보관 핸들 1개만 끝내고 새로
+    /// 요청하면 어떤 이유로든 2개가 된 순간부터 자가 복구가 안 된다(1개만 교체되고 나머지는
+    /// 영구히 남는다). 실제 증상: 앱을 열었다 닫을 때마다 일정 카드가 쌓여 최대 4개,
+    /// 단축어 「라이브 새로고침」을 돌려도 옛 카드가 남음(2026-09-20 보고).
+    /// 게시·종료 전에 이걸로 같은 종류를 전부 끝내면 결과가 항상 1개로 수렴한다.
+    static func liveAll<Handle>(
+        from handles: [Handle],
+        state: (Handle) -> LiveActivityHandleState
+    ) -> [Handle] {
+        handles.filter { state($0).acceptsUpdates }
+    }
 }

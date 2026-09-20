@@ -78,7 +78,8 @@ struct LiveActivityHandlePickingTests {
         #expect(pick(handles) == nil)
     }
 
-    /// 살아있는 게 여럿이면 첫 번째 — kind당 1개 정책이라 실제로는 하나뿐이다.
+    /// 살아있는 게 여럿이면 첫 번째 — 갱신(update)할 대상은 하나면 된다.
+    /// 나머지 중복은 `liveAll`로 걷어낸다(아래 "종류당 1개" 테스트).
     @Test func picksFirstAmongMultipleLiveHandles() {
         let handles = [
             Handle(id: "first", state: .active),
@@ -91,5 +92,48 @@ struct LiveActivityHandlePickingTests {
     /// 빈 목록 — 앱이 백그라운드에서 막 깨어나 아직 안 채워진 경우.
     @Test func returnsNilForEmptyList() {
         #expect(pick([]) == nil)
+    }
+
+    // MARK: - 종류당 1개: 살아있는 것 전부
+
+    /// 증상(2026-09-20 보고): 앱을 열었다 닫을 때마다 일정 카드가 쌓여 최대 4개, 단축어
+    /// 「라이브 새로고침」을 돌려도 옛 카드가 남는다.
+    ///
+    /// 원인 — 게시 경로가 **보관 핸들 1개**만 끝내고 새로 요청한다. 어떤 이유로든 같은
+    /// 종류가 2개가 되는 순간(런치 직후 `activities`가 잠깐 비는 ActivityKit 특성 등)
+    /// 1개만 교체되고 나머지는 영구히 남아 자가 복구가 안 된다.
+    ///
+    /// 규칙 — 게시·종료 전에 **살아있는 같은 종류를 전부** 골라 끝낸다. 죽은 것은 제외
+    /// (end 호출은 무해하지만 의미가 없다), 순서는 시스템 컬렉션 그대로 보존한다.
+    private func pickAll(_ handles: [Handle]) -> [Handle] {
+        LiveActivityHandlePicker.liveAll(from: handles, state: \.state)
+    }
+
+    /// **재현 핵심.** 살아있는 게 여럿이면 전부 돌려준다 — 하나만 끝내면 나머지가 남는다.
+    @Test func liveAllReturnsEveryLiveHandle() {
+        let handles = [
+            Handle(id: "first", state: .active),
+            Handle(id: "second", state: .active),
+            Handle(id: "third", state: .stale),
+        ]
+
+        #expect(pickAll(handles).map(\.id) == ["first", "second", "third"])
+    }
+
+    /// 죽은 것은 섞여 있어도 빠진다.
+    @Test func liveAllSkipsDeadHandles() {
+        let handles = [
+            Handle(id: "ended", state: .ended),
+            Handle(id: "live", state: .active),
+            Handle(id: "gone", state: .dismissed),
+        ]
+
+        #expect(pickAll(handles).map(\.id) == ["live"])
+    }
+
+    /// 전부 죽었거나 비었으면 빈 배열.
+    @Test func liveAllIsEmptyWhenNothingLive() {
+        #expect(pickAll([Handle(id: "a", state: .ended)]).isEmpty)
+        #expect(pickAll([]).isEmpty)
     }
 }

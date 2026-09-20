@@ -34,4 +34,9 @@ extension Activity {
     static var liveActivity: Activity? {
         LiveActivityHandlePicker.liveOne(from: activities) { $0.activityState.handleState }
     }
+
+    /// 갱신을 받을 수 있는 인스턴스 **전부** — 종류당 1개 정책을 강제할 때 이걸로 훑는다.
+    static var liveActivities: [Activity] {
+        LiveActivityHandlePicker.liveAll(from: activities) { $0.activityState.handleState }
+    }
 }
