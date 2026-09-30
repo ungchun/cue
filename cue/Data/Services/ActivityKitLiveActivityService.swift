@@ -19,12 +19,18 @@ import Foundation
 /// 갖고 Non-Sendable property를 안전하게 보관할 수 있으며, protocol `Sendable` 요구도 actor가
 /// 자동 만족한다.
 ///
-/// **각 kind당 동시 1개** — 같은 kind로 start가 들어오면 시스템 컬렉션에 살아있는 같은
-/// kind를 **전부** `.immediate`로 종료하고 새로 시작한다(제자리 update로 이어받는 하나는
+/// **각 kind당 동시 1개** — 같은 kind로 start가 들어오면 시스템 컬렉션의 같은 kind를
+/// **전부** `.immediate`로 종료하고 새로 시작한다(제자리 update로 이어받는 하나는
 /// 예외). 보관 핸들 1개만 끝내면 어떤 이유로든 2개가 된 순간부터 자가 복구가 안 된다 —
 /// 실제 증상: 앱을 열었다 닫을 때마다 일정 카드가 쌓여 최대 4개, 단축어 「라이브 새로고침」
 /// 을 돌려도 옛 카드가 남음(2026-09-20 보고). 종료(`end*`)도 같은 이유로 전부 끝낸다.
 /// 단축어 러너가 별도 서비스 인스턴스를 쓰더라도 이 규칙이 시스템 컬렉션 기준이라 무해하다.
+///
+/// **게시·종료는 직렬** — "전부 종료 → request"는 종료의 await에서 actor가 재진입돼,
+/// 겹쳐 들어온 게시가 서로의 새 인스턴스를 못 본 채 각자 request한다. 위 규칙만으로는
+/// 한 실행 안의 동시 게시를 못 막았다(1.1.9 이후에도 일정 카드 최대 4개, 2026-09-30
+/// 재보고 — 콜드런치엔 항상 표시 게시가 서너 갈래로 동시에 들어온다). 그래서 `start*`·
+/// `end*` 전체를 `publishGate`로 한 번에 하나씩만 돌린다.
 ///
 /// **타이머 매초 update 금지** — Focus는 `phaseEndDate`·`pauseTime`만 ContentState에 두고
 /// 위젯에서 `Text(timerInterval:pauseTime:)` / `ProgressView(timerInterval:)`이 시스템
@@ -50,6 +56,10 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 마지막 할일 게시의 **전체(미-cap) items** — 일정과 같은 이유(캘린더 토글 복원).
     private var lastReminderItems: [LiveReminderItem] = []
 
+    /// 게시·종료 직렬화 게이트 — **프로세스 공용(static)**. 단축어 러너가 서비스를 새로
+    /// 조립하므로 인스턴스마다 두면 앱 쪽 게시와 단축어 게시가 서로를 못 막는다.
+    private static let publishGate = SerialGate()
+
     init() {}
 
     /// 시스템 설정 + OS budget으로 라이브 액티비티가 활성화돼 있는지.
@@ -65,6 +75,24 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     // MARK: - Reminder
 
     func startReminder(
+        listTitle: String,
+        items: [LiveReminderItem],
+        remaining: Int,
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?,
+        isSample: Bool
+    ) async throws {
+        try await Self.publishGate.run {
+            try await self.publishReminder(
+                listTitle: listTitle, items: items, remaining: remaining,
+                todayCount: todayCount, weekEventDots: weekEventDots,
+                showsCalendarOverride: showsCalendarOverride, isSample: isSample
+            )
+        }
+    }
+
+    private func publishReminder(
         listTitle: String,
         items: [LiveReminderItem],
         remaining: Int,
@@ -97,9 +125,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 같은 리스트로 이미 떠 있으면 **부드럽게 update** — 재시작은 깜빡임 + 새 인스턴스 발생.
         // listTitle은 attributes(불변)라, 리스트가 바뀐 경우엔 end 후 새로 request해야 한다.
         // 어느 쪽이든 그 하나를 뺀 같은 종류는 전부 끝낸다(종류당 1개).
-        let live = Activity<ReminderLiveActivityAttributes>.liveActivities
-        let survivor = live.first { $0.attributes.listTitle == listTitle }
-        await endAll(live, except: survivor)
+        let survivor = Activity<ReminderLiveActivityAttributes>.liveActivities
+            .first { $0.attributes.listTitle == listTitle }
+        await endAll(Activity<ReminderLiveActivityAttributes>.activities, except: survivor)
         if let survivor {
             reminderActivity = survivor
             await survivor.update(content)
@@ -119,10 +147,14 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     }
 
     func endReminder() async {
+        await Self.publishGate.run { await self.retireReminder() }
+    }
+
+    private func retireReminder() async {
         // 기록은 핸들 유무와 무관하게 지운다 — 사용자가 잠금화면에서 직접 밀어 없앤 뒤라
         // 핸들이 이미 비어 있어도 "끄겠다"는 의사는 기록에 반영돼야 한다.
         LiveActivityIntentRecord.markEnded(.reminder)
-        await endAll(Activity<ReminderLiveActivityAttributes>.liveActivities)
+        await endAll(Activity<ReminderLiveActivityAttributes>.activities)
         reminderActivity = nil
         lastReminderItems = []
     }
@@ -136,10 +168,25 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         showsCalendarOverride: Bool?,
         isSample: Bool
     ) async throws {
+        try await Self.publishGate.run {
+            try await self.publishSchedule(
+                days: days, todayCount: todayCount, weekEventDots: weekEventDots,
+                showsCalendarOverride: showsCalendarOverride, isSample: isSample
+            )
+        }
+    }
+
+    private func publishSchedule(
+        days: [LiveScheduleDay],
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?,
+        isSample: Bool
+    ) async throws {
         guard await isEnabled else { return }
 
-        // 종류당 1개 — 보관 핸들이 아니라 시스템에 살아있는 일정 LA를 전부 끝낸다.
-        await endAll(Activity<ScheduleLiveActivityAttributes>.liveActivities)
+        // 종류당 1개 — 보관 핸들이 아니라 시스템 컬렉션의 일정 LA를 전부 끝낸다.
+        await endAll(Activity<ScheduleLiveActivityAttributes>.activities)
         scheduleActivity = nil
 
         let attributes = ScheduleLiveActivityAttributes(startedAt: .now)
@@ -178,9 +225,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     }
 
     func endSchedule() async {
+        await Self.publishGate.run { await self.retireSchedule() }
+    }
+
+    private func retireSchedule() async {
         // 기록은 핸들 유무와 무관하게 지운다(endReminder 주석 참고).
         LiveActivityIntentRecord.markEnded(.schedule)
-        await endAll(Activity<ScheduleLiveActivityAttributes>.liveActivities)
+        await endAll(Activity<ScheduleLiveActivityAttributes>.activities)
         scheduleActivity = nil
         lastScheduleDays = []
     }
@@ -191,6 +242,10 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     /// 보관 중인 핸들이 아니라 시스템 컬렉션을 스캔 — 앱 재시작으로 핸들이 유실된
     /// 지난 실행의 예시도 정리된다. 실사용 게시는 마커가 항상 nil이라 안 걸린다.
     func endSamples() async {
+        await Self.publishGate.run { await self.retireSamples() }
+    }
+
+    private func retireSamples() async {
         for activity in Activity<ScheduleLiveActivityAttributes>.activities
         where activity.content.state.isSample {
             await activity.end(nil, dismissalPolicy: .immediate)
@@ -217,6 +272,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     // MARK: - Memo
 
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {
+        try await Self.publishGate.run {
+            try await self.publishMemo(text: text, colorHex: colorHex, textColorHex: textColorHex)
+        }
+    }
+
+    private func publishMemo(text: String, colorHex: String, textColorHex: String) async throws {
         guard await isEnabled else { return }
 
         // 메모도 표시 여부를 게시 시점에 확정해 싣는다(할일·일정과 동일).
@@ -231,7 +292,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
         // 이어받는 하나를 뺀 나머지 메모 LA는 전부 끝낸다(종류당 1개).
         let survivor = Activity<MemoLiveActivityAttributes>.liveActivity
-        await endAll(Activity<MemoLiveActivityAttributes>.liveActivities, except: survivor)
+        await endAll(Activity<MemoLiveActivityAttributes>.activities, except: survivor)
         if let existing = survivor {
             memoActivity = existing
             await existing.update(content)
@@ -252,16 +313,25 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     }
 
     func endMemo() async {
+        await Self.publishGate.run { await self.retireMemo() }
+    }
+
+    private func retireMemo() async {
         // 기록은 핸들 유무와 무관하게 지운다(endReminder 주석 참고).
         LiveActivityIntentRecord.markEnded(.memo)
-        await endAll(Activity<MemoLiveActivityAttributes>.liveActivities)
+        await endAll(Activity<MemoLiveActivityAttributes>.activities)
         memoActivity = nil
     }
 
     // MARK: - 종류당 1개
 
-    /// 살아있는 같은 종류 인스턴스를 전부 `.immediate`로 끝낸다. `except`는 제자리 update로
+    /// 같은 종류 인스턴스를 전부 `.immediate`로 끝낸다. `except`는 제자리 update로
     /// 이어받을 하나 — 그것만 남긴다.
+    ///
+    /// **끝낼 대상은 거르지 않는다** — 호출부는 `liveActivities`가 아니라 `activities`
+    /// 전체를 넘긴다. 시스템이 8시간 한도로 끝낸(`.ended`) 카드는 잠금화면에 최대 4시간
+    /// 더 남는데, 살아있는 것만 고르면 그 잔상 위에 새 카드가 하나 더 얹힌다.
+    /// 갱신할 하나(`except`)를 고를 때만 살아있는지 본다 — 죽은 핸들의 update는 무시된다.
     /// actor 인스턴스 메서드로 둔다 — static(비격리)이면 Non-Sendable `Activity` 배열이
     /// 격리 경계를 넘어 Swift 6 strict가 잡는다.
     private func endAll<Attrs: ActivityAttributes>(

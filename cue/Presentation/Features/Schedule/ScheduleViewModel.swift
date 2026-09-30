@@ -204,6 +204,8 @@ final class ScheduleViewModel {
 
     /// 라이브 액티비티 활성 상태 — 동그라미 버튼의 시각 상태 + 토글 분기.
     private(set) var liveActivityActive = false
+    /// 항상 표시 게시의 직렬 체인 — 겹쳐 들어온 호출을 들어온 순서대로 하나씩 돌린다.
+    private var alwaysOnChain: Task<Void, Never>?
     /// 라이브 액티비티 시작 실패 등 사용자에게 알릴 에러 — View가 alert로 표시.
     var errorMessage: String?
 
@@ -256,7 +258,21 @@ final class ScheduleViewModel {
     /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 건너뛴다.
     /// `force`면 이미 활성이어도 다시 게시한다 — 설정에서 표시 순서를 바꾼 직후,
     /// 새 순서로 다시 쌓기 위해 전 종류를 재게시하는 경로(할일 VM의 force와 동일).
+    ///
+    /// **겹친 호출은 직렬로** — 콜드런치엔 이 게시가 여러 갈래로 동시에 들어온다(설정 로드,
+    /// scenePhase `.active`, 설정 onChange의 "새로 켜짐", reconcile). `liveActivityActive`는
+    /// 게시가 끝나야 서므로, 줄 세우지 않으면 전부 "이미 켜짐" 가드를 통과해 호출 수만큼
+    /// 게시한다(일정 카드 최대 4개, 2026-09-30 재보고). 앞 호출이 끝난 뒤 가드를 다시 본다.
     func startAlwaysOnLiveActivity(force: Bool = false) async {
+        let task = Task { [previous = alwaysOnChain] in
+            await previous?.value
+            await performAlwaysOnStart(force: force)
+        }
+        alwaysOnChain = task
+        await task.value
+    }
+
+    private func performAlwaysOnStart(force: Bool) async {
         // 항상 표시는 Premium 전용 — 게시 시점에 재확인(구독 만료·과거 저장값 잔존 방어).
         guard premiumStore.isPremium else { return }
         guard force || !liveActivityActive else { return }

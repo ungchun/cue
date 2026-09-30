@@ -79,7 +79,7 @@ struct LiveActivityHandlePickingTests {
     }
 
     /// 살아있는 게 여럿이면 첫 번째 — 갱신(update)할 대상은 하나면 된다.
-    /// 나머지 중복은 `liveAll`로 걷어낸다(아래 "종류당 1개" 테스트).
+    /// 나머지 중복은 게시 경로가 시스템 컬렉션 전체를 끝내서 걷어낸다.
     @Test func picksFirstAmongMultipleLiveHandles() {
         let handles = [
             Handle(id: "first", state: .active),
@@ -103,8 +103,13 @@ struct LiveActivityHandlePickingTests {
     /// 종류가 2개가 되는 순간(런치 직후 `activities`가 잠깐 비는 ActivityKit 특성 등)
     /// 1개만 교체되고 나머지는 영구히 남아 자가 복구가 안 된다.
     ///
-    /// 규칙 — 게시·종료 전에 **살아있는 같은 종류를 전부** 골라 끝낸다. 죽은 것은 제외
-    /// (end 호출은 무해하지만 의미가 없다), 순서는 시스템 컬렉션 그대로 보존한다.
+    /// 규칙 — 살아있는 같은 종류를 **전부** 고른다. 죽은 것은 제외, 순서는 시스템 컬렉션
+    /// 그대로 보존한다.
+    ///
+    /// 2026-09-30 이후 이 목록은 **끝낼 대상이 아니라** 제자리 update로 이어받을 후보를
+    /// 찾는 데 쓴다 — 종료는 거르지 않은 전체 컬렉션에 보낸다(시스템이 끝낸 `.ended` 카드도
+    /// 잠금화면에 한동안 남기 때문). 중복의 실제 계기는 동시 게시 경합이었고, 그건
+    /// `SerialGateTests`·`ScheduleViewModelTests`가 고정한다.
     private func pickAll(_ handles: [Handle]) -> [Handle] {
         LiveActivityHandlePicker.liveAll(from: handles, state: \.state)
     }

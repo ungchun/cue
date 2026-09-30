@@ -230,6 +230,34 @@ struct ScheduleViewModelTests {
         #expect(viewModel.liveActivityActive == false)
     }
 
+    /// 항상 표시 게시가 **겹쳐 들어와도** 일정 LA는 한 번만 게시된다.
+    ///
+    /// 콜드런치엔 같은 게시가 동시에 여러 갈래로 들어온다 — 설정 로드 `.task`,
+    /// scenePhase `.active`, 설정 onChange의 "새로 켜짐"(기본값 → 저장값), reconcile.
+    /// `liveActivityActive`는 게시가 **끝난 뒤에야** 서므로 그 사이 들어온 호출은 전부
+    /// 가드를 통과하고, 일정은 제자리 update 없이 매번 새로 request하므로 호출 수만큼
+    /// 카드가 쌓인다. 실제 증상: 앱을 열었다 닫으면 일정 카드가 최대 4개(2026-09-30 재보고).
+    @Test func concurrentAlwaysOnStartsPublishScheduleOnce() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let allDay = event(id: "allday", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let service = CountingScheduleLiveActivityService()
+        var dependencies = makeDependencies(events: [allDay])
+        dependencies.startScheduleLiveActivity = StartScheduleLiveActivityUseCase(service: service)
+        let viewModel = ScheduleViewModel(
+            dependencies: dependencies,
+            premiumStore: PremiumStore(previewIsPremium: true),
+            now: { today }
+        )
+
+        async let first: Void = viewModel.startAlwaysOnLiveActivity()
+        async let second: Void = viewModel.startAlwaysOnLiveActivity()
+        async let third: Void = viewModel.startAlwaysOnLiveActivity()
+        _ = await (first, second, third)
+
+        #expect(await service.startScheduleCount == 1)
+        #expect(viewModel.liveActivityActive == true)
+    }
+
     @Test func eventsByDayGroupsByCalendarDay() async {
         let today = Calendar.current.startOfDay(for: Date())
         let tomorrow = today.addingTimeInterval(24 * 60 * 60)
@@ -701,4 +729,30 @@ private actor GatedEventsRepository: EventsRepository {
     }
     func fetchCalendars() async throws -> [EventCalendar] { try await base.fetchCalendars() }
     nonisolated func changes() -> AsyncStream<Void> { base.changes() }
+}
+
+/// 일정 게시 횟수만 세는 서비스 더블 — 겹친 게시가 몇 번 서비스까지 닿는지 관측한다.
+private actor CountingScheduleLiveActivityService: LiveActivityService {
+    var isEnabled: Bool { true }
+    private(set) var startScheduleCount = 0
+
+    func startReminder(
+        listTitle: String,
+        items: [LiveReminderItem],
+        remaining: Int,
+        todayCount: Int,
+        weekEventDots: [LiveDayEventDots],
+        showsCalendarOverride: Bool?,
+        isSample: Bool
+    ) async throws {}
+    func endReminder() async {}
+    func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
+        startScheduleCount += 1
+    }
+    func endSchedule() async {}
+    func endSamples() async {}
+    func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
+    func endMemo() async {}
+    func sync() async {}
+    func refreshLayout() async {}
 }
