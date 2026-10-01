@@ -42,6 +42,18 @@ struct RefreshLiveActivityRunnerTests {
         #expect(reminderCalls == ["endReminder", "startReminder"])
     }
 
+    /// 셋 다 살아있으면 셋 다 새로 게시한다 — "종류당 1개"지 "전체 1개"가 아니다.
+    @Test func everyAliveKindIsRepublishedOncePerKind() async {
+        let service = OrderRecordingLiveActivityService()
+
+        await run(alive: [.memo, .reminder, .schedule], service: service)
+
+        let calls = await service.calls
+        for kind in ["Memo", "Reminder", "Schedule"] {
+            #expect(calls.filter { $0.hasSuffix(kind) } == ["end\(kind)", "start\(kind)"])
+        }
+    }
+
     /// 새로 만들 내용이 없으면 살아있는 카드를 건드리지 않는다 — 실패한 새로고침이 카드를 지우면 안 된다.
     @Test func aliveKindWithNothingToPublishIsLeftAsIs() async {
         let service = OrderRecordingLiveActivityService()
