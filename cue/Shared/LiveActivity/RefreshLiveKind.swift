@@ -17,11 +17,11 @@ enum RefreshLiveKind: String, AppEnum {
     case schedule
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Live"
-    // 표시 문구는 설정 화면과 같은 키를 쓴다 — 번역이 이미 있고, 앱과 단축어의 이름이 같아야 한다.
+    // 「라이브」를 붙여 단축어 목록에서 무엇을 새로고침하는지 바로 읽히게 한다(메모 라이브 등).
     static let caseDisplayRepresentations: [RefreshLiveKind: DisplayRepresentation] = [
-        .memo: "Memo",
-        .reminder: "Tasks",
-        .schedule: "Schedule",
+        .memo: "Memo Live",
+        .reminder: "Tasks Live",
+        .schedule: "Schedule Live",
     ]
 
     var liveKind: LiveActivityKind {
