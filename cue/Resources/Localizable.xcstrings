@@ -27210,6 +27210,106 @@
           }
         }
       }
+    },
+    "In ‘Refresh Live’, you can choose Live, Memo, Tasks, or Schedule." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "في ‘تحديث Live’ يمكنك اختيار مباشر أو مذكرة أو المهام أو الجدول."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In ‘Live aktualisieren’ kannst du Live, Memo, Aufgaben oder Termine auswählen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En ‘Actualizar Live’ puedes elegir En vivo, Nota, Tareas o Agenda."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans ‘Actualiser Live’, vous pouvez choisir En direct, Mémo, Tâches ou Agenda."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘Live रिफ़्रेश करें’ में लाइव, मेमो, टास्क या शेड्यूल चुन सकते हैं।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di ‘Segarkan Live’ bisa memilih Langsung, Memo, Tugas, atau Jadwal."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In ‘Aggiorna Live’ puoi scegliere Live, Nota, Attività o Agenda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘Liveを更新’ではライブ・メモ・タスク・予定をそれぞれ選べます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "‘라이브 새로고침’에서 라이브, 메모, 할일, 일정을 각각 선택할 수 있어요."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dalam ‘Segarkan Live’, boleh pilih Langsung, Memo, Tugas atau Jadual."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Em ‘Atualizar Live’, você pode escolher Ao vivo, Nota, Tarefas ou Agenda."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В «Обновить Live» можно выбрать: «Лайв», «Заметка», «Задачи» или «Расписание»."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใน ‘รีเฟรช Live’ เลือก ไลฟ์, บันทึก, งาน หรือ กำหนดการ ได้"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trong ‘Làm mới Live’, bạn có thể chọn Trực tiếp, Ghi chú, Việc cần làm hoặc Lịch trình."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在“刷新 Live”中可分别选择实时、备忘、任务或日程。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在「重新整理 Live」中可分別選擇即時、備忘、任務或行程。"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

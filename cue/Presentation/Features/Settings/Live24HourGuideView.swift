@@ -116,6 +116,11 @@ struct Live24HourGuideView: View {
                 Image(systemName: "info.circle")
             }
             Label {
+                Text("In ‘Refresh Live’, you can choose Live, Memo, Tasks, or Schedule.")
+            } icon: {
+                Image(systemName: "list.bullet")
+            }
+            Label {
                 Text("If run times overlap with other automations, they may not run at the same time. Space them apart. e.g. 00:01, 08:01, 16:01")
             } icon: {
                 Image(systemName: "exclamationmark.triangle")
