@@ -538,6 +538,7 @@ private final class SpyAnalyticsService: AnalyticsService, @unchecked Sendable {
 // MARK: - refreshLayout 기록용 더블 — 나머지 호출은 무시한다.
 
 private final actor RefreshRecordingLiveActivityService: LiveActivityService {
+    func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
 
     private(set) var refreshLayoutCount = 0

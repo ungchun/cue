@@ -23,12 +23,16 @@ enum RefreshLiveActivityRunner {
     /// 실제 증상: 밤에 할일만 켜뒀는데 08:00 자동화 뒤 일정이 떠 있었다(2026-10-01 보고).
     /// 시스템이 이미 끝낸(`.ended`) 카드도 되살리지 않는다 — 꺼지기 전에 자동화가 돌아야 한다.
     ///
-    /// **제자리 update가 아니라 끝낸 뒤 새로** — update는 8시간 타이머를 리셋하지 않고,
-    /// 종류마다 전부 끝낸 뒤 하나만 게시해야 같은 종류가 겹치지 않는다. 살아있지 않은 종류는
+    /// **제자리 update가 아니라 새 요청** — update는 8시간 타이머를 리셋하지 않는다. 옛 카드는
+    /// 새 카드가 뜬 **뒤에** 서비스가 끝낸다(`prepareRenewal`). 먼저 끝냈더니 백그라운드 게시가
+    /// 막혀 메모·할일이 사라지고 마지막 일정만 남았다(2026-10-01 재보고). 살아있지 않은 종류는
     /// 잠금화면에 남은 잔상까지 끝낸다.
     ///
-    /// 실패는 조용히 삼킨다 — 자동화 경로라 사용자에게 보여줄 화면이 없다.
+    /// **`kind`** — 지정하면 그 종류만 다룬다. 백그라운드 인텐트는 실행 한 번에 라이브 하나만
+    /// 새로 켜지는 것으로 보여(Apple 미문서화, 포럼 보고), 자동화가 종류마다 따로 실행한다.
+    /// nil이면 전 종류 — 종류 선택이 없던 옛 자동화와의 호환용이다.
     static func run(
+        kind: LiveActivityKind? = nil,
         settingsRepository: any AppSettingsRepository = UserDefaultsAppSettingsRepository(),
         memoRepository: any MemoRepository = UserDefaultsMemoRepository(),
         remindersRepository: any RemindersRepository = EventKitRemindersRepository(),
@@ -48,7 +52,8 @@ enum RefreshLiveActivityRunner {
         // 설정의 표시 순서대로 재게시 — 정렬 자체는 각 게시에 실리는 relevanceScore가
         // 정하고, 순회는 게시 시점(동점의 보조 기준)까지 화면과 맞추기 위해 같은 순서로
         // 돈다(항상 표시 경로 `startAlwaysOnActivities`와 동일).
-        for kind in settings.resolvedLiveOrder {
+        let targets = kind.map { [$0] } ?? settings.resolvedLiveOrder
+        for kind in targets {
             guard alive.contains(kind) else {
                 await clear(kind, service: service)
                 continue
@@ -101,8 +106,8 @@ enum RefreshLiveActivityRunner {
         let memo = await memoRepository.fetch()
         // 빈 메모는 use case가 throw한다 — 시도 자체를 막아 의도를 분명히 한다.
         guard RefreshLiveActivityDecision.canPublishMemo(memo) else { return }
-        // 내용을 확인한 뒤에야 끝낸다 — 실패한 새로고침이 살아있는 카드를 지우면 안 된다.
-        await service.endMemo()
+        // 내용을 확인한 뒤에야 교체를 건다 — 새로 만들 게 없으면 살아있는 카드를 그대로 둔다.
+        await service.prepareRenewal(.memo)
         try? await StartMemoLiveActivityUseCase(service: service)(memo)
     }
 
@@ -137,8 +142,7 @@ enum RefreshLiveActivityRunner {
             list.colorHex.map { (list.id, $0) }
         })
         let week = await weekEvents(eventsRepository, settings: settings, now: now)
-        // 재료를 다 모은 뒤에 끝낸다 — 끝내고 새로 켜기까지 카드가 비는 틈을 줄인다.
-        await service.endReminder()
+        await service.prepareRenewal(.reminder)
         try? await StartReminderLiveActivityUseCase(service: service)(
             listTitle: RefreshLiveActivitySelection.title(for: scope, lists: lists),
             reminders: items,
@@ -170,7 +174,7 @@ enum RefreshLiveActivityRunner {
         // 다가오는 일정이 없으면 use case가 게시하지 않는다 — 끝내기 전에 먼저 확인한다.
         guard !StartScheduleLiveActivityUseCase.groupIntoDays(visible, now: now).isEmpty else { return }
         let week = await weekEvents(eventsRepository, settings: settings, now: now)
-        await service.endSchedule()
+        await service.prepareRenewal(.schedule)
         try? await StartScheduleLiveActivityUseCase(service: service)(
             events: visible,
             weekEvents: week,

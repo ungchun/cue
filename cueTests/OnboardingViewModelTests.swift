@@ -206,6 +206,7 @@ struct OnboardingViewModelTests {
 // MARK: - 메모 LA 호출 기록용 더블 (온보딩 전용 — 실패 주입 지원)
 
 private actor RecordingOnboardingLiveActivity: LiveActivityService {
+    func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
 
     private(set) var startMemoCalls: [(text: String, colorHex: String, textColorHex: String)] = []

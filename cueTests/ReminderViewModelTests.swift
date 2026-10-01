@@ -2003,6 +2003,7 @@ private actor GatedRemindersRepository: RemindersRepository {
 
 /// 시작/갱신 호출을 기록하는 LA 더블. `isEnabled = true`라 ViewModel이 활성으로 전환된다.
 private actor RecordingReminderLiveActivity: LiveActivityService {
+    func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
     private(set) var startReminderCalls: [(items: [LiveReminderItem], remaining: Int)] = []
 

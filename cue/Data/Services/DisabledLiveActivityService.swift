@@ -37,6 +37,8 @@ struct DisabledLiveActivityService: LiveActivityService {
 
     func endMemo() async {}
 
+    func prepareRenewal(_ kind: LiveActivityKind) async {}
+
     func sync() async {}
 
     func refreshLayout() async {}

@@ -55,13 +55,9 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     private var lastScheduleDays: [LiveScheduleDay] = []
     /// 마지막 할일 게시의 **전체(미-cap) items** — 일정과 같은 이유(캘린더 토글 복원).
     private var lastReminderItems: [LiveReminderItem] = []
-    /// 이 서비스가 끝낸 인스턴스 id — 제자리 update로 이어받을 후보에서 뺀다.
-    ///
-    /// `end()`를 await한 직후에도 `activityState`가 한동안 `.active`로 남는다. 그래서 "끝내고
-    /// 바로 새로 게시"하면 방금 끝낸 카드를 살아있는 것으로 잡아 거기에 update를 보내고(무시됨)
-    /// 새 카드는 요청하지 않는다. 실제 증상: 단축어 「라이브 새로고침」 뒤 메모·할일이 사라지고
-    /// 이어받기가 없는 일정만 남았다(2026-10-01 보고).
-    private var endedIDs: Set<String> = []
+    /// `prepareRenewal`로 교체가 예약된 인스턴스 id(종류별). 다음 게시는 이들을 이어받지
+    /// 않고 새로 요청하며, 요청이 성공한 **뒤에** 끝낸다 — 실패하면 옛 카드가 그대로 남는다.
+    private var renewing: [LiveActivityKind: Set<String>] = [:]
 
     /// 게시·종료 직렬화 게이트 — **프로세스 공용(static)**. 단축어 러너가 서비스를 새로
     /// 조립하므로 인스턴스마다 두면 앱 쪽 게시와 단축어 게시가 서로를 못 막는다.
@@ -108,6 +104,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         showsCalendarOverride: Bool?,
         isSample: Bool
     ) async throws {
+        let retiring = renewing.removeValue(forKey: .reminder) ?? []
         guard await isEnabled else { return }
 
         // 캘린더 껐다 켤 때 원본에서 복원하도록 전체 items 보관(cap 이전).
@@ -131,10 +128,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         // 같은 리스트로 이미 떠 있으면 **부드럽게 update** — 재시작은 깜빡임 + 새 인스턴스 발생.
         // listTitle은 attributes(불변)라, 리스트가 바뀐 경우엔 end 후 새로 request해야 한다.
-        // 어느 쪽이든 그 하나를 뺀 같은 종류는 전부 끝낸다(종류당 1개).
+        // 어느 쪽이든 그 하나를 뺀 같은 종류는 전부 끝낸다(종류당 1개). 교체 예약분은
+        // 이어받지도, 지금 끝내지도 않는다 — 새 카드가 뜬 뒤에 끝낸다.
+        let existing = Activity<ReminderLiveActivityAttributes>.activities
         let survivor = Activity<ReminderLiveActivityAttributes>.liveActivities
-            .first { $0.attributes.listTitle == listTitle && !endedIDs.contains($0.id) }
-        await endAll(Activity<ReminderLiveActivityAttributes>.activities, except: survivor)
+            .first { $0.attributes.listTitle == listTitle && !retiring.contains($0.id) }
+        await endAll(existing.filter { !retiring.contains($0.id) }, except: survivor)
         if let survivor {
             reminderActivity = survivor
             await survivor.update(content)
@@ -149,6 +148,8 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             content: content,
             pushType: nil
         )
+        // 요청이 throw하면 여기 오지 않는다 — 교체 대상은 새 카드가 뜬 경우에만 끝낸다.
+        await endAll(existing.filter { retiring.contains($0.id) })
     }
 
     func endReminder() async {
@@ -185,10 +186,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         showsCalendarOverride: Bool?,
         isSample: Bool
     ) async throws {
+        let retiring = renewing.removeValue(forKey: .schedule) ?? []
         guard await isEnabled else { return }
 
         // 종류당 1개 — 보관 핸들이 아니라 시스템 컬렉션의 일정 LA를 전부 끝낸다.
-        await endAll(Activity<ScheduleLiveActivityAttributes>.activities)
+        // 교체 예약분만 남겨 두었다가 새 카드가 뜬 뒤에 끝낸다(할일 쪽 주석 참고).
+        let existing = Activity<ScheduleLiveActivityAttributes>.activities
+        await endAll(existing.filter { !retiring.contains($0.id) })
         scheduleActivity = nil
 
         let attributes = ScheduleLiveActivityAttributes(startedAt: .now)
@@ -223,6 +227,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             content: content,
             pushType: nil
         )
+        await endAll(existing.filter { retiring.contains($0.id) })
     }
 
     func endSchedule() async {
@@ -248,7 +253,6 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         for activity in Activity<ScheduleLiveActivityAttributes>.activities
         where activity.content.state.isSample {
             await activity.end(nil, dismissalPolicy: .immediate)
-            endedIDs.insert(activity.id)
             if scheduleActivity?.id == activity.id {
                 scheduleActivity = nil
                 lastScheduleDays = []
@@ -257,7 +261,6 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         for activity in Activity<ReminderLiveActivityAttributes>.activities
         where activity.content.state.isSample {
             await activity.end(nil, dismissalPolicy: .immediate)
-            endedIDs.insert(activity.id)
             if reminderActivity?.id == activity.id {
                 reminderActivity = nil
                 lastReminderItems = []
@@ -274,6 +277,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     }
 
     private func publishMemo(text: String, colorHex: String, textColorHex: String) async throws {
+        let retiring = renewing.removeValue(forKey: .memo) ?? []
         guard await isEnabled else { return }
 
         // 메모도 표시 여부를 게시 시점에 확정해 싣는다(할일·일정과 동일).
@@ -286,13 +290,15 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         let content = ActivityContent(state: state, staleDate: nil, relevanceScore: relevanceScore(for: .memo))
 
         // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
-        // 이어받는 하나를 뺀 나머지 메모 LA는 전부 끝낸다(종류당 1개).
+        // 이어받는 하나를 뺀 나머지 메모 LA는 전부 끝낸다(종류당 1개). 교체 예약분은
+        // 새 카드가 뜬 뒤에 끝낸다(할일 쪽 주석 참고).
+        let existing = Activity<MemoLiveActivityAttributes>.activities
         let survivor = Activity<MemoLiveActivityAttributes>.liveActivities
-            .first { !endedIDs.contains($0.id) }
-        await endAll(Activity<MemoLiveActivityAttributes>.activities, except: survivor)
-        if let existing = survivor {
-            memoActivity = existing
-            await existing.update(content)
+            .first { !retiring.contains($0.id) }
+        await endAll(existing.filter { !retiring.contains($0.id) }, except: survivor)
+        if let survivor {
+            memoActivity = survivor
+            await survivor.update(content)
             return
         }
 
@@ -303,6 +309,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
             content: content,
             pushType: nil
         )
+        await endAll(existing.filter { retiring.contains($0.id) })
     }
 
     func endMemo() async {
@@ -312,6 +319,19 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     private func retireMemo() async {
         await endAll(Activity<MemoLiveActivityAttributes>.activities)
         memoActivity = nil
+    }
+
+    // MARK: - 교체 (단축어 「라이브 새로고침」)
+
+    /// 지금 시스템에 있는 `kind` 인스턴스 전부를 다음 게시의 교체 대상으로 잡는다.
+    /// 끝난(`.ended`) 잔상도 포함한다 — 새 카드가 뜰 때 같이 정리된다.
+    func prepareRenewal(_ kind: LiveActivityKind) async {
+        switch kind {
+        case .memo: renewing[kind] = Set(Activity<MemoLiveActivityAttributes>.activities.map(\.id))
+        case .reminder: renewing[kind] = Set(Activity<ReminderLiveActivityAttributes>.activities.map(\.id))
+        case .schedule: renewing[kind] = Set(Activity<ScheduleLiveActivityAttributes>.activities.map(\.id))
+        case .focus: break
+        }
     }
 
     // MARK: - 종류당 1개
@@ -331,7 +351,6 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     ) async {
         for activity in activities where activity.id != survivor?.id {
             await activity.end(nil, dismissalPolicy: .immediate)
-            endedIDs.insert(activity.id)
         }
     }
 

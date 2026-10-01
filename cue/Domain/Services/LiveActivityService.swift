@@ -76,6 +76,16 @@ protocol LiveActivityService: Sendable {
     /// 메모 라이브 액티비티 즉시 종료.
     func endMemo() async
 
+    // MARK: - 교체 (단축어 「라이브 새로고침」)
+
+    /// 지금 떠 있는 `kind` 카드를 **다음 게시로 교체**하도록 예약한다.
+    ///
+    /// 다음 `start*`는 이 카드들을 제자리 update로 이어받지 않고 새로 요청하며, 요청이
+    /// **성공한 뒤에** 끝낸다. 요청이 실패하면 그대로 둔다 — 백그라운드 게시가 막혀도 카드가
+    /// 사라지지 않게(먼저 끝냈더니 메모·할일이 사라진 실기기 보고, 2026-10-01).
+    /// 새 요청이어야 하는 이유는 제자리 update가 8시간 한도를 리셋하지 않기 때문이다.
+    func prepareRenewal(_ kind: LiveActivityKind) async
+
     // MARK: - Sync
 
     /// 앱 시작 시 호출 — 시스템에 살아있는 Activity 인스턴스를 재포착해 내부 핸들 복원.

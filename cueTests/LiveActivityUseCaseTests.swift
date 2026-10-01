@@ -644,6 +644,7 @@ struct LiveActivityUseCaseTests {
 // MARK: - Mock service — actor로 호출 기록을 안전하게 보관
 
 private final actor RecordingLiveActivityService: LiveActivityService {
+    func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
 
     private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool)] = []
@@ -706,6 +707,7 @@ private final actor RecordingLiveActivityService: LiveActivityService {
 
 /// startSchedule만 throw하는 실패 주입 더블 — 목업 use case의 best-effort 검증용.
 private final actor ScheduleFailingLiveActivityService: LiveActivityService {
+    func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
 
     private(set) var startReminderCount = 0

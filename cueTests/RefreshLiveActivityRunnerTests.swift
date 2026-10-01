@@ -12,8 +12,8 @@ import Testing
 /// 실제 증상(2026-10-01 보고): 밤에 할일 라이브만 켜두고 08:00 자동화를 걸었더니, 아침에
 /// 할일 대신 **일정** 라이브가 떠 있었다. 되살릴 근거가 "예전에 켠 적 있다"는 기록이라,
 /// 잠금화면에서 밀어 치운 일정도 기록에 남아 함께 되살아났다. 기준을 "지금 화면에 살아있는가"
-/// 로 바꾸고, 같은 종류가 겹치지 않게 **끝낸 뒤 새로 게시**한다(제자리 update는 8시간
-/// 타이머를 리셋하지 않는다).
+/// 로 바꾸고, 새 카드를 **먼저** 게시한 뒤 옛 카드를 끝낸다(제자리 update는 8시간 타이머를
+/// 리셋하지 않고, 먼저 끝내면 백그라운드 게시가 막혔을 때 카드가 사라진다 — 같은 날 재보고).
 @MainActor
 struct RefreshLiveActivityRunnerTests {
 
@@ -32,26 +32,25 @@ struct RefreshLiveActivityRunnerTests {
         #expect(calls.contains("endMemo"))
     }
 
-    /// 살아있는 종류는 **끝낸 뒤 새로** 게시한다 — 같은 종류가 2개 남지 않고, 8시간이 다시 시작된다.
-    @Test func aliveKindIsEndedThenPublishedFresh() async {
+    /// 살아있는 종류는 **끝내지 않고** 교체를 예약한 뒤 새로 게시한다 — 옛 카드는 새 게시가
+    /// 성공해야 서비스가 끝낸다. 먼저 끝내면 게시가 막혔을 때 카드가 그냥 사라진다.
+    @Test func aliveKindIsRenewedWithoutEndingFirst() async {
         let service = OrderRecordingLiveActivityService()
 
         await run(alive: [.reminder], service: service)
 
-        let reminderCalls = await service.calls.filter { $0.hasSuffix("Reminder") }
-        #expect(reminderCalls == ["endReminder", "startReminder"])
+        #expect(await service.calls(of: "reminder") == ["prepareRenewal(reminder)", "startReminder"])
     }
 
     /// 셋 다 살아있으면 셋 다 새로 게시한다 — "종류당 1개"지 "전체 1개"가 아니다.
-    @Test func everyAliveKindIsRepublishedOncePerKind() async {
+    @Test func everyAliveKindIsRenewedOncePerKind() async {
         let service = OrderRecordingLiveActivityService()
 
         await run(alive: [.memo, .reminder, .schedule], service: service)
 
-        let calls = await service.calls
-        for kind in ["Memo", "Reminder", "Schedule"] {
-            #expect(calls.filter { $0.hasSuffix(kind) } == ["end\(kind)", "start\(kind)"])
-        }
+        #expect(await service.calls(of: "memo") == ["prepareRenewal(memo)", "startMemo"])
+        #expect(await service.calls(of: "reminder") == ["prepareRenewal(reminder)", "startReminder"])
+        #expect(await service.calls(of: "schedule") == ["prepareRenewal(schedule)", "startSchedule"])
     }
 
     /// 설정의 표시 순서대로 게시한다 — 잠금화면 정렬의 동점 보조 기준(게시 시점)까지 맞춘다.
@@ -72,8 +71,7 @@ struct RefreshLiveActivityRunnerTests {
 
         await run(alive: [.reminder], reminders: [], service: service)
 
-        let reminderCalls = await service.calls.filter { $0.hasSuffix("Reminder") }
-        #expect(reminderCalls.isEmpty)
+        #expect(await service.calls(of: "reminder").isEmpty)
     }
 
     /// 무료 사용자는 아무것도 건드리지 않는다 — 수동으로 켠 라이브를 단축어가 지우면 안 된다.
@@ -85,9 +83,31 @@ struct RefreshLiveActivityRunnerTests {
         #expect(await service.calls.isEmpty)
     }
 
+    // MARK: - 종류 하나만 (단축어 동작을 종류별로 나눠 실행)
+
+    /// 종류를 지정하면 그 종류만 다룬다 — 백그라운드 게시 권한이 실행 한 번에 하나로 보여,
+    /// 자동화가 종류마다 따로 실행한다. 다른 종류를 건드리면 앞 실행이 켠 카드를 지운다.
+    @Test func singleKindRunTouchesOnlyThatKind() async {
+        let service = OrderRecordingLiveActivityService()
+
+        await run(kind: .memo, alive: [.memo, .reminder, .schedule], service: service)
+
+        #expect(await service.calls == ["prepareRenewal(memo)", "startMemo"])
+    }
+
+    /// 지정한 종류가 살아있지 않으면 그 종류의 잔상만 끝낸다.
+    @Test func singleKindRunClearsOnlyItsOwnLeftover() async {
+        let service = OrderRecordingLiveActivityService()
+
+        await run(kind: .schedule, alive: [.memo], service: service)
+
+        #expect(await service.calls == ["endSchedule"])
+    }
+
     // MARK: - Helpers
 
     private func run(
+        kind: LiveActivityKind? = nil,
         alive: Set<LiveActivityKind>,
         reminders: [Reminder]? = nil,
         settings: AppSettings = .default,
@@ -100,6 +120,7 @@ struct RefreshLiveActivityRunnerTests {
             isAllDay: false, calendarColorHex: nil, isReadOnly: false, calendarID: "C1"
         )
         await RefreshLiveActivityRunner.run(
+            kind: kind,
             settingsRepository: InMemoryAppSettingsRepository(storage: settings),
             memoRepository: InMemoryMemoRepository(memo: Memo(text: "회의 준비", colorHex: "#000000")),
             remindersRepository: InMemoryRemindersRepository(
@@ -115,11 +136,18 @@ struct RefreshLiveActivityRunnerTests {
     }
 }
 
-/// 호출 순서를 이름으로 기록하는 대역 — "끝낸 뒤 새로 게시" 순서를 검증한다.
+/// 호출 순서를 이름으로 기록하는 대역 — "교체 예약 → 새로 게시" 순서를 검증한다.
 private final actor OrderRecordingLiveActivityService: LiveActivityService {
     var isEnabled: Bool { true }
 
     private(set) var calls: [String] = []
+
+    /// 한 종류에 대한 호출만 — 이름에 종류가 들어간 것(대소문자 무시).
+    func calls(of kind: String) -> [String] {
+        calls.filter { $0.lowercased().contains(kind) }
+    }
+
+    func prepareRenewal(_ kind: LiveActivityKind) async { calls.append("prepareRenewal(\(kind.rawValue))") }
 
     func startReminder(
         listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int,

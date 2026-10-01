@@ -733,6 +733,7 @@ private actor GatedEventsRepository: EventsRepository {
 
 /// 일정 게시 횟수만 세는 서비스 더블 — 겹친 게시가 몇 번 서비스까지 닿는지 관측한다.
 private actor CountingScheduleLiveActivityService: LiveActivityService {
+    func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
     private(set) var startScheduleCount = 0
 
