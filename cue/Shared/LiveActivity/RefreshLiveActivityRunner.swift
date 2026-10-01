@@ -35,7 +35,7 @@ enum RefreshLiveActivityRunner {
         eventsRepository: any EventsRepository = EventKitEventsRepository(),
         service: any LiveActivityService = ActivityKitLiveActivityService(),
         isPremium: Bool = SharedAppGroup.isPremium,
-        alive: Set<LiveActivityKind> = aliveKinds(),
+        alive: Set<LiveActivityKind> = RefreshLiveActivityRunner.aliveKinds(),
         now: Date = .now
     ) async {
         // 프리미엄 전용 — 무료 사용자는 하루 한 번 한도(`ConsumeLiveActivationUseCase`)를
