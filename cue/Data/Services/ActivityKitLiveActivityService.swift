@@ -55,6 +55,13 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     private var lastScheduleDays: [LiveScheduleDay] = []
     /// 마지막 할일 게시의 **전체(미-cap) items** — 일정과 같은 이유(캘린더 토글 복원).
     private var lastReminderItems: [LiveReminderItem] = []
+    /// 이 서비스가 끝낸 인스턴스 id — 제자리 update로 이어받을 후보에서 뺀다.
+    ///
+    /// `end()`를 await한 직후에도 `activityState`가 한동안 `.active`로 남는다. 그래서 "끝내고
+    /// 바로 새로 게시"하면 방금 끝낸 카드를 살아있는 것으로 잡아 거기에 update를 보내고(무시됨)
+    /// 새 카드는 요청하지 않는다. 실제 증상: 단축어 「라이브 새로고침」 뒤 메모·할일이 사라지고
+    /// 이어받기가 없는 일정만 남았다(2026-10-01 보고).
+    private var endedIDs: Set<String> = []
 
     /// 게시·종료 직렬화 게이트 — **프로세스 공용(static)**. 단축어 러너가 서비스를 새로
     /// 조립하므로 인스턴스마다 두면 앱 쪽 게시와 단축어 게시가 서로를 못 막는다.
@@ -126,7 +133,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         // listTitle은 attributes(불변)라, 리스트가 바뀐 경우엔 end 후 새로 request해야 한다.
         // 어느 쪽이든 그 하나를 뺀 같은 종류는 전부 끝낸다(종류당 1개).
         let survivor = Activity<ReminderLiveActivityAttributes>.liveActivities
-            .first { $0.attributes.listTitle == listTitle }
+            .first { $0.attributes.listTitle == listTitle && !endedIDs.contains($0.id) }
         await endAll(Activity<ReminderLiveActivityAttributes>.activities, except: survivor)
         if let survivor {
             reminderActivity = survivor
@@ -241,6 +248,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         for activity in Activity<ScheduleLiveActivityAttributes>.activities
         where activity.content.state.isSample {
             await activity.end(nil, dismissalPolicy: .immediate)
+            endedIDs.insert(activity.id)
             if scheduleActivity?.id == activity.id {
                 scheduleActivity = nil
                 lastScheduleDays = []
@@ -249,6 +257,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         for activity in Activity<ReminderLiveActivityAttributes>.activities
         where activity.content.state.isSample {
             await activity.end(nil, dismissalPolicy: .immediate)
+            endedIDs.insert(activity.id)
             if reminderActivity?.id == activity.id {
                 reminderActivity = nil
                 lastReminderItems = []
@@ -278,7 +287,8 @@ actor ActivityKitLiveActivityService: LiveActivityService {
 
         // 이미 떠 있으면 부드럽게 update — 텍스트·색 모두 ContentState라 재시작이 필요 없다.
         // 이어받는 하나를 뺀 나머지 메모 LA는 전부 끝낸다(종류당 1개).
-        let survivor = Activity<MemoLiveActivityAttributes>.liveActivity
+        let survivor = Activity<MemoLiveActivityAttributes>.liveActivities
+            .first { !endedIDs.contains($0.id) }
         await endAll(Activity<MemoLiveActivityAttributes>.activities, except: survivor)
         if let existing = survivor {
             memoActivity = existing
@@ -321,6 +331,7 @@ actor ActivityKitLiveActivityService: LiveActivityService {
     ) async {
         for activity in activities where activity.id != survivor?.id {
             await activity.end(nil, dismissalPolicy: .immediate)
+            endedIDs.insert(activity.id)
         }
     }
 
