@@ -5,6 +5,7 @@
 
 @preconcurrency import ActivityKit
 import Foundation
+import OSLog
 
 /// 「라이브 새로고침」 인텐트의 실제 동작 — **지금 살아있는 라이브만** 새로 게시한다.
 ///
@@ -45,7 +46,23 @@ enum RefreshLiveActivityRunner {
         // 프리미엄 전용 — 무료 사용자는 하루 한 번 한도(`ConsumeLiveActivationUseCase`)를
         // 쓰는데, 자동화를 허용하면 그 한도를 우회하는 뒷문이 된다. 끝내는 것도 하지 않는다 —
         // 무료 사용자가 수동으로 켠 라이브를 단축어가 지우면 안 된다.
-        guard isPremium else { return }
+        guard isPremium else {
+            AppLogger.liveRefresh.notice("skip: not premium")
+            return
+        }
+        // 실행 단위 기록 — pid로 종류별 실행이 같은 프로세스인지, alive로 앞 실행의 카드가
+        // 살아남았는지 콘솔에서 확인한다(백그라운드 게시 제약이 문서화돼 있지 않아서).
+        // 로그 인자는 미리 문자열로 만든다 — OSLog 보간은 탈출 클로저라 메인 액터 함수를 못 부른다.
+        let label = kind?.rawValue ?? "all"
+        let aliveBefore = describe(alive)
+        let pid = ProcessInfo.processInfo.processIdentifier
+        AppLogger.liveRefresh.notice(
+            "run kind=\(label, privacy: .public) alive=\(aliveBefore, privacy: .public) pid=\(pid, privacy: .public)"
+        )
+        defer {
+            let aliveAfter = describe(aliveKinds())
+            AppLogger.liveRefresh.notice("done kind=\(label, privacy: .public) alive=\(aliveAfter, privacy: .public)")
+        }
 
         let settings = await settingsRepository.fetch()
 
@@ -87,6 +104,28 @@ enum RefreshLiveActivityRunner {
         return kinds
     }
 
+    nonisolated private static func describe(_ kinds: Set<LiveActivityKind>) -> String {
+        kinds.map(\.rawValue).sorted().joined(separator: ",")
+    }
+
+    /// 게시하고 결과를 기록한다 — 자동화 경로라 화면이 없어, 실패 원인은 콘솔 로그로만 보인다.
+    /// 성공 기록은 요청이 받아들여졌다는 뜻일 뿐이다 — 시스템이 몇 초 뒤 끄는 사례가 보고돼
+    /// 있어, 실제 생존은 `done alive=`와 다음 실행의 `alive=`로 확인한다.
+    private static func publish(_ kind: LiveActivityKind, _ operation: () async throws -> Void) async {
+        do {
+            try await operation()
+            AppLogger.liveRefresh.notice("\(kind.rawValue, privacy: .public): requested")
+        } catch {
+            let ns = error as NSError
+            let domain = ns.domain
+            let code = ns.code
+            let detail = String(describing: error)
+            AppLogger.liveRefresh.error(
+                "\(kind.rawValue, privacy: .public): failed \(domain, privacy: .public)#\(code, privacy: .public) \(detail, privacy: .public)"
+            )
+        }
+    }
+
     /// 살아있지 않은 종류의 잔상(시스템이 끝냈지만 잠금화면에 남은 카드)을 끝낸다.
     private static func clear(_ kind: LiveActivityKind, service: any LiveActivityService) async {
         switch kind {
@@ -105,10 +144,13 @@ enum RefreshLiveActivityRunner {
     ) async {
         let memo = await memoRepository.fetch()
         // 빈 메모는 use case가 throw한다 — 시도 자체를 막아 의도를 분명히 한다.
-        guard RefreshLiveActivityDecision.canPublishMemo(memo) else { return }
+        guard RefreshLiveActivityDecision.canPublishMemo(memo) else {
+            AppLogger.liveRefresh.notice("memo: skip, empty")
+            return
+        }
         // 내용을 확인한 뒤에야 교체를 건다 — 새로 만들 게 없으면 살아있는 카드를 그대로 둔다.
         await service.prepareRenewal(.memo)
-        try? await StartMemoLiveActivityUseCase(service: service)(memo)
+        await publish(.memo) { try await StartMemoLiveActivityUseCase(service: service)(memo) }
     }
 
     // MARK: - 할일
@@ -136,20 +178,25 @@ enum RefreshLiveActivityRunner {
         )
         let items = RefreshLiveActivitySelection.matching(visible, scope: scope, now: now)
         // 빈 목록으로 게시하면 잠금화면에 빈 카드가 남는다 — 아무것도 안 하는 편이 낫다.
-        guard !items.isEmpty else { return }
+        guard !items.isEmpty else {
+            AppLogger.liveRefresh.notice("reminder: skip, no items in scope")
+            return
+        }
 
         let colors = Dictionary(uniqueKeysWithValues: lists.compactMap { list in
             list.colorHex.map { (list.id, $0) }
         })
         let week = await weekEvents(eventsRepository, settings: settings, now: now)
         await service.prepareRenewal(.reminder)
-        try? await StartReminderLiveActivityUseCase(service: service)(
-            listTitle: RefreshLiveActivitySelection.title(for: scope, lists: lists),
-            reminders: items,
-            listColors: colors,
-            weekEvents: week,
-            now: now
-        )
+        await publish(.reminder) {
+            try await StartReminderLiveActivityUseCase(service: service)(
+                listTitle: RefreshLiveActivitySelection.title(for: scope, lists: lists),
+                reminders: items,
+                listColors: colors,
+                weekEvents: week,
+                now: now
+            )
+        }
     }
 
     // MARK: - 일정
@@ -172,14 +219,19 @@ enum RefreshLiveActivityRunner {
             fetched, hiddenCalendarIDs: settings.hiddenCalendarIDs
         )
         // 다가오는 일정이 없으면 use case가 게시하지 않는다 — 끝내기 전에 먼저 확인한다.
-        guard !StartScheduleLiveActivityUseCase.groupIntoDays(visible, now: now).isEmpty else { return }
+        guard !StartScheduleLiveActivityUseCase.groupIntoDays(visible, now: now).isEmpty else {
+            AppLogger.liveRefresh.notice("schedule: skip, no upcoming events")
+            return
+        }
         let week = await weekEvents(eventsRepository, settings: settings, now: now)
         await service.prepareRenewal(.schedule)
-        try? await StartScheduleLiveActivityUseCase(service: service)(
-            events: visible,
-            weekEvents: week,
-            now: now
-        )
+        await publish(.schedule) {
+            _ = try await StartScheduleLiveActivityUseCase(service: service)(
+                events: visible,
+                weekEvents: week,
+                now: now
+            )
+        }
     }
 
     // MARK: - 공용

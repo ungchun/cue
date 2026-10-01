@@ -30,8 +30,16 @@ struct RefreshLiveIntent: LiveActivityIntent {
     /// 백그라운드에서 처리한다(위 주석 참고).
     static let openAppWhenRun = false
 
+    /// 새로고침할 라이브 — 자동화에 이 동작을 **종류마다 하나씩** 넣는다.
+    ///
+    /// 백그라운드 인텐트는 실행 한 번에 라이브 하나만 새로 켜지는 것으로 보인다(Apple 미문서화,
+    /// 포럼 보고: developer.apple.com/forums/thread/776541). 한 번에 셋을 켰더니 마지막 하나만
+    /// 남았다(2026-10-01). 비워 두면 전 종류 — 종류 선택이 없던 옛 자동화 호환용.
+    @Parameter(title: "Live")
+    var kind: RefreshLiveKind?
+
     func perform() async throws -> some IntentResult {
-        await RefreshLiveActivityRunner.run()
+        await RefreshLiveActivityRunner.run(kind: kind?.liveKind)
         return .result()
     }
 }

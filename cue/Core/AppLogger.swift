@@ -15,4 +15,6 @@ enum AppLogger {
     static let app = Logger(subsystem: subsystem, category: "app")
     static let data = Logger(subsystem: subsystem, category: "data")
     static let ui = Logger(subsystem: subsystem, category: "ui")
+    /// 단축어 「라이브 새로고침」 — 백그라운드 경로라 화면이 없어 결과를 여기로만 남긴다.
+    static let liveRefresh = Logger(subsystem: subsystem, category: "liveRefresh")
 }
