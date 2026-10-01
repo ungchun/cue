@@ -27211,102 +27211,102 @@
         }
       }
     },
-    "In ‘Refresh Live’, you can choose Live, Memo, Tasks, or Schedule." : {
+    "In ‘Refresh Live’, choosing ‘Live’ refreshes only the Lives that are on, while choosing ‘Memo’, ‘Tasks’, or ‘Schedule’ turns that Live on even if it’s off." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "في ‘تحديث Live’ يمكنك اختيار مباشر أو مذكرة أو المهام أو الجدول."
+            "value" : "في ‘تحديث Live’، يحدّث ‘مباشر’ اللايف المفعّل فقط، أما اختيار ‘مذكرة’ أو ‘المهام’ أو ‘الجدول’ فيشغّله حتى لو كان متوقفاً."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In ‘Live aktualisieren’ kannst du Live, Memo, Aufgaben oder Termine auswählen."
+            "value" : "In ‘Live aktualisieren’ aktualisiert ‘Live’ nur Lives, die an sind. ‘Memo’, ‘Aufgaben’ oder ‘Termine’ schaltet das jeweilige Live auch ein, wenn es aus ist."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En ‘Actualizar Live’ puedes elegir En vivo, Nota, Tareas o Agenda."
+            "value" : "En ‘Actualizar Live’, ‘En vivo’ solo actualiza los Live activados. Si eliges ‘Nota’, ‘Tareas’ o ‘Agenda’, se activa aunque esté desactivado."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dans ‘Actualiser Live’, vous pouvez choisir En direct, Mémo, Tâches ou Agenda."
+            "value" : "Dans ‘Actualiser Live’, ‘En direct’ n’actualise que les Live activés. Si vous choisissez ‘Mémo’, ‘Tâches’ ou ‘Agenda’, il est activé même s’il est désactivé."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "‘Live रिफ़्रेश करें’ में लाइव, मेमो, टास्क या शेड्यूल चुन सकते हैं।"
+            "value" : "‘Live रिफ़्रेश करें’ में ‘लाइव’ चुनने पर सिर्फ़ चालू लाइव रिफ़्रेश होते हैं; ‘मेमो’, ‘टास्क’ या ‘शेड्यूल’ चुनने पर बंद होने पर भी चालू हो जाता है।"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Di ‘Segarkan Live’ bisa memilih Langsung, Memo, Tugas, atau Jadwal."
+            "value" : "Di ‘Segarkan Live’, ‘Langsung’ hanya menyegarkan Live yang menyala. Jika memilih ‘Memo’, ‘Tugas’, atau ‘Jadwal’, Live akan dinyalakan meski sedang mati."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In ‘Aggiorna Live’ puoi scegliere Live, Nota, Attività o Agenda."
+            "value" : "In ‘Aggiorna Live’, ‘Live’ aggiorna solo i Live attivi. Se scegli ‘Nota’, ‘Attività’ o ‘Agenda’, viene attivato anche se è disattivato."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "‘Liveを更新’ではライブ・メモ・タスク・予定をそれぞれ選べます。"
+            "value" : "‘Liveを更新’で‘ライブ’を選ぶとオンのライブだけを更新し、‘メモ’・‘タスク’・‘予定’を選ぶとオフでもオンにします。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "‘라이브 새로고침’에서 라이브, 메모, 할일, 일정을 각각 선택할 수 있어요."
+            "value" : "‘라이브 새로고침’에서 ‘라이브’를 고르면 켜져 있는 라이브만 새로고침하고, ‘메모’·‘할일’·‘일정’을 고르면 꺼져 있어도 켜요."
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dalam ‘Segarkan Live’, boleh pilih Langsung, Memo, Tugas atau Jadual."
+            "value" : "Dalam ‘Segarkan Live’, ‘Langsung’ hanya menyegarkan Live yang menyala. Jika memilih ‘Memo’, ‘Tugas’ atau ‘Jadual’, Live akan dinyalakan walaupun sedang mati."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Em ‘Atualizar Live’, você pode escolher Ao vivo, Nota, Tarefas ou Agenda."
+            "value" : "Em ‘Atualizar Live’, ‘Ao vivo’ atualiza só os Live ativados. Se você escolher ‘Nota’, ‘Tarefas’ ou ‘Agenda’, ele é ativado mesmo se estiver desativado."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "В «Обновить Live» можно выбрать: «Лайв», «Заметка», «Задачи» или «Расписание»."
+            "value" : "В «Обновить Live» вариант «Лайв» обновляет только включённые Live. Если выбрать «Заметка», «Задачи» или «Расписание», Live включится, даже если он выключен."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ใน ‘รีเฟรช Live’ เลือก ไลฟ์, บันทึก, งาน หรือ กำหนดการ ได้"
+            "value" : "ใน ‘รีเฟรช Live’ หากเลือก ‘ไลฟ์’ จะรีเฟรชเฉพาะ Live ที่เปิดอยู่ หากเลือก ‘บันทึก’, ‘งาน’ หรือ ‘กำหนดการ’ จะเปิดให้แม้ปิดอยู่"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trong ‘Làm mới Live’, bạn có thể chọn Trực tiếp, Ghi chú, Việc cần làm hoặc Lịch trình."
+            "value" : "Trong ‘Làm mới Live’, chọn ‘Trực tiếp’ chỉ làm mới các Live đang bật; chọn ‘Ghi chú’, ‘Việc cần làm’ hoặc ‘Lịch trình’ sẽ bật Live đó kể cả khi đang tắt."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在“刷新 Live”中可分别选择实时、备忘、任务或日程。"
+            "value" : "在“刷新 Live”中选择“实时”只会刷新已开启的实时活动；选择“备忘”“任务”或“日程”则即使未开启也会开启。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在「重新整理 Live」中可分別選擇即時、備忘、任務或行程。"
+            "value" : "在「重新整理 Live」中選擇「即時」只會重新整理已開啟的即時動態；選擇「備忘」「任務」或「行程」則即使未開啟也會開啟。"
           }
         }
       }

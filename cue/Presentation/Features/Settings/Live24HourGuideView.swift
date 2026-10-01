@@ -116,7 +116,7 @@ struct Live24HourGuideView: View {
                 Image(systemName: "info.circle")
             }
             Label {
-                Text("In ‘Refresh Live’, you can choose Live, Memo, Tasks, or Schedule.")
+                Text("In ‘Refresh Live’, choosing ‘Live’ refreshes only the Lives that are on, while choosing ‘Memo’, ‘Tasks’, or ‘Schedule’ turns that Live on even if it’s off.")
             } icon: {
                 Image(systemName: "list.bullet")
             }
