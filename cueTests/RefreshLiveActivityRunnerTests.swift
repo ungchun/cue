@@ -54,6 +54,18 @@ struct RefreshLiveActivityRunnerTests {
         }
     }
 
+    /// 설정의 표시 순서대로 게시한다 — 잠금화면 정렬의 동점 보조 기준(게시 시점)까지 맞춘다.
+    @Test func republishesInTheUsersLiveOrder() async {
+        let service = OrderRecordingLiveActivityService()
+        var settings = AppSettings.default
+        settings.liveAlwaysOnOrder = [.schedule, .memo, .reminder]
+
+        await run(alive: [.memo, .reminder, .schedule], settings: settings, service: service)
+
+        let starts = await service.calls.filter { $0.hasPrefix("start") }
+        #expect(starts == ["startSchedule", "startMemo", "startReminder"])
+    }
+
     /// 새로 만들 내용이 없으면 살아있는 카드를 건드리지 않는다 — 실패한 새로고침이 카드를 지우면 안 된다.
     @Test func aliveKindWithNothingToPublishIsLeftAsIs() async {
         let service = OrderRecordingLiveActivityService()
@@ -78,6 +90,7 @@ struct RefreshLiveActivityRunnerTests {
     private func run(
         alive: Set<LiveActivityKind>,
         reminders: [Reminder]? = nil,
+        settings: AppSettings = .default,
         isPremium: Bool = true,
         service: OrderRecordingLiveActivityService
     ) async {
@@ -87,7 +100,7 @@ struct RefreshLiveActivityRunnerTests {
             isAllDay: false, calendarColorHex: nil, isReadOnly: false, calendarID: "C1"
         )
         await RefreshLiveActivityRunner.run(
-            settingsRepository: InMemoryAppSettingsRepository(),
+            settingsRepository: InMemoryAppSettingsRepository(storage: settings),
             memoRepository: InMemoryMemoRepository(memo: Memo(text: "회의 준비", colorHex: "#000000")),
             remindersRepository: InMemoryRemindersRepository(
                 lists: [ReminderList(id: "L1", title: "장보기", colorHex: nil)],
