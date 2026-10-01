@@ -3,9 +3,10 @@
 //  cue / Shared
 //
 
+@preconcurrency import ActivityKit
 import Foundation
 
-/// 「라이브 새로고침」 인텐트의 실제 동작 — 꺼진 라이브를 조건에 맞으면 다시 게시한다.
+/// 「라이브 새로고침」 인텐트의 실제 동작 — **지금 살아있는 라이브만** 새로 게시한다.
 ///
 /// 인텐트에서 분리한 이유는 `AppIntent` 타입 안에 로직을 두면 테스트에서 인텐트를 직접
 /// 실행해야 하는데 그게 시스템에 묶여 있기 때문이다.
@@ -15,10 +16,18 @@ import Foundation
 @MainActor
 enum RefreshLiveActivityRunner {
 
-    /// 사용자가 켜둔 채로 둔 라이브를 다시 게시한다.
+    /// 살아있는 라이브를 끝내고 새로 게시해 8시간 한도를 다시 시작한다.
     ///
-    /// 실패는 조용히 삼킨다 — 자동화 경로라 사용자에게 보여줄 화면이 없고, 다음 자동화가
-    /// 8시간 뒤 다시 시도한다.
+    /// **기준은 "지금 화면에 살아있는가"** 다. 예전엔 "켠 적 있고 앱에서 끄지 않았다"는
+    /// 기록을 썼는데, 잠금화면에서 밀어 치운 라이브는 앱을 거치지 않아 기록에 남았다 —
+    /// 실제 증상: 밤에 할일만 켜뒀는데 08:00 자동화 뒤 일정이 떠 있었다(2026-10-01 보고).
+    /// 시스템이 이미 끝낸(`.ended`) 카드도 되살리지 않는다 — 꺼지기 전에 자동화가 돌아야 한다.
+    ///
+    /// **제자리 update가 아니라 끝낸 뒤 새로** — update는 8시간 타이머를 리셋하지 않고,
+    /// 종류마다 전부 끝낸 뒤 하나만 게시해야 같은 종류가 겹치지 않는다. 살아있지 않은 종류는
+    /// 잠금화면에 남은 잔상까지 끝낸다.
+    ///
+    /// 실패는 조용히 삼킨다 — 자동화 경로라 사용자에게 보여줄 화면이 없다.
     static func run(
         settingsRepository: any AppSettingsRepository = UserDefaultsAppSettingsRepository(),
         memoRepository: any MemoRepository = UserDefaultsMemoRepository(),
@@ -26,29 +35,24 @@ enum RefreshLiveActivityRunner {
         eventsRepository: any EventsRepository = EventKitEventsRepository(),
         service: any LiveActivityService = ActivityKitLiveActivityService(),
         isPremium: Bool = SharedAppGroup.isPremium,
-        wanted: Set<LiveActivityKind> = LiveActivityIntentRecord.wanted(),
+        alive: Set<LiveActivityKind> = aliveKinds(),
         now: Date = .now
     ) async {
-        guard isPremium, !wanted.isEmpty else { return }
-
-        // 시스템에 살아있는 라이브 핸들을 먼저 재포착한다 — 앱이 백그라운드에서 깨어난
-        // 직후라 서비스 내부 핸들이 비어 있다. 이게 없으면 이미 떠 있는 라이브를 못 보고
-        // 매번 새로 게시해 8시간 타이머가 불필요하게 리셋된다.
-        await service.sync()
+        // 프리미엄 전용 — 무료 사용자는 하루 한 번 한도(`ConsumeLiveActivationUseCase`)를
+        // 쓰는데, 자동화를 허용하면 그 한도를 우회하는 뒷문이 된다. 끝내는 것도 하지 않는다 —
+        // 무료 사용자가 수동으로 켠 라이브를 단축어가 지우면 안 된다.
+        guard isPremium else { return }
 
         let settings = await settingsRepository.fetch()
 
-        // 되살릴지 말지는 종류별로 `RefreshLiveActivityDecision`이 정한다 — 프리미엄·사용자
-        // 의사 판단을 한곳에 모아 두어야 규칙이 갈라지지 않는다.
-        let allows = { (kind: LiveActivityKind) in
-            RefreshLiveActivityDecision.shouldRepublish(
-                isPremium: isPremium, kind: kind, wanted: wanted
-            )
-        }
         // 설정의 표시 순서대로 재게시 — 정렬 자체는 각 게시에 실리는 relevanceScore가
         // 정하고, 순회는 게시 시점(동점의 보조 기준)까지 화면과 맞추기 위해 같은 순서로
         // 돈다(항상 표시 경로 `startAlwaysOnActivities`와 동일).
-        for kind in settings.resolvedLiveOrder where allows(kind) {
+        for kind in settings.resolvedLiveOrder {
+            guard alive.contains(kind) else {
+                await clear(kind, service: service)
+                continue
+            }
             switch kind {
             case .memo:
                 await republishMemo(memoRepository: memoRepository, service: service)
@@ -68,6 +72,26 @@ enum RefreshLiveActivityRunner {
         }
     }
 
+    /// 시스템에 살아있는(`.active`·`.stale`) 라이브 종류 — 테스트 불가능한 ActivityKit 글루.
+    /// 생존 판단 규칙 자체는 `LiveActivityHandlePicker`에 있고 거기서 검증된다.
+    nonisolated static func aliveKinds() -> Set<LiveActivityKind> {
+        var kinds = Set<LiveActivityKind>()
+        if Activity<MemoLiveActivityAttributes>.liveActivity != nil { kinds.insert(.memo) }
+        if Activity<ReminderLiveActivityAttributes>.liveActivity != nil { kinds.insert(.reminder) }
+        if Activity<ScheduleLiveActivityAttributes>.liveActivity != nil { kinds.insert(.schedule) }
+        return kinds
+    }
+
+    /// 살아있지 않은 종류의 잔상(시스템이 끝냈지만 잠금화면에 남은 카드)을 끝낸다.
+    private static func clear(_ kind: LiveActivityKind, service: any LiveActivityService) async {
+        switch kind {
+        case .memo: await service.endMemo()
+        case .reminder: await service.endReminder()
+        case .schedule: await service.endSchedule()
+        case .focus: break
+        }
+    }
+
     // MARK: - 메모
 
     private static func republishMemo(
@@ -77,6 +101,8 @@ enum RefreshLiveActivityRunner {
         let memo = await memoRepository.fetch()
         // 빈 메모는 use case가 throw한다 — 시도 자체를 막아 의도를 분명히 한다.
         guard RefreshLiveActivityDecision.canPublishMemo(memo) else { return }
+        // 내용을 확인한 뒤에야 끝낸다 — 실패한 새로고침이 살아있는 카드를 지우면 안 된다.
+        await service.endMemo()
         try? await StartMemoLiveActivityUseCase(service: service)(memo)
     }
 
@@ -110,11 +136,14 @@ enum RefreshLiveActivityRunner {
         let colors = Dictionary(uniqueKeysWithValues: lists.compactMap { list in
             list.colorHex.map { (list.id, $0) }
         })
+        let week = await weekEvents(eventsRepository, settings: settings, now: now)
+        // 재료를 다 모은 뒤에 끝낸다 — 끝내고 새로 켜기까지 카드가 비는 틈을 줄인다.
+        await service.endReminder()
         try? await StartReminderLiveActivityUseCase(service: service)(
             listTitle: RefreshLiveActivitySelection.title(for: scope, lists: lists),
             reminders: items,
             listColors: colors,
-            weekEvents: await weekEvents(eventsRepository, settings: settings, now: now),
+            weekEvents: week,
             now: now
         )
     }
@@ -138,10 +167,13 @@ enum RefreshLiveActivityRunner {
         let visible = RefreshLiveActivitySelection.visibleEvents(
             fetched, hiddenCalendarIDs: settings.hiddenCalendarIDs
         )
-        // 다가오는 일정이 없으면 use case가 false를 돌려주고 게시하지 않는다.
+        // 다가오는 일정이 없으면 use case가 게시하지 않는다 — 끝내기 전에 먼저 확인한다.
+        guard !StartScheduleLiveActivityUseCase.groupIntoDays(visible, now: now).isEmpty else { return }
+        let week = await weekEvents(eventsRepository, settings: settings, now: now)
+        await service.endSchedule()
         try? await StartScheduleLiveActivityUseCase(service: service)(
             events: visible,
-            weekEvents: await weekEvents(eventsRepository, settings: settings, now: now),
+            weekEvents: week,
             now: now
         )
     }
