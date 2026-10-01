@@ -95,13 +95,14 @@ struct RefreshLiveActivityRunnerTests {
         #expect(await service.calls == ["prepareRenewal(memo)", "startMemo"])
     }
 
-    /// 지정한 종류가 살아있지 않으면 그 종류의 잔상만 끝낸다.
-    @Test func singleKindRunClearsOnlyItsOwnLeftover() async {
+    /// 종류를 직접 고른 실행은 꺼져 있어도 켠다 — 고른 것 자체가 "띄워라"는 뜻이다.
+    /// 남아 있던 잔상은 교체 대상으로 잡혀 새 카드가 뜬 뒤 정리된다.
+    @Test func singleKindRunPublishesEvenWhenOff() async {
         let service = OrderRecordingLiveActivityService()
 
         await run(kind: .schedule, alive: [.memo], service: service)
 
-        #expect(await service.calls == ["endSchedule"])
+        #expect(await service.calls == ["prepareRenewal(schedule)", "startSchedule"])
     }
 
     // MARK: - Helpers

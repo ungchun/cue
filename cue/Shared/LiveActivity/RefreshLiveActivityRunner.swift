@@ -7,7 +7,7 @@
 import Foundation
 import OSLog
 
-/// 「라이브 새로고침」 인텐트의 실제 동작 — **지금 살아있는 라이브만** 새로 게시한다.
+/// 「라이브 새로고침」 인텐트의 실제 동작 — 고른 종류를, 또는 **지금 살아있는 라이브 전부**를 새로 게시한다.
 ///
 /// 인텐트에서 분리한 이유는 `AppIntent` 타입 안에 로직을 두면 테스트에서 인텐트를 직접
 /// 실행해야 하는데 그게 시스템에 묶여 있기 때문이다.
@@ -19,7 +19,7 @@ enum RefreshLiveActivityRunner {
 
     /// 살아있는 라이브를 끝내고 새로 게시해 8시간 한도를 다시 시작한다.
     ///
-    /// **기준은 "지금 화면에 살아있는가"** 다. 예전엔 "켠 적 있고 앱에서 끄지 않았다"는
+    /// **전부(「라이브」)일 때 기준은 "지금 화면에 살아있는가"** 다. 예전엔 "켠 적 있고 앱에서 끄지 않았다"는
     /// 기록을 썼는데, 잠금화면에서 밀어 치운 라이브는 앱을 거치지 않아 기록에 남았다 —
     /// 실제 증상: 밤에 할일만 켜뒀는데 08:00 자동화 뒤 일정이 떠 있었다(2026-10-01 보고).
     /// 시스템이 이미 끝낸(`.ended`) 카드도 되살리지 않는다 — 꺼지기 전에 자동화가 돌아야 한다.
@@ -29,9 +29,9 @@ enum RefreshLiveActivityRunner {
     /// 막혀 메모·할일이 사라지고 마지막 일정만 남았다(2026-10-01 재보고). 살아있지 않은 종류는
     /// 잠금화면에 남은 잔상까지 끝낸다.
     ///
-    /// **`kind`** — 지정하면 그 종류만 다룬다. 백그라운드 인텐트는 실행 한 번에 라이브 하나만
-    /// 새로 켜지는 것으로 보여(Apple 미문서화, 포럼 보고), 자동화가 종류마다 따로 실행한다.
-    /// nil이면 전 종류 — 종류 선택이 없던 옛 자동화와의 호환용이다.
+    /// **`kind`** — 지정하면 그 종류만, **꺼져 있어도** 켠다. 백그라운드 인텐트는 실행 한 번에
+    /// 라이브 하나만 새로 켜지는 것으로 보여(Apple 미문서화, 포럼 보고), 자동화가 종류마다 따로
+    /// 실행한다. nil이면 살아있는 종류 전부(단축어의 「라이브」, 종류 선택이 없던 옛 자동화).
     static func run(
         kind: LiveActivityKind? = nil,
         settingsRepository: any AppSettingsRepository = UserDefaultsAppSettingsRepository(),
@@ -70,12 +70,14 @@ enum RefreshLiveActivityRunner {
         // 정하고, 순회는 게시 시점(동점의 보조 기준)까지 화면과 맞추기 위해 같은 순서로
         // 돈다(항상 표시 경로 `startAlwaysOnActivities`와 동일).
         let targets = kind.map { [$0] } ?? settings.resolvedLiveOrder
-        for kind in targets {
-            guard alive.contains(kind) else {
-                await clear(kind, service: service)
+        for target in targets {
+            // 종류를 직접 고른 실행은 꺼져 있어도 켠다 — 고른 것 자체가 "띄워라"는 뜻이다.
+            // 전부(nil)일 때만 살아있는 것으로 제한한다 — 치운 카드를 되살리지 않게.
+            guard kind != nil || alive.contains(target) else {
+                await clear(target, service: service)
                 continue
             }
-            switch kind {
+            switch target {
             case .memo:
                 await republishMemo(memoRepository: memoRepository, service: service)
             case .reminder:
