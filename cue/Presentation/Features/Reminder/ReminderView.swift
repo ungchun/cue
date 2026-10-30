@@ -1138,13 +1138,7 @@ struct ReminderView: View {
         guard !trimmed.isEmpty,
               trimmed != reminder.title || memo != originalMemo else { return }
 
-        await viewModel.update(
-            reminderID: reminder.id,
-            title: trimmed,
-            notes: memo,
-            dueDate: reminder.dueDate,
-            includesTime: reminder.includesTime
-        )
+        await viewModel.updateText(reminderID: reminder.id, title: trimmed, notes: memo)
     }
 
     /// 인라인 편집을 시작한다 — 기존 값으로 버퍼를 채우고 제목에 포커스.
@@ -1199,10 +1193,7 @@ struct ReminderView: View {
         guard !trimmed.isEmpty,
               trimmed != previous.title || snapshot.memo != originalMemo else { return }
         Task {
-            await viewModel.update(
-                reminderID: previous.id, title: trimmed, notes: snapshot.memo,
-                dueDate: previous.dueDate, includesTime: previous.includesTime
-            )
+            await viewModel.updateText(reminderID: previous.id, title: trimmed, notes: snapshot.memo)
         }
     }
 
@@ -1221,13 +1212,7 @@ struct ReminderView: View {
         guard trimmed != reminder.title || memo != originalMemo else { return }
 
         Task {
-            await viewModel.update(
-                reminderID: reminder.id,
-                title: trimmed,
-                notes: memo,
-                dueDate: reminder.dueDate,
-                includesTime: reminder.includesTime
-            )
+            await viewModel.updateText(reminderID: reminder.id, title: trimmed, notes: memo)
         }
     }
 

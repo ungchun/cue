@@ -880,14 +880,29 @@ final class ReminderViewModel {
         return lists.first?.id
     }
 
-    /// 기존 항목의 제목·메모·마감일을 수정한다.
+    /// 제목·메모만 수정한다 — 인라인 편집 경로. 마감일·반복은 현재 값을 그대로 유지한다.
+    /// 호출부가 마감일·반복을 들고 다니지 않게 해, 빠뜨린 필드가 "삭제"로 저장되는 걸 막는다.
+    func updateText(reminderID: String, title: String, notes: String?) async {
+        guard let current = allReminders.first(where: { $0.id == reminderID }) else { return }
+        await update(
+            reminderID: reminderID,
+            title: title,
+            notes: notes,
+            dueDate: current.dueDate,
+            includesTime: current.includesTime,
+            recurrence: current.recurrence
+        )
+    }
+
+    /// 기존 항목의 제목·메모·마감일·반복을 수정한다 — 세부사항 시트 경로.
+    /// 기본값을 두지 않는다: 빠뜨린 필드가 조용히 nil(=삭제)로 저장되지 않게 호출부에 명시를 강제.
     func update(
         reminderID: String,
         title: String,
         notes: String?,
-        dueDate: Date? = nil,
-        includesTime: Bool = false,
-        recurrence: RecurrenceRule? = nil
+        dueDate: Date?,
+        includesTime: Bool,
+        recurrence: RecurrenceRule?
     ) async {
         // 저장 확정 전 선반영 — 편집 종료로 행이 읽기 모드로 바뀌는 순간 옛 값이 저장 왕복
         // 시간만큼 보이는 플래시를 없앤다. UseCase와 같은 정규화(trim·notes)를 적용하고,

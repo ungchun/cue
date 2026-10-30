@@ -110,12 +110,13 @@ struct ReminderViewModelTests {
     private func reminder(
         id: String, title: String = "할 일",
         isCompleted: Bool = false, dueDate: Date? = nil,
-        includesTime: Bool = false, creationDate: Date? = nil, listID: String
+        includesTime: Bool = false, recurrence: RecurrenceRule? = nil,
+        creationDate: Date? = nil, listID: String
     ) -> Reminder {
         Reminder(
             id: id, title: title, isCompleted: isCompleted,
             notes: nil, dueDate: dueDate, includesTime: includesTime,
-            creationDate: creationDate, listID: listID
+            recurrence: recurrence, creationDate: creationDate, listID: listID
         )
     }
 
@@ -395,7 +396,7 @@ struct ReminderViewModelTests {
         await viewModel.onAppear()
 
         await repo.closeGate()
-        let task = Task { await viewModel.update(reminderID: "1", title: "새 제목", notes: nil) }
+        let task = Task { await viewModel.updateText(reminderID: "1", title: "새 제목", notes: nil) }
 
         var reloadInFlight = false
         for _ in 0..<200 {
@@ -453,7 +454,7 @@ struct ReminderViewModelTests {
         await viewModel.onAppear()
 
         await repo.closeUpdateGate()   // EventKit 쓰기 자체를 붙잡는다.
-        let task = Task { await viewModel.update(reminderID: "1", title: "새 제목", notes: nil) }
+        let task = Task { await viewModel.updateText(reminderID: "1", title: "새 제목", notes: nil) }
 
         var updateInFlight = false
         for _ in 0..<200 {
@@ -1141,7 +1142,7 @@ struct ReminderViewModelTests {
 
         await viewModel.update(
             reminderID: "1", title: "마감 있는 일", notes: nil,
-            dueDate: due, includesTime: true
+            dueDate: due, includesTime: true, recurrence: nil
         )
 
         let updated = viewModel.visibleReminders.first
@@ -1156,10 +1157,56 @@ struct ReminderViewModelTests {
         ))
         await viewModel.onAppear()
 
-        await viewModel.update(reminderID: "1", title: "새 제목", notes: "새 메모")
+        await viewModel.updateText(reminderID: "1", title: "새 제목", notes: "새 메모")
 
         #expect(viewModel.visibleReminders.first?.title == "새 제목")
         #expect(viewModel.visibleReminders.first?.notes == "새 메모")
+    }
+
+    /// 인라인 편집(제목·메모만)은 마감일·반복을 건드리지 않는다 — 제목만 바꿨는데 반복이
+    /// 사라지던 버그(2026-10-30 QA)의 회귀 방지. 저장소 값까지 확인해 낙관 반영만의 PASS를 배제.
+    @Test func updateTextPreservesDueDateAndRecurrence() async throws {
+        let due = Date(timeIntervalSince1970: 1_700_000_000)
+        let rule = RecurrenceRule(frequency: .daily, interval: 3)
+        let repository = InMemoryRemindersRepository(
+            access: .granted, lists: [listA],
+            reminders: [reminder(
+                id: "1", title: "옛 제목", dueDate: due, includesTime: true,
+                recurrence: rule, listID: "A"
+            )]
+        )
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repository))
+        await viewModel.onAppear()
+
+        await viewModel.updateText(reminderID: "1", title: "새 제목", notes: "메모")
+
+        let local = viewModel.allReminders.first { $0.id == "1" }
+        #expect(local?.title == "새 제목")
+        #expect(local?.recurrence == rule)
+        #expect(local?.dueDate == due)
+        #expect(local?.includesTime == true)
+        let stored = try await repository.fetchReminders().first { $0.id == "1" }
+        #expect(stored?.recurrence == rule)
+        #expect(stored?.dueDate == due)
+    }
+
+    /// 세부사항 시트 경로(update)는 반복을 nil로 넘기면 실제로 해제한다 — 의도적 삭제는 유지.
+    @Test func updateWithNilRecurrenceClearsIt() async {
+        let due = Date(timeIntervalSince1970: 1_700_000_000)
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA],
+            reminders: [reminder(
+                id: "1", dueDate: due, recurrence: RecurrenceRule(frequency: .weekly), listID: "A"
+            )]
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.update(
+            reminderID: "1", title: "할 일", notes: nil,
+            dueDate: due, includesTime: false, recurrence: nil
+        )
+
+        #expect(viewModel.allReminders.first { $0.id == "1" }?.recurrence == nil)
     }
 
     @Test func addStoresDueDate() async {
@@ -1686,7 +1733,7 @@ struct ReminderViewModelTests {
             lists: [listA], reminders: [reminder(id: "1", listID: "A")]
         )
 
-        await viewModel.update(reminderID: "1", title: "새 제목", notes: nil)
+        await viewModel.updateText(reminderID: "1", title: "새 제목", notes: nil)
 
         #expect(analytics.events == [.reminderUpdated])
     }
