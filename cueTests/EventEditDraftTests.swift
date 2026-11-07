@@ -130,6 +130,29 @@ struct EventEditDraftTests {
         #expect(event.recurrenceRules?.first?.recurrenceEnd?.endDate == until)
     }
 
+    /// 반복을 안 바꾼 저장은 규칙을 다시 달지 않는다 — 회차 하나를 "이 이벤트에만" 저장할 때
+    /// 같은 규칙을 지웠다 다시 달면 원본 시리즈가 깨져 다른 회차가 사라졌다(QA 실측).
+    @Test func unchangedRecurrenceKeepsOriginalRule() throws {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 11, 14, 16, 0)
+        event.endDate = date(2026, 11, 14, 17, 0)
+        event.addRecurrenceRule(EKRecurrenceRule(recurrenceWith: .weekly, interval: 1, end: nil))
+        let original = try #require(event.recurrenceRules?.first)
+
+        var draft = EventEditDraft(event: event)
+        draft.title = "회차만 제목 변경"
+        draft.apply(to: event)
+        #expect(event.recurrenceRules?.count == 1)
+        #expect(event.recurrenceRules?.first === original)
+
+        draft.recurrence = .daily
+        draft.apply(to: event)
+        #expect(event.recurrenceRules?.count == 1)
+        #expect(event.recurrenceRules?.first?.frequency == .daily)
+        #expect(event.recurrenceRules?.first !== original)
+    }
+
     /// 서수 요일 지정(매월 첫째 월요일 · 매년 3월 마지막 금요일) 왕복 — Apple "다음 순서로".
     @Test func ordinalWeekdayRuleRoundTrips() {
         let firstMonday = EventEditDraft.Recurrence.custom(

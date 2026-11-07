@@ -160,7 +160,12 @@ struct EventEditDraft: Equatable {
         event.endDate = end
         if availability != .notSupported { event.availability = availability }
 
-        if recurrence != .foreign {
+        // 반복은 **실제로 바뀌었을 때만** 재기록한다. 같은 규칙을 지우고 다시 달면 회차 하나를
+        // "이 이벤트에만" 저장할 때 원본 시리즈의 규칙·제외 날짜가 깨져 다른 회차가 전부 사라진다
+        // (시뮬 실측: 반복 규칙 frequency 0, OccurrenceCache 비어 버림). 미리알림의 isEquivalentRecurrence와 같은 계약.
+        let recurrenceChanged = recurrence != Recurrence(rules: event.recurrenceRules)
+            || recurrenceEnd != RecurrenceEnd(rules: event.recurrenceRules)
+        if recurrence != .foreign, recurrenceChanged {
             (event.recurrenceRules ?? []).forEach(event.removeRecurrenceRule)
             if let rule = recurrence.rule(endingOn: recurrenceEnd) { event.addRecurrenceRule(rule) }
         }
