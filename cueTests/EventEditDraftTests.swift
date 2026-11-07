@@ -130,6 +130,23 @@ struct EventEditDraftTests {
         #expect(event.recurrenceRules?.first?.recurrenceEnd?.endDate == until)
     }
 
+    /// 반복 종료는 고른 날의 끝(23:59:59)으로 저장 — 피커가 단 시작 시각을 그대로 저장하면
+    /// 나중에 시작을 늦췄을 때 종료일 당일 회차가 빠졌다(QA 실측: 18:00 종료 + 19:00 시작 → 10일 회차 소실).
+    @Test func recurrenceEndSavesEndOfPickedDay() throws {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 11, 7, 18, 0)
+        event.endDate = date(2026, 11, 7, 19, 0)
+        var draft = EventEditDraft(event: event)
+        draft.recurrence = .daily
+        draft.recurrenceEnd = .onDate(date(2026, 11, 10, 18, 0))   // 피커가 시작 시각을 단 날짜
+
+        draft.apply(to: event)
+
+        let end = try #require(event.recurrenceRules?.first?.recurrenceEnd?.endDate)
+        #expect(end == date(2026, 11, 11).addingTimeInterval(-1))
+    }
+
     /// 반복을 안 바꾼 저장은 규칙을 다시 달지 않는다 — 회차 하나를 "이 이벤트에만" 저장할 때
     /// 같은 규칙을 지웠다 다시 달면 원본 시리즈가 깨져 다른 회차가 사라졌다(QA 실측).
     @Test func unchangedRecurrenceKeepsOriginalRule() throws {

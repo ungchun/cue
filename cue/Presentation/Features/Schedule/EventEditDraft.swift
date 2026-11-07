@@ -254,8 +254,17 @@ struct EventEditDraft: Equatable {
         var recurrenceEnd: EKRecurrenceEnd? {
             switch self {
             case .never: nil
-            case .onDate(let date): EKRecurrenceEnd(end: date)
+            case .onDate(let date): EKRecurrenceEnd(end: Self.endOfDay(date))
             }
+        }
+
+        /// 고른 날의 끝(23:59:59) — 종료일 당일 회차를 시각과 무관하게 포함한다.
+        /// 날짜 피커는 고른 날에 시작 시각을 그대로 달고 있어, 그대로 저장하면 나중에 시작을
+        /// 늦췄을 때 종료일 회차가 빠졌다(QA 실측). EventKit의 "이후 모두 삭제" 절단과 같은 기준.
+        static func endOfDay(_ date: Date, calendar: Calendar = .current) -> Date {
+            let start = calendar.startOfDay(for: date)
+            let next = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+            return next.addingTimeInterval(-1)
         }
     }
 
@@ -486,7 +495,7 @@ extension EventEditDraft.Recurrence {
     /// UI 모델 + 반복 종료 → 도메인 규칙. 안 함(none)·foreign은 nil.
     func reminderRule(endingOn end: EventEditDraft.RecurrenceEnd) -> RecurrenceRule? {
         let endDate: Date? = {
-            if case .onDate(let date) = end { return date }
+            if case .onDate(let date) = end { return EventEditDraft.RecurrenceEnd.endOfDay(date) }
             return nil
         }()
         switch self {

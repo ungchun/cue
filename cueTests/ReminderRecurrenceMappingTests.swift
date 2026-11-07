@@ -82,13 +82,27 @@ struct ReminderRecurrenceMappingTests {
         #expect(ui == .custom(.init(frequency: .weekly, interval: 1, weekdays: [2, 4])))
         #expect(ui.reminderRule(endingOn: .never) == rich)
 
-        // 반복 종료는 endDate로 합쳐진다.
+        // 반복 종료는 endDate로 합쳐진다 — 고른 날의 끝으로.
         let until = date(2026, 12, 31)
         let ended = EventEditDraft.Recurrence.monthly.reminderRule(endingOn: .onDate(until))
-        #expect(ended == RecurrenceRule(frequency: .monthly, endDate: until))
+        #expect(ended == RecurrenceRule(frequency: .monthly, endDate: EventEditDraft.RecurrenceEnd.endOfDay(until)))
 
         // 안 함은 nil.
         #expect(EventEditDraft.Recurrence.none.reminderRule(endingOn: .never) == nil)
+    }
+
+    /// 피커가 단 시각(마감 시각)과 무관하게 종료일 당일 끝까지 반복한다 — 마감을 늦춰도
+    /// 종료일 회차가 빠지지 않는다. 이미 날 끝이면 그대로(편집 왕복에서 값이 흔들리지 않음).
+    @Test func reminderEndDateCoversWholeEndDay() throws {
+        let calendar = Calendar.current
+        let picked = try #require(DateComponents(calendar: calendar, year: 2026, month: 11, day: 26, hour: 9, minute: 50).date)
+        let rule = try #require(EventEditDraft.Recurrence.daily.reminderRule(endingOn: .onDate(picked)))
+        let end = try #require(rule.endDate)
+
+        #expect(calendar.isDate(end, inSameDayAs: picked))
+        #expect(calendar.dateComponents([.hour, .minute, .second], from: end) == DateComponents(hour: 23, minute: 59, second: 59))
+        let again = EventEditDraft.Recurrence.daily.reminderRule(endingOn: .onDate(end))
+        #expect(again?.endDate == end)
     }
 
     /// endDate 있는 도메인 규칙 → UI로 갈 때 RecurrenceEnd가 분리된다.
