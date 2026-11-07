@@ -20,12 +20,16 @@ struct ScheduleViewModelTests {
         appSettings: AppSettings = .default,
         displayModeRepository: InMemoryScheduleDisplayModeRepository = InMemoryScheduleDisplayModeRepository(),
         eventsRepository injected: (any EventsRepository)? = nil,
-        analytics: SpyAnalyticsService? = nil
+        analytics: SpyAnalyticsService? = nil,
+        reminderLists: [ReminderList] = [],
+        reminders: [Reminder] = []
     ) -> Dependencies {
         let eventsRepository = injected ?? InMemoryEventsRepository(
             access: access, events: events, calendars: calendars
         )
-        let remindersRepository = InMemoryRemindersRepository(access: .granted)
+        let remindersRepository = InMemoryRemindersRepository(
+            access: .granted, lists: reminderLists, reminders: reminders
+        )
         let reminderSortRepository = InMemoryReminderSortRepository()
         let itemRepository = InMemoryItemRepository()
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
@@ -388,6 +392,42 @@ struct ScheduleViewModelTests {
         viewModel.presentEvent(ref)
 
         #expect(viewModel.editingEvent == ref)
+    }
+
+    /// 월 캘린더 일정 칩 — 칩의 이벤트 ID와 (걸친 날로 자르지 않은) 회차 시작으로 이벤트 시트를 연다.
+    @Test func selectingEventChipOpensThatOccurrence() async {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let chip = WidgetCalendarItem(
+            id: "weekly-\(start.timeIntervalSince1970)", title: "회의",
+            start: start, end: start.addingTimeInterval(60 * 60),
+            kind: .timedEvent, colorHex: nil, isHighPriority: false, eventID: "weekly"
+        )
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+
+        await viewModel.selectMonthItem(chip)
+
+        #expect(viewModel.editingEvent == EventOccurrenceRef(eventID: "weekly", occurrenceStart: start))
+        #expect(viewModel.reminderEditor.editingReminder == nil)
+    }
+
+    /// 월 캘린더 할일 칩 — 이벤트 시트가 아니라 할일 상세 시트를 그 할일로 연다.
+    @Test func selectingReminderChipOpensReminderSheet() async {
+        let due = Date(timeIntervalSince1970: 1_800_000_000)
+        let list = ReminderList(id: "list", title: "개인", colorHex: nil)
+        let target = Reminder(id: "r1", title: "장보기", isCompleted: false, notes: nil,
+                              dueDate: due, includesTime: true, listID: list.id)
+        let chip = WidgetCalendarItem(
+            id: "r1-\(due.timeIntervalSince1970)", title: "장보기",
+            start: due, end: due, kind: .reminder, colorHex: nil, isHighPriority: false,
+            reminderID: "r1"
+        )
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(reminderLists: [list], reminders: [target]))
+
+        await viewModel.selectMonthItem(chip)
+
+        #expect(viewModel.reminderEditor.editingReminder == target)
+        #expect(viewModel.reminderEditor.lists == [list])
+        #expect(viewModel.editingEvent == nil)
     }
 
     @Test func dismissEditClearsEditingEvent() {

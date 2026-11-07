@@ -12,8 +12,10 @@ import SwiftUI
 /// - 할일 완료: 리스트 색 체크 원 + 제목, 전체를 흐리게
 ///
 /// 위젯의 `WidgetItemChip`과 같은 시각 언어 — 위젯 타깃 전용이라 앱에서 재사용할 수 없어 따로 둔다.
+/// 누르면 상세 시트를 연다(`onSelect`).
 struct ScheduleMonthItemChip: View {
     let item: WidgetCalendarItem
+    let onSelect: () -> Void
 
     /// 할일 원 지름 — 제목(caption2)보다 작게, 글자 크기 설정을 따라 함께 커진다.
     @ScaledMetric(relativeTo: .caption2) private var reminderIconSize: CGFloat = 7
@@ -26,11 +28,17 @@ struct ScheduleMonthItemChip: View {
     private static let completedOpacity: Double = 0.5
 
     var body: some View {
-        content
-            // 칸 VStack이 남는 높이를 칩에 나눠 주지 않게 — 칩은 항상 한 줄 높이다.
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(item.title))
+        // plain — 기본 스타일의 tint·눌림 강조가 종류별 칩 모양을 바꾸지 않게.
+        Button(action: onSelect) {
+            content
+                // 칸 VStack이 남는 높이를 칩에 나눠 주지 않게 — 칩은 항상 한 줄 높이다.
+                .fixedSize(horizontal: false, vertical: true)
+                // 할일 칩은 배경이 없어 글자 뒤 빈 자리까지 눌리게 한다.
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // 원 아이콘 이름 없이 제목만 읽는다. 버튼이라 "버튼"이 함께 읽힌다.
+        .accessibilityLabel(Text(item.title))
     }
 
     @ViewBuilder

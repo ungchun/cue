@@ -11,6 +11,8 @@ import SwiftUI
 struct ScheduleMonthPage: View {
     let viewModel: ScheduleMonthViewModel
     let offset: Int
+    /// 칩 탭 — 상세 시트를 연다.
+    let onSelect: (WidgetCalendarItem) -> Void
 
     @Environment(\.displayScale) private var displayScale
     /// 스크롤뷰의 보이는 높이(인셋 제외).
@@ -28,7 +30,8 @@ struct ScheduleMonthPage: View {
                     ScheduleMonthWeekRow(
                         page: page,
                         week: grid.weeks[index],
-                        fillHeight: rowFillHeight
+                        fillHeight: rowFillHeight,
+                        onSelect: onSelect
                     )
                     Rectangle()
                         .fill(Color(.separator))

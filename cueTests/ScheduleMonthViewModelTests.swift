@@ -439,6 +439,26 @@ struct ScheduleMonthViewModelTests {
         #expect(viewModel.page(for: 1).items(day: 31).isEmpty)
     }
 
+    /// 칩 탭 → 시트에 넘길 할일 원본. 다른 달 마감도 찾고, 마감 없는(칩이 없는)·모르는 id는 nil.
+    @Test func reminderLookupFindsLoadedRemindersAcrossMonths() async {
+        let reminders = InMemoryRemindersRepository(
+            access: .granted, lists: [listA],
+            reminders: [
+                reminder(id: "r1", title: "이번 달", due: date(11, 12, hour: 9)),
+                reminder(id: "r2", title: "먼 달", due: date(3, 1, year: 2027)),
+                reminder(id: "r3", title: "마감 없음", due: nil),
+            ]
+        )
+        let (viewModel, _, _) = makeViewModel(remindersRepository: reminders)
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.reminder(id: "r1")?.title == "이번 달")
+        #expect(viewModel.reminder(id: "r2")?.title == "먼 달")
+        #expect(viewModel.reminder(id: "r3") == nil)
+        #expect(viewModel.reminder(id: "unknown") == nil)
+    }
+
     // MARK: - 스냅샷 첫 페인트
 
     @Test func snapshotPaintsBeforeFetchAndFetchReplacesIt() async throws {

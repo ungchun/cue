@@ -49,6 +49,12 @@ struct WidgetCalendarItem: Identifiable, Hashable, Sendable {
     /// 일정·표본 항목은 `nil` — 완료 버튼이 붙지 않는 근거가 된다.
     var reminderID: String? = nil
 
+    /// 상세 시트에 넘길 EventKit 이벤트 식별자 — 앱 월 캘린더 칩 탭이 이 일정을 연다.
+    ///
+    /// 표시용 `id`는 회차 시각을 붙인 합성값이라 그대로 못 쓴다. 회차는 `start`가 가른다.
+    /// 할일·위젯 항목은 `nil`.
+    var eventID: String? = nil
+
     /// 완료된 미리알림인지. 일정에는 의미가 없어 항상 `false`.
     ///
     /// 완료해도 **오늘 이후 마감이면 계속 보여준다** — 오늘 할 일을 끝냈다는 사실 자체가

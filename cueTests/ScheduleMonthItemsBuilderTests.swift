@@ -112,6 +112,16 @@ struct ScheduleMonthItemsBuilderTests {
         #expect(days(result) == [1, 2, 30])
     }
 
+    /// 칩 탭이 상세 시트를 그 회차로 열 수 있게 — 걸친 날마다 복제돼도 이벤트 ID와 잘리지 않은 회차 시작을 싣는다.
+    @Test func eventChipsCarryEventIDAndOccurrenceStartOnEveryDay() {
+        let start = date(2026, 11, 3, 22)
+        let result = build(events: [event("trip", start, date(2026, 11, 5, 9))])
+
+        let chips = [3, 4, 5].compactMap { result[date(2026, 11, $0)]?.first }
+        #expect(chips.count == 3)
+        #expect(chips.allSatisfy { $0.eventID == "trip" && $0.start == start })
+    }
+
     // MARK: - 할일
 
     @Test func mapsReminderFields() {
@@ -129,6 +139,7 @@ struct ScheduleMonthItemsBuilderTests {
         #expect(open?.colorHex == "#00FF00")
         #expect(open?.hasTime == true)
         #expect(open?.isCompleted == false)
+        #expect(open?.eventID == nil)
 
         let done = items.first { $0.reminderID == "done" }
         #expect(done?.colorHex == "#0000FF")

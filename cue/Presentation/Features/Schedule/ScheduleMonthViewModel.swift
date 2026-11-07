@@ -173,6 +173,15 @@ final class ScheduleMonthViewModel {
         )
     }
 
+    /// 칩 탭으로 열 할일 원본 — 칩(`WidgetCalendarItem`)엔 시트가 쓸 반복·메모 등이 없어 받아 둔 할일에서 찾는다.
+    /// 마감 있는 할일 전체를 들고 있어(달 윈도우와 무관) 칩이 보이는 한 찾힌다.
+    func reminder(id: String) -> Reminder? {
+        for reminders in remindersByMonth.values {
+            if let match = reminders.first(where: { $0.id == id }) { return match }
+        }
+        return nil
+    }
+
     /// 피커 Done — 그 날짜가 속한 달로 이동한다(범위 밖이면 끝 달로).
     func jump(to date: Date) {
         let months = Calendar.current.dateComponents(

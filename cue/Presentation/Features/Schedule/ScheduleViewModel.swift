@@ -54,6 +54,8 @@ final class ScheduleViewModel {
     private(set) var displayMode: ScheduleDisplayMode
     /// 월 캘린더 모드의 상태 — 탭 VM이 소유해 모드를 오가도 적재한 달을 잃지 않는다.
     let monthCalendar: ScheduleMonthViewModel
+    /// 월 캘린더 할일 칩이 여는 상세 시트의 상태 — 할일 탭 VM과 따로 둔다.
+    let reminderEditor: ScheduleReminderEditor
 
     private(set) var access: EventsAccess = .notDetermined
     /// 날짜별로 그룹핑된 이벤트. 일정 없는 날은 생략, 날짜·시작시간 오름차순.
@@ -107,6 +109,7 @@ final class ScheduleViewModel {
         self.displayMode = dependencies.fetchScheduleDisplayMode()
         self.now = now
         self.monthCalendar = ScheduleMonthViewModel(dependencies: dependencies, now: now)
+        self.reminderEditor = ScheduleReminderEditor(dependencies: dependencies)
         startObservingChanges()
     }
 
@@ -326,6 +329,16 @@ final class ScheduleViewModel {
     /// 회차 참조로 상세 시트를 연다 — 월 캘린더 칩처럼 `CalendarEvent`가 없는 진입점용.
     func presentEvent(_ occurrence: EventOccurrenceRef) {
         editingEvent = occurrence
+    }
+
+    /// 월 캘린더 칩 탭 — 일정 칩은 그 회차의 이벤트 시트, 할일 칩은 할일 상세 시트를 연다.
+    /// 칩의 `start`는 걸친 날로 자르지 않은 회차 시작이라 그대로 회차 참조가 된다.
+    func selectMonthItem(_ item: WidgetCalendarItem) async {
+        if let eventID = item.eventID {
+            presentEvent(EventOccurrenceRef(eventID: eventID, occurrenceStart: item.start))
+        } else if let reminderID = item.reminderID {
+            await reminderEditor.present(reminderID: reminderID, lookup: monthCalendar.reminder(id: reminderID))
+        }
     }
 
     /// 편집 시트 콜백 — 시트를 닫는다. 저장이면 event_updated, 시트 안 삭제 버튼이면

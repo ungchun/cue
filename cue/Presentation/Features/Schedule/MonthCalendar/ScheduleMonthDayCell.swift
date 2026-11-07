@@ -13,6 +13,8 @@ struct ScheduleMonthDayCell: View {
     let isToday: Bool
     /// 이미 칸 안 순서(종일 → 시간 → 미완료 → 완료)로 정렬된 항목.
     let items: [WidgetCalendarItem]
+    /// 칩 탭 — 상세 시트를 연다.
+    let onSelect: (WidgetCalendarItem) -> Void
 
     /// 오늘 원의 지름 — 두 자리 숫자가 원 안에 들어가도록 caption 글자 크기를 따라간다.
     @ScaledMetric(relativeTo: .caption) private var todayDiameter: CGFloat = 20
@@ -23,7 +25,7 @@ struct ScheduleMonthDayCell: View {
                 dayNumber(day)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 ForEach(items) { item in
-                    ScheduleMonthItemChip(item: item)
+                    ScheduleMonthItemChip(item: item) { onSelect(item) }
                 }
             }
             .padding(Spacing.xxs)

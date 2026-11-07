@@ -16,6 +16,8 @@ struct ScheduleMonthWeekRow: View {
     let week: [Int?]
     /// 화면을 채우기 위한 행 높이 하한 — 항목이 적은 달도 격자가 화면 아래까지 차 보이게.
     let fillHeight: CGFloat
+    /// 칩 탭 — 상세 시트를 연다.
+    let onSelect: (WidgetCalendarItem) -> Void
 
     /// 빈 주도 날짜 숫자 + 칩 3줄 정도는 차지한다 — 주마다 높이가 들쭉날쭉하면 격자로 안 읽힌다.
     /// 글자 크기를 키우면 칩도 커지므로 caption2 기준으로 함께 늘린다.
@@ -45,7 +47,8 @@ struct ScheduleMonthWeekRow: View {
             day: day,
             weekday: page.grid.weekdayIndex(column: column),
             isToday: day.map { page.grid.isToday(day: $0) } ?? false,
-            items: day.map { page.items(day: $0) } ?? []
+            items: day.map { page.items(day: $0) } ?? [],
+            onSelect: onSelect
         )
     }
 }

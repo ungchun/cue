@@ -34,9 +34,11 @@ enum ScheduleMonthItemsBuilder {
                 end: event.endDate,
                 kind: event.isAllDay ? .allDayEvent : .timedEvent,
                 colorHex: event.calendarColorHex,
-                isHighPriority: false
+                isHighPriority: false,
+                eventID: event.id
             )
             // 걸치는 날마다 복제하되, 앞·뒷달로 넘친 날은 이 범위의 칸이 아니라 버린다.
+            // 복제본의 start는 그날로 자르지 않은 회차 시작 그대로 — 칩 탭이 이 회차를 연다.
             for day in DaySpan.days(from: item.start, to: item.end, calendar: calendar)
             where day >= lowerBound && day < to {
                 result[day, default: []].append(item)

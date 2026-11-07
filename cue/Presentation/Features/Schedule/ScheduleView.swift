@@ -66,11 +66,49 @@ struct ScheduleView: View {
                     onCompletion: { outcome in viewModel.dismissEdit(outcome: outcome) }
                 )
             }
+            .sheet(item: Bindable(viewModel.reminderEditor).editingReminder) { reminder in
+                reminderSheet(reminder)
+            }
             .alert("Error", isPresented: errorBinding) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(viewModel.errorMessage ?? "")
             }
+            // 시트가 떠 있으면 시트 쪽 알럿이 맡는다 — 시트 아래 화면은 알럿을 띄우지 못한다.
+            .alert("Error", isPresented: reminderErrorBinding(whileSheetPresented: false)) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.reminderEditor.errorMessage ?? "")
+            }
+    }
+
+    /// 월 캘린더 할일 칩이 여는 상세 시트 — 보기 모드로 시작해 완료·수정·삭제를 시트 안에서 한다.
+    private func reminderSheet(_ reminder: Reminder) -> some View {
+        let editor = viewModel.reminderEditor
+        return ReminderDetailSheet(
+            reminder: reminder,
+            lists: editor.lists,
+            startsInViewMode: true,
+            onSave: { changes in
+                Task { await editor.save(reminderID: reminder.id, changes: changes) }
+            },
+            onToggleCompletion: {
+                Task { await editor.toggleCompletion(reminderID: reminder.id) }
+            },
+            onDelete: {
+                Task { await editor.delete(reminderID: reminder.id) }
+            }
+        )
+        // 시트는 연 순간의 할일을 상태로 고정한다 — 완료 후 editor가 저장소 값으로 갱신하면
+        // (반복 할일은 다음 회차로 전진해 미완료·새 마감일) 그 값으로 다시 그리도록 상태 키로 묶는다.
+        // 완료 토글은 보기 모드에만 있어 편집 중 상태가 날아가지 않는다.
+        .id("\(reminder.isCompleted)-\(reminder.dueDate?.timeIntervalSinceReferenceDate ?? 0)")
+        // 시트를 연 채 실패한 완료·저장은 시트 위에 알린다.
+        .alert("Error", isPresented: reminderErrorBinding(whileSheetPresented: true)) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(editor.errorMessage ?? "")
+        }
     }
 
     @ViewBuilder
@@ -83,7 +121,8 @@ struct ScheduleView: View {
             ScheduleMonthView(
                 viewModel: viewModel.monthCalendar,
                 isLiveDisabled: isLiveDisabled,
-                onLive: { await toggleLive() }
+                onLive: { await toggleLive() },
+                onSelectItem: { item in Task { await viewModel.selectMonthItem(item) } }
             )
         }
     }
@@ -130,6 +169,16 @@ struct ScheduleView: View {
         Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.errorMessage = nil } }
+        )
+    }
+
+    /// 할일 시트 열기·저장·완료·삭제 실패 — 위와 같은 패턴. 시트가 떠 있는지로 시트 위·탭 화면 중
+    /// 한 곳에만 띄운다(둘 다 참이면 탭 화면 쪽은 시트에 가려 표시되지 못한다).
+    private func reminderErrorBinding(whileSheetPresented: Bool) -> Binding<Bool> {
+        let editor = viewModel.reminderEditor
+        return Binding(
+            get: { editor.errorMessage != nil && (editor.editingReminder != nil) == whileSheetPresented },
+            set: { if !$0 { editor.errorMessage = nil } }
         )
     }
 

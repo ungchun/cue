@@ -16,6 +16,8 @@ struct ScheduleMonthView: View {
     let isLiveDisabled: Bool
     /// 라이브 버튼 동작 — 타임라인과 같은 토글·토스트·리뷰 흐름을 호출처와 공유한다.
     let onLive: () async -> Void
+    /// 칩 탭 — 일정은 이벤트 시트, 할일은 할일 시트. 시트는 탭 화면(`ScheduleView`)이 띄운다.
+    let onSelectItem: (WidgetCalendarItem) -> Void
 
     @Environment(\.displayScale) private var displayScale
     @Environment(\.scenePhase) private var scenePhase
@@ -114,7 +116,7 @@ struct ScheduleMonthView: View {
     private var pager: some View {
         TabView(selection: Bindable(viewModel).visibleOffset) {
             ForEach(viewModel.monthOffsets, id: \.self) { offset in
-                ScheduleMonthPage(viewModel: viewModel, offset: offset)
+                ScheduleMonthPage(viewModel: viewModel, offset: offset, onSelect: onSelectItem)
                     .tag(offset)
             }
         }
