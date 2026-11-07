@@ -891,27 +891,6 @@ final class ReminderViewModel {
         await update(reminderID: reminderID, changes: changes)
     }
 
-    /// 제목·메모·마감일·반복을 수정한다 — 할일 탭 세부사항 시트 경로. 시트가 다루지 않는
-    /// 우선순위·위치·리스트는 현재 값을 유지한다(`ReminderChanges(from:)`에서 출발).
-    /// 기본값을 두지 않는다: 빠뜨린 필드가 조용히 nil(=삭제)로 저장되지 않게 호출부에 명시를 강제.
-    func update(
-        reminderID: String,
-        title: String,
-        notes: String?,
-        dueDate: Date?,
-        includesTime: Bool,
-        recurrence: RecurrenceRule?
-    ) async {
-        guard let current = allReminders.first(where: { $0.id == reminderID }) else { return }
-        var changes = ReminderChanges(from: current)
-        changes.title = title
-        changes.notes = notes
-        changes.dueDate = dueDate
-        changes.includesTime = includesTime
-        changes.recurrence = recurrence
-        await update(reminderID: reminderID, changes: changes)
-    }
-
     /// 항목을 `changes`의 전체 상태로 수정한다 — 모든 수정 경로가 모이는 곳.
     func update(reminderID: String, changes: ReminderChanges) async {
         // 저장 확정 전 선반영 — 편집 종료로 행이 읽기 모드로 바뀌는 순간 옛 값이 저장 왕복

@@ -1146,10 +1146,10 @@ struct ReminderViewModelTests {
         await viewModel.onAppear()
         let due = Date(timeIntervalSince1970: 1_700_000_000)
 
-        await viewModel.update(
-            reminderID: "1", title: "마감 있는 일", notes: nil,
-            dueDate: due, includesTime: true, recurrence: nil
-        )
+        await viewModel.update(reminderID: "1", changes: ReminderChanges(
+            title: "마감 있는 일", notes: nil, dueDate: due, includesTime: true,
+            recurrence: nil, priority: ReminderPriority.none, locationAlarm: nil, listID: "A"
+        ))
 
         let updated = viewModel.visibleReminders.first
         #expect(updated?.dueDate == due)
@@ -1189,27 +1189,6 @@ struct ReminderViewModelTests {
         #expect(try await repository.fetchReminders().first(where: { $0.id == "1" }) == expected)
     }
 
-    /// 세부사항 시트 경로(update)도 시트가 다루지 않는 우선순위·위치 알림·리스트를 유지한다.
-    @Test func sheetUpdatePreservesPriorityLocationAndList() async throws {
-        let original = richReminder()
-        let repository = InMemoryRemindersRepository(
-            access: .granted, lists: [listA, listB], reminders: [original]
-        )
-        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repository))
-        await viewModel.onAppear()
-
-        await viewModel.update(
-            reminderID: "1", title: "새 제목", notes: nil,
-            dueDate: nil, includesTime: false, recurrence: nil
-        )
-
-        let stored = try #require(try await repository.fetchReminders().first(where: { $0.id == "1" }))
-        #expect(stored.title == "새 제목")
-        #expect(stored.priority == original.priority)
-        #expect(stored.locationAlarm == original.locationAlarm)
-        #expect(stored.listID == original.listID)
-    }
-
     /// 마감·반복·우선순위·위치 알림을 모두 가진 항목(리스트 B) — 보존 계약 테스트용.
     private func richReminder() -> Reminder {
         Reminder(
@@ -1225,7 +1204,7 @@ struct ReminderViewModelTests {
         )
     }
 
-    /// 세부사항 시트 경로(update)는 반복을 nil로 넘기면 실제로 해제한다 — 의도적 삭제는 유지.
+    /// 수정 경로(update)는 반복을 nil로 넘기면 실제로 해제한다 — 의도적 삭제는 유지.
     @Test func updateWithNilRecurrenceClearsIt() async {
         let due = Date(timeIntervalSince1970: 1_700_000_000)
         let viewModel = ReminderViewModel(dependencies: makeDependencies(
@@ -1236,10 +1215,10 @@ struct ReminderViewModelTests {
         ))
         await viewModel.onAppear()
 
-        await viewModel.update(
-            reminderID: "1", title: "할 일", notes: nil,
-            dueDate: due, includesTime: false, recurrence: nil
-        )
+        await viewModel.update(reminderID: "1", changes: ReminderChanges(
+            title: "할 일", notes: nil, dueDate: due, includesTime: false,
+            recurrence: nil, priority: ReminderPriority.none, locationAlarm: nil, listID: "A"
+        ))
 
         #expect(viewModel.allReminders.first { $0.id == "1" }?.recurrence == nil)
     }

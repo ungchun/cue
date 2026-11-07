@@ -108,16 +108,16 @@ struct ReminderView: View {
                 }
             }
             .sheet(item: $editingReminder) { reminder in
-                // 수정 — 인라인 편집 값(이미 reminder에 스냅샷됨)을 초기값으로 넘기고, 완료 시 update 호출.
+                // 수정 — 인라인 편집 값(이미 reminder에 스냅샷됨)으로 편집 모드에서 열고, 완료 시 update 호출.
+                // 목록은 전부 넘긴다(EventKit 미리 알림 목록은 도메인에 쓰기 가능 여부가 없다).
                 ReminderDetailSheet(
-                    title: reminder.title,
-                    memo: reminder.notes ?? "",
-                    dueDate: reminder.dueDate,
-                    includesTime: reminder.includesTime,
-                    recurrence: reminder.recurrence
-                ) { draft in
-                    saveEdit(reminderID: reminder.id, draft: draft)
-                }
+                    reminder: reminder,
+                    lists: viewModel.lists,
+                    startsInViewMode: false,
+                    onSave: { changes in
+                        Task { await viewModel.update(reminderID: reminder.id, changes: changes) }
+                    }
+                )
             }
             // 인라인 편집의 두 필드 사이 이동은 잠깐 둘 다 false가 될 수 있어 80ms 지연 후 재확인.
             .onChange(of: editTitleFocused) { _, _ in scheduleEditCommit() }
@@ -1322,22 +1322,6 @@ struct ReminderView: View {
                 activeNewRowListID = nil
             }
             pendingNewSubmission = false
-        }
-    }
-
-    /// 세부사항 시트(수정) 완료 — Draft를 풀어 update 호출.
-    private func saveEdit(reminderID: String, draft: ReminderDetailSheet.Draft) {
-        let trimmed = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        Task {
-            await viewModel.update(
-                reminderID: reminderID,
-                title: trimmed,
-                notes: draft.memo,
-                dueDate: draft.dueDate,
-                includesTime: draft.includesTime,
-                recurrence: draft.recurrence
-            )
         }
     }
 

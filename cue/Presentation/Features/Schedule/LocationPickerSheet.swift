@@ -16,6 +16,8 @@ import SwiftUI
 /// 서드파티에 열어주지 않는 캘린더 앱 전용 필드라 제외.)
 struct LocationPickerSheet: View {
     let onSelect: (EventEditDraft.Location) -> Void
+    /// 좌표 있는 선택만 받는다 — 할일 위치 알림(좌표가 있어야 울림)용. 이름만 쓰는 행을 숨긴다.
+    var requiresCoordinate = false
 
     @State private var searchText = ""
     @State private var search = LocationSearchModel()
@@ -26,7 +28,7 @@ struct LocationPickerSheet: View {
         NavigationStack {
             List {
                 // 입력 문자열을 장소 검색 없이 그대로 쓰기 — Apple의 '개봉' 행과 동일.
-                if !trimmedQuery.isEmpty {
+                if !trimmedQuery.isEmpty, !requiresCoordinate {
                     Section {
                         Button {
                             select(EventEditDraft.Location(title: trimmedQuery))
