@@ -1169,31 +1169,60 @@ struct ReminderViewModelTests {
         #expect(viewModel.visibleReminders.first?.notes == "새 메모")
     }
 
-    /// 인라인 편집(제목·메모만)은 마감일·반복을 건드리지 않는다 — 제목만 바꿨는데 반복이
-    /// 사라지던 버그(2026-10-30 QA)의 회귀 방지. 저장소 값까지 확인해 낙관 반영만의 PASS를 배제.
-    @Test func updateTextPreservesDueDateAndRecurrence() async throws {
-        let due = Date(timeIntervalSince1970: 1_700_000_000)
-        let rule = RecurrenceRule(frequency: .daily, interval: 3)
+    /// 인라인 편집(제목·메모만)은 나머지 필드를 건드리지 않는다 — 제목만 바꿨는데 반복이
+    /// 사라지던 버그(2026-10-30 QA)의 회귀 방지. 우선순위·위치 알림·리스트도 같은 계약.
+    /// 저장소 값까지 확인해 낙관 반영만의 PASS를 배제.
+    @Test func updateTextPreservesEverythingButTitleAndNotes() async throws {
+        let original = richReminder()
         let repository = InMemoryRemindersRepository(
-            access: .granted, lists: [listA],
-            reminders: [reminder(
-                id: "1", title: "옛 제목", dueDate: due, includesTime: true,
-                recurrence: rule, listID: "A"
-            )]
+            access: .granted, lists: [listA, listB], reminders: [original]
         )
         let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repository))
         await viewModel.onAppear()
 
         await viewModel.updateText(reminderID: "1", title: "새 제목", notes: "메모")
 
-        let local = viewModel.allReminders.first { $0.id == "1" }
-        #expect(local?.title == "새 제목")
-        #expect(local?.recurrence == rule)
-        #expect(local?.dueDate == due)
-        #expect(local?.includesTime == true)
-        let stored = try await repository.fetchReminders().first { $0.id == "1" }
-        #expect(stored?.recurrence == rule)
-        #expect(stored?.dueDate == due)
+        var expected = original
+        expected.title = "새 제목"
+        expected.notes = "메모"
+        #expect(viewModel.allReminders.first(where: { $0.id == "1" }) == expected)
+        #expect(try await repository.fetchReminders().first(where: { $0.id == "1" }) == expected)
+    }
+
+    /// 세부사항 시트 경로(update)도 시트가 다루지 않는 우선순위·위치 알림·리스트를 유지한다.
+    @Test func sheetUpdatePreservesPriorityLocationAndList() async throws {
+        let original = richReminder()
+        let repository = InMemoryRemindersRepository(
+            access: .granted, lists: [listA, listB], reminders: [original]
+        )
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(remindersRepository: repository))
+        await viewModel.onAppear()
+
+        await viewModel.update(
+            reminderID: "1", title: "새 제목", notes: nil,
+            dueDate: nil, includesTime: false, recurrence: nil
+        )
+
+        let stored = try #require(try await repository.fetchReminders().first(where: { $0.id == "1" }))
+        #expect(stored.title == "새 제목")
+        #expect(stored.priority == original.priority)
+        #expect(stored.locationAlarm == original.locationAlarm)
+        #expect(stored.listID == original.listID)
+    }
+
+    /// 마감·반복·우선순위·위치 알림을 모두 가진 항목(리스트 B) — 보존 계약 테스트용.
+    private func richReminder() -> Reminder {
+        Reminder(
+            id: "1", title: "옛 제목", isCompleted: false, notes: nil,
+            dueDate: Date(timeIntervalSince1970: 1_700_000_000), includesTime: true,
+            recurrence: RecurrenceRule(frequency: .daily, interval: 3),
+            priority: .high,
+            locationAlarm: ReminderLocationAlarm(
+                title: "집", address: nil, latitude: 37.5, longitude: 127.0,
+                radius: nil, proximity: .arriving
+            ),
+            listID: "B"
+        )
     }
 
     /// 세부사항 시트 경로(update)는 반복을 nil로 넘기면 실제로 해제한다 — 의도적 삭제는 유지.
@@ -2028,18 +2057,12 @@ private actor GatedRemindersRepository: RemindersRepository {
         )
     }
     @discardableResult
-    func updateReminder(
-        reminderID: String, title: String, notes: String?, dueDate: Date?, includesTime: Bool,
-        recurrence: RecurrenceRule?
-    ) async throws -> Reminder {
+    func updateReminder(reminderID: String, changes: ReminderChanges) async throws -> Reminder {
         if updateGateClosed {
             isUpdateWaiting = true
             await withCheckedContinuation { updateWaiters.append($0) }
         }
-        return try await base.updateReminder(
-            reminderID: reminderID, title: title, notes: notes, dueDate: dueDate,
-            includesTime: includesTime, recurrence: recurrence
-        )
+        return try await base.updateReminder(reminderID: reminderID, changes: changes)
     }
     func deleteReminder(reminderID: String) async throws { try await base.deleteReminder(reminderID: reminderID) }
     func moveReminder(reminderID: String, toListID listID: String) async throws {

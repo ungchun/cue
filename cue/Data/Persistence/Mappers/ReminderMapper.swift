@@ -3,6 +3,7 @@
 //  cue / Data
 //
 
+import CoreLocation
 import EventKit
 
 /// EventKit 모델 ↔ 도메인 엔티티 변환. 두 계층 사이 경계를 한 곳에 모은다.
@@ -42,15 +43,152 @@ enum ReminderMapper {
             includesTime: reminder.dueDateComponents?.hour != nil,
             recurrence: toRecurrence(reminder.recurrenceRules?.first),
             creationDate: reminder.creationDate,
+            priority: toPriority(reminder.priority),
+            locationAlarm: representedLocationAlarm(in: reminder.alarms)?.domain,
             listID: reminder.calendar.calendarIdentifier
         )
     }
 
-    /// cue가 관리하는 알람인지 — **마감 시각 절대 알람(위치 없음)**만 해당한다.
-    /// 그 외(위치·상대 오프셋·위치 붙은 절대)는 사용자가 미리알림 앱에서 단 것일 수 있어
+    // MARK: - 편집 적용 (도메인 → EKReminder)
+
+    /// `changes`를 EKReminder에 쓴다(리스트=calendar 교체는 저장소 조회가 필요해 호출부 몫).
+    /// 도메인이 EventKit보다 거칠게 표현하는 값(반복 세부·우선순위 정수·위치 알람 세부)은
+    /// **실제로 바뀌었을 때만** 재기록해, 미리알림 앱에서 만든 원본을 깎지 않는다.
+    static func apply(_ changes: ReminderChanges, to reminder: EKReminder) {
+        // 알람 판정의 기준은 **바꾸기 전** 마감 시각 — 먼저 읽어 둔다.
+        let previousDue = timedDueDate(reminder.dueDateComponents)
+        reminder.title = changes.title
+        reminder.notes = changes.notes
+
+        let effectiveRecurrence = changes.dueDate != nil ? changes.recurrence : nil
+        if !isEquivalentRecurrence(reminder.recurrenceRules?.first, to: effectiveRecurrence) {
+            (reminder.recurrenceRules ?? []).forEach(reminder.removeRecurrenceRule)
+            if let rule = toEKRecurrenceRule(effectiveRecurrence) {
+                reminder.addRecurrenceRule(rule)
+            }
+        }
+
+        if toPriority(reminder.priority) != changes.priority {
+            reminder.priority = toEKPriority(changes.priority)
+        }
+
+        // 마감 알람은 cue가 단 것(=이전 마감 시각의 절대 알람)만 떼고 새 마감 시각으로 다시 단다.
+        for alarm in (reminder.alarms ?? []) where isCueManagedDueAlarm(alarm, previousDue: previousDue) {
+            reminder.removeAlarm(alarm)
+        }
+        if let dueDate = changes.dueDate {
+            // 시간이 없으면 [년·월·일]만 — EventKit은 이를 "종일" 마감으로 본다.
+            let fields: Set<Calendar.Component> = changes.includesTime
+                ? [.year, .month, .day, .hour, .minute]
+                : [.year, .month, .day]
+            reminder.dueDateComponents = Calendar.current.dateComponents(fields, from: dueDate)
+            // 마감일만으로는 알림이 울리지 않는다 — 시간이 있으면 알람을 함께 단다.
+            if changes.includesTime {
+                reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
+            }
+        } else {
+            reminder.dueDateComponents = nil
+        }
+
+        let represented = representedLocationAlarm(in: reminder.alarms)
+        if represented?.domain != changes.locationAlarm {
+            if let alarm = represented?.alarm { reminder.removeAlarm(alarm) }
+            if let locationAlarm = changes.locationAlarm {
+                reminder.addAlarm(toEKLocationAlarm(locationAlarm))
+            }
+        }
+    }
+
+    // MARK: - 알람
+
+    /// cue가 관리하는 마감 알람인지 — **이전 마감 시각과 같은 시각의 절대 알람(위치 없음)**만.
+    /// 다른 시각의 절대 알람·상대 오프셋·위치 알람은 사용자가 미리알림 앱에서 단 것일 수 있어
     /// 편집 저장 시 보존한다 — 일정 편집의 `.custom` 알림 보존과 같은 계약.
-    static func isCueManagedDueAlarm(_ alarm: EKAlarm) -> Bool {
-        alarm.absoluteDate != nil && alarm.structuredLocation == nil
+    /// 분 단위로 비교한다: 마감 컴포넌트는 분까지만 남지만 알람은 저장 당시 초까지 들고 있다.
+    /// `previousDue`가 nil(마감 없음·종일)이면 cue가 단 알람이 없으므로 아무것도 해당하지 않는다.
+    static func isCueManagedDueAlarm(_ alarm: EKAlarm, previousDue: Date?) -> Bool {
+        guard let previousDue, let date = alarm.absoluteDate, alarm.structuredLocation == nil else {
+            return false
+        }
+        return Calendar.current.compare(date, to: previousDue, toGranularity: .minute) == .orderedSame
+    }
+
+    /// 시각이 지정된 마감 컴포넌트 → Date. 종일(시 없음)·마감 없음이면 nil.
+    /// 컴포넌트에 calendar가 없으면 `.date`가 nil이라 현재 달력으로 보정한다.
+    static func timedDueDate(_ components: DateComponents?) -> Date? {
+        guard let components, components.hour != nil else { return nil }
+        return components.date ?? Calendar.current.date(from: components)
+    }
+
+    /// 도메인이 표현하는 위치 알람 — 위치·도착/출발·좌표를 모두 갖춘 첫 알람.
+    /// 표현 못 하는 위치 알람(좌표 없음·proximity 없음)은 여기서 빠져 저장 시 그대로 보존된다.
+    static func representedLocationAlarm(
+        in alarms: [EKAlarm]?
+    ) -> (alarm: EKAlarm, domain: ReminderLocationAlarm)? {
+        for alarm in alarms ?? [] {
+            if let domain = toLocationAlarm(alarm) { return (alarm, domain) }
+        }
+        return nil
+    }
+
+    /// `EKAlarm`(위치 기반) → 도메인. 이름과 주소는 Apple 캘린더처럼 title의 첫 줄·나머지로 나눈다
+    /// (`EKStructuredLocation`에 주소 필드가 따로 없다). 반경 0은 시스템 기본(nil).
+    static func toLocationAlarm(_ alarm: EKAlarm) -> ReminderLocationAlarm? {
+        guard let location = alarm.structuredLocation, let geo = location.geoLocation else { return nil }
+        let proximity: ReminderLocationAlarm.Proximity
+        switch alarm.proximity {
+        case .enter: proximity = .arriving
+        case .leave: proximity = .leaving
+        default: return nil
+        }
+        let lines = (location.title ?? "").split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+        let address = lines.count > 1 ? String(lines[1]) : nil
+        return ReminderLocationAlarm(
+            title: String(lines.first ?? ""),
+            address: address?.isEmpty == true ? nil : address,
+            latitude: geo.coordinate.latitude,
+            longitude: geo.coordinate.longitude,
+            radius: location.radius > 0 ? location.radius : nil,
+            proximity: proximity
+        )
+    }
+
+    /// 도메인 위치 알람 → `EKAlarm`. 상대 오프셋 0 + structuredLocation + proximity가
+    /// 미리알림 앱의 위치 알람과 같은 형태다.
+    static func toEKLocationAlarm(_ locationAlarm: ReminderLocationAlarm) -> EKAlarm {
+        // 빈 주소는 주소 없음 — "이름\n"으로 쓰면 다시 읽을 때 nil이 돼 매번 변경으로 판정된다.
+        let address = locationAlarm.address.flatMap { $0.isEmpty ? nil : $0 }
+        let title = address.map { "\(locationAlarm.title)\n\($0)" } ?? locationAlarm.title
+        let location = EKStructuredLocation(title: title)
+        location.geoLocation = CLLocation(latitude: locationAlarm.latitude, longitude: locationAlarm.longitude)
+        location.radius = locationAlarm.radius ?? 0
+        let alarm = EKAlarm(relativeOffset: 0)
+        alarm.structuredLocation = location
+        alarm.proximity = locationAlarm.proximity == .arriving ? .enter : .leave
+        return alarm
+    }
+
+    // MARK: - 우선순위
+
+    /// EventKit 정수(0~9) → 4단계. 0 없음, 1~4 높음, 5 중간, 6~9 낮음(RFC 5545·미리알림 앱 기준).
+    static func toPriority(_ value: Int) -> ReminderPriority {
+        switch value {
+        case 1...4: .high
+        case 5: .medium
+        case 6...9: .low
+        default: .none
+        }
+    }
+
+    /// 4단계 → EventKit 정수. 미리알림 앱이 쓰는 대표값(높음 1, 중간 5, 낮음 9).
+    /// 저장 경로는 단계가 바뀐 경우에만 이 값을 쓴다 — 3 같은 세분값을 1로 깎지 않기 위해.
+    static func toEKPriority(_ priority: ReminderPriority) -> Int {
+        switch priority {
+        case .none: 0
+        case .high: 1
+        case .medium: 5
+        case .low: 9
+        }
     }
 
     /// 기존 EK 규칙과 도메인 규칙의 동치 판정 — 동치면 저장 시 재기록하지 않아, 도메인이

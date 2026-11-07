@@ -101,24 +101,26 @@ struct ReminderRecurrenceMappingTests {
 
     // MARK: - 편집 저장 시 보존 정책 (알람·반복 — 미리알림 앱과의 계약)
 
-    /// cue가 관리하는 알람은 "마감 시각 절대 알람"뿐 — 위치·상대·기타 알람은 사용자가
-    /// 미리알림 앱에서 단 것일 수 있어 편집 저장 시 보존해야 한다(일정 .custom 보존과 동일 계약).
-    @Test func onlyPlainAbsoluteAlarmIsCueManaged() {
-        let absolute = EKAlarm(absoluteDate: date(2026, 8, 1))
-        #expect(ReminderMapper.isCueManagedDueAlarm(absolute))
+    /// cue가 관리하는 알람은 "이전 마감 시각의 절대 알람"뿐 — 다른 시각의 절대 알람·위치·상대
+    /// 알람은 사용자가 미리알림 앱에서 단 것일 수 있어 편집 저장 시 보존해야 한다(일정 .custom 보존과 동일 계약).
+    @Test func onlyAbsoluteAlarmAtPreviousDueIsCueManaged() {
+        let due = date(2026, 8, 1).addingTimeInterval(9 * 3600)   // 09:00
+        // 저장 당시 초가 붙어 있어도 같은 분이면 cue가 단 마감 알람.
+        #expect(ReminderMapper.isCueManagedDueAlarm(EKAlarm(absoluteDate: due.addingTimeInterval(23)), previousDue: due))
+
+        // 다른 시각의 절대 알람(사용자가 단 추가 알람) — 보존.
+        let other = EKAlarm(absoluteDate: due.addingTimeInterval(-3600))
+        #expect(!ReminderMapper.isCueManagedDueAlarm(other, previousDue: due))
+        // 이전 마감이 없거나 종일이면 cue가 단 알람이 없다 — 어떤 절대 알람도 보존.
+        #expect(!ReminderMapper.isCueManagedDueAlarm(EKAlarm(absoluteDate: due), previousDue: nil))
 
         let relative = EKAlarm(relativeOffset: -300)
-        #expect(!ReminderMapper.isCueManagedDueAlarm(relative))
-
-        let location = EKAlarm(relativeOffset: 0)
-        location.structuredLocation = EKStructuredLocation(title: "집")
-        location.proximity = .enter
-        #expect(!ReminderMapper.isCueManagedDueAlarm(location))
+        #expect(!ReminderMapper.isCueManagedDueAlarm(relative, previousDue: due))
 
         // 절대시각이라도 위치가 붙어 있으면 위치 알람 — 보존.
-        let absoluteWithLocation = EKAlarm(absoluteDate: date(2026, 8, 1))
+        let absoluteWithLocation = EKAlarm(absoluteDate: due)
         absoluteWithLocation.structuredLocation = EKStructuredLocation(title: "회사")
-        #expect(!ReminderMapper.isCueManagedDueAlarm(absoluteWithLocation))
+        #expect(!ReminderMapper.isCueManagedDueAlarm(absoluteWithLocation, previousDue: due))
     }
 
     /// 반복 재기록은 실제로 바뀌었을 때만 — 도메인이 표현 못 하는 원본 세부(횟수 종료 등)를

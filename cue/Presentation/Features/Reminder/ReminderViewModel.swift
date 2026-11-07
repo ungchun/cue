@@ -880,21 +880,19 @@ final class ReminderViewModel {
         return lists.first?.id
     }
 
-    /// 제목·메모만 수정한다 — 인라인 편집 경로. 마감일·반복은 현재 값을 그대로 유지한다.
-    /// 호출부가 마감일·반복을 들고 다니지 않게 해, 빠뜨린 필드가 "삭제"로 저장되는 걸 막는다.
+    /// 제목·메모만 수정한다 — 인라인 편집 경로. 나머지(마감일·반복·우선순위·위치·리스트)는
+    /// 현재 값을 그대로 유지한다. 호출부가 다른 필드를 들고 다니지 않게 해, 빠뜨린 필드가
+    /// "삭제"로 저장되는 걸 막는다.
     func updateText(reminderID: String, title: String, notes: String?) async {
         guard let current = allReminders.first(where: { $0.id == reminderID }) else { return }
-        await update(
-            reminderID: reminderID,
-            title: title,
-            notes: notes,
-            dueDate: current.dueDate,
-            includesTime: current.includesTime,
-            recurrence: current.recurrence
-        )
+        var changes = ReminderChanges(from: current)
+        changes.title = title
+        changes.notes = notes
+        await update(reminderID: reminderID, changes: changes)
     }
 
-    /// 기존 항목의 제목·메모·마감일·반복을 수정한다 — 세부사항 시트 경로.
+    /// 제목·메모·마감일·반복을 수정한다 — 할일 탭 세부사항 시트 경로. 시트가 다루지 않는
+    /// 우선순위·위치·리스트는 현재 값을 유지한다(`ReminderChanges(from:)`에서 출발).
     /// 기본값을 두지 않는다: 빠뜨린 필드가 조용히 nil(=삭제)로 저장되지 않게 호출부에 명시를 강제.
     func update(
         reminderID: String,
@@ -904,29 +902,38 @@ final class ReminderViewModel {
         includesTime: Bool,
         recurrence: RecurrenceRule?
     ) async {
+        guard let current = allReminders.first(where: { $0.id == reminderID }) else { return }
+        var changes = ReminderChanges(from: current)
+        changes.title = title
+        changes.notes = notes
+        changes.dueDate = dueDate
+        changes.includesTime = includesTime
+        changes.recurrence = recurrence
+        await update(reminderID: reminderID, changes: changes)
+    }
+
+    /// 항목을 `changes`의 전체 상태로 수정한다 — 모든 수정 경로가 모이는 곳.
+    func update(reminderID: String, changes: ReminderChanges) async {
         // 저장 확정 전 선반영 — 편집 종료로 행이 읽기 모드로 바뀌는 순간 옛 값이 저장 왕복
-        // 시간만큼 보이는 플래시를 없앤다. UseCase와 같은 정규화(trim·notes)를 적용하고,
-        // 무효 입력(빈 제목)은 선반영하지 않는다(UseCase가 던지는 검증과 일치).
+        // 시간만큼 보이는 플래시를 없앤다. UseCase와 같은 정규화(trim·notes·마감일 전제)를
+        // 적용하고, 무효 입력(빈 제목)은 선반영하지 않는다(UseCase가 던지는 검증과 일치).
         // 실패 시엔 백그라운드 reconcile이 저장소 원본으로 되돌린다.
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = changes.title.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty, var current = allReminders.first(where: { $0.id == reminderID }) {
+            let hasDueDate = changes.dueDate != nil
             current.title = trimmed
-            current.notes = ReminderNotes.normalized(notes)
-            current.dueDate = dueDate
-            current.includesTime = includesTime
-            current.recurrence = dueDate != nil ? recurrence : nil
+            current.notes = ReminderNotes.normalized(changes.notes)
+            current.dueDate = changes.dueDate
+            current.includesTime = hasDueDate && changes.includesTime
+            current.recurrence = hasDueDate ? changes.recurrence : nil
+            current.priority = changes.priority
+            current.locationAlarm = changes.locationAlarm
+            current.listID = changes.listID
             applyOptimistically(current)
         }
         openSelfWriteSuppressWindow()
         do {
-            let updated = try await updateReminderUseCase(
-                reminderID: reminderID,
-                title: title,
-                notes: notes,
-                dueDate: dueDate,
-                includesTime: includesTime,
-                recurrence: recurrence
-            )
+            let updated = try await updateReminderUseCase(reminderID: reminderID, changes: changes)
             applyOptimistically(updated)
             analytics.log(.reminderUpdated)
             reconcileInBackground()

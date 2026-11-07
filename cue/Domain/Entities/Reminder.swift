@@ -22,6 +22,33 @@ struct Reminder: Identifiable, Equatable, Sendable, Codable {
     /// 생성 시각(EventKit `creationDate`). 시스템 필터(전체·예정)의 "추가한 순서" 정렬 기준.
     /// nil이면 정렬에서 맨 뒤로 보낸다(미리 알림 앱과 동일하게 가장 나중에 추가된 것 취급).
     var creationDate: Date? = nil
+    /// 우선순위(EventKit `priority`를 4단계로 접은 값).
+    var priority: ReminderPriority = .none
+    /// 위치 기반 알림(도착·출발). nil이면 없음.
+    var locationAlarm: ReminderLocationAlarm? = nil
     /// 속한 리스트 — 전체 탭 섹션 간 드래그(리스트 이동)로 바뀔 수 있어 가변.
     var listID: String
+}
+
+extension Reminder {
+    // 커스텀 디코딩은 extension에 둬서 멤버와이즈 init을 살린다. 새 필드(priority·locationAlarm)는
+    // decodeIfPresent — 필드 추가 전에 저장된 스냅샷(JSON)도 그대로 읽혀, 업데이트 직후 첫
+    // 페인트가 캐시 디코딩 실패로 스피너에 떨어지지 않는다(RecurrenceRule과 같은 방식).
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decode(String.self, forKey: .id),
+            title: try container.decode(String.self, forKey: .title),
+            isCompleted: try container.decode(Bool.self, forKey: .isCompleted),
+            notes: try container.decodeIfPresent(String.self, forKey: .notes),
+            dueDate: try container.decodeIfPresent(Date.self, forKey: .dueDate),
+            includesTime: try container.decode(Bool.self, forKey: .includesTime),
+            recurrence: try container.decodeIfPresent(RecurrenceRule.self, forKey: .recurrence),
+            creationDate: try container.decodeIfPresent(Date.self, forKey: .creationDate),
+            priority: try container.decodeIfPresent(ReminderPriority.self, forKey: .priority)
+                ?? ReminderPriority.none,
+            locationAlarm: try container.decodeIfPresent(ReminderLocationAlarm.self, forKey: .locationAlarm),
+            listID: try container.decode(String.self, forKey: .listID)
+        )
+    }
 }

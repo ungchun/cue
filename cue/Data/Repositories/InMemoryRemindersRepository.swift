@@ -90,22 +90,24 @@ actor InMemoryRemindersRepository: RemindersRepository {
     }
 
     @discardableResult
-    func updateReminder(
-        reminderID: String,
-        title: String,
-        notes: String?,
-        dueDate: Date?,
-        includesTime: Bool,
-        recurrence: RecurrenceRule?
-    ) async throws -> Reminder {
+    func updateReminder(reminderID: String, changes: ReminderChanges) async throws -> Reminder {
         guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
             throw DomainError.notFound
         }
-        reminders[index].title = title
-        reminders[index].notes = notes
-        reminders[index].dueDate = dueDate
-        reminders[index].includesTime = includesTime
-        reminders[index].recurrence = dueDate != nil ? recurrence : nil
+        // 리스트 이동은 EventKit 구현처럼 대상 리스트가 있어야 한다 — 없으면 아무것도 안 바꾸고 실패.
+        if changes.listID != reminders[index].listID,
+           !lists.contains(where: { $0.id == changes.listID }) {
+            throw DomainError.notFound
+        }
+        let hasDueDate = changes.dueDate != nil
+        reminders[index].title = changes.title
+        reminders[index].notes = changes.notes
+        reminders[index].dueDate = changes.dueDate
+        reminders[index].includesTime = hasDueDate && changes.includesTime
+        reminders[index].recurrence = hasDueDate ? changes.recurrence : nil
+        reminders[index].priority = changes.priority
+        reminders[index].locationAlarm = changes.locationAlarm
+        reminders[index].listID = changes.listID
         return reminders[index]
     }
 

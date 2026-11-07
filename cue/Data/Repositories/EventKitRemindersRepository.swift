@@ -102,43 +102,24 @@ actor EventKitRemindersRepository: RemindersRepository {
     }
 
     @discardableResult
-    func updateReminder(
-        reminderID: String,
-        title: String,
-        notes: String?,
-        dueDate: Date?,
-        includesTime: Bool,
-        recurrence: RecurrenceRule?
-    ) async throws -> Reminder {
+    func updateReminder(reminderID: String, changes: ReminderChanges) async throws -> Reminder {
         guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
             throw DomainError.notFound
         }
-        reminder.title = title
-        reminder.notes = notes
-        // 반복은 **실제로 바뀌었을 때만** 재기록 — 동치면 그대로 둬서 도메인이 표현 못 하는
-        // 원본 세부(횟수 종료 등)를 깎지 않는다(미리알림 앱에서 만든 규칙 보존).
-        let effectiveRecurrence = dueDate != nil ? recurrence : nil
-        if !ReminderMapper.isEquivalentRecurrence(reminder.recurrenceRules?.first, to: effectiveRecurrence) {
-            (reminder.recurrenceRules ?? []).forEach(reminder.removeRecurrenceRule)
-            if let rule = ReminderMapper.toEKRecurrenceRule(effectiveRecurrence) {
-                reminder.addRecurrenceRule(rule)
+        // 리스트 이동 대상은 쓰기 가능한 리스트만 — 읽기 전용(구독·공유 읽기) 리스트는 없는
+        // 리스트와 같게 취급한다. 다른 필드를 건드리기 전에 확인해 반쯤 바뀐 상태를 만들지 않는다.
+        var targetCalendar: EKCalendar?
+        if changes.listID != reminder.calendar.calendarIdentifier {
+            guard let calendar = store.calendars(for: .reminder).first(where: {
+                $0.calendarIdentifier == changes.listID && $0.allowsContentModifications
+            }) else {
+                throw DomainError.notFound
             }
+            targetCalendar = calendar
         }
-        // 알람은 cue가 관리하는 **마감 시각 절대 알람만** 떼고 다시 단다 — 사용자가 미리알림
-        // 앱에서 단 위치·상대·추가 알람은 보존(마감일 변경 시 마감 알람 시각만 따라간다).
-        for alarm in (reminder.alarms ?? []) where ReminderMapper.isCueManagedDueAlarm(alarm) {
-            reminder.removeAlarm(alarm)
-        }
-        if let dueDate {
-            let fields: Set<Calendar.Component> = includesTime
-                ? [.year, .month, .day, .hour, .minute]
-                : [.year, .month, .day]
-            reminder.dueDateComponents = Calendar.current.dateComponents(fields, from: dueDate)
-            if includesTime {
-                reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
-            }
-        } else {
-            reminder.dueDateComponents = nil
+        ReminderMapper.apply(changes, to: reminder)
+        if let targetCalendar {
+            reminder.calendar = targetCalendar
         }
         try store.save(reminder, commit: true)
         return ReminderMapper.toReminder(reminder)

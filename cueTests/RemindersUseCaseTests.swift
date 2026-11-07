@@ -15,6 +15,24 @@ struct RemindersUseCaseTests {
         InMemoryRemindersRepository(access: .granted, lists: [list], reminders: reminders)
     }
 
+    /// 수정 요청 픽스처 — 프로덕션 `ReminderChanges` init은 기본값이 없어(생략 방지 가드)
+    /// 테스트에서만 기본값을 둔다.
+    private func makeChanges(
+        title: String = "할 일",
+        notes: String? = nil,
+        dueDate: Date? = nil,
+        includesTime: Bool = false,
+        recurrence: RecurrenceRule? = nil,
+        priority: ReminderPriority = .none,
+        locationAlarm: ReminderLocationAlarm? = nil,
+        listID: String = "L1"
+    ) -> ReminderChanges {
+        ReminderChanges(
+            title: title, notes: notes, dueDate: dueDate, includesTime: includesTime,
+            recurrence: recurrence, priority: priority, locationAlarm: locationAlarm, listID: listID
+        )
+    }
+
     private func makeReminder(
         id: String = "R1",
         title: String = "할 일",
@@ -106,13 +124,15 @@ struct RemindersUseCaseTests {
         let id = try await FetchRemindersUseCase(repository: repository)().first!.id
 
         let updated = try await UpdateReminderUseCase(repository: repository)(
-            reminderID: id, title: "제목", notes: nil,
-            dueDate: Date(), recurrence: RecurrenceRule(frequency: .monthly, monthDays: [1, 15])
+            reminderID: id,
+            changes: makeChanges(
+                title: "제목", dueDate: Date(), recurrence: RecurrenceRule(frequency: .monthly, monthDays: [1, 15])
+            )
         )
         #expect(updated.recurrence == RecurrenceRule(frequency: .monthly, monthDays: [1, 15]))
 
         let cleared = try await UpdateReminderUseCase(repository: repository)(
-            reminderID: id, title: "제목", notes: nil, dueDate: Date(), recurrence: nil
+            reminderID: id, changes: makeChanges(title: "제목", dueDate: Date(), recurrence: nil)
         )
         #expect(cleared.recurrence == nil)
     }
@@ -155,7 +175,7 @@ struct RemindersUseCaseTests {
         let repository = makeRepository(reminders: [makeReminder()])
 
         let updated = try await UpdateReminderUseCase(repository: repository)(
-            reminderID: "R1", title: "  수정됨  ", notes: "메모"
+            reminderID: "R1", changes: makeChanges(title: "  수정됨  ", notes: "메모")
         )
 
         #expect(updated.id == "R1")
@@ -197,7 +217,7 @@ struct RemindersUseCaseTests {
         let repository = makeRepository(reminders: [makeReminder(id: "R1", title: "옛 제목")])
 
         try await UpdateReminderUseCase(repository: repository)(
-            reminderID: "R1", title: "새 제목", notes: "새 메모"
+            reminderID: "R1", changes: makeChanges(title: "새 제목", notes: "새 메모")
         )
 
         let reminders = try await FetchRemindersUseCase(repository: repository)()
@@ -209,7 +229,7 @@ struct RemindersUseCaseTests {
         let repository = makeRepository(reminders: [makeReminder(id: "R1")])
 
         try await UpdateReminderUseCase(repository: repository)(
-            reminderID: "R1", title: "  공백  ", notes: nil
+            reminderID: "R1", changes: makeChanges(title: "  공백  ")
         )
 
         let reminders = try await FetchRemindersUseCase(repository: repository)()
@@ -221,7 +241,7 @@ struct RemindersUseCaseTests {
 
         await #expect(throws: DomainError.self) {
             try await UpdateReminderUseCase(repository: repository)(
-                reminderID: "R1", title: " ", notes: nil
+                reminderID: "R1", changes: makeChanges(title: " ")
             )
         }
     }
@@ -231,7 +251,7 @@ struct RemindersUseCaseTests {
 
         await #expect(throws: DomainError.self) {
             try await UpdateReminderUseCase(repository: repository)(
-                reminderID: "없는ID", title: "제목", notes: nil
+                reminderID: "없는ID", changes: makeChanges(title: "제목")
             )
         }
     }
@@ -258,13 +278,85 @@ struct RemindersUseCaseTests {
         let due = Date(timeIntervalSince1970: 1_700_000_000)
 
         try await UpdateReminderUseCase(repository: repository)(
-            reminderID: "R1", title: "할 일", notes: nil,
-            dueDate: due, includesTime: true
+            reminderID: "R1", changes: makeChanges(dueDate: due, includesTime: true)
         )
 
         let reminders = try await FetchRemindersUseCase(repository: repository)()
         #expect(reminders.first?.dueDate == due)
         #expect(reminders.first?.includesTime == true)
+    }
+
+    // MARK: - ReminderChanges (전체 상태 수정)
+
+    private let home = ReminderLocationAlarm(
+        title: "집", address: "서울시 어딘가 1", latitude: 37.5, longitude: 127.0,
+        radius: 150, proximity: .arriving
+    )
+
+    /// `init(from:)`은 편집 가능한 모든 필드를 복사한다 — 일부만 바꾸는 호출부가 나머지를
+    /// 잃지 않는 근거. 필드가 늘면 이 테스트도 함께 늘려야 한다.
+    @Test func reminderChangesFromReminderCopiesAllEditableFields() {
+        let due = Date(timeIntervalSince1970: 1_700_000_000)
+        let rule = RecurrenceRule(frequency: .weekly, weekdays: [2])
+        let reminder = Reminder(
+            id: "R1", title: "제목", isCompleted: true, notes: "메모", dueDate: due,
+            includesTime: true, recurrence: rule, priority: .high, locationAlarm: home, listID: "L1"
+        )
+
+        let changes = ReminderChanges(from: reminder)
+
+        #expect(changes == ReminderChanges(
+            title: "제목", notes: "메모", dueDate: due, includesTime: true,
+            recurrence: rule, priority: .high, locationAlarm: home, listID: "L1"
+        ))
+    }
+
+    /// 우선순위·위치 알림·리스트 이동까지 한 번에 저장된다.
+    @Test func updateReminderAppliesPriorityLocationAndList() async throws {
+        let other = ReminderList(id: "L2", title: "다른 리스트", colorHex: nil)
+        let repository = InMemoryRemindersRepository(
+            access: .granted, lists: [list, other], reminders: [makeReminder(id: "R1")]
+        )
+
+        let updated = try await UpdateReminderUseCase(repository: repository)(
+            reminderID: "R1",
+            changes: makeChanges(priority: .medium, locationAlarm: home, listID: "L2")
+        )
+
+        #expect(updated.priority == .medium)
+        #expect(updated.locationAlarm == home)
+        #expect(updated.listID == "L2")
+        let stored = try await FetchRemindersUseCase(repository: repository)().first
+        #expect(stored == updated)
+    }
+
+    /// 없는 리스트로의 이동은 실패하고, 다른 필드도 바뀌지 않는다(반쯤 저장 금지).
+    @Test func updateReminderToMissingListThrowsAndKeepsReminder() async throws {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1", title: "원래")])
+
+        await #expect(throws: DomainError.notFound) {
+            try await UpdateReminderUseCase(repository: repository)(
+                reminderID: "R1", changes: makeChanges(title: "바뀜", listID: "없는리스트")
+            )
+        }
+
+        let stored = try await FetchRemindersUseCase(repository: repository)().first
+        #expect(stored?.title == "원래")
+        #expect(stored?.listID == "L1")
+    }
+
+    /// 마감일을 지우면 시각 지정·반복도 함께 해제된다(마감일 전제 불변식).
+    @Test func updateReminderWithoutDueDateClearsTimeAndRecurrence() async throws {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1")])
+
+        let updated = try await UpdateReminderUseCase(repository: repository)(
+            reminderID: "R1",
+            changes: makeChanges(dueDate: nil, includesTime: true, recurrence: RecurrenceRule(frequency: .daily))
+        )
+
+        #expect(updated.dueDate == nil)
+        #expect(updated.includesTime == false)
+        #expect(updated.recurrence == nil)
     }
 
     @Test func addReminderStoresDueDate() async throws {

@@ -35,20 +35,13 @@ protocol RemindersRepository: Sendable {
         recurrence: RecurrenceRule?,
         toListID listID: String
     ) async throws -> Reminder
-    /// 기존 항목의 제목·메모·마감일을 갱신하고, 갱신된 항목을 돌려준다 — 같은 id의 항목을
+    /// 기존 항목을 `changes`의 전체 상태로 갱신하고, 갱신된 항목을 돌려준다 — 같은 id의 항목을
     /// 로컬에서 in-place 치환하기 위함(add와 같은 낙관적 갱신 계약).
-    /// `notes`가 nil이면 메모를 비우고, `dueDate`가 nil이면 마감일을 지운다.
-    /// `includesTime`은 종일/시각 구분을 결정한다 (시각이면 EventKit 알람도 함께 갱신).
-    /// `recurrence`가 nil이면 반복을 지운다.
+    /// 필드별 의미는 `ReminderChanges` 참고(nil = 지움). `listID`가 현재와 다르면 그 리스트로 옮긴다.
+    /// 구현은 저장소가 도메인보다 세밀하게 들고 있는 값(반복 세부·우선순위 정수·사용자가 단
+    /// 다른 알람)을, 해당 필드가 실제로 바뀌지 않았으면 보존해야 한다.
     @discardableResult
-    func updateReminder(
-        reminderID: String,
-        title: String,
-        notes: String?,
-        dueDate: Date?,
-        includesTime: Bool,
-        recurrence: RecurrenceRule?
-    ) async throws -> Reminder
+    func updateReminder(reminderID: String, changes: ReminderChanges) async throws -> Reminder
     /// 항목을 삭제한다.
     func deleteReminder(reminderID: String) async throws
     /// 항목을 다른 리스트로 옮긴다 (전체 탭 섹션 간 드래그). EventKit에선 calendar 교체.

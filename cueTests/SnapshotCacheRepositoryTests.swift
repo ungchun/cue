@@ -29,7 +29,13 @@ struct SnapshotCacheRepositoryTests {
                     id: "r1", title: "보고서", isCompleted: false, notes: "메모",
                     dueDate: Date(timeIntervalSince1970: 1_800_000_000), includesTime: true,
                     recurrence: RecurrenceRule(frequency: .weekly, interval: 2),
-                    creationDate: Date(timeIntervalSince1970: 1_700_000_000), listID: "A"
+                    creationDate: Date(timeIntervalSince1970: 1_700_000_000),
+                    priority: .high,
+                    locationAlarm: ReminderLocationAlarm(
+                        title: "집", address: nil, latitude: 37.5, longitude: 127.0,
+                        radius: nil, proximity: .leaving
+                    ),
+                    listID: "A"
                 ),
                 Reminder(id: "r2", title: "장보기", isCompleted: true,
                          notes: nil, dueDate: nil, listID: "B"),
@@ -39,6 +45,18 @@ struct SnapshotCacheRepositoryTests {
         await repo.saveRemindersSnapshot(snapshot)
 
         #expect(await repo.loadRemindersSnapshot() == snapshot)
+    }
+
+    /// 우선순위·위치 알림 추가 전에 저장된 스냅샷도 읽힌다 — 업데이트 직후 첫 페인트가
+    /// 캐시 디코딩 실패로 스피너에 떨어지지 않게(새 필드는 없음/nil로 채운다).
+    @Test func reminderDecodesLegacyJSONWithoutNewFields() throws {
+        let json = #"{"id":"r1","title":"보고서","isCompleted":false,"includesTime":false,"listID":"A"}"#
+
+        let reminder = try JSONDecoder().decode(Reminder.self, from: Data(json.utf8))
+
+        #expect(reminder.priority == ReminderPriority.none)
+        #expect(reminder.locationAlarm == nil)
+        #expect(reminder.listID == "A")
     }
 
     /// 일정 스냅샷 — 이벤트와 fetch 범위 끝(fetchedUntil)을 함께 복원한다.
