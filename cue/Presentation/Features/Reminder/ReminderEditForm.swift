@@ -262,6 +262,15 @@ struct ReminderEditForm: View {
                     }
                 }
                 .buttonStyle(.plain)
+                // 시트는 **이 행에** 붙인다. Section에 붙이면 행마다(토글·장소·세그먼트) 적용돼
+                // 같은 바인딩으로 시트가 여러 번 뜨려다 상세 시트까지 닫힌다(실측: 위치 입력 탭 → 시트 전부 닫힘).
+                .sheet(isPresented: $showingLocationPicker) {
+                    // 위치 알림은 좌표가 있어야 울린다 — 이름만 입력하는 행은 숨기고, 좌표 해석에
+                    // 실패한 선택은 드래프트가 거절한다.
+                    LocationPickerSheet(onSelect: { location in
+                        draft.selectLocation(location)
+                    }, requiresCoordinate: true)
+                }
 
                 Picker("Location", selection: $draft.proximity) {
                     Text(ReminderLocationAlarm.Proximity.arriving.label).tag(ReminderLocationAlarm.Proximity.arriving)
@@ -270,13 +279,6 @@ struct ReminderEditForm: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
             }
-        }
-        .sheet(isPresented: $showingLocationPicker) {
-            // 위치 알림은 좌표가 있어야 울린다 — 이름만 입력하는 행은 숨기고, 좌표 해석에
-            // 실패한 선택은 드래프트가 거절한다.
-            LocationPickerSheet(onSelect: { location in
-                draft.selectLocation(location)
-            }, requiresCoordinate: true)
         }
     }
 
