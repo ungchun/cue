@@ -64,8 +64,8 @@ struct ScheduleMonthItemChip: View {
             HStack(spacing: Spacing.xxs) {
                 // caption2가 가장 작은 텍스트 스타일이라 그보다 작게는 크기를 직접 잡는다(ScaledMetric으로
                 // Dynamic Type은 따라감). 작아진 만큼 선이 가늘어 보여 굵기를 올린다.
-                // 완료·미완료가 같은 프레임이라 크기가 같다.
-                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                // 완료는 체크 없이 리스트 색으로 채운 원. 완료·미완료가 같은 프레임이라 크기가 같다.
+                Image(systemName: item.isCompleted ? "circle.fill" : "circle")
                     .resizable()
                     .scaledToFit()
                     .fontWeight(.black)
