@@ -93,12 +93,13 @@ struct ReminderReadView: View {
 
     // MARK: - 완료
 
-    /// 할일 탭 행과 같은 원 — 완료면 목록 색으로 채운다.
+    /// 미리 알림 앱 세부사항과 같은 원 — 미완료도 목록 색 테두리, 행보다 굵은 선.
+    /// 시트에선 원이 이 항목 하나의 주 조작이라 목록 행(얇은 회색)보다 또렷하게 보인다.
     private func completionButton(action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: isCompleted ? "largecircle.fill.circle" : "circle")
-                .font(.title2.weight(.thin))
-                .foregroundStyle(isCompleted ? listColor : Color.secondary)
+                .font(.title2.weight(.regular))
+                .foregroundStyle(listColor)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Completed")
