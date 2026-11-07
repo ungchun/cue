@@ -922,6 +922,10 @@ struct ReminderView: View {
                     }
                 }
                 newTitleFocused = newValue
+                // 제목·메모 포커스는 배타 — 메모 → 제목 탭 때 메모의 false는 didEnd 150ms 뒤에야
+                // 오는데, 그 사이 렌더에서 메모의 updateUIView(클로저 binding이라 매번 호출)가 아직
+                // true인 값을 보고 first responder를 도로 빼앗아 글자가 메모에 들어갔다(QA RC-02).
+                if newValue { newMemoFocused = false }
             }
         )
     }
@@ -934,6 +938,7 @@ struct ReminderView: View {
             set: { newValue in
                 if newValue { fillNewTitleIfEmpty() }
                 newMemoFocused = newValue
+                if newValue { newTitleFocused = false }   // 제목 binding과 같은 배타
             }
         )
     }
