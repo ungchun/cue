@@ -6,155 +6,86 @@
 import EventKit
 import SwiftUI
 
-/// 자체 이벤트 편집 시트 — Apple 캘린더의 신규/편집 시트를 SwiftUI로 재구성한다.
+/// 자체 이벤트 상세 시트 — Apple 캘린더의 이벤트 보기/편집/신규 시트를 SwiftUI로 재구성한다.
 ///
 /// `EKEventEditViewController`를 쓰지 않는 이유: iOS 17부터 그 화면은 별도 시스템
 /// 프로세스(OOP 원격 뷰)로 렌더돼 폼 위 터치가 우리 앱에 오지 않고, 그래서 시트를
 /// 아래로 끌어 닫는 제스처가 서드파티 앱에선 동작하지 않는다(실기기 로그로 확정).
 /// 자체 폼이면 일반 SwiftUI 시트라 스와이프 닫기·디자인 통일·즉시 표시가 전부 해결된다.
 ///
-/// 기능 패리티: 제목·위치·종일·시작/종료·반복(프리셋)·알림(프리셋)·캘린더·URL·메모·삭제.
-/// EventKit이 서드파티에 공개하지 않는 초대받은 사람·이동 시간은 제외. 프리셋 밖의
-/// 반복·알림은 "사용자 설정"으로 표시만 하고 저장 시 보존한다(EventEditDraft 계약).
+/// 모드: 기존 이벤트는 **보기 모드**(EventReadView)로 열리고 연필로 **편집 모드**
+/// (EventEditForm)에 들어간다. 편집 X는 보기로 돌아가고(변경 있으면 폐기 확인), ✓는 저장 후
+/// 시트를 닫는다. 신규 이벤트는 곧장 편집 모드. 수정 불가 캘린더(공휴일·구독)는 보기 전용.
 ///
-/// 반복 이벤트의 저장·삭제는 Apple과 동일하게 "이 이벤트에만 / 이후 모든 이벤트에"를
-/// 묻는다. 저장/삭제/취소 결과는 `onCompletion`으로 전달 — 호출처 로직은 기존
-/// 시스템 시트 때와 동일하다(EventEditOutcome).
+/// 반복 이벤트는 탭한 **회차**를 연다(EventOccurrenceLocator) — 저장·삭제는 Apple과 동일하게
+/// "이 이벤트에만 / 이후 모든 이벤트에"를 묻는다. 결과는 `onCompletion`(EventEditOutcome).
 struct EventDetailSheet: View {
     let eventStore: EKEventStore
-    /// nil이면 신규 모드. 값이 있으면 그 ID의 기존 이벤트를 편집한다.
-    let editingEventID: String?
     let onCompletion: (EventEditOutcome) -> Void
 
+    /// 대상 회차 — 열 때 한 번만 찾는다. 상태로 고정하는 이유: 저장·삭제 직후 부모가 다시
+    /// 그려지며 init이 재실행돼도 (이미 지워진) 이벤트를 다시 찾다 신규 모드로 뒤집히지 않게.
+    @State private var event: EKEvent?
+    /// 변경 감지·보기 모드 표시용 스냅샷 — 편집 X로 돌아갈 때 draft를 이 값으로 되돌린다.
+    @State private var initialDraft: EventEditDraft
     @State private var draft: EventEditDraft
-    @State private var showingLocationPicker = false
+    @State private var isEditing: Bool
     @State private var showingDiscardConfirmation = false
     @State private var showingSaveSpanDialog = false
     @State private var showingDeleteConfirmation = false
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
 
-    /// 변경 감지용 초기 스냅샷 — X 누를 때 폐기 확인 여부.
-    private let initialDraft: EventEditDraft
-    /// 편집 모드의 대상 이벤트 — 저장 시점에 draft를 반영한다(그 전엔 안 건드림).
-    private let editingEvent: EKEvent?
     /// 쓰기 가능한 캘린더 목록 — 캘린더 선택 행.
     private let calendars: [EKCalendar]
 
-    init(eventStore: EKEventStore, editingEventID: String? = nil, onCompletion: @escaping (EventEditOutcome) -> Void) {
+    /// `occurrence`가 nil이면 신규 모드(편집 모드로 시작).
+    init(eventStore: EKEventStore, occurrence: EventOccurrenceRef? = nil, onCompletion: @escaping (EventEditOutcome) -> Void) {
         self.eventStore = eventStore
-        self.editingEventID = editingEventID
         self.onCompletion = onCompletion
 
-        let event = editingEventID.flatMap { eventStore.event(withIdentifier: $0) }
-        self.editingEvent = event
+        let event = occurrence.flatMap { EventOccurrenceLocator.locate($0, in: eventStore) }
         var initial = event.map(EventEditDraft.init(event:)) ?? .newEvent(now: .now)
         if initial.calendarID == nil {
             initial.calendarID = eventStore.defaultCalendarForNewEvents?.calendarIdentifier
         }
-        self.initialDraft = initial
+        _event = State(initialValue: event)
+        _initialDraft = State(initialValue: initial)
         _draft = State(initialValue: initial)
+        _isEditing = State(initialValue: event == nil)
         self.calendars = eventStore.calendars(for: .event).filter(\.allowsContentModifications)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField("Title", text: $draft.title, axis: .vertical)
-                        .font(.title2.weight(.semibold))
-                    locationRow
+                if isEditing {
+                    EventEditForm(draft: $draft, calendars: calendars)
+                } else if let event {
+                    EventReadView(event: event, draft: initialDraft)
                 }
-
-                Section {
-                    Toggle("All-day", isOn: $draft.isAllDay.animation())
-                    DatePicker("Starts", selection: startBinding, displayedComponents: dateComponents)
-                    // 종료는 시작 이전으로 못 내린다 — 드래프트 클램프와 피커 범위 이중 방어.
-                    DatePicker("Ends", selection: endBinding, in: draft.start..., displayedComponents: dateComponents)
-                    alarmPicker
-                }
-
-                // 반복 — Apple 캘린더와 동일 구성: 메뉴 피커(안 함…사용자화) +
-                // 사용자화면 요약 행(상세 화면 진입) + 반복 종료(안 함/날짜). 할일 시트와 공용 행.
-                Section {
-                    RepeatRows(
-                        recurrence: $draft.recurrence,
-                        recurrenceEnd: $draft.recurrenceEnd,
-                        anchorDate: draft.start
-                    )
-                }
-
-                if !calendars.isEmpty {
-                    Section {
-                        calendarPicker
-                    }
-                }
-
-                Section {
-                    TextField("URL", text: $draft.urlString)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("Note", text: $draft.notes, axis: .vertical)
-                        .lineLimit(3...)
-                }
-
-                if editingEvent != nil {
-                    Section {
-                        Button(role: .destructive) {
-                            showingDeleteConfirmation = true
-                        } label: {
-                            Text("Delete Event")
-                                .frame(maxWidth: .infinity)
-                        }
-                        // 다이얼로그는 **여는 버튼에** 붙인다 — 루트(Form)에 붙이면 앵커가
-                        // 버튼과 무관한 자리라 확인 창이 화면 중간에 동떠 보인다(실기기).
-                        // 삭제 — 반복이면 범위까지 묻는다.
-                        .confirmationDialog("Delete Event", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
-                            if editingEvent?.hasRecurrenceRules == true {
-                                Button("Delete This Event Only", role: .destructive) { delete(span: .thisEvent) }
-                                Button("Delete All Future Events", role: .destructive) { delete(span: .futureEvents) }
-                            } else {
-                                Button("Delete Event", role: .destructive) { delete(span: .thisEvent) }
-                            }
-                        }
-                    }
+                if canModify {
+                    deleteSection
                 }
             }
-            .navigationTitle(editingEvent == nil ? "New Event" : "Edit Event")
+            .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        if draft != initialDraft {
-                            showingDiscardConfirmation = true
-                        } else {
-                            cancel()
-                        }
-                    } label: {
-                        Label("Close", systemImage: "xmark")
-                            .labelStyle(.iconOnly)
-                    }
-                    .popover(isPresented: $showingDiscardConfirmation) {
-                        discardPopover
-                            .presentationCompactAdaptation(.popover)
-                    }
+                    closeButton
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        saveTapped()
-                    } label: {
-                        Label("Save", systemImage: "checkmark")
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(Color(.systemBackground))
+                if isEditing {
+                    ToolbarItem(placement: .confirmationAction) {
+                        saveButton
                     }
-                    .buttonStyle(.glassProminent)
-                    .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    // 반복 이벤트 저장 범위 — Apple 캘린더와 동일한 질문. 여는 버튼(저장)에
-                    // 붙여야 그 위에 앵커된다(삭제 다이얼로그와 같은 이유).
-                    .confirmationDialog("This is a repeating event.", isPresented: $showingSaveSpanDialog, titleVisibility: .visible) {
-                        Button("Save for This Event Only") { save(span: .thisEvent) }
-                        Button("Save for Future Events") { save(span: .futureEvents) }
+                } else if canModify {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            withAnimation { isEditing = true }
+                        } label: {
+                            Image(systemName: "pencil")
+                        }
+                        .accessibilityLabel("Edit")
                     }
                 }
             }
@@ -167,108 +98,55 @@ struct EventDetailSheet: View {
         }
     }
 
-    // MARK: - 행 구성
+    // MARK: - 상태
 
-    /// 위치 — 탭하면 위치 검색 시트(현재 위치·지도 검색). 선택되면 제목+주소 표시 + ⓧ로 제거.
-    private var locationRow: some View {
-        HStack {
-            Button {
-                showingLocationPicker = true
-            } label: {
-                if let location = draft.location {
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text(location.title)
-                            .foregroundStyle(.primary)
-                        if let address = location.address {
-                            Text(address)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                } else {
-                    Text("Location")
-                        .foregroundStyle(Color(.placeholderText))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-            }
-            .buttonStyle(.plain)
+    /// 기존 이벤트이고 캘린더가 수정을 허용할 때만 편집·삭제 가능.
+    private var canModify: Bool {
+        event?.calendar?.allowsContentModifications == true
+    }
 
-            if draft.location != nil {
-                Button {
-                    draft.location = nil
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
+    private var navigationTitle: LocalizedStringKey {
+        guard isEditing else { return "" }
+        return event == nil ? "New Event" : "Edit Event"
+    }
+
+    // MARK: - 툴바
+
+    /// X — 보기 모드는 닫기. 편집 모드는 변경 있으면 폐기 확인 후 보기로(신규면 닫기).
+    private var closeButton: some View {
+        Button {
+            if isEditing, draft != initialDraft {
+                showingDiscardConfirmation = true
+            } else {
+                leaveEditing()
             }
+        } label: {
+            Image(systemName: "xmark")
         }
-        .sheet(isPresented: $showingLocationPicker) {
-            LocationPickerSheet { location in
-                draft.location = location
-            }
+        .accessibilityLabel("Close")
+        .popover(isPresented: $showingDiscardConfirmation) {
+            discardPopover
+                .presentationCompactAdaptation(.popover)
         }
     }
 
-    private var dateComponents: DatePickerComponents {
-        draft.isAllDay ? [.date] : [.date, .hourAndMinute]
-    }
-
-    /// 시작 바인딩 — 지속시간 유지 로직은 드래프트가 갖는다.
-    private var startBinding: Binding<Date> {
-        Binding(get: { draft.start }, set: { draft.setStart($0) })
-    }
-
-    private var endBinding: Binding<Date> {
-        Binding(get: { draft.end }, set: { draft.setEnd($0) })
-    }
-
-    private var alarmPicker: some View {
-        Picker("Alert", selection: $draft.alarm) {
-            ForEach(alarmOptions, id: \.self) { option in
-                Text(label(for: option)).tag(option)
-            }
+    /// ✓ — 앱 tint가 `.primary`(RootView)라 prominent 캡슐이 검정/흰색이 되므로 글리프는
+    /// systemBackground로 칠해 대비를 맞춘다.
+    private var saveButton: some View {
+        Button {
+            saveTapped()
+        } label: {
+            Label("Save", systemImage: "checkmark")
+                .labelStyle(.iconOnly)
+                .foregroundStyle(Color(.systemBackground))
         }
-    }
-
-    private var alarmOptions: [EventEditDraft.Alarm] {
-        draft.alarm == .custom
-            ? EventEditDraft.Alarm.presets + [.custom]
-            : EventEditDraft.Alarm.presets
-    }
-
-    private var calendarPicker: some View {
-        Picker("Calendar", selection: $draft.calendarID) {
-            ForEach(calendars, id: \.calendarIdentifier) { calendar in
-                HStack(spacing: Spacing.sm) {
-                    Circle()
-                        .fill(Color(cgColor: calendar.cgColor))
-                        .frame(width: Spacing.sm, height: Spacing.sm)
-                    Text(calendar.title)
-                }
-                .tag(Optional(calendar.calendarIdentifier))
-            }
-        }
-    }
-
-    // MARK: - 라벨
-
-    private func label(for option: EventEditDraft.Alarm) -> String {
-        switch option {
-        case .none: return String(localized: "None")
-        case .atTime: return String(localized: "At time of event")
-        case .custom: return String(localized: "Custom")
-        case .minutesBefore(let minutes):
-            if minutes < 60 { return String(localized: "\(minutes) minutes before") }
-            if minutes == 60 { return String(localized: "1 hour before") }
-            if minutes < 1_440 { return String(localized: "\(minutes / 60) hours before") }
-            if minutes == 1_440 { return String(localized: "1 day before") }
-            if minutes < 10_080 { return String(localized: "\(minutes / 1_440) days before") }
-            return String(localized: "1 week before")
+        .buttonStyle(.glassProminent)
+        .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        // 반복 이벤트 저장 범위 — Apple 캘린더와 동일한 질문. 여는 버튼(저장)에
+        // 붙여야 그 위에 앵커된다(삭제 다이얼로그와 같은 이유).
+        .confirmationDialog("This is a repeating event.", isPresented: $showingSaveSpanDialog, titleVisibility: .visible) {
+            Button("Save for This Event Only") { save(span: .thisEvent) }
+            Button("Save for Future Events") { save(span: .futureEvents) }
         }
     }
 
@@ -283,7 +161,7 @@ struct EventDetailSheet: View {
 
             Button(role: .destructive) {
                 showingDiscardConfirmation = false
-                cancel()
+                leaveEditing()
             } label: {
                 Text("Discard Changes")
                     .font(.body.weight(.medium))
@@ -298,6 +176,30 @@ struct EventDetailSheet: View {
         .frame(minWidth: 240)
     }
 
+    // MARK: - 삭제
+
+    private var deleteSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showingDeleteConfirmation = true
+            } label: {
+                Text("Delete Event")
+                    .frame(maxWidth: .infinity)
+            }
+            // 다이얼로그는 **여는 버튼에** 붙인다 — 루트(Form)에 붙이면 앵커가
+            // 버튼과 무관한 자리라 확인 창이 화면 중간에 동떠 보인다(실기기).
+            // 삭제 — 반복이면 범위까지 묻는다.
+            .confirmationDialog("Delete Event", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+                if event?.hasRecurrenceRules == true {
+                    Button("Delete This Event Only", role: .destructive) { delete(span: .thisEvent) }
+                    Button("Delete All Future Events", role: .destructive) { delete(span: .futureEvents) }
+                } else {
+                    Button("Delete Event", role: .destructive) { delete(span: .thisEvent) }
+                }
+            }
+        }
+    }
+
     private var errorBinding: Binding<Bool> {
         Binding(
             get: { errorMessage != nil },
@@ -307,9 +209,19 @@ struct EventDetailSheet: View {
 
     // MARK: - 액션
 
+    /// 편집 종료 — 신규면 시트를 닫고, 기존이면 편집분을 버리고 보기 모드로.
+    private func leaveEditing() {
+        guard isEditing, event != nil else {
+            cancel()
+            return
+        }
+        draft = initialDraft
+        withAnimation { isEditing = false }
+    }
+
     private func saveTapped() {
         // 반복 시리즈의 일부면 저장 범위를 먼저 묻는다 — 그 전엔 이벤트를 안 건드린다.
-        if editingEvent?.hasRecurrenceRules == true {
+        if event?.hasRecurrenceRules == true {
             showingSaveSpanDialog = true
         } else {
             save(span: .thisEvent)
@@ -317,13 +229,19 @@ struct EventDetailSheet: View {
     }
 
     private func save(span: EKSpan) {
-        let event = editingEvent ?? EKEvent(eventStore: eventStore)
-        draft.apply(to: event)
-        event.calendar = calendars.first { $0.calendarIdentifier == draft.calendarID }
-            ?? event.calendar
+        let target = event ?? EKEvent(eventStore: eventStore)
+        // 캘린더를 먼저 정해야 그 캘린더가 지원하는 "다음으로 표시"인지 판정할 수 있다.
+        target.calendar = calendars.first { $0.calendarIdentifier == draft.calendarID }
+            ?? target.calendar
             ?? eventStore.defaultCalendarForNewEvents
+        var final = draft
+        let mask = target.calendar?.supportedEventAvailabilities ?? []
+        if !EventEditDraft.availabilityOptions(for: mask).contains(final.availability) {
+            final.availability = .notSupported   // 지원 밖 값은 쓰지 않고 EventKit 값을 유지
+        }
+        final.apply(to: target)
         do {
-            try eventStore.save(event, span: span, commit: true)
+            try eventStore.save(target, span: span, commit: true)
             onCompletion(.saved)
             dismiss()
         } catch {
@@ -333,7 +251,7 @@ struct EventDetailSheet: View {
     }
 
     private func delete(span: EKSpan) {
-        guard let event = editingEvent else { return }
+        guard let event else { return }
         do {
             try eventStore.remove(event, span: span, commit: true)
             onCompletion(.deleted)

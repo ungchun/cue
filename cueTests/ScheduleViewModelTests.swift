@@ -366,7 +366,28 @@ struct ScheduleViewModelTests {
 
         viewModel.presentEdit(target)
 
-        #expect(viewModel.editingEvent?.id == "edit-me")
+        #expect(viewModel.editingEvent == EventOccurrenceRef(eventID: "edit-me", occurrenceStart: today))
+    }
+
+    /// 반복 이벤트는 회차마다 ID가 같다 — 탭한 회차의 시작 시각이 참조에 실려야 그 회차가 열린다.
+    @Test func presentEditCarriesTappedOccurrenceStart() {
+        let today = Calendar.current.startOfDay(for: Date())
+        let fifth = today.addingTimeInterval(4 * 7 * 24 * 60 * 60)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+
+        viewModel.presentEdit(event(id: "weekly", start: fifth, end: fifth.addingTimeInterval(60 * 60)))
+
+        #expect(viewModel.editingEvent?.occurrenceStart == fifth)
+    }
+
+    /// 월 캘린더 칩 같은 진입점은 회차 참조로 바로 연다.
+    @Test func presentEventSetsEditingEvent() {
+        let ref = EventOccurrenceRef(eventID: "chip", occurrenceStart: Date(timeIntervalSince1970: 1_000))
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+
+        viewModel.presentEvent(ref)
+
+        #expect(viewModel.editingEvent == ref)
     }
 
     @Test func dismissEditClearsEditingEvent() {
@@ -575,8 +596,8 @@ struct ScheduleViewModelTests {
         #expect(viewModel.canLoadMore)
     }
 
-    @Test func presentEditIgnoresReadOnlyEvent() {
-        // 구독 캘린더의 공휴일 같은 read-only 이벤트는 탭해도 시트가 안 떠야 한다.
+    @Test func presentEditOpensReadOnlyEventForViewing() {
+        // 구독 캘린더의 공휴일 같은 read-only 이벤트도 탭하면 시트가 뜬다(보기 전용 — 시트가 판단).
         let today = Calendar.current.startOfDay(for: Date())
         let holiday = event(
             id: "holiday",
@@ -589,7 +610,7 @@ struct ScheduleViewModelTests {
 
         viewModel.presentEdit(holiday)
 
-        #expect(viewModel.editingEvent == nil)
+        #expect(viewModel.editingEvent == EventOccurrenceRef(eventID: "holiday", occurrenceStart: today))
     }
 
     @Test func onAppearDoesNotLoadEventsWhenDenied() async {

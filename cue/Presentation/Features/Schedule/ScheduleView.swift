@@ -59,10 +59,10 @@ struct ScheduleView: View {
                     onCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
                 )
             }
-            .sheet(item: $viewModel.editingEvent) { event in
+            .sheet(item: $viewModel.editingEvent) { occurrence in
                 EventDetailSheet(
                     eventStore: eventStore,
-                    editingEventID: event.id,
+                    occurrence: occurrence,
                     onCompletion: { outcome in viewModel.dismissEdit(outcome: outcome) }
                 )
             }

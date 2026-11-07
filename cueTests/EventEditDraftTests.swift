@@ -181,16 +181,23 @@ struct EventEditDraftTests {
         #expect(event.recurrenceRules?.first?.recurrenceEnd?.occurrenceCount == 5)   // 보존
     }
 
-    // MARK: - 알림 옵션 ↔ 상대 오프셋
+    // MARK: - 알림 옵션 ↔ EKAlarm
+
+    private func timedAlarm(_ offset: TimeInterval) -> EventEditDraft.Alarm {
+        EventEditDraft.Alarm(alarm: EKAlarm(relativeOffset: offset), isAllDay: false)
+    }
+
+    private func allDayAlarm(_ offset: TimeInterval) -> EventEditDraft.Alarm {
+        EventEditDraft.Alarm(alarm: EKAlarm(relativeOffset: offset), isAllDay: true)
+    }
 
     @Test func alarmOptionMapsFromRelativeOffset() {
-        #expect(EventEditDraft.Alarm(alarms: nil) == EventEditDraft.Alarm.none)
-        #expect(EventEditDraft.Alarm(alarms: [EKAlarm(relativeOffset: 0)]) == .atTime)
-        #expect(EventEditDraft.Alarm(alarms: [EKAlarm(relativeOffset: -300)]) == .minutesBefore(5))
-        #expect(EventEditDraft.Alarm(alarms: [EKAlarm(relativeOffset: -3600)]) == .minutesBefore(60))
-        #expect(EventEditDraft.Alarm(alarms: [EKAlarm(relativeOffset: -86_400)]) == .minutesBefore(1_440))
+        #expect(timedAlarm(0) == .atTime)
+        #expect(timedAlarm(-300) == .minutesBefore(5))
+        #expect(timedAlarm(-3600) == .minutesBefore(60))
+        #expect(timedAlarm(-86_400) == .minutesBefore(1_440))
         // 프리셋 밖 오프셋(-7분 등)은 custom — 저장 시 기존 알림을 보존한다.
-        #expect(EventEditDraft.Alarm(alarms: [EKAlarm(relativeOffset: -420)]) == .custom)
+        #expect(timedAlarm(-420) == .custom)
     }
 
     @Test func alarmOptionProducesRelativeOffset() {
@@ -198,6 +205,172 @@ struct EventEditDraftTests {
         #expect(EventEditDraft.Alarm.atTime.relativeOffset == 0)
         #expect(EventEditDraft.Alarm.minutesBefore(30).relativeOffset == -1800)
         #expect(EventEditDraft.Alarm.custom.relativeOffset == nil)
+    }
+
+    /// 종일 프리셋은 자정 기준 오프셋 — 당일 9시 = +9h, 1일 전 9시 = -15h, 2일 전 = -39h, 1주 전 = -159h.
+    @Test func allDayPresetsMapBothWays() {
+        let expected: [(Int, TimeInterval)] = [(0, 32_400), (1, -54_000), (2, -140_400), (7, -572_400)]
+        for (days, offset) in expected {
+            #expect(EventEditDraft.Alarm.daysBeforeAt9AM(days).relativeOffset == offset)
+            #expect(allDayAlarm(offset) == .daysBeforeAt9AM(days))
+        }
+        // 시간 지정 프리셋 오프셋도 종일 이벤트에선 프리셋이 아니다 — 보존.
+        #expect(allDayAlarm(-900) == .custom)
+        // 반대로 종일 프리셋 오프셋은 시간 지정 이벤트에서 custom.
+        #expect(timedAlarm(-54_000) == .custom)
+    }
+
+    /// 사용자 지정(절대 일시) 알림 왕복.
+    @Test func absoluteAlarmRoundTrips() {
+        let fireDate = date(2026, 7, 24, 20, 30)
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        event.addAlarm(EKAlarm(absoluteDate: fireDate))
+
+        var draft = EventEditDraft(event: event)
+        #expect(draft.firstAlarm == .absolute(fireDate))
+
+        draft.firstAlarm = .absolute(date(2026, 7, 24, 21, 0))
+        draft.apply(to: event)
+
+        #expect(event.alarms?.count == 1)
+        #expect(event.alarms?.first?.absoluteDate == date(2026, 7, 24, 21, 0))
+    }
+
+    /// 알림 두 칸 — 이벤트에 가까운 알림이 첫 칸(추가 순서와 무관). 첫 칸이 없음이면 두 번째도 쓰지 않는다.
+    /// EventKit은 추가 순서를 보존하지 않으므로 저장 결과는 집합으로 비교한다.
+    @Test func twoAlarmSlotsMapBothWays() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        event.addAlarm(EKAlarm(relativeOffset: -3600))
+        event.addAlarm(EKAlarm(relativeOffset: -600))
+
+        var draft = EventEditDraft(event: event)
+        #expect(draft.firstAlarm == .minutesBefore(10))
+        #expect(draft.secondAlarm == .minutesBefore(60))
+
+        draft.secondAlarm = .minutesBefore(1_440)
+        draft.apply(to: event)
+        #expect(Set(event.alarms?.map(\.relativeOffset) ?? []) == [-600, -86_400])
+        let reread = EventEditDraft(event: event)
+        #expect(reread.firstAlarm == .minutesBefore(10))
+        #expect(reread.secondAlarm == .minutesBefore(1_440))
+
+        draft.firstAlarm = EventEditDraft.Alarm.none
+        draft.apply(to: event)
+        #expect(event.alarms == nil || event.alarms?.isEmpty == true)
+    }
+
+    /// 한 칸만 표현 불가(-7분)면 그 칸의 원본을 남기고 다른 칸만 바꾼다.
+    @Test func customSlotKeepsOriginalAlarmWhileOtherSlotChanges() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        event.addAlarm(EKAlarm(relativeOffset: -420))
+        var draft = EventEditDraft(event: event)
+        #expect(draft.firstAlarm == .custom)
+
+        draft.secondAlarm = .atTime
+        draft.apply(to: event)
+
+        #expect(Set(event.alarms?.map(\.relativeOffset) ?? []) == [-420, 0])
+    }
+
+    /// 알림 3개 이상은 두 칸으로 못 그린다 — 두 칸 모두 custom, 저장 시 전부 보존.
+    @Test func threeOrMoreAlarmsArePreserved() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        [-300, -600, -900].forEach { event.addAlarm(EKAlarm(relativeOffset: TimeInterval($0))) }
+        var draft = EventEditDraft(event: event)
+        #expect(draft.firstAlarm == .custom)
+        #expect(draft.secondAlarm == .custom)
+
+        draft.title = "제목만 변경"
+        draft.apply(to: event)
+
+        #expect(event.alarms?.count == 3)
+    }
+
+    /// 종일 전환 시 새 체계에 없는 알림 프리셋은 없음으로 — 사용자 지정은 유지.
+    @Test func togglingAllDayResetsIncompatibleAlarmPresets() {
+        var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
+        draft.firstAlarm = .minutesBefore(15)
+        draft.secondAlarm = .absolute(date(2026, 7, 25, 9, 0))
+
+        draft.isAllDay = true
+
+        #expect(draft.firstAlarm == EventEditDraft.Alarm.none)
+        #expect(draft.secondAlarm == .absolute(date(2026, 7, 25, 9, 0)))
+    }
+
+    // MARK: - 시간대
+
+    /// 시간대를 바꾸면 벽시계 시각은 유지 — 서울 10:00 → 뉴욕 10:00.
+    @Test func changingTimeZoneKeepsWallClockTime() throws {
+        let seoul = try #require(TimeZone(identifier: "Asia/Seoul"))
+        let newYork = try #require(TimeZone(identifier: "America/New_York"))
+        var seoulCalendar = Calendar(identifier: .gregorian)
+        seoulCalendar.timeZone = seoul
+        var newYorkCalendar = Calendar(identifier: .gregorian)
+        newYorkCalendar.timeZone = newYork
+        let tenSeoul = try #require(seoulCalendar.date(from: DateComponents(year: 2026, month: 7, day: 25, hour: 10)))
+        var draft = EventEditDraft.newEvent(now: tenSeoul, calendar: seoulCalendar)
+
+        draft.setTimeZone(newYork, deviceZone: seoul)
+
+        #expect(draft.timeZone == newYork)
+        #expect(draft.start == newYorkCalendar.date(from: DateComponents(year: 2026, month: 7, day: 25, hour: 10)))
+        #expect(draft.end.timeIntervalSince(draft.start) == 3600)
+    }
+
+    /// 시간대 읽기·쓰기.
+    @Test func timeZoneMapsBothWays() throws {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        event.timeZone = TimeZone(identifier: "Europe/Paris")
+        var draft = EventEditDraft(event: event)
+        #expect(draft.timeZone == event.timeZone)
+
+        let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
+        draft.setTimeZone(tokyo)
+        draft.apply(to: event)
+
+        #expect(event.timeZone?.identifier == "Asia/Tokyo")
+    }
+
+    // MARK: - 다음으로 표시
+
+    @Test func availabilityOptionsFollowCalendarSupport() {
+        #expect(EventEditDraft.availabilityOptions(for: []).isEmpty)
+        #expect(EventEditDraft.availabilityOptions(for: [.busy, .free]) == [.busy, .free])
+        #expect(EventEditDraft.availabilityOptions(for: [.busy, .free, .tentative, .unavailable])
+                == [.busy, .free, .tentative, .unavailable])
+    }
+
+    /// 읽은 값을 그대로 담고, `.notSupported`로 저장하면 이벤트 값을 건드리지 않는다.
+    /// (캘린더 없는 테스트 이벤트에서 EventKit이 무엇을 돌려줄지에 기대지 않게 "전과 같음"으로 본다.)
+    @Test func availabilityReadsAndNotSupportedLeavesEventUntouched() {
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        var draft = EventEditDraft(event: event)
+        #expect(draft.availability == event.availability)
+
+        let before = event.availability
+        draft.availability = .notSupported
+        draft.apply(to: event)
+
+        #expect(event.availability == before)
     }
 
     // MARK: - EKEvent 읽기/쓰기
@@ -223,7 +396,8 @@ struct EventEditDraftTests {
         #expect(draft.end == date(2026, 7, 25, 11, 0))
         #expect(draft.notes == "자료 지참")
         #expect(draft.urlString == "https://example.com")
-        #expect(draft.alarm == .minutesBefore(10))
+        #expect(draft.firstAlarm == .minutesBefore(10))
+        #expect(draft.secondAlarm == EventEditDraft.Alarm.none)
         #expect(draft.recurrence == EventEditDraft.Recurrence.none)
     }
 
@@ -236,7 +410,7 @@ struct EventEditDraftTests {
         draft.location = nil
         draft.notes = ""
         draft.urlString = "https://cue.app"
-        draft.alarm = .minutesBefore(15)
+        draft.firstAlarm = .minutesBefore(15)
         draft.recurrence = .daily
 
         draft.apply(to: event)
@@ -266,7 +440,7 @@ struct EventEditDraftTests {
         event.addAlarm(EKAlarm(relativeOffset: -420))
         var draft = EventEditDraft(event: event)
         #expect(draft.recurrence == .custom(.init(frequency: .weekly, interval: 3, weekdays: [EKWeekday.monday.rawValue])))
-        #expect(draft.alarm == .custom)
+        #expect(draft.firstAlarm == .custom)
 
         draft.title = "바뀐 제목"
         draft.apply(to: event)
@@ -287,7 +461,7 @@ struct EventEditDraftTests {
         var draft = EventEditDraft(event: event)
 
         draft.recurrence = .monthly
-        draft.alarm = EventEditDraft.Alarm.none
+        draft.firstAlarm = EventEditDraft.Alarm.none
         draft.apply(to: event)
 
         #expect(event.recurrenceRules?.count == 1)

@@ -60,9 +60,9 @@ final class ScheduleViewModel {
     private(set) var eventsByDay: [DayGroup] = []
     /// 우상단 + 버튼이 띄우는 "신규 이벤트" 시트 표시 여부.
     var showingNewEvent = false
-    /// row 탭이 띄우는 "이벤트 편집" 시트. nil이면 닫힘.
-    /// `Identifiable`인 `CalendarEvent`를 그대로 두면 `.sheet(item:)`이 자동 binding.
-    var editingEvent: CalendarEvent?
+    /// row·칩 탭이 띄우는 이벤트 상세 시트(보기 모드로 시작). nil이면 닫힘.
+    /// ID만이 아니라 회차 시작까지 실어 반복 이벤트의 탭한 회차를 연다.
+    var editingEvent: EventOccurrenceRef?
 
     /// 다음 페이지의 시작점. 직전 페이지의 종료 시점과 같다.
     /// `View`가 trigger row의 `.id(...)`로 이 값을 쓰면 페이지가 늘어날 때마다 row
@@ -316,12 +316,16 @@ final class ScheduleViewModel {
         showingNewEvent = false
     }
 
-    /// 이벤트 row 탭 — 편집 시트를 연다.
-    /// 구독 캘린더(공휴일 등 `isReadOnly == true`)는 EventKit이 수정을 막으므로 시트를
-    /// 띄우지 않고 무시한다 — 띄워도 저장이 안 되어 사용자 혼란만 만든다.
+    /// 이벤트 row 탭 — 상세 시트를 그 회차로 연다.
+    /// 구독 캘린더(공휴일 등 `isReadOnly == true`)도 연다 — 시트가 보기 전용으로 띄운다
+    /// (연필·삭제 없음).
     func presentEdit(_ event: CalendarEvent) {
-        guard !event.isReadOnly else { return }
-        editingEvent = event
+        presentEvent(EventOccurrenceRef(eventID: event.id, occurrenceStart: event.startDate))
+    }
+
+    /// 회차 참조로 상세 시트를 연다 — 월 캘린더 칩처럼 `CalendarEvent`가 없는 진입점용.
+    func presentEvent(_ occurrence: EventOccurrenceRef) {
+        editingEvent = occurrence
     }
 
     /// 편집 시트 콜백 — 시트를 닫는다. 저장이면 event_updated, 시트 안 삭제 버튼이면

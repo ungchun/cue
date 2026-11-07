@@ -15,8 +15,8 @@ import Foundation
 /// `EKCalendar.cgColor`를 "#RRGGBB"로 매핑한 값이며 색을 못 읽으면 nil.
 ///
 /// `isReadOnly`는 EventKit `EKCalendar.allowsContentModifications == false`를 의미한다.
-/// 구독 캘린더(공휴일·외부 ICS 등)는 사용자가 수정할 수 없으므로 탭해도 편집 시트를
-/// 띄우지 않는다 — 띄워도 저장이 안 되어 사용자 혼란만 만든다.
+/// 구독 캘린더(공휴일·외부 ICS 등)는 사용자가 수정할 수 없으므로 탭하면 상세 시트를
+/// 보기 전용(편집·삭제 없음)으로 띄운다.
 struct CalendarEvent: Identifiable, Equatable, Sendable, Codable {
     let id: String
     var title: String

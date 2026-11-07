@@ -41,7 +41,7 @@ struct RepeatRows: View {
     private var repeatMenuRow: some View {
         Picker("Repeat", selection: $recurrence) {
             ForEach(menuOptions, id: \.self) { option in
-                Text(label(for: option)).tag(option)
+                Text(option.label).tag(option)
             }
         }
     }
@@ -102,17 +102,5 @@ struct RepeatRows: View {
         if case .onDate = recurrenceEnd { return recurrenceEnd }
         let base = Calendar.current.date(byAdding: .month, value: 1, to: anchorDate) ?? anchorDate
         return .onDate(base)
-    }
-
-    private func label(for option: EventEditDraft.Recurrence) -> String {
-        switch option {
-        case .none: String(localized: "Never")
-        case .daily: String(localized: "Every Day")
-        case .weekly: String(localized: "Every Week")
-        case .biweekly: String(localized: "Every 2 Weeks")
-        case .monthly: String(localized: "Every Month")
-        case .yearly: String(localized: "Every Year")
-        case .custom, .foreign: String(localized: "Custom")
-        }
     }
 }

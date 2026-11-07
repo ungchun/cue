@@ -10,20 +10,33 @@ import Foundation
 /// 자체 이벤트 편집 시트(EventDetailSheet)의 편집 상태 — EKEvent 읽기/쓰기와 시간·반복·알림
 /// 로직을 뷰 밖으로 꺼내 단위 테스트 가능하게 둔다. 뷰는 이 드래프트만 바인딩한다.
 ///
-/// EventKit이 서드파티에 공개하지 않는 초대받은 사람·이동 시간은 다루지 않는다.
+/// EventKit이 서드파티에 공개하지 않는 이동 시간·초대받은 사람 편집은 다루지 않는다.
 /// 프리셋 밖의 반복 규칙·알림(요일 지정 반복, -7분 알림 등)은 `.custom`으로 표시만 하고
 /// 저장 시 **기존 값을 보존**한다 — 우리 폼이 못 그리는 고급 설정을 파괴하지 않기 위해.
 struct EventEditDraft: Equatable {
     var title: String
     /// 위치 — 지도 검색으로 고른 구조화 위치(제목·주소·좌표) 또는 직접 입력 문자열. nil = 없음.
     var location: Location?
-    var isAllDay: Bool
+    var isAllDay: Bool {
+        // 종일 ↔ 시간 지정은 알림 프리셋 체계가 다르다 — 새 체계에 없는 프리셋은 "없음"으로.
+        didSet {
+            guard isAllDay != oldValue else { return }
+            firstAlarm = firstAlarm.fits(isAllDay: isAllDay) ? firstAlarm : .none
+            secondAlarm = secondAlarm.fits(isAllDay: isAllDay) ? secondAlarm : .none
+        }
+    }
     private(set) var start: Date
     private(set) var end: Date
+    /// 시간 지정 이벤트의 시간대. nil = 유동(floating — 기기 시간대를 따름). 종일 이벤트에선 무시.
+    private(set) var timeZone: TimeZone?
     var recurrence: Recurrence
     /// 반복 종료 — `.never` 또는 특정 날짜. `.foreign` 규칙에선 무시(원본 보존).
     var recurrenceEnd: RecurrenceEnd
-    var alarm: Alarm
+    /// 알림 두 칸 — Apple 캘린더의 "알림 / 두 번째 알림". 첫 칸이 없음이면 두 번째는 무시.
+    var firstAlarm: Alarm
+    var secondAlarm: Alarm
+    /// 다음으로 표시(바쁨/한가함…). `.notSupported` = 건드리지 않음(EventKit 기본값 유지).
+    var availability: EKEventAvailability
     var urlString: String
     var notes: String
     /// 선택한 캘린더 식별자 — 뷰가 EKCalendar로 해석해 apply 시 주입한다.
@@ -38,8 +51,10 @@ struct EventEditDraft: Equatable {
         return EventEditDraft(
             title: "", location: nil, isAllDay: false,
             start: start, end: start.addingTimeInterval(3600),
+            timeZone: calendar.timeZone,
             recurrence: .none, recurrenceEnd: .never,
-            alarm: .none, urlString: "", notes: "", calendarID: nil
+            firstAlarm: .none, secondAlarm: .none, availability: .notSupported,
+            urlString: "", notes: "", calendarID: nil
         )
     }
 
@@ -53,9 +68,11 @@ struct EventEditDraft: Equatable {
         let fallbackStart = event.startDate ?? Date()
         start = fallbackStart
         end = event.endDate ?? fallbackStart.addingTimeInterval(3600)
+        timeZone = event.timeZone
         recurrence = Recurrence(rules: event.recurrenceRules)
         recurrenceEnd = RecurrenceEnd(rules: event.recurrenceRules)
-        alarm = Alarm(alarms: event.alarms)
+        (firstAlarm, secondAlarm) = Alarm.slots(from: event.alarms, isAllDay: event.isAllDay, eventStart: fallbackStart)
+        availability = event.availability
         urlString = event.url?.absoluteString ?? ""
         notes = event.notes ?? ""
         calendarID = event.calendar?.calendarIdentifier
@@ -63,17 +80,21 @@ struct EventEditDraft: Equatable {
 
     private init(
         title: String, location: Location?, isAllDay: Bool, start: Date, end: Date,
-        recurrence: Recurrence, recurrenceEnd: RecurrenceEnd,
-        alarm: Alarm, urlString: String, notes: String, calendarID: String?
+        timeZone: TimeZone?, recurrence: Recurrence, recurrenceEnd: RecurrenceEnd,
+        firstAlarm: Alarm, secondAlarm: Alarm, availability: EKEventAvailability,
+        urlString: String, notes: String, calendarID: String?
     ) {
         self.title = title
         self.location = location
         self.isAllDay = isAllDay
         self.start = start
         self.end = end
+        self.timeZone = timeZone
         self.recurrence = recurrence
         self.recurrenceEnd = recurrenceEnd
-        self.alarm = alarm
+        self.firstAlarm = firstAlarm
+        self.secondAlarm = secondAlarm
+        self.availability = availability
         self.urlString = urlString
         self.notes = notes
         self.calendarID = calendarID
@@ -91,6 +112,24 @@ struct EventEditDraft: Equatable {
     /// 종료 이동 — 시작 이전으로는 못 내린다(시작 시각으로 클램프).
     mutating func setEnd(_ newEnd: Date) {
         end = max(newEnd, start)
+    }
+
+    /// 시간대 변경 — 벽시계 시각(10:00)은 그대로 두고 새 시간대의 10:00으로 옮긴다
+    /// (Apple 캘린더와 동일). nil(유동)은 `deviceZone` 기준으로 해석한다.
+    mutating func setTimeZone(_ newZone: TimeZone?, deviceZone: TimeZone = .current) {
+        let from = timeZone ?? deviceZone
+        let to = newZone ?? deviceZone
+        start = Self.wallClock(start, from: from, to: to)
+        end = Self.wallClock(end, from: from, to: to)
+        timeZone = newZone
+    }
+
+    private static func wallClock(_ date: Date, from: TimeZone, to: TimeZone) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = from
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        calendar.timeZone = to
+        return calendar.date(from: components) ?? date
     }
 
     // MARK: - EKEvent 쓰기
@@ -114,17 +153,40 @@ struct EventEditDraft: Equatable {
         event.notes = Self.nilIfEmpty(notes)
         event.url = Self.nilIfEmpty(urlString).flatMap(URL.init(string:))
         event.isAllDay = isAllDay
+        // 시작/종료는 절대 시각이라 시간대는 표시·반복 계산 기준일 뿐이다(setTimeZone이 벽시계를
+        // 이미 옮겨 둠). 종일 이벤트는 시간대가 의미 없어 원본 그대로 둔다.
+        if !isAllDay { event.timeZone = timeZone }
         event.startDate = start
         event.endDate = end
+        if availability != .notSupported { event.availability = availability }
 
         if recurrence != .foreign {
             (event.recurrenceRules ?? []).forEach(event.removeRecurrenceRule)
             if let rule = recurrence.rule(endingOn: recurrenceEnd) { event.addRecurrenceRule(rule) }
         }
-        if alarm != .custom {
-            (event.alarms ?? []).forEach(event.removeAlarm)
-            if let offset = alarm.relativeOffset { event.addAlarm(EKAlarm(relativeOffset: offset)) }
+        applyAlarms(to: event)
+    }
+
+    /// 알림 두 칸 반영. 두 칸 모두 `.custom`(3개 이상·위치 알림 등)이면 원본을 통째로 두고,
+    /// 한 칸만 `.custom`이면 그 자리의 원본 알림을 복사해 남긴다 — 보존 계약.
+    private func applyAlarms(to event: EKEvent) {
+        if firstAlarm == .custom, secondAlarm == .custom { return }
+        let original = Alarm.ordered(event.alarms ?? [], eventStart: event.startDate ?? start)
+        let slots = firstAlarm == .none ? [] : [firstAlarm, secondAlarm]
+        let next = slots.enumerated().compactMap { index, slot -> EKAlarm? in
+            guard slot == .custom else { return slot.makeEKAlarm() }
+            return index < original.count ? original[index].copy() as? EKAlarm : nil
         }
+        original.forEach(event.removeAlarm)
+        next.forEach(event.addAlarm)
+    }
+
+    /// 캘린더가 지원하는 "다음으로 표시" 선택지 — 지원 안 하면 빈 배열(행 숨김).
+    static func availabilityOptions(for supported: EKCalendarEventAvailabilityMask) -> [EKEventAvailability] {
+        let all: [(EKCalendarEventAvailabilityMask, EKEventAvailability)] = [
+            (.busy, .busy), (.free, .free), (.tentative, .tentative), (.unavailable, .unavailable),
+        ]
+        return all.filter { supported.contains($0.0) }.map { $0.1 }
     }
 
     private static func nilIfEmpty(_ value: String) -> String? {
@@ -379,47 +441,6 @@ struct EventEditDraft: Equatable {
                 setPositions: usesOrdinal ? ordinal.map { [NSNumber(value: $0)] } : nil,
                 end: end
             )
-        }
-    }
-
-    // MARK: - 알림 옵션
-
-    /// Apple 캘린더 알림 프리셋(상대 오프셋) — 그 밖의 값은 `.custom`(표시·보존 전용).
-    enum Alarm: Hashable {
-        case none
-        case atTime                 // 이벤트 당시(오프셋 0)
-        case minutesBefore(Int)     // 프리셋 분 단위만(presetMinutes)
-        case custom
-
-        /// 선택 메뉴에 노출하는 분 프리셋 — Apple 캘린더와 동일 구성.
-        static let presetMinutes = [5, 10, 15, 30, 60, 120, 1_440, 2_880, 10_080]
-        static var presets: [Alarm] { [.none, .atTime] + presetMinutes.map(Alarm.minutesBefore) }
-
-        init(alarms: [EKAlarm]?) {
-            // 프리셋은 단일 상대 알림일 때만 — 절대시각 알림·복수 알림은 custom 보존.
-            guard let alarms, alarms.count == 1, let first = alarms.first,
-                  first.absoluteDate == nil else {
-                self = alarms?.isEmpty == false ? .custom : .none
-                return
-            }
-            let offset = first.relativeOffset
-            if offset == 0 {
-                self = .atTime
-            } else if offset < 0, offset.truncatingRemainder(dividingBy: 60) == 0,
-                      Self.presetMinutes.contains(Int(-offset) / 60) {
-                self = .minutesBefore(Int(-offset) / 60)
-            } else {
-                self = .custom
-            }
-        }
-
-        /// 이벤트 시작 기준 상대 오프셋(초). `.none`/`.custom`은 nil.
-        var relativeOffset: TimeInterval? {
-            switch self {
-            case .none, .custom: return nil
-            case .atTime: return 0
-            case .minutesBefore(let minutes): return TimeInterval(-minutes * 60)
-            }
         }
     }
 }
