@@ -98,7 +98,7 @@ struct ReminderReadView: View {
     private func completionButton(action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: isCompleted ? "largecircle.fill.circle" : "circle")
-                .font(.title2.weight(.regular))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(listColor)
         }
         .buttonStyle(.plain)
