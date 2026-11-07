@@ -51,6 +51,7 @@ struct ReminderViewModelTests {
         analytics: (any AnalyticsService)? = nil
     ) -> Dependencies {
         let reminderSortRepository = InMemoryReminderSortRepository(storage: sortSettings)
+        let scheduleDisplayModeRepository = InMemoryScheduleDisplayModeRepository()
         let itemRepository = InMemoryItemRepository()
         let eventsRepository = InMemoryEventsRepository(access: .granted)
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
@@ -71,6 +72,8 @@ struct ReminderViewModelTests {
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
             fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
+            fetchScheduleDisplayMode: FetchScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
+            saveScheduleDisplayMode: SaveScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
@@ -262,6 +265,7 @@ struct ReminderViewModelTests {
         // 같은 repo 인스턴스가 ViewModel의 fetch와 변경 emit 양쪽에 쓰이도록.
         let repo = InMemoryRemindersRepository(access: .granted, lists: [listA])
         let sortRepo = InMemoryReminderSortRepository()
+        let scheduleDisplayModeRepository = InMemoryScheduleDisplayModeRepository()
         let itemRepo = InMemoryItemRepository()
         let eventsRepo = InMemoryEventsRepository(access: .granted)
         let focusRepo = InMemoryFocusSessionsRepository()
@@ -282,6 +286,8 @@ struct ReminderViewModelTests {
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: repo),
             fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: sortRepo),
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: sortRepo),
+            fetchScheduleDisplayMode: FetchScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
+            saveScheduleDisplayMode: SaveScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepo),
             fetchEvents: FetchEventsUseCase(repository: eventsRepo),
             fetchCalendars: FetchCalendarsUseCase(repository: eventsRepo),

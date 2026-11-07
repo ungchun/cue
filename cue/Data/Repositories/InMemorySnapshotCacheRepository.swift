@@ -8,13 +8,16 @@
 actor InMemorySnapshotCacheRepository: SnapshotCacheRepository {
     private(set) var remindersSnapshot: RemindersSnapshot?
     private(set) var eventsSnapshot: EventsSnapshot?
+    private(set) var monthEventsSnapshot: MonthEventsSnapshot?
 
     init(
         remindersSnapshot: RemindersSnapshot? = nil,
-        eventsSnapshot: EventsSnapshot? = nil
+        eventsSnapshot: EventsSnapshot? = nil,
+        monthEventsSnapshot: MonthEventsSnapshot? = nil
     ) {
         self.remindersSnapshot = remindersSnapshot
         self.eventsSnapshot = eventsSnapshot
+        self.monthEventsSnapshot = monthEventsSnapshot
     }
 
     func loadRemindersSnapshot() async -> RemindersSnapshot? { remindersSnapshot }
@@ -27,5 +30,11 @@ actor InMemorySnapshotCacheRepository: SnapshotCacheRepository {
 
     func saveEventsSnapshot(_ snapshot: EventsSnapshot) async {
         eventsSnapshot = snapshot
+    }
+
+    func loadMonthEventsSnapshot() async -> MonthEventsSnapshot? { monthEventsSnapshot }
+
+    func saveMonthEventsSnapshot(_ snapshot: MonthEventsSnapshot) async {
+        monthEventsSnapshot = snapshot
     }
 }

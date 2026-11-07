@@ -113,6 +113,40 @@ struct MonthCalendarGridTests {
         #expect(clamped.month == 1)
     }
 
+    // MARK: - firstOfMonth init (제한 없음)
+
+    @Test func firstOfMonthInitIsNotClamped() {
+        let cal = calendar(firstWeekday: 1)
+        // now=2026-10, 5년 뒤(+60개월) — 기존 init이면 ±12로 잘렸을 달.
+        let grid = MonthCalendarGrid(firstOfMonth: date(2031, 10, 1, cal), now: date(2026, 10, 15, cal), calendar: cal)
+
+        #expect(grid.year == 2031)
+        #expect(grid.month == 10)
+        // Oct 1 2031 = 수요일 → 앞 3칸 빔.
+        #expect(grid.weeks.first == [nil, nil, nil, 1, 2, 3, 4])
+        #expect(!grid.isToday(day: 15))
+    }
+
+    @Test func firstOfMonthInitMatchesOffsetInit() {
+        let cal = calendar(firstWeekday: 2)
+        let now = date(2026, 10, 15, cal)
+
+        let byOffset = MonthCalendarGrid(now: now, monthOffset: 3, calendar: cal)
+        // 달 중간 날짜를 줘도 그 달로 맞춘다.
+        let byDate = MonthCalendarGrid(firstOfMonth: date(2027, 1, 20, cal), now: now, calendar: cal)
+
+        #expect(byDate.year == byOffset.year)
+        #expect(byDate.month == byOffset.month)
+        #expect(byDate.weeks == byOffset.weeks)
+        #expect(byDate.weekdaySymbols == byOffset.weekdaySymbols)
+        #expect(byDate.monthLabel == byOffset.monthLabel)
+        #expect(byDate.previousMonthLabel == byOffset.previousMonthLabel)
+        #expect(byDate.nextMonthLabel == byOffset.nextMonthLabel)
+
+        let today = MonthCalendarGrid(firstOfMonth: date(2026, 10, 1, cal), now: now, calendar: cal)
+        #expect(today.isToday(day: 15))
+    }
+
     // MARK: - isToday
 
     @Test func isTodayOnlyAtOffsetZeroMatchingDay() {

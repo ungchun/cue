@@ -33,20 +33,30 @@ struct MonthCalendarGrid: Sendable {
     private let todayMonth: Int
     private let todayDay: Int
 
-    /// `monthOffset`은 `now`의 달을 기준으로 표시 월을 앞뒤로 민다. 항상 `clampedOffset`으로 좁힌다.
+    /// `monthOffset`은 `now`의 달을 기준으로 표시 월을 앞뒤로 민다. 항상 `clampedOffset`으로 좁힌다
+    /// (라이브 액티비티·위젯용 ±12 제한).
     init(now: Date, monthOffset: Int, calendar: Calendar = .current) {
         let offset = Self.clampedOffset(monthOffset)
-
-        let nowComponents = calendar.dateComponents([.year, .month, .day], from: now)
-        self.todayYear = nowComponents.year ?? 0
-        self.todayMonth = nowComponents.month ?? 0
-        self.todayDay = nowComponents.day ?? 0
-
+        let nowComponents = calendar.dateComponents([.year, .month], from: now)
         // 표시 월의 1일 — now가 속한 달의 1일에서 offset개월 이동.
         let firstOfNowMonth = calendar.date(
             from: DateComponents(year: nowComponents.year, month: nowComponents.month, day: 1)
         ) ?? calendar.startOfDay(for: now)
         let firstOfMonth = calendar.date(byAdding: .month, value: offset, to: firstOfNowMonth) ?? firstOfNowMonth
+        self.init(firstOfMonth: firstOfMonth, now: now, calendar: calendar)
+    }
+
+    /// 표시 월을 그 달 날짜로 직접 받는다 — 제한 없음. 앱 월 캘린더(±10년)가 쓴다.
+    /// 달 중간 날짜가 와도 그 달 1일로 맞춘다(앞 여백 계산이 1일 요일 기준이라).
+    init(firstOfMonth date: Date, now: Date, calendar: Calendar = .current) {
+        let nowComponents = calendar.dateComponents([.year, .month, .day], from: now)
+        self.todayYear = nowComponents.year ?? 0
+        self.todayMonth = nowComponents.month ?? 0
+        self.todayDay = nowComponents.day ?? 0
+
+        let firstOfMonth = calendar.date(
+            from: calendar.dateComponents([.year, .month], from: date)
+        ) ?? calendar.startOfDay(for: date)
 
         let displayed = calendar.dateComponents([.year, .month], from: firstOfMonth)
         self.year = displayed.year ?? 0

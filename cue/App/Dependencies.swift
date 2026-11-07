@@ -34,6 +34,11 @@ struct Dependencies: Sendable {
     var fetchReminderSortSettings: FetchReminderSortSettingsUseCase
     var saveReminderSortSettings: SaveReminderSortSettingsUseCase
 
+    /// 일정 탭 표시 모드(타임라인/월) 영속화 — fetch는 첫 프레임 전에 동기로 읽고,
+    /// 토글 직후 save한다.
+    var fetchScheduleDisplayMode: FetchScheduleDisplayModeUseCase
+    var saveScheduleDisplayMode: SaveScheduleDisplayModeUseCase
+
     var requestEventsAccess: RequestEventsAccessUseCase
     var fetchEvents: FetchEventsUseCase
     /// 사용자 캘린더 목록 — 설정 "볼 캘린더 선택" 체크리스트가 읽는다.
@@ -122,6 +127,10 @@ struct Dependencies: Sendable {
         .init(repository: InMemorySnapshotCacheRepository())
     var saveEventsSnapshot: SaveEventsSnapshotUseCase =
         .init(repository: InMemorySnapshotCacheRepository())
+    var loadMonthEventsSnapshot: LoadMonthEventsSnapshotUseCase =
+        .init(repository: InMemorySnapshotCacheRepository())
+    var saveMonthEventsSnapshot: SaveMonthEventsSnapshotUseCase =
+        .init(repository: InMemorySnapshotCacheRepository())
 
     /// 분석 이벤트 기록 — 프로덕션은 Firebase(GA4), 프리뷰·테스트는 no-op.
     /// fire-and-forget이라 UseCase 없이 서비스 경계를 그대로 노출한다.
@@ -209,6 +218,7 @@ extension Dependencies {
         // 프리뷰는 인메모리 — 실제 영속화 동작은 CompositionRoot의 UserDefaults 구현으로.
         let focusSessionsRepository = InMemoryFocusSessionsRepository()
         let reminderSortRepository = InMemoryReminderSortRepository()
+        let scheduleDisplayModeRepository = InMemoryScheduleDisplayModeRepository()
         let appSettingsRepository = InMemoryAppSettingsRepository()
         let memoRepository = InMemoryMemoRepository(memo: Memo(text: "나 오늘 할 수 있다", colorHex: "#FF3B30"))
 
@@ -232,6 +242,8 @@ extension Dependencies {
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
             fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
+            fetchScheduleDisplayMode: FetchScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
+            saveScheduleDisplayMode: SaveScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),

@@ -22,6 +22,7 @@ struct CompositionRoot {
         let focusSessionsRepository = UserDefaultsFocusSessionsRepository()
         let memoRepository = UserDefaultsMemoRepository()
         let reminderSortRepository = UserDefaultsReminderSortRepository()
+        let scheduleDisplayModeRepository = UserDefaultsScheduleDisplayModeRepository()
         let appSettingsRepository = UserDefaultsAppSettingsRepository()
         // 첫 페인트 스냅샷 캐시 — 마지막 fetch 결과를 저장해 앱 재시작 시 스피너 없이 그린다.
         let snapshotCacheRepository = UserDefaultsSnapshotCacheRepository()
@@ -55,6 +56,8 @@ struct CompositionRoot {
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
             fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
+            fetchScheduleDisplayMode: FetchScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
+            saveScheduleDisplayMode: SaveScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
@@ -93,6 +96,8 @@ struct CompositionRoot {
             saveRemindersSnapshot: SaveRemindersSnapshotUseCase(repository: snapshotCacheRepository),
             loadEventsSnapshot: LoadEventsSnapshotUseCase(repository: snapshotCacheRepository),
             saveEventsSnapshot: SaveEventsSnapshotUseCase(repository: snapshotCacheRepository),
+            loadMonthEventsSnapshot: LoadMonthEventsSnapshotUseCase(repository: snapshotCacheRepository),
+            saveMonthEventsSnapshot: SaveMonthEventsSnapshotUseCase(repository: snapshotCacheRepository),
             analytics: analytics,
             reconcilePremiumSettings: ReconcilePremiumSettingsUseCase(
                 fetch: FetchAppSettingsUseCase(repository: appSettingsRepository),

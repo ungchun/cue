@@ -11,6 +11,7 @@ import Foundation
 struct UserDefaultsSnapshotCacheRepository: SnapshotCacheRepository, @unchecked Sendable {
     private static let remindersKey = "cue.snapshot.reminders.v1"
     private static let eventsKey = "cue.snapshot.events.v1"
+    private static let monthEventsKey = "cue.snapshot.monthEvents.v1"
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -31,6 +32,14 @@ struct UserDefaultsSnapshotCacheRepository: SnapshotCacheRepository, @unchecked 
 
     func saveEventsSnapshot(_ snapshot: EventsSnapshot) async {
         save(snapshot, key: Self.eventsKey)
+    }
+
+    func loadMonthEventsSnapshot() async -> MonthEventsSnapshot? {
+        load(MonthEventsSnapshot.self, key: Self.monthEventsKey)
+    }
+
+    func saveMonthEventsSnapshot(_ snapshot: MonthEventsSnapshot) async {
+        save(snapshot, key: Self.monthEventsKey)
     }
 
     private func load<T: Decodable>(_ type: T.Type, key: String) -> T? {

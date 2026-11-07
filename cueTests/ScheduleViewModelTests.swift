@@ -18,6 +18,7 @@ struct ScheduleViewModelTests {
         events: [CalendarEvent] = [],
         calendars: [EventCalendar] = [],
         appSettings: AppSettings = .default,
+        displayModeRepository: InMemoryScheduleDisplayModeRepository = InMemoryScheduleDisplayModeRepository(),
         eventsRepository injected: (any EventsRepository)? = nil,
         analytics: SpyAnalyticsService? = nil
     ) -> Dependencies {
@@ -45,6 +46,8 @@ struct ScheduleViewModelTests {
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
             fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
+            fetchScheduleDisplayMode: FetchScheduleDisplayModeUseCase(repository: displayModeRepository),
+            saveScheduleDisplayMode: SaveScheduleDisplayModeUseCase(repository: displayModeRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),
@@ -440,14 +443,45 @@ struct ScheduleViewModelTests {
         #expect(analytics.events.isEmpty)
     }
 
-    /// 좌상단 캘린더 버튼 — Apple 캘린더 앱 열기를 기록한다.
-    @Test func calendarAppOpenedLogsExternalAppOpened() {
-        let analytics = SpyAnalyticsService()
-        let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
+    // MARK: - 표시 방식 전환
 
-        viewModel.calendarAppOpened()
+    /// 저장된 모드가 없으면 타임라인부터.
+    @Test func displayModeDefaultsToTimeline() {
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
 
-        #expect(analytics.events == [.externalAppOpened(app: "calendar")])
+        #expect(viewModel.displayMode == .timeline)
+    }
+
+    @Test func toggleDisplayModeSwitchesToMonthAndBack() {
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+
+        viewModel.toggleDisplayMode()
+        #expect(viewModel.displayMode == .month)
+
+        viewModel.toggleDisplayMode()
+        #expect(viewModel.displayMode == .timeline)
+    }
+
+    /// 마지막으로 저장된 모드가 월이면 init 직후(첫 body 전)부터 월 — 타임라인이 잠깐 보이지 않는다.
+    @Test func displayModeStartsFromSavedMode() {
+        let repository = InMemoryScheduleDisplayModeRepository(mode: .month)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(displayModeRepository: repository))
+
+        #expect(viewModel.displayMode == .month)
+    }
+
+    /// 토글한 모드가 저장소에 남아, 같은 저장소로 만든 새 VM(= 앱 재실행)이 그 모드로 시작한다.
+    @Test func toggleDisplayModeSavesSoNewViewModelStartsThere() {
+        let repository = InMemoryScheduleDisplayModeRepository()
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(displayModeRepository: repository))
+
+        viewModel.toggleDisplayMode()
+        #expect(repository.fetch() == .month)
+        let relaunched = ScheduleViewModel(dependencies: makeDependencies(displayModeRepository: repository))
+        #expect(relaunched.displayMode == .month)
+
+        relaunched.toggleDisplayMode()
+        #expect(repository.fetch() == .timeline)
     }
 
     /// 권한 거부 화면 "설정 열기" — 설정 앱 이동을 기록한다.

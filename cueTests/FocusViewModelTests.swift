@@ -21,6 +21,7 @@ struct FocusViewModelTests {
         let itemRepository = InMemoryItemRepository()
         let remindersRepository = InMemoryRemindersRepository(access: .granted)
         let reminderSortRepository = InMemoryReminderSortRepository()
+        let scheduleDisplayModeRepository = InMemoryScheduleDisplayModeRepository()
         let eventsRepository = InMemoryEventsRepository(access: .granted)
         let appSettingsRepository = InMemoryAppSettingsRepository(storage: appSettings)
         var deps = Dependencies(
@@ -40,6 +41,8 @@ struct FocusViewModelTests {
             observeRemindersChanges: ObserveRemindersChangesUseCase(repository: remindersRepository),
             fetchReminderSortSettings: FetchReminderSortSettingsUseCase(repository: reminderSortRepository),
             saveReminderSortSettings: SaveReminderSortSettingsUseCase(repository: reminderSortRepository),
+            fetchScheduleDisplayMode: FetchScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
+            saveScheduleDisplayMode: SaveScheduleDisplayModeUseCase(repository: scheduleDisplayModeRepository),
             requestEventsAccess: RequestEventsAccessUseCase(repository: eventsRepository),
             fetchEvents: FetchEventsUseCase(repository: eventsRepository),
             fetchCalendars: FetchCalendarsUseCase(repository: eventsRepository),

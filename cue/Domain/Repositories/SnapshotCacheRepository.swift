@@ -12,4 +12,6 @@ protocol SnapshotCacheRepository: Sendable {
     func saveRemindersSnapshot(_ snapshot: RemindersSnapshot) async
     func loadEventsSnapshot() async -> EventsSnapshot?
     func saveEventsSnapshot(_ snapshot: EventsSnapshot) async
+    func loadMonthEventsSnapshot() async -> MonthEventsSnapshot?
+    func saveMonthEventsSnapshot(_ snapshot: MonthEventsSnapshot) async
 }

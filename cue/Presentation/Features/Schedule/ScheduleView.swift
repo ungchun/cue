@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 /// 일정 탭 화면 — "타임라인" 헤더 + 우상단 신규 이벤트 + 버튼 + 향후 30일치 이벤트 리스트.
+/// 좌상단 버튼으로 월간 캘린더(`ScheduleMonthView`)와 오간다 — 툴바·시트·알럿은 두 모드 공통.
 ///
 /// 이벤트는 일정 있는 날만 섹션으로 묶여 표시된다(`DayGroup` 단위). 신규 입력·편집은
 /// 자체 시트(`EventDetailSheet`)가 처리한다 — 시스템 EKEventEditViewController는 iOS 17+
@@ -23,17 +24,72 @@ struct ScheduleView: View {
     @State private var eventStore = EKEventStore()
     /// 스크롤로 본문 "타임라인" large title이 가려졌는지 — 가려지면 navigation bar
     /// 중앙에 inline title("타임라인")이 채워진다. ReminderView와 동일 패턴.
+    /// 타임라인 모드에서만 쓴다 — 월 모드는 제목 행이 고정이라 가려질 일이 없다.
     @State private var showsInlineTitle = false
-
-    // 좌상단 "캘린더" 버튼 — Apple Calendar 앱 호출용 SwiftUI 환경 핸들.
-    // ReminderView의 "미리 알림" 버튼과 동일 패턴.
-    @Environment(\.openURL) private var openURL
     /// 앱 공통 토스트 — "켜기"로 라이브가 켜지면 상단 토스트를 띄운다.
     @Environment(\.toastCenter) private var toastCenter
     @Environment(\.dependencies) private var dependencies
     @Environment(\.requestReview) private var requestReview
 
     var body: some View {
+        // 모드 전환은 본문만 갈아끼운다 — task·시트·알럿이 두 모드에서 한 번씩만 걸리게.
+        modeContent
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(viewModel.displayMode == .timeline && showsInlineTitle ? "Timeline" : "")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    displayModeButton
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.presentNewEvent()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("New event")
+                }
+            }
+            .task {
+                await viewModel.onAppear()
+                warmUpEventStore()
+            }
+            .sheet(isPresented: $viewModel.showingNewEvent) {
+                EventDetailSheet(
+                    eventStore: eventStore,
+                    onCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
+                )
+            }
+            .sheet(item: $viewModel.editingEvent) { event in
+                EventDetailSheet(
+                    eventStore: eventStore,
+                    editingEventID: event.id,
+                    onCompletion: { outcome in viewModel.dismissEdit(outcome: outcome) }
+                )
+            }
+            .alert("Error", isPresented: errorBinding) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(viewModel.errorMessage ?? "")
+            }
+    }
+
+    @ViewBuilder
+    private var modeContent: some View {
+        switch viewModel.displayMode {
+        case .timeline:
+            timelineList
+        case .month:
+            // 권한 안내 오버레이는 타임라인에만 — 월 모드는 일정 권한이 없어도 할일은 그릴 수 있다.
+            ScheduleMonthView(
+                viewModel: viewModel.monthCalendar,
+                isLiveDisabled: isLiveDisabled,
+                onLive: { await toggleLive() }
+            )
+        }
+    }
+
+    /// 타임라인 본문 — 다가오는 일정 List.
+    private var timelineList: some View {
         // ReminderView와 동일한 패턴: navigation bar는 inline 모드로 두고 large title은
         // List 첫 row에 직접 박는다. List가 가진 자체 top inset 덕에 toolbar↔title 간격이
         // 자연스럽게 맞고, 두 탭의 헤더 라인이 일치한다.
@@ -67,43 +123,6 @@ struct ScheduleView: View {
         } action: { _, newValue in
             showsInlineTitle = newValue
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle(showsInlineTitle ? "Timeline" : "")
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                openCalendarAppButton
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    viewModel.presentNewEvent()
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("New event")
-            }
-        }
-        .task {
-            await viewModel.onAppear()
-            warmUpEventStore()
-        }
-        .sheet(isPresented: $viewModel.showingNewEvent) {
-            EventDetailSheet(
-                eventStore: eventStore,
-                onCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
-            )
-        }
-        .sheet(item: $viewModel.editingEvent) { event in
-            EventDetailSheet(
-                eventStore: eventStore,
-                editingEventID: event.id,
-                onCompletion: { outcome in viewModel.dismissEdit(outcome: outcome) }
-            )
-        }
-        .alert("Error", isPresented: errorBinding) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "")
-        }
     }
 
     /// errorMessage가 있으면 alert 표시 — ReminderView와 동일 패턴.
@@ -122,31 +141,9 @@ struct ScheduleView: View {
                 .font(.largeTitle.bold())
             Spacer()
             FloatingMessageButton {
-                let wasActive = viewModel.liveActivityActive
-                let verdict = await viewModel.toggleLiveActivity()
-                // 실제로 게시된 경우만 리뷰 후보 — .denied는 기존 LA를 건드리지 않아
-                // liveActivityActive가 true로 남을 수 있으므로 분기에서 직접 구분한다.
-                var published = false
-                switch verdict {
-                case .unlimited where viewModel.liveActivityActive:
-                    toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
-                    published = true
-                case .denied:
-                    toastCenter.showPremium()
-                case .allowed(let remaining, let limit) where viewModel.liveActivityActive:
-                    // 무료 한도 잔여 표기 — "1/2" → "0/2".
-                    toastCenter.show("\(remaining) / \(limit)")
-                    published = true
-                default:
-                    break
-                }
-                if published, await dependencies.considerReviewPrompt() {
-                    dependencies.analytics.log(.reviewRequested(source: "live"))
-                    requestReview()
-                }
+                await toggleLive()
             }
-            // 보여줄 일정이 없으면 라이브 버튼 비활성 — 메모·할일과 동일.
-            .disabled(viewModel.eventsByDay.isEmpty)
+            .disabled(isLiveDisabled)
         }
         .listRowSeparator(.hidden)
         // 할일 탭과 같은 좌우 인셋(24) — 두 탭의 큰 제목 leading을 같은 세로선에 맞춘다.
@@ -154,16 +151,49 @@ struct ScheduleView: View {
         .listRowInsets(.init(top: Spacing.sm + Spacing.xxs, leading: Spacing.lg, bottom: Spacing.sm + Spacing.xxs, trailing: Spacing.md))
     }
 
-    /// 좌상단 "캘린더" 버튼 — Apple 캘린더 앱을 연다. `calshow://`는 캘린더 앱의 표준
-    /// URL scheme. ReminderView의 `openRemindersAppButton`과 동일 패턴.
-    private var openCalendarAppButton: some View {
+    /// 보여줄 일정이 없으면 라이브 버튼 비활성 — 메모·할일과 동일. 월 모드도 같은 조건을 쓴다:
+    /// 라이브로 게시되는 건 보이는 달이 아니라 다가오는 일정(`eventsByDay`)이기 때문.
+    private var isLiveDisabled: Bool {
+        viewModel.eventsByDay.isEmpty
+    }
+
+    /// 라이브 버튼 동작 — 타임라인·월 모드가 공유한다(토글 → 토스트 → 리뷰 후보).
+    private func toggleLive() async {
+        let wasActive = viewModel.liveActivityActive
+        let verdict = await viewModel.toggleLiveActivity()
+        // 실제로 게시된 경우만 리뷰 후보 — .denied는 기존 LA를 건드리지 않아
+        // liveActivityActive가 true로 남을 수 있으므로 분기에서 직접 구분한다.
+        var published = false
+        switch verdict {
+        case .unlimited where viewModel.liveActivityActive:
+            toastCenter.show(wasActive ? String(localized: "Refreshed") : String(localized: "Live"))
+            published = true
+        case .denied:
+            toastCenter.showPremium()
+        case .allowed(let remaining, let limit) where viewModel.liveActivityActive:
+            // 무료 한도 잔여 표기 — "1/2" → "0/2".
+            toastCenter.show("\(remaining) / \(limit)")
+            published = true
+        default:
+            break
+        }
+        if published, await dependencies.considerReviewPrompt() {
+            dependencies.analytics.log(.reviewRequested(source: "live"))
+            requestReview()
+        }
+    }
+
+    /// 좌상단 모드 토글 — 라벨은 "누르면 갈 곳"을 적는다(타임라인에선 "Calendar", 월에선 "Timeline").
+    private var displayModeButton: some View {
         Button {
-            viewModel.calendarAppOpened()
-            if let url = URL(string: "calshow://") {
-                openURL(url)
-            }
+            viewModel.toggleDisplayMode()
+            // 타임라인 List는 모드를 오가며 새로 만들어져 맨 위에서 시작하므로 inline 제목도 초기화.
+            showsInlineTitle = false
         } label: {
-            Text("Calendar")
+            switch viewModel.displayMode {
+            case .timeline: Text("Calendar")
+            case .month: Text("Timeline")
+            }
         }
     }
 

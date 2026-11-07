@@ -31,6 +31,7 @@ final class ScheduleViewModel {
     /// 프리미엄 여부의 반응형 소스 — 라이브 한도 소비 시 호출 시점에 읽는다(구매 즉시 반영).
     private let premiumStore: PremiumStore
     private let fetchAppSettings: FetchAppSettingsUseCase
+    private let saveDisplayModeUseCase: SaveScheduleDisplayModeUseCase
     /// 설정에서 숨긴 캘린더의 식별자 집합 — 이 캘린더의 이벤트는 타임라인·LA에서 제외한다.
     /// onAppear에서 설정을 읽어 채우고, 설정이 바뀌면 재적용한다.
     private var hiddenCalendarIDs: Set<String> = []
@@ -48,6 +49,11 @@ final class ScheduleViewModel {
     /// 전체를 reload한다. 탭 전환에도 살아있어 다른 탭에서 발생한 변경을 놓치지 않는다.
     /// `nonisolated(unsafe)`: Swift 6의 nonisolated `deinit`에서 cancel을 호출하기 위함.
     nonisolated(unsafe) private var observeTask: Task<Void, Never>?
+
+    /// 본문 표시 방식 — 마지막 선택(없으면 타임라인). init에서 동기로 읽어 확정한다.
+    private(set) var displayMode: ScheduleDisplayMode
+    /// 월 캘린더 모드의 상태 — 탭 VM이 소유해 모드를 오가도 적재한 달을 잃지 않는다.
+    let monthCalendar: ScheduleMonthViewModel
 
     private(set) var access: EventsAccess = .notDetermined
     /// 날짜별로 그룹핑된 이벤트. 일정 없는 날은 생략, 날짜·시작시간 오름차순.
@@ -96,7 +102,11 @@ final class ScheduleViewModel {
         self.consumeLiveActivation = dependencies.consumeLiveActivation
         self.analytics = dependencies.analytics
         self.fetchAppSettings = dependencies.fetchAppSettings
+        self.saveDisplayModeUseCase = dependencies.saveScheduleDisplayMode
+        // 동기로 읽어 첫 body 전에 확정 — 타임라인이 잠깐 보였다 월로 바뀌는 깜빡임 방지.
+        self.displayMode = dependencies.fetchScheduleDisplayMode()
         self.now = now
+        self.monthCalendar = ScheduleMonthViewModel(dependencies: dependencies, now: now)
         startObservingChanges()
     }
 
@@ -325,10 +335,10 @@ final class ScheduleViewModel {
         editingEvent = nil
     }
 
-    /// 좌상단 캘린더 버튼 — Apple 캘린더 앱 열기를 기록한다. URL 열기 자체는 뷰의
-    /// `openURL` 담당(SwiftUI 환경 핸들은 뷰 전용).
-    func calendarAppOpened() {
-        analytics.log(.externalAppOpened(app: "calendar"))
+    /// 좌상단 버튼 — 타임라인 ↔ 월 캘린더 전환. 바꾼 모드를 저장해 앱을 다시 열어도 유지한다.
+    func toggleDisplayMode() {
+        displayMode = displayMode == .timeline ? .month : .timeline
+        saveDisplayModeUseCase(displayMode)
     }
 
     /// 권한 거부 화면 "설정 열기" — 설정 앱 이동을 기록한다. 열기 자체는 뷰 담당.
