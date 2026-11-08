@@ -85,6 +85,9 @@ struct ScheduleMonthDayCell: View {
             .lineLimit(1)
             // 칸 폭이 50pt 남짓이라 "윤10.14"나 큰 글자 크기에선 넘친다 — 잘려 "10.1…"로 오독되느니 줄인다.
             .minimumScaleFactor(0.7)
+            // 텍스트 스타일·보조 배율로는 더 못 줄인다 — 고정 크기 대신 그린 결과만 한 번 더 줄인다.
+            // 왼쪽 아래를 기준으로 줄여 왼쪽 정렬과 날짜 숫자와의 바닥선을 그대로 둔다.
+            .scaleEffect(0.85, anchor: .bottomLeading)
             // VoiceOver는 "10.14"를 소수로 읽어 오해를 부른다. 바르게 읽히는 라벨("음력 10월 14일")은
             // 번역 문자열이 필요해 두지 않고, 곁들이는 정보라 숨긴다 — 날짜 숫자·항목은 그대로 읽힌다.
             .accessibilityHidden(true)
