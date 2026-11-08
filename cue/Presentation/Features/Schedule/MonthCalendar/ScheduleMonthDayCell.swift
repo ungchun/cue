@@ -24,7 +24,7 @@ struct ScheduleMonthDayCell: View {
     /// 오늘 원의 지름 — 두 자리 숫자가 원 안에 들어가도록 날짜 숫자(callout) 글자 크기를 따라간다.
     @ScaledMetric(relativeTo: .callout) private var todayDiameter: CGFloat = 26
     /// 라이트 모드 날씨 아이콘 테두리 두께(pt) — 아이콘과 함께 커진다.
-    @ScaledMetric(relativeTo: .callout) private var weatherEdgeWidth: CGFloat = 0.7
+    @ScaledMetric(relativeTo: .title3) private var weatherEdgeWidth: CGFloat = 0.8
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -53,7 +53,7 @@ struct ScheduleMonthDayCell: View {
     }
 
     /// 시스템 날씨 앱처럼 멀티컬러 채움 심볼 — 해는 노랑, 비는 파랑 등 색은 심볼이 정한다.
-    /// 날짜 숫자와 같은 callout 크기를 따른다. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
+    /// 날짜 숫자(callout)보다 한 단계 크게(title3) — 칸 머리에서 날씨가 먼저 눈에 들어오게. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
     ///
     /// 멀티컬러 구름·달은 흰색으로 고정이라 라이트 배경에선 사라진다 — 라이트에서만 같은 모양을 상하좌우로
     /// 살짝 밀어 낸 그림자로 얇은 회색 테두리를 둘러 윤곽을 살린다(해·비 색은 그대로).
@@ -63,7 +63,7 @@ struct ScheduleMonthDayCell: View {
         return Image(systemName: symbol)
             .symbolVariant(.fill)
             .symbolRenderingMode(.multicolor)
-            .font(.callout)
+            .font(.title3)
             .shadow(color: edge, radius: 0, x: width, y: 0)
             .shadow(color: edge, radius: 0, x: -width, y: 0)
             .shadow(color: edge, radius: 0, x: 0, y: width)
