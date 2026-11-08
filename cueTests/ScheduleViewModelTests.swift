@@ -552,29 +552,29 @@ struct ScheduleViewModelTests {
 
     // MARK: - 표시 방식 전환
 
-    /// 저장된 모드가 없으면 타임라인부터.
-    @Test func displayModeDefaultsToTimeline() {
+    /// 저장된 모드가 없으면 월 캘린더부터.
+    @Test func displayModeDefaultsToMonth() {
         let viewModel = ScheduleViewModel(dependencies: makeDependencies())
 
-        #expect(viewModel.displayMode == .timeline)
+        #expect(viewModel.displayMode == .month)
     }
 
-    @Test func toggleDisplayModeSwitchesToMonthAndBack() {
+    @Test func toggleDisplayModeSwitchesToTimelineAndBack() {
         let viewModel = ScheduleViewModel(dependencies: makeDependencies())
+
+        viewModel.toggleDisplayMode()
+        #expect(viewModel.displayMode == .timeline)
 
         viewModel.toggleDisplayMode()
         #expect(viewModel.displayMode == .month)
-
-        viewModel.toggleDisplayMode()
-        #expect(viewModel.displayMode == .timeline)
     }
 
-    /// 마지막으로 저장된 모드가 월이면 init 직후(첫 body 전)부터 월 — 타임라인이 잠깐 보이지 않는다.
+    /// 마지막으로 저장된 모드가 타임라인이면 init 직후(첫 body 전)부터 타임라인 — 월이 잠깐 보이지 않는다.
     @Test func displayModeStartsFromSavedMode() {
-        let repository = InMemoryScheduleDisplayModeRepository(mode: .month)
+        let repository = InMemoryScheduleDisplayModeRepository(mode: .timeline)
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(displayModeRepository: repository))
 
-        #expect(viewModel.displayMode == .month)
+        #expect(viewModel.displayMode == .timeline)
     }
 
     /// 토글한 모드가 저장소에 남아, 같은 저장소로 만든 새 VM(= 앱 재실행)이 그 모드로 시작한다.
@@ -583,12 +583,12 @@ struct ScheduleViewModelTests {
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(displayModeRepository: repository))
 
         viewModel.toggleDisplayMode()
-        #expect(repository.fetch() == .month)
+        #expect(repository.fetch() == .timeline)
         let relaunched = ScheduleViewModel(dependencies: makeDependencies(displayModeRepository: repository))
-        #expect(relaunched.displayMode == .month)
+        #expect(relaunched.displayMode == .timeline)
 
         relaunched.toggleDisplayMode()
-        #expect(repository.fetch() == .timeline)
+        #expect(repository.fetch() == .month)
     }
 
     /// 권한 거부 화면 "설정 열기" — 설정 앱 이동을 기록한다.
