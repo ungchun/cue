@@ -167,7 +167,7 @@ struct SettingsView: View {
                     ColorPicker("Live Font Color", selection: $memoFontColor, supportsOpacity: false)
                 }
                 premiumGated(feature: "show_calendar_memo") {
-                    Toggle("Show Calendar", isOn: memoShowsCalendarBinding)
+                    Toggle("Show Calendar in Live", isOn: memoShowsCalendarBinding)
                         .tint(.green)
                 }
             }
@@ -181,10 +181,10 @@ struct SettingsView: View {
                         LabeledContent("Calendars", value: calendarsSummary)
                     }
                 }
-                Toggle("Show Completed Tasks in Calendar", isOn: monthShowsCompletedRemindersBinding)
+                Toggle("Show Completed Tasks in Month View", isOn: monthShowsCompletedRemindersBinding)
                     .tint(.green)
                 premiumGated(feature: "show_calendar_schedule") {
-                    Toggle("Show Calendar", isOn: scheduleShowsCalendarBinding)
+                    Toggle("Show Calendar in Live", isOn: scheduleShowsCalendarBinding)
                         .tint(.green)
                 }
             } header: {
@@ -211,7 +211,7 @@ struct SettingsView: View {
                     }
                 }
                 premiumGated(feature: "show_calendar_tasks") {
-                    Toggle("Show Calendar", isOn: reminderShowsCalendarBinding)
+                    Toggle("Show Calendar in Live", isOn: reminderShowsCalendarBinding)
                         .tint(.green)
                 }
             } header: {

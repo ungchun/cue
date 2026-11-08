@@ -23697,6 +23697,106 @@
         }
       }
     },
+    "Show Calendar in Live" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إظهار التقويم في اللايف"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalender im Live zeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar calendario en Live"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher l'agenda dans le Live"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लाइव में कैलेंडर दिखाएं"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan Kalender di Live"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra calendario nel Live"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ライブにカレンダーを表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라이브에 달력 표시"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tunjuk Kalendar dalam Live"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar calendário no Live"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать календарь в Лайве"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แสดงปฏิทินใน Live"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiện lịch trong Live"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在实时活动中显示日历"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在即時動態中顯示行事曆"
+          }
+        }
+      }
+    },
     "Show Completed" : {
       "localizations" : {
         "ar" : {
@@ -23797,102 +23897,102 @@
         }
       }
     },
-    "Show Completed Tasks in Calendar" : {
+    "Show Completed Tasks in Month View" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "إظهار المهام المكتملة في التقويم"
+            "value" : "إظهار المهام المكتملة في عرض الشهر"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erledigte Aufgaben im Kalender anzeigen"
+            "value" : "Erledigte Aufgaben in Monatsansicht anzeigen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar tareas completadas en el calendario"
+            "value" : "Mostrar tareas completadas en vista mensual"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afficher les tâches terminées dans l'agenda"
+            "value" : "Afficher les tâches terminées en vue mensuelle"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "कैलेंडर में पूर्ण टास्क दिखाएं"
+            "value" : "मासिक दृश्य में पूर्ण टास्क दिखाएं"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tampilkan Tugas Selesai di Kalender"
+            "value" : "Tampilkan Tugas Selesai di Tampilan Bulan"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra attività completate nel calendario"
+            "value" : "Mostra attività completate nella vista mensile"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カレンダーに完了済みのタスクを表示"
+            "value" : "月表示に完了済みのタスクを表示"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "캘린더에 완료된 할일 보기"
+            "value" : "월 캘린더에 완료된 할일 표시"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tunjuk Tugas Selesai dalam Kalendar"
+            "value" : "Tunjuk Tugas Selesai dalam Paparan Bulan"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar tarefas concluídas no calendário"
+            "value" : "Mostrar tarefas concluídas na visão mensal"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Показывать выполненные задачи в календаре"
+            "value" : "Показывать выполненные задачи в виде месяца"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงงานที่เสร็จแล้วในปฏิทิน"
+            "value" : "แสดงงานที่เสร็จแล้วในมุมมองเดือน"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiện việc đã xong trong lịch"
+            "value" : "Hiện việc đã xong trong lịch tháng"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在日历中显示已完成的任务"
+            "value" : "在月视图中显示已完成的任务"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在行事曆中顯示已完成的任務"
+            "value" : "在月檢視中顯示已完成的任務"
           }
         }
       }
