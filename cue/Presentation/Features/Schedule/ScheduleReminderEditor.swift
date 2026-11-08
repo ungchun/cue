@@ -10,7 +10,8 @@ import Observation
 /// 그리고 + 시트의 할일 쪽 생성.
 ///
 /// 할일 탭의 `ReminderViewModel`에 기대지 않는다 — 그쪽은 목록·선택·낙관적 반영까지 들고 있는
-/// 할일 탭 전용이다. 여기선 UseCase만 부르고, 월 칩 갱신은 월 VM의 EventKit 변경 구독이 맡는다.
+/// 할일 탭 전용이다. 여기선 UseCase만 부르고, 쓰기가 성공하면 `afterWrite`로 월 칩을 직접 다시 읽힌다.
+/// EventKit 변경 알림에만 기대면 알림이 빠질 때 칩이 안 바뀐다(일정 쪽 R-07과 같은 위험).
 @MainActor
 @Observable
 final class ScheduleReminderEditor {
@@ -22,6 +23,8 @@ final class ScheduleReminderEditor {
     private let toggleReminderCompletion: ToggleReminderCompletionUseCase
     private let deleteReminder: DeleteReminderUseCase
     private let analytics: any AnalyticsService
+    /// 쓰기(생성·수정·완료·삭제) 성공 직후 — 월 캘린더가 알림을 기다리지 않고 다시 읽게 한다.
+    private let afterWrite: @MainActor () async -> Void
 
     /// 상세 시트에 띄운 할일. nil이면 닫힘 — `.sheet(item:)`이 바인딩한다.
     var editingReminder: Reminder?
@@ -32,7 +35,7 @@ final class ScheduleReminderEditor {
     /// 완료 저장·재조회 중인 할일 — 그새 다시 탭하면 옛 값으로 한 번 더 완료해 반복 회차를 건너뛴다.
     private var pendingCompletionIDs: Set<String> = []
 
-    init(dependencies: Dependencies) {
+    init(dependencies: Dependencies, afterWrite: @escaping @MainActor () async -> Void = {}) {
         self.requestRemindersAccess = dependencies.requestRemindersAccess
         self.fetchReminderLists = dependencies.fetchReminderLists
         self.fetchReminders = dependencies.fetchReminders
@@ -41,6 +44,7 @@ final class ScheduleReminderEditor {
         self.toggleReminderCompletion = dependencies.toggleReminderCompletion
         self.deleteReminder = dependencies.deleteReminder
         self.analytics = dependencies.analytics
+        self.afterWrite = afterWrite
     }
 
     /// 칩 탭 — 리스트를 읽은 뒤 시트를 연다(리스트 없이 열면 목록 행이 빈 채로 그려진다).
@@ -70,7 +74,9 @@ final class ScheduleReminderEditor {
             replaceIfPresented(updated)
         } catch {
             errorMessage = error.localizedDescription
+            return
         }
+        await afterWrite()
     }
 
     /// 시트의 완료 토글 — 할일 탭과 같은 방향별 기록.
@@ -92,13 +98,14 @@ final class ScheduleReminderEditor {
         var toggled = current
         toggled.isCompleted.toggle()
         // 반복 할일은 완료하면 EventKit이 다음 회차로 넘겨 미완료로 남는다 — 저장소 값으로 다시 맞춘다.
-        // 재조회 실패는 쓰기 실패가 아니라 알리지 않고 뒤집은 값으로 둔다(월 칩은 변경 구독이 맞춘다).
+        // 재조회 실패는 쓰기 실패가 아니라 알리지 않고 뒤집은 값으로 둔다.
         do {
             let stored = try await fetchReminders().first { $0.id == reminderID }
             replaceIfPresented(stored ?? toggled)
         } catch {
             replaceIfPresented(toggled)
         }
+        await afterWrite()
     }
 
     /// 시트의 삭제 — 성공하면 시트를 닫는다.
@@ -109,7 +116,9 @@ final class ScheduleReminderEditor {
             if editingReminder?.id == reminderID { editingReminder = nil }
         } catch {
             errorMessage = error.localizedDescription
+            return
         }
+        await afterWrite()
     }
 
     // MARK: - 생성 (+ 시트)
@@ -127,12 +136,14 @@ final class ScheduleReminderEditor {
         await refreshLists()
     }
 
-    /// 새 할일의 기본 목록 — 미리 알림의 기본 목록, 없으면 첫 목록.
+    /// 새 할일의 기본 목록 — 미리 알림의 기본 목록, 없으면 첫 목록. 읽기 전용 목록은 건너뛴다
+    /// (넣으면 저장이 실패한다).
     var defaultListID: String? {
-        lists.first(where: \.isDefault)?.id ?? lists.first?.id
+        let writable = lists.filter { !$0.isReadOnly }
+        return writable.first(where: \.isDefault)?.id ?? writable.first?.id
     }
 
-    /// + 시트의 할일 저장. 목록을 안 골랐으면 기본 목록으로. 월 칩은 변경 구독이 갱신한다.
+    /// + 시트의 할일 저장. 목록을 안 골랐으면 기본 목록으로.
     func create(
         title: String,
         notes: String?,
@@ -154,7 +165,9 @@ final class ScheduleReminderEditor {
             analytics.log(.reminderCreated)
         } catch {
             errorMessage = error.localizedDescription
+            return
         }
+        await afterWrite()
     }
 
     func dismiss() {

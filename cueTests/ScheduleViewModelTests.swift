@@ -580,6 +580,72 @@ struct ScheduleViewModelTests {
         #expect(month.page(for: 0).items(day: day).map(\.title) == ["After"])
     }
 
+    /// 일정 라이브가 떠 있으면 시트 저장 뒤 새 내용으로 다시 게시한다 — 예전엔 다음 게시 전까지
+    /// 잠금화면에 옛 제목이 남았다.
+    @Test func dismissEditSavedRepublishesActiveLiveActivity() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let original = event(id: "e", title: "Before", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let repository = InMemoryEventsRepository(access: .granted, events: [original])
+        let service = CountingScheduleLiveActivityService()
+        var dependencies = makeDependencies(eventsRepository: repository)
+        dependencies.startScheduleLiveActivity = StartScheduleLiveActivityUseCase(service: service)
+        let viewModel = ScheduleViewModel(
+            dependencies: dependencies, premiumStore: PremiumStore(previewIsPremium: true), now: { today }
+        )
+        await viewModel.onAppear()
+        _ = await viewModel.toggleLiveActivity()
+        viewModel.presentEdit(original)
+
+        var edited = original
+        edited.title = "After"
+        await repository.updateSilently(edited)
+        await viewModel.dismissEdit(outcome: .saved)
+
+        #expect(await service.startScheduleCount == 2)
+        #expect(await service.lastScheduleTitles == ["After"])
+        #expect(viewModel.liveActivityActive)
+    }
+
+    /// 라이브가 꺼져 있으면 저장해도 새로 켜지 않는다.
+    @Test func dismissEditSavedDoesNotStartInactiveLiveActivity() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let original = event(id: "e", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let service = CountingScheduleLiveActivityService()
+        var dependencies = makeDependencies(events: [original])
+        dependencies.startScheduleLiveActivity = StartScheduleLiveActivityUseCase(service: service)
+        let viewModel = ScheduleViewModel(dependencies: dependencies, now: { today })
+        await viewModel.onAppear()
+        viewModel.presentEdit(original)
+
+        await viewModel.dismissEdit(outcome: .saved)
+
+        #expect(await service.startScheduleCount == 0)
+        #expect(!viewModel.liveActivityActive)
+    }
+
+    /// 마지막 다가오는 일정을 지우면 옛 카드가 남지 않게 라이브를 끝낸다.
+    @Test func deletingLastEventEndsActiveLiveActivity() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let only = event(id: "e", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let repository = InMemoryEventsRepository(access: .granted, events: [only])
+        let service = CountingScheduleLiveActivityService()
+        var dependencies = makeDependencies(eventsRepository: repository)
+        dependencies.startScheduleLiveActivity = StartScheduleLiveActivityUseCase(service: service)
+        dependencies.endScheduleLiveActivity = EndScheduleLiveActivityUseCase(service: service)
+        let viewModel = ScheduleViewModel(
+            dependencies: dependencies, premiumStore: PremiumStore(previewIsPremium: true), now: { today }
+        )
+        await viewModel.onAppear()
+        _ = await viewModel.toggleLiveActivity()
+        viewModel.presentEdit(only)
+
+        await repository.removeSilently(id: "e")
+        await viewModel.dismissEdit(outcome: .deleted)
+
+        #expect(await service.endScheduleCount == 1)
+        #expect(!viewModel.liveActivityActive)
+    }
+
     /// 취소는 쓴 게 없으니 다시 읽지 않는다 — 저장소에 몰래 들어간 일정이 보이지 않아야 한다.
     @Test func dismissNewEventCanceledDoesNotReload() async {
         let today = Calendar.current.startOfDay(for: Date())
@@ -988,6 +1054,9 @@ private actor CountingScheduleLiveActivityService: LiveActivityService {
     func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
     private(set) var startScheduleCount = 0
+    private(set) var endScheduleCount = 0
+    /// 마지막으로 게시한 일정 제목들 — 다시 게시가 새 내용을 실었는지 본다.
+    private(set) var lastScheduleTitles: [String] = []
 
     func startReminder(
         listTitle: String,
@@ -1001,8 +1070,9 @@ private actor CountingScheduleLiveActivityService: LiveActivityService {
     func endReminder() async {}
     func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
         startScheduleCount += 1
+        lastScheduleTitles = days.flatMap(\.events).map(\.title)
     }
-    func endSchedule() async {}
+    func endSchedule() async { endScheduleCount += 1 }
     func endSamples() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}

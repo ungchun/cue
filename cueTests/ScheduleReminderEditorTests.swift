@@ -23,7 +23,8 @@ struct ScheduleReminderEditorTests {
     private func makeEditor(
         access: RemindersAccess = .granted,
         lists: [ReminderList]? = nil,
-        reminders: [Reminder] = []
+        reminders: [Reminder] = [],
+        afterWrite: @escaping @MainActor () async -> Void = {}
     ) -> (ScheduleReminderEditor, InMemoryRemindersRepository, SpyAnalyticsService) {
         let repository = InMemoryRemindersRepository(access: access, lists: lists ?? [listA, listB], reminders: reminders)
         let analytics = SpyAnalyticsService()
@@ -36,7 +37,7 @@ struct ScheduleReminderEditorTests {
         dependencies.toggleReminderCompletion = ToggleReminderCompletionUseCase(repository: repository)
         dependencies.deleteReminder = DeleteReminderUseCase(repository: repository)
         dependencies.analytics = analytics
-        return (ScheduleReminderEditor(dependencies: dependencies), repository, analytics)
+        return (ScheduleReminderEditor(dependencies: dependencies, afterWrite: afterWrite), repository, analytics)
     }
 
     // MARK: - 열기
@@ -286,6 +287,75 @@ struct ScheduleReminderEditorTests {
         #expect(try await repository.fetchReminders().isEmpty)
         #expect(analytics.events.isEmpty)
     }
+
+    // MARK: - 쓰기 뒤 월 캘린더 다시 읽기
+
+    /// 생성·수정·완료·삭제가 성공할 때마다 한 번씩 월 칩을 다시 읽게 한다 — EventKit 변경 알림이
+    /// 빠져도 칩이 바로 바뀌게(일정 쪽 QA R-07과 같은 위험).
+    @Test func everySuccessfulWriteAsksForReloadOnce() async {
+        let reloads = ReloadCounter()
+        let target = reminder(id: "r1")
+        let (editor, _, _) = makeEditor(reminders: [target]) { reloads.count += 1 }
+        await editor.refreshLists()
+
+        await editor.create(title: "새 할일", notes: nil, dueDate: nil, includesTime: false, recurrence: nil, listID: nil)
+        #expect(reloads.count == 1)
+
+        await editor.present(reminderID: "r1", lookup: target)
+        var changes = ReminderChanges(from: target)
+        changes.title = "바뀐 제목"
+        await editor.save(reminderID: "r1", changes: changes)
+        #expect(reloads.count == 2)
+
+        await editor.toggleCompletion(reminderID: "r1")
+        #expect(reloads.count == 3)
+
+        await editor.delete(reminderID: "r1")
+        #expect(reloads.count == 4)
+    }
+
+    /// 쓰기가 실패하면 바뀐 게 없으니 다시 읽지 않는다.
+    @Test func failedWritesDoNotAskForReload() async {
+        let reloads = ReloadCounter()
+        let stale = reminder(id: "stale")
+        let (editor, _, _) = makeEditor { reloads.count += 1 }
+        await editor.present(reminderID: "stale", lookup: stale)
+
+        await editor.save(reminderID: "stale", changes: ReminderChanges(from: stale))
+        await editor.toggleCompletion(reminderID: "stale")
+        await editor.delete(reminderID: "stale")
+        await editor.create(title: "  ", notes: nil, dueDate: nil, includesTime: false, recurrence: nil, listID: listA.id)
+
+        #expect(reloads.count == 0)
+    }
+
+    // MARK: - 읽기 전용 목록
+
+    /// 기본 목록이 읽기 전용이면 건너뛰고 쓸 수 있는 목록으로 — 넣으면 저장이 실패한다.
+    @Test func defaultListSkipsReadOnlyLists() async {
+        let sharedDefault = ReminderList(id: "shared", title: "공유", colorHex: nil, isDefault: true, isReadOnly: true)
+        let (editor, _, _) = makeEditor(lists: [sharedDefault, listB])
+
+        await editor.refreshLists()
+
+        #expect(editor.defaultListID == listB.id)
+    }
+
+    /// 쓸 수 있는 목록이 없으면 기본 목록도 없다 — `create`가 "목록을 고르라"고 알린다.
+    @Test func defaultListIsNilWhenEveryListIsReadOnly() async {
+        let shared = ReminderList(id: "shared", title: "공유", colorHex: nil, isReadOnly: true)
+        let (editor, _, _) = makeEditor(lists: [shared])
+
+        await editor.refreshLists()
+
+        #expect(editor.defaultListID == nil)
+    }
+}
+
+/// 다시 읽기 요청 횟수 — 클로저가 값을 바꾸므로 참조 타입으로 둔다.
+@MainActor
+private final class ReloadCounter {
+    var count = 0
 }
 
 // MARK: - 분석 이벤트 기록용 더블

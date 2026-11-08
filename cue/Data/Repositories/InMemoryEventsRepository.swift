@@ -72,4 +72,9 @@ actor InMemoryEventsRepository: EventsRepository {
         guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
         events[index] = event
     }
+
+    /// 테스트 헬퍼 — 같은 id의 이벤트를 변경 신호 없이 지운다. 시트가 일정을 삭제한 경우.
+    func removeSilently(id: String) {
+        events.removeAll { $0.id == id }
+    }
 }

@@ -110,8 +110,12 @@ final class ScheduleViewModel {
         // 동기로 읽어 첫 body 전에 확정 — 타임라인이 잠깐 보였다 월로 바뀌는 깜빡임 방지.
         self.displayMode = dependencies.fetchScheduleDisplayMode()
         self.now = now
-        self.monthCalendar = ScheduleMonthViewModel(dependencies: dependencies, now: now)
-        self.reminderEditor = ScheduleReminderEditor(dependencies: dependencies)
+        let monthCalendar = ScheduleMonthViewModel(dependencies: dependencies, now: now)
+        self.monthCalendar = monthCalendar
+        // 할일 시트가 쓴 뒤 월 칩을 직접 다시 읽는다 — 변경 알림이 빠져도 바로 보이게.
+        self.reminderEditor = ScheduleReminderEditor(dependencies: dependencies) {
+            await monthCalendar.reloadAfterOwnWrite()
+        }
         startObservingChanges()
     }
 
@@ -381,6 +385,34 @@ final class ScheduleViewModel {
         await discardEventsCacheUseCase()
         await handleExternalChange()
         await monthCalendar.reloadAfterOwnWrite()
+        await refreshLiveActivityAfterOwnWrite()
+    }
+
+    /// 떠 있는 일정 라이브를 방금 다시 읽은 일정으로 다시 게시한다 — 안 하면 앱에서 고친 일정이
+    /// 다음 게시 전까지 잠금화면에 옛 내용으로 남는다. 외부 변경엔 하지 않는다: 일정 게시는
+    /// 끝내고 새로 요청하는데, 백그라운드에서 요청이 막히면 카드가 사라진다. 시트 저장은 늘 앞쪽이다.
+    /// 항상 표시 게시와 같은 체인에 줄 세운다 — 겹치면 카드가 여러 장 뜬다.
+    private func refreshLiveActivityAfterOwnWrite() async {
+        let task = Task { [previous = alwaysOnChain] in
+            await previous?.value
+            await performLiveActivityRefresh()
+        }
+        alwaysOnChain = task
+        await task.value
+    }
+
+    private func performLiveActivityRefresh() async {
+        guard liveActivityActive, access == .granted else { return }
+        do {
+            liveActivityActive = try await startLiveActivityUseCase(
+                events: eventsByDay.flatMap(\.events),
+                weekEvents: await fetchWeekEvents()
+            )
+            // 다가오는 일정이 다 지워졌으면 게시를 건너뛴다 — 옛 카드가 남지 않게 끝낸다(토글과 같은 처리).
+            if !liveActivityActive { await endLiveActivityUseCase() }
+        } catch {
+            // 갱신 실패는 조용히 — 저장 자체는 성공했다.
+        }
     }
 
     /// 좌상단 버튼 — 타임라인 ↔ 월 캘린더 전환. 바꾼 모드를 저장해 앱을 다시 열어도 유지한다.
