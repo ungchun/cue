@@ -21,8 +21,8 @@ struct ScheduleMonthDayCell: View {
     /// 칩 탭 — 상세 시트를 연다.
     let onSelect: (WidgetCalendarItem) -> Void
 
-    /// 오늘 원의 지름 — 두 자리 숫자가 원 안에 들어가도록 날짜 숫자(callout) 글자 크기를 따라간다.
-    @ScaledMetric(relativeTo: .callout) private var todayDiameter: CGFloat = 26
+    /// 오늘 밑줄 두께 — 날짜 숫자 글자 크기를 따라간다.
+    @ScaledMetric(relativeTo: .subheadline) private var todayUnderlineHeight: CGFloat = 2
     /// 라이트 모드 날씨 아이콘 테두리 두께(pt) — 아이콘과 함께 커진다.
     @ScaledMetric(relativeTo: .title3) private var weatherEdgeWidth: CGFloat = 0.8
     @Environment(\.colorScheme) private var colorScheme
@@ -39,21 +39,23 @@ struct ScheduleMonthDayCell: View {
                     } else if let lunarLabel {
                         lunarText(lunarLabel)
                     }
-                    Spacer(minLength: Spacing.zero)
+                    // 음력과 날짜 숫자가 붙어 "10.1018"처럼 읽히지 않게 최소 틈을 둔다.
+                    Spacer(minLength: Spacing.xxs)
                     dayNumber(day)
                 }
                 ForEach(items) { item in
                     ScheduleMonthItemChip(item: item) { onSelect(item) }
                 }
             }
-            .padding(Spacing.xxs)
+            .padding(.vertical, Spacing.xs)
+            .padding(.horizontal, Spacing.xxs)
         } else {
             Color.clear
         }
     }
 
     /// 시스템 날씨 앱처럼 멀티컬러 채움 심볼 — 해는 노랑, 비는 파랑 등 색은 심볼이 정한다.
-    /// 날짜 숫자(callout)보다 한 단계 크게(title3) — 칸 머리에서 날씨가 먼저 눈에 들어오게. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
+    /// 날짜 숫자(subheadline)보다 크게(title3) — 칸 머리에서 날씨가 먼저 눈에 들어오게. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
     ///
     /// 멀티컬러 구름·달은 흰색으로 고정이라 라이트 배경에선 사라진다 — 라이트에서만 같은 모양을 상하좌우로
     /// 살짝 밀어 낸 그림자로 얇은 회색 테두리를 둘러 윤곽을 살린다(해·비 색은 그대로).
@@ -71,13 +73,13 @@ struct ScheduleMonthDayCell: View {
             .accessibilityHidden(true)
     }
 
-    /// 날짜 숫자(callout)보다 작고 흐리게 — 곁들이는 정보라 날짜를 가리지 않게.
+    /// 날짜 숫자(subheadline)보다 작고 흐리게(tertiary) — 곁들이는 정보라 날짜보다 먼저 눈에 띄지 않게.
+    /// 고정폭 숫자는 쓰지 않는다 — "1"이 넓어져 좁은 칸에서 날짜 숫자와 붙는다.
     /// 숫자를 그대로 찍는 표기라 문자열 카탈로그를 거치지 않는다(verbatim).
     private func lunarText(_ label: String) -> some View {
         Text(verbatim: label)
             .font(.caption2)
-            .foregroundStyle(.secondary)
-            .monospacedDigit()
+            .foregroundStyle(.tertiary)
             .lineLimit(1)
             // 칸 폭이 50pt 남짓이라 "윤10.14"나 큰 글자 크기에선 넘친다 — 잘려 "10.1…"로 오독되느니 줄인다.
             .minimumScaleFactor(0.7)
@@ -86,25 +88,22 @@ struct ScheduleMonthDayCell: View {
             .accessibilityHidden(true)
     }
 
-    @ViewBuilder
+    /// 칸 오른쪽에 붙인 날짜 숫자. 오늘은 빨간 굵은 숫자 + 밑줄 — 원으로 감싸면 좁은 칸에서 숫자보다
+    /// 원이 먼저 보여 무겁다. 밑줄 자리는 모든 날이 똑같이 비워 둬, 오늘이 있는 주와 없는 주의 칩 시작선이 같다.
     private func dayNumber(_ day: Int) -> some View {
         // 숫자 포맷으로 — 문자열 카탈로그 키를 거치지 않고 로케일 숫자 표기를 따른다.
-        let text = Text(day, format: .number)
-            .font(.callout.weight(isToday ? .semibold : .regular))
+        Text(day, format: .number)
+            .font(.subheadline.weight(isToday ? .bold : .regular))
             .monospacedDigit()
-        if isToday {
-            // 앱 tint가 `.primary`(다크=흰색)라 흰 글씨를 얹으면 다크에서 숫자가 사라진다.
-            // 원은 primary, 숫자는 배경색으로 반전해 라이트·다크 모두 대비를 지킨다.
-            text
-                .foregroundStyle(Color(.systemBackground))
-                .frame(minWidth: todayDiameter, minHeight: todayDiameter)
-                .background(Circle().fill(Color.primary))
-        } else {
-            // 오늘 원과 같은 높이를 잡아, 오늘이 있는 주와 없는 주의 칩 시작선이 같아진다.
-            text
-                .foregroundStyle(Self.dayColor(weekday))
-                .frame(minWidth: todayDiameter, minHeight: todayDiameter)
-        }
+            .foregroundStyle(isToday ? Color.red : Self.dayColor(weekday))
+            .padding(.bottom, todayUnderlineHeight + Spacing.xxs)
+            .overlay(alignment: .bottom) {
+                if isToday {
+                    Capsule()
+                        .fill(Color.red)
+                        .frame(height: todayUnderlineHeight)
+                }
+            }
     }
 
     /// 날짜 숫자 색 — 타임라인 날짜 헤더(`ScheduleView.headerColor`)와 같은 규칙.
