@@ -101,7 +101,7 @@ struct ScheduleMonthView: View {
                     Color.clear.frame(width: 1 / displayScale, height: Spacing.zero)
                 }
                 Text(grid.weekdaySymbols.indices.contains(column) ? grid.weekdaySymbols[column] : "")
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundStyle(Self.weekdayColor(grid.weekdayIndex(column: column)))
                     .frame(maxWidth: .infinity)
             }

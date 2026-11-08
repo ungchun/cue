@@ -79,6 +79,8 @@ struct ScheduleMonthDayCell: View {
     private func lunarText(_ label: String) -> some View {
         Text(verbatim: label)
             .font(.caption2)
+            // caption2가 가장 작은 텍스트 스타일이라 한 단 더 줄이는 건 시스템 보조 글자 배율로 — 고정 크기 없이 동적 글꼴을 따른다.
+            .textScale(.secondary)
             .foregroundStyle(.tertiary)
             .lineLimit(1)
             // 칸 폭이 50pt 남짓이라 "윤10.14"나 큰 글자 크기에선 넘친다 — 잘려 "10.1…"로 오독되느니 줄인다.
