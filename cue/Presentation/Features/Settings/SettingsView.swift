@@ -210,8 +210,6 @@ struct SettingsView: View {
             } footer: {
                 weatherAttributionFooter
             }
-            // 출처 한 줄 아래가 전역 간격(28)이면 휑하다 — 다음 섹션과 붙인다.
-            .listSectionSpacing(Spacing.sm)
 
             Section {
                 // 볼 목록 선택 — 전용 화면으로 push(체크리스트). 리스트가 없으면 행 자체를 숨긴다.
