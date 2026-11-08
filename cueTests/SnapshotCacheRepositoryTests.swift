@@ -59,6 +59,24 @@ struct SnapshotCacheRepositoryTests {
         #expect(reminder.listID == "A")
     }
 
+    /// 기본·읽기 전용 플래그 추가 전에 저장된 목록도 읽힌다 — 없으면 둘 다 false.
+    @Test func reminderListDecodesLegacyJSONWithoutFlags() throws {
+        let json = #"{"id":"A","title":"회사","colorHex":"#FF9500"}"#
+
+        let list = try JSONDecoder().decode(ReminderList.self, from: Data(json.utf8))
+
+        #expect(list == ReminderList(id: "A", title: "회사", colorHex: "#FF9500"))
+    }
+
+    /// 읽기 전용 플래그도 왕복한다.
+    @Test func reminderListRoundTripsReadOnlyFlag() throws {
+        let list = ReminderList(id: "S", title: "공유", colorHex: nil, isReadOnly: true)
+
+        let decoded = try JSONDecoder().decode(ReminderList.self, from: JSONEncoder().encode(list))
+
+        #expect(decoded == list)
+    }
+
     /// 일정 스냅샷 — 이벤트와 fetch 범위 끝(fetchedUntil)을 함께 복원한다.
     @Test func eventsSnapshotRoundTrips() async {
         let repo = makeRepo()

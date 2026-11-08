@@ -15,7 +15,8 @@ enum ReminderMapper {
             id: calendar.calendarIdentifier,
             title: calendar.title,
             colorHex: hex(from: calendar.cgColor),
-            isDefault: calendar.calendarIdentifier == defaultListID
+            isDefault: calendar.calendarIdentifier == defaultListID,
+            isReadOnly: !calendar.allowsContentModifications
         )
     }
 

@@ -239,4 +239,17 @@ struct ReminderEditDraftTests {
         #expect(withList.listID == "list-b")
         #expect(withoutList.listID == "")
     }
+
+    /// 목록 선택지에서 읽기 전용 목록은 빠진다 — 고르면 저장이 실패한다. 지금 속한 목록은
+    /// 읽기 전용이어도 남겨 피커 선택값이 비지 않게 한다.
+    @Test func pickableListsHideReadOnlyExceptCurrent() {
+        let mine = ReminderList(id: "A", title: "개인", colorHex: nil)
+        let shared = ReminderList(id: "S", title: "공유", colorHex: nil, isReadOnly: true)
+        let other = ReminderList(id: "O", title: "다른 공유", colorHex: nil, isReadOnly: true)
+        let creating = ReminderEditDraft(title: "", notes: "", dueDate: nil, includesTime: false, recurrence: nil, listID: "A")
+        let inShared = ReminderEditDraft(title: "", notes: "", dueDate: nil, includesTime: false, recurrence: nil, listID: "S")
+
+        #expect(creating.pickableLists(from: [mine, shared, other]).map(\.id) == ["A"])
+        #expect(inShared.pickableLists(from: [mine, shared, other]).map(\.id) == ["A", "S"])
+    }
 }

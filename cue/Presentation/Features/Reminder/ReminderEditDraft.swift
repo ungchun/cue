@@ -73,6 +73,12 @@ struct ReminderEditDraft: Equatable {
     /// 저장할 마감일 — 날짜가 꺼져 있으면 nil.
     var effectiveDueDate: Date? { hasDate ? dueDate : nil }
 
+    /// 목록 선택지 — 읽기 전용 목록은 고르면 저장이 실패하니 뺀다. 지금 고른 목록은 남겨
+    /// 피커 선택값이 선택지 밖으로 떨어지지 않게 한다.
+    func pickableLists(from lists: [ReminderList]) -> [ReminderList] {
+        lists.filter { !$0.isReadOnly || $0.id == listID }
+    }
+
     /// 시각 지정은 날짜 전제.
     var effectiveIncludesTime: Bool { hasDate && hasTime }
 

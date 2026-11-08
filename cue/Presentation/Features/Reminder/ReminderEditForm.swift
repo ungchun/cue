@@ -289,7 +289,7 @@ struct ReminderEditForm: View {
 
     private var listPicker: some View {
         Picker("List", selection: $draft.listID) {
-            ForEach(lists) { list in
+            ForEach(draft.pickableLists(from: lists)) { list in
                 HStack(spacing: Spacing.sm) {
                     Circle()
                         .fill(list.colorHex.flatMap(Color.init(hex:)) ?? .secondary)

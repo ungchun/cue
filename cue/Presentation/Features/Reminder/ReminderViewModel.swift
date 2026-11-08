@@ -874,10 +874,12 @@ final class ReminderViewModel {
     /// - 사용자 리스트가 selection이면 그 리스트로.
     /// - 시스템 필터 selection(오늘/예정/전체)이면 기본 목록(isDefault) 우선,
     ///   없으면 `lists.first`로 fallback. (기본 목록 이름은 로케일에 따라 다르므로 플래그로 판별.)
+    ///   fallback은 읽기 전용 목록을 건너뛴다 — 넣으면 저장이 실패한다.
     private func resolveTargetListID() -> String? {
         if let selectedListID { return selectedListID }
-        if let defaultList = lists.first(where: { $0.isDefault }) { return defaultList.id }
-        return lists.first?.id
+        let writable = lists.filter { !$0.isReadOnly }
+        if let defaultList = writable.first(where: { $0.isDefault }) { return defaultList.id }
+        return writable.first?.id
     }
 
     /// 제목·메모만 수정한다 — 인라인 편집 경로. 나머지(마감일·반복·우선순위·위치·리스트)는
