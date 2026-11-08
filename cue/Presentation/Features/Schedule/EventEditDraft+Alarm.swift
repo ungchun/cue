@@ -7,6 +7,15 @@ import EventKit
 import Foundation
 
 extension EventEditDraft {
+    /// 종일 전환 직전 두 칸과, 전환하며 옮긴 두 칸. 옮긴 값 그대로 되돌아오면 원래 값으로 복원한다.
+    struct AlarmStash: Equatable {
+        let isAllDay: Bool
+        let first: Alarm
+        let second: Alarm
+        let convertedFirst: Alarm
+        let convertedSecond: Alarm
+    }
+
     /// 알림 한 칸 — Apple 캘린더 프리셋(상대 오프셋) + 사용자 지정(절대 일시).
     /// 그 밖(프리셋 밖 오프셋·위치 알림 등)은 `.custom`(표시·보존 전용).
     ///
@@ -99,12 +108,22 @@ extension EventEditDraft {
             return relativeOffset.map { EKAlarm(relativeOffset: $0) }
         }
 
-        /// 종일 여부가 바뀐 뒤에도 유효한 값인지 — 상대 프리셋은 자기 체계에서만 유효.
-        func fits(isAllDay: Bool) -> Bool {
-            switch self {
-            case .none, .absolute, .custom: true
-            case .atTime, .minutesBefore: !isAllDay
-            case .daysBeforeAt9AM: isAllDay
+        /// 종일 여부가 바뀔 때 새 체계의 가장 가까운 프리셋으로 옮긴다 — 없음으로 지우면 사용자가
+        /// 모르는 사이 알림이 사라진다. 하루 안쪽 분 프리셋·이벤트 당시는 당일 오전 9시,
+        /// N일 전은 N일 전 오전 9시(역방향은 당일 → 이벤트 당시). 절대 일시·custom은 그대로.
+        func converted(toAllDay isAllDay: Bool) -> Alarm {
+            switch (self, isAllDay) {
+            case (.atTime, true):
+                return .daysBeforeAt9AM(0)
+            case (.minutesBefore(let minutes), true):
+                let days = Int((Double(minutes) / 1_440).rounded(.down))
+                return .daysBeforeAt9AM(Self.allDayPresetDays.last { $0 <= days } ?? 0)
+            case (.daysBeforeAt9AM(0), false):
+                return .atTime
+            case (.daysBeforeAt9AM(let days), false):
+                return .minutesBefore(days * 1_440)
+            default:
+                return self
             }
         }
 

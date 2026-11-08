@@ -360,16 +360,77 @@ struct EventEditDraftTests {
         #expect(event.alarms?.count == 3)
     }
 
-    /// 종일 전환 시 새 체계에 없는 알림 프리셋은 없음으로 — 사용자 지정은 유지.
-    @Test func togglingAllDayResetsIncompatibleAlarmPresets() {
+    /// 종일 전환 시 알림을 지우지 않고 새 체계의 가까운 프리셋으로 옮긴다 — 사용자 지정은 유지.
+    /// 예전엔 첫 칸이 없음이 되면서 저장 때 두 번째(사용자 지정)까지 함께 빠졌다.
+    @Test func togglingAllDayConvertsAlarmPresetsInsteadOfClearing() {
         var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
         draft.firstAlarm = .minutesBefore(15)
         draft.secondAlarm = .absolute(date(2026, 7, 25, 9, 0))
 
         draft.isAllDay = true
 
-        #expect(draft.firstAlarm == EventEditDraft.Alarm.none)
+        #expect(draft.firstAlarm == .daysBeforeAt9AM(0))
         #expect(draft.secondAlarm == .absolute(date(2026, 7, 25, 9, 0)))
+    }
+
+    /// 프리셋별 옮김 — 하루 안쪽은 당일, N일 전은 N일 전(오전 9시), 역방향도 같은 날수.
+    @Test func allDayToggleMapsEachPresetToNearestCounterpart() {
+        typealias Alarm = EventEditDraft.Alarm
+        #expect(Alarm.atTime.converted(toAllDay: true) == .daysBeforeAt9AM(0))
+        #expect(Alarm.minutesBefore(120).converted(toAllDay: true) == .daysBeforeAt9AM(0))
+        #expect(Alarm.minutesBefore(1_440).converted(toAllDay: true) == .daysBeforeAt9AM(1))
+        #expect(Alarm.minutesBefore(2_880).converted(toAllDay: true) == .daysBeforeAt9AM(2))
+        #expect(Alarm.minutesBefore(10_080).converted(toAllDay: true) == .daysBeforeAt9AM(7))
+        #expect(Alarm.daysBeforeAt9AM(0).converted(toAllDay: false) == .atTime)
+        #expect(Alarm.daysBeforeAt9AM(7).converted(toAllDay: false) == .minutesBefore(10_080))
+        #expect(Alarm.none.converted(toAllDay: true) == .none)
+        #expect(Alarm.custom.converted(toAllDay: false) == .custom)
+    }
+
+    /// 알림을 안 건드리고 종일을 껐다 켜면 원래 값 그대로 — 처음 드래프트와도 같아진다(변경 없음).
+    @Test func togglingAllDayBackRestoresOriginalAlarms() {
+        let original = {
+            var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
+            draft.firstAlarm = .minutesBefore(15)
+            draft.secondAlarm = .minutesBefore(60)
+            return draft
+        }()
+        var draft = original
+
+        draft.isAllDay = true
+        draft.isAllDay = false
+
+        #expect(draft.firstAlarm == .minutesBefore(15))
+        #expect(draft.secondAlarm == .minutesBefore(60))
+        #expect(draft == original)
+    }
+
+    /// 종일 상태에서 알림을 직접 바꿨다면 되돌릴 때 그 선택을 옮긴다 — 옛 값으로 덮지 않는다.
+    @Test func togglingAllDayBackKeepsAlarmPickedMeanwhile() {
+        var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
+        draft.firstAlarm = .minutesBefore(15)
+
+        draft.isAllDay = true
+        draft.firstAlarm = .daysBeforeAt9AM(1)
+        draft.isAllDay = false
+
+        #expect(draft.firstAlarm == .minutesBefore(1_440))
+    }
+
+    /// 전환 후 저장하면 알림이 실제로 이벤트에 남는다 — 종일 당일 오전 9시(+9시간)와 사용자 지정.
+    @Test func allDayToggleKeepsAlarmsThroughApply() {
+        let event = EKEvent(eventStore: EKEventStore())
+        var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
+        draft.firstAlarm = .minutesBefore(15)
+        draft.secondAlarm = .absolute(date(2026, 7, 25, 9, 0))
+
+        draft.isAllDay = true
+        draft.apply(to: event)
+
+        let alarms = event.alarms ?? []
+        #expect(alarms.count == 2)
+        #expect(alarms.contains { $0.absoluteDate == nil && $0.relativeOffset == 9 * 3_600 })
+        #expect(alarms.contains { $0.absoluteDate == date(2026, 7, 25, 9, 0) })
     }
 
     // MARK: - 시간대

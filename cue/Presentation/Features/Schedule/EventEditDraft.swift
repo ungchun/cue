@@ -18,13 +18,27 @@ struct EventEditDraft: Equatable {
     /// 위치 — 지도 검색으로 고른 구조화 위치(제목·주소·좌표) 또는 직접 입력 문자열. nil = 없음.
     var location: Location?
     var isAllDay: Bool {
-        // 종일 ↔ 시간 지정은 알림 프리셋 체계가 다르다 — 새 체계에 없는 프리셋은 "없음"으로.
+        // 종일 ↔ 시간 지정은 알림 프리셋 체계가 다르다 — 새 체계의 가까운 프리셋으로 옮긴다.
+        // 옮기기 전 값을 기억해, 알림을 안 건드리고 되돌리면 원래 값으로 복원한다(15분 전 → 당일 → 15분 전).
         didSet {
             guard isAllDay != oldValue else { return }
-            firstAlarm = firstAlarm.fits(isAllDay: isAllDay) ? firstAlarm : .none
-            secondAlarm = secondAlarm.fits(isAllDay: isAllDay) ? secondAlarm : .none
+            if let stash = alarmsBeforeAllDayToggle, stash.isAllDay == isAllDay,
+               stash.convertedFirst == firstAlarm, stash.convertedSecond == secondAlarm {
+                (firstAlarm, secondAlarm) = (stash.first, stash.second)
+                alarmsBeforeAllDayToggle = nil
+                return
+            }
+            let converted = (firstAlarm.converted(toAllDay: isAllDay), secondAlarm.converted(toAllDay: isAllDay))
+            alarmsBeforeAllDayToggle = AlarmStash(
+                isAllDay: oldValue, first: firstAlarm, second: secondAlarm,
+                convertedFirst: converted.0, convertedSecond: converted.1
+            )
+            (firstAlarm, secondAlarm) = converted
         }
     }
+    /// 종일 전환 직전 알림 — 되돌릴 때 복원용. 복원하면 nil로 비워 처음 드래프트와 다시 같아진다
+    /// (닫을 때 "변경 취소" 확인이 안 뜨게).
+    private var alarmsBeforeAllDayToggle: AlarmStash?
     private(set) var start: Date
     private(set) var end: Date
     /// 시간 지정 이벤트의 시간대. nil = 유동(floating — 기기 시간대를 따름). 종일 이벤트에선 무시.
