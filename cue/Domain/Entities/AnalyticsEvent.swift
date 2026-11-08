@@ -86,6 +86,7 @@ enum AnalyticsEvent: Equatable, Sendable {
     case tasksDefaultViewChanged(view: String)
     case focusEndSoundToggled(on: Bool)
     case monthCompletedTasksToggled(on: Bool)
+    case monthWeatherToggled(on: Bool)
     case calendarVisibilityToggled(kind: String, on: Bool)
     case calendarShowAllTapped(kind: String)
     case live24hGuideOpened
@@ -162,6 +163,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .tasksDefaultViewChanged: "tasks_default_view_changed"
         case .focusEndSoundToggled: "focus_end_sound_toggled"
         case .monthCompletedTasksToggled: "month_completed_tasks_toggled"
+        case .monthWeatherToggled: "month_weather_toggled"
         case .calendarVisibilityToggled: "calendar_visibility_toggled"
         case .calendarShowAllTapped: "calendar_show_all"
         case .live24hGuideOpened: "live_24h_guide_opened"
@@ -209,6 +211,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .tasksDefaultViewChanged(let view): ["view": view]
         case .focusEndSoundToggled(let on): ["on": String(on)]
         case .monthCompletedTasksToggled(let on): ["on": String(on)]
+        case .monthWeatherToggled(let on): ["on": String(on)]
         case .calendarVisibilityToggled(let kind, let on): ["kind": kind, "on": String(on)]
         case .calendarShowAllTapped(let kind): ["kind": kind]
         case .reviewRequested(let source): ["source": source]

@@ -6,7 +6,7 @@
 /// 앱 시작 시 엔타이틀먼트와 프리미엄 전용 설정을 맞춘다 — 강등(구독 만료·환불) 사용자 방어.
 ///
 /// 프리미엄 게이트는 "설정을 켜는 순간"에만 있어, 프리미엄 기간(또는 게이트 이전 빌드)에 켜둔
-/// `liveAlwaysOn`·`showsCalendar` 저장값이 강등 후에도 남아 무료로 유료 기능을 계속 부여한다.
+/// `liveAlwaysOn`·`showsCalendar`·월 캘린더 옵션(완료 할일 숨김·날씨) 저장값이 강등 후에도 남아 무료로 유료 기능을 계속 부여한다.
 /// 이 use case가 시작 시 비프리미엄이면 해당 플래그를 꺼서 저장한다 — 저장 리포지토리가
 /// App Group 미러까지 갱신하므로 위젯(LA 캘린더)도 함께 닫힌다.
 struct ReconcilePremiumSettingsUseCase: Sendable {
@@ -57,15 +57,23 @@ struct ReconcilePremiumSettingsUseCase: Sendable {
             || settings.memoShowsCalendar
             || settings.scheduleShowsCalendar
             || settings.reminderShowsCalendar
+            || !settings.monthShowsCompletedReminders
+            || settings.monthShowsWeather
         if hadPremiumFlags {
             settings.demotedLiveAlwaysOn = settings.demotedLiveAlwaysOn || settings.liveAlwaysOn
             settings.demotedMemoShowsCalendar = settings.demotedMemoShowsCalendar || settings.memoShowsCalendar
             settings.demotedScheduleShowsCalendar = settings.demotedScheduleShowsCalendar || settings.scheduleShowsCalendar
             settings.demotedReminderShowsCalendar = settings.demotedReminderShowsCalendar || settings.reminderShowsCalendar
+            settings.demotedMonthHidesCompletedReminders = settings.demotedMonthHidesCompletedReminders
+                || !settings.monthShowsCompletedReminders
+            settings.demotedMonthShowsWeather = settings.demotedMonthShowsWeather || settings.monthShowsWeather
             settings.liveAlwaysOn = false
             settings.memoShowsCalendar = false
             settings.scheduleShowsCalendar = false
             settings.reminderShowsCalendar = false
+            // 완료 할일 숨김은 기본(보임)으로 되돌린다 — 끄는 쪽이 프리미엄 기능이다.
+            settings.monthShowsCompletedReminders = true
+            settings.monthShowsWeather = false
             settingsChanged = true
         }
         // 메모 색 — 색은 AppSettings가 아닌 Memo에 살아 별도 정리. 텍스트는 사용자 데이터라 보존.
@@ -91,18 +99,25 @@ struct ReconcilePremiumSettingsUseCase: Sendable {
             || settings.demotedMemoShowsCalendar
             || settings.demotedScheduleShowsCalendar
             || settings.demotedReminderShowsCalendar
+            || settings.demotedMonthHidesCompletedReminders
+            || settings.demotedMonthShowsWeather
             || hadColorRecord
         guard hadRecord else { return (false, false) }
         settings.liveAlwaysOn = settings.liveAlwaysOn || settings.demotedLiveAlwaysOn
         settings.memoShowsCalendar = settings.memoShowsCalendar || settings.demotedMemoShowsCalendar
         settings.scheduleShowsCalendar = settings.scheduleShowsCalendar || settings.demotedScheduleShowsCalendar
         settings.reminderShowsCalendar = settings.reminderShowsCalendar || settings.demotedReminderShowsCalendar
+        settings.monthShowsCompletedReminders = settings.monthShowsCompletedReminders
+            && !settings.demotedMonthHidesCompletedReminders
+        settings.monthShowsWeather = settings.monthShowsWeather || settings.demotedMonthShowsWeather
         memo.colorHex = settings.demotedMemoColorHex ?? memo.colorHex
         memo.textColorHex = settings.demotedMemoTextColorHex ?? memo.textColorHex
         settings.demotedLiveAlwaysOn = false
         settings.demotedMemoShowsCalendar = false
         settings.demotedScheduleShowsCalendar = false
         settings.demotedReminderShowsCalendar = false
+        settings.demotedMonthHidesCompletedReminders = false
+        settings.demotedMonthShowsWeather = false
         settings.demotedMemoColorHex = nil
         settings.demotedMemoTextColorHex = nil
         return (true, hadColorRecord)

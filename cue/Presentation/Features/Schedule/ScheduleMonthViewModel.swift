@@ -32,6 +32,7 @@ final class ScheduleMonthViewModel {
     private let loadMonthEventsSnapshot: LoadMonthEventsSnapshotUseCase
     private let saveMonthEventsSnapshot: SaveMonthEventsSnapshotUseCase
     private let loadRemindersSnapshot: LoadRemindersSnapshotUseCase
+    private let fetchDailyWeather: FetchDailyWeatherUseCase
     /// 현재 시각 공급자 — 앵커 달과 격자의 "오늘" 기준. 테스트에서 주입.
     private let now: () -> Date
     /// 오프셋 0의 달(1일 자정) — init에서 한 번 고정한다.
@@ -84,6 +85,10 @@ final class ScheduleMonthViewModel {
     @ObservationIgnored private var hiddenReminderListIDs: Set<String> = []
     /// 설정 — 완료한 할일을 칸에 그릴지. 끄면 재구성 때 걸러 낸다(조회는 그대로).
     @ObservationIgnored private var showsCompletedReminders = true
+    /// 설정 — 날짜 칸에 날씨 아이콘을 그릴지.
+    @ObservationIgnored private var showsWeather = false
+    /// 날(자정) → 날씨 SF Symbol 이름. 조회 실패면 이전 값을 그대로 둔다.
+    @ObservationIgnored private var weatherSymbols: [Date: String] = [:]
     @ObservationIgnored private var reminderListColorHexes: [String: String] = [:]
     /// 권한·설정·할일 컨텍스트를 한 번이라도 읽었는지.
     @ObservationIgnored private var hasContext = false
@@ -103,6 +108,8 @@ final class ScheduleMonthViewModel {
     @ObservationIgnored nonisolated(unsafe) private var observeTasks: [Task<Void, Never>] = []
     /// 예약된(디바운스 중이거나 도는) 윈도우 적재. 보이는 달이 또 바뀌면 취소한다.
     @ObservationIgnored nonisolated(unsafe) private var windowTask: Task<Void, Never>?
+    /// 진행 중인 날씨 조회 — 네트워크라 컨텍스트·윈도우 적재를 붙잡지 않게 따로 돈다.
+    @ObservationIgnored nonisolated(unsafe) private var weatherTask: Task<Void, Never>?
 
     init(
         dependencies: Dependencies,
@@ -120,6 +127,7 @@ final class ScheduleMonthViewModel {
         self.loadMonthEventsSnapshot = dependencies.loadMonthEventsSnapshot
         self.saveMonthEventsSnapshot = dependencies.saveMonthEventsSnapshot
         self.loadRemindersSnapshot = dependencies.loadRemindersSnapshot
+        self.fetchDailyWeather = dependencies.fetchDailyWeather
         self.now = now
         self.anchorMonthStart = Self.monthStart(containing: now())
         self.debounce = debounce
@@ -135,6 +143,7 @@ final class ScheduleMonthViewModel {
     deinit {
         for task in observeTasks { task.cancel() }
         windowTask?.cancel()
+        weatherTask?.cancel()
     }
 
     // MARK: - 표시
@@ -219,6 +228,11 @@ final class ScheduleMonthViewModel {
     /// 테스트 훅 — 예약된 윈도우 적재가 끝날 때까지 기다린다.
     func waitForWindowLoad() async {
         await windowTask?.value
+    }
+
+    /// 테스트 훅 — 진행 중인 날씨 조회가 끝날 때까지 기다린다.
+    func waitForWeather() async {
+        await weatherTask?.value
     }
 
     /// 테스트 훅 — 메모리에 보관 중인 달(페이지·일정).
@@ -333,6 +347,7 @@ final class ScheduleMonthViewModel {
         hiddenCalendarIDs = settings.hiddenCalendarIDs
         hiddenReminderListIDs = settings.hiddenReminderListIDs
         showsCompletedReminders = settings.monthShowsCompletedReminders
+        showsWeather = settings.monthShowsWeather
         // 할일 권한은 묻지 않는다 — 없으면 일정만 보여 준다(월 화면이 프롬프트를 띄우면 맥락이 어긋난다).
         let remindersGranted = await currentRemindersAccess() == .granted
         if eventsAccess != previousAccess {
@@ -355,8 +370,36 @@ final class ScheduleMonthViewModel {
         }
         hasContext = true
         // 숨김 설정·할일 변화는 받아 둔 일정으로 다시 만들면 충분하다(재조회 비용 절약).
-        for (start, page) in pages where page.isLoaded {
-            rebuild(monthStart: start)
+        rebuildLoadedPages()
+        refreshWeather()
+    }
+
+    // MARK: - 날씨
+
+    /// 설정이 켜져 있으면 예보를 받아(저장소가 1시간 캐시) 칸을 다시 만든다. 꺼졌으면 지운다.
+    private func refreshWeather() {
+        guard showsWeather else {
+            weatherTask?.cancel()
+            weatherTask = nil
+            guard !weatherSymbols.isEmpty else { return }
+            weatherSymbols = [:]
+            rebuildLoadedPages()
+            return
+        }
+        guard weatherTask == nil else { return }
+        weatherTask = Task { [weak self] in
+            guard let self else { return }
+            let forecast = try? await self.fetchDailyWeather()
+            self.weatherTask = nil
+            // 실패면 이전 값으로 둔다 — 에러는 띄우지 않는다(날씨는 곁들이는 정보).
+            guard let forecast, self.showsWeather, !Task.isCancelled else { return }
+            let symbols = Dictionary(
+                forecast.map { ($0.date, $0.symbolName) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            guard symbols != self.weatherSymbols else { return }
+            self.weatherSymbols = symbols
+            self.rebuildLoadedPages()
         }
     }
 
@@ -421,7 +464,19 @@ final class ScheduleMonthViewModel {
         for (date, items) in byDate {
             byDay[calendar.component(.day, from: date)] = items
         }
-        pageModel(for: start, retain: isInWindow(start)).apply(itemsByDay: byDay)
+        let end = monthEnd(after: start)
+        var weatherByDay: [Int: String] = [:]
+        for (date, symbol) in weatherSymbols where date >= start && date < end {
+            weatherByDay[calendar.component(.day, from: date)] = symbol
+        }
+        pageModel(for: start, retain: isInWindow(start)).apply(itemsByDay: byDay, weatherByDay: weatherByDay)
+    }
+
+    /// 적재된 페이지를 받아 둔 데이터로 다시 만든다 — 설정·할일·날씨만 바뀌었을 때.
+    private func rebuildLoadedPages() {
+        for (start, page) in pages where page.isLoaded {
+            rebuild(monthStart: start)
+        }
     }
 
     /// 그 달 할일 — 완료 숨김 설정이면 완료한 것을 뺀다.

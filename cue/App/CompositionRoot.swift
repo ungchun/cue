@@ -26,6 +26,8 @@ struct CompositionRoot {
         let appSettingsRepository = UserDefaultsAppSettingsRepository()
         // 첫 페인트 스냅샷 캐시 — 마지막 fetch 결과를 저장해 앱 재시작 시 스피너 없이 그린다.
         let snapshotCacheRepository = UserDefaultsSnapshotCacheRepository()
+        // 월 캘린더 날씨 — 예보 캐시를 한 인스턴스가 들고 있게 공유한다.
+        let weatherRepository = WeatherKitWeatherRepository()
         // 라이브 액티비티 service — @MainActor 격리. ActivityKit 호출은 모두 main actor에서.
         let liveActivityService: any LiveActivityService = ActivityKitLiveActivityService()
 
@@ -104,7 +106,10 @@ struct CompositionRoot {
                 save: SaveAppSettingsUseCase(repository: appSettingsRepository),
                 fetchMemo: FetchMemoUseCase(repository: memoRepository),
                 saveMemo: SaveMemoUseCase(repository: memoRepository)
-            )
+            ),
+            requestWeatherLocationAccess: RequestWeatherLocationAccessUseCase(repository: weatherRepository),
+            fetchDailyWeather: FetchDailyWeatherUseCase(repository: weatherRepository),
+            fetchWeatherAttribution: FetchWeatherAttributionUseCase(repository: weatherRepository)
         )
     }
 }

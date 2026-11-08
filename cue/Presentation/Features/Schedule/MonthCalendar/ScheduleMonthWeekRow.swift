@@ -47,6 +47,7 @@ struct ScheduleMonthWeekRow: View {
             day: day,
             weekday: page.grid.weekdayIndex(column: column),
             isToday: day.map { page.grid.isToday(day: $0) } ?? false,
+            weatherSymbol: day.flatMap { page.weatherSymbol(day: $0) },
             items: day.map { page.items(day: $0) } ?? [],
             onSelect: onSelect
         )

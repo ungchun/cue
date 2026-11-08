@@ -14,11 +14,14 @@ struct SettingsViewModelTests {
     /// `.preview`에서 AppSettings 관련 use case 둘만 갈아끼운다.
     private func makeViewModel(
         repository: InMemoryAppSettingsRepository,
-        analytics: SpyAnalyticsService? = nil
+        analytics: SpyAnalyticsService? = nil,
+        weather: InMemoryWeatherRepository = InMemoryWeatherRepository()
     ) -> SettingsViewModel {
         var dependencies = Dependencies.preview
         dependencies.fetchAppSettings = FetchAppSettingsUseCase(repository: repository)
         dependencies.saveAppSettings = SaveAppSettingsUseCase(repository: repository)
+        dependencies.requestWeatherLocationAccess = RequestWeatherLocationAccessUseCase(repository: weather)
+        dependencies.fetchWeatherAttribution = FetchWeatherAttributionUseCase(repository: weather)
         if let analytics { dependencies.analytics = analytics }
         return SettingsViewModel(dependencies: dependencies)
     }
@@ -130,6 +133,68 @@ struct SettingsViewModelTests {
         let reloaded = makeViewModel(repository: repository)
         await reloaded.onAppear()
         #expect(reloaded.settings.monthShowsCompletedReminders == false)
+    }
+
+    /// 날씨 표시를 켜면 위치 권한을 묻고, 허용되면 저장·기록한다.
+    @Test func setMonthShowsWeatherGrantedPersistsAndLogs() async {
+        let repository = InMemoryAppSettingsRepository()
+        let analytics = SpyAnalyticsService()
+        let weather = InMemoryWeatherRepository(grantsAccess: true)
+        let viewModel = makeViewModel(repository: repository, analytics: analytics, weather: weather)
+        await viewModel.onAppear()
+
+        await viewModel.setMonthShowsWeather(true)
+
+        #expect(await weather.accessRequestCount == 1)
+        #expect(viewModel.settings.monthShowsWeather == true)
+        #expect(await repository.fetch().monthShowsWeather == true)
+        #expect(viewModel.isLocationDeniedAlertPresented == false)
+        #expect(analytics.events == [.monthWeatherToggled(on: true)])
+    }
+
+    /// 위치 권한이 거부되면 켜지 않고(저장·기록 없음) 설정 앱 안내 알럿을 띄운다.
+    @Test func setMonthShowsWeatherDeniedKeepsOffAndAlerts() async {
+        let repository = InMemoryAppSettingsRepository()
+        let analytics = SpyAnalyticsService()
+        let weather = InMemoryWeatherRepository(grantsAccess: false)
+        let viewModel = makeViewModel(repository: repository, analytics: analytics, weather: weather)
+        await viewModel.onAppear()
+
+        await viewModel.setMonthShowsWeather(true)
+
+        #expect(viewModel.settings.monthShowsWeather == false)
+        #expect(await repository.fetch().monthShowsWeather == false)
+        #expect(viewModel.isLocationDeniedAlertPresented == true)
+        #expect(analytics.events.isEmpty)
+    }
+
+    /// 끄는 건 권한을 묻지 않는다.
+    @Test func setMonthShowsWeatherOffSkipsAccessRequest() async {
+        var stored = AppSettings.default
+        stored.monthShowsWeather = true
+        let repository = InMemoryAppSettingsRepository(storage: stored)
+        let weather = InMemoryWeatherRepository(grantsAccess: false)
+        let viewModel = makeViewModel(repository: repository, weather: weather)
+        await viewModel.onAppear()
+
+        await viewModel.setMonthShowsWeather(false)
+
+        #expect(await weather.accessRequestCount == 0)
+        #expect(await repository.fetch().monthShowsWeather == false)
+        #expect(viewModel.isLocationDeniedAlertPresented == false)
+    }
+
+    /// 진입 시 날씨 출처 표기를 받아 두고, 실패하면 nil로 둔다(표기 행을 그리지 않음).
+    @Test func onAppearLoadsWeatherAttribution() async {
+        let loaded = makeViewModel(repository: InMemoryAppSettingsRepository())
+        await loaded.onAppear()
+        #expect(loaded.weatherAttribution != nil)
+
+        let failing = makeViewModel(
+            repository: InMemoryAppSettingsRepository(), weather: InMemoryWeatherRepository(fails: true)
+        )
+        await failing.onAppear()
+        #expect(failing.weatherAttribution == nil)
     }
 
     /// 라이브 표시 순서 변경이 영속화되고, 저장 전에 정제(집중 제외·빠진 종류 보충)를 거친다.

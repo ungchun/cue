@@ -13,6 +13,9 @@ struct SettingsView: View {
     @Environment(\.premiumStore) private var premiumStore
     @Environment(\.dependencies) private var dependencies
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
+    /// 날씨 출처 마크 높이 — 옆 링크(caption2)와 같은 줄 높이를 따른다.
+    @ScaledMetric(relativeTo: .caption2) private var weatherMarkHeight: CGFloat = 12
 
     /// 유료(Premium) 전용 설정 게이트 — 실제 구매 엔타이틀먼트(`PremiumStore`)를 반응형으로 따른다.
     private var isPremiumUser: Bool { premiumStore.isPremium }
@@ -181,14 +184,22 @@ struct SettingsView: View {
                         LabeledContent("Calendars", value: calendarsSummary)
                     }
                 }
-                Toggle("Show Completed Tasks in Month View", isOn: monthShowsCompletedRemindersBinding)
-                    .tint(.green)
+                premiumGated(feature: "month_hide_completed") {
+                    Toggle("Show Completed Tasks in Month View", isOn: monthShowsCompletedRemindersBinding)
+                        .tint(.green)
+                }
+                premiumGated(feature: "month_weather") {
+                    Toggle("Show Weather in Calendar", isOn: monthShowsWeatherBinding)
+                        .tint(.green)
+                }
                 premiumGated(feature: "show_calendar_schedule") {
                     Toggle("Show Calendar in Live", isOn: scheduleShowsCalendarBinding)
                         .tint(.green)
                 }
             } header: {
                 sectionHeader("Schedule")
+            } footer: {
+                weatherAttributionFooter
             }
 
             Section {
@@ -285,6 +296,33 @@ struct SettingsView: View {
         // Premium 페이월 — 가치 → 플랜 → CTA. 결제 연결은 추후.
         .sheet(isPresented: $showsPremiumSheet) {
             PremiumPaywallView()
+        }
+        // 날씨 표시를 켜려다 위치 권한이 거부됨 — 다시 묻지 못하니 설정 앱으로 보낸다.
+        .alert("Location Access Needed", isPresented: locationDeniedAlertBinding) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Allow location access in Settings to show the weather in your calendar.")
+        }
+    }
+
+    /// WeatherKit 약관의 출처 표기 — Apple 날씨 마크 + 법적 고지 링크. 받지 못했으면 그리지 않는다.
+    @ViewBuilder
+    private var weatherAttributionFooter: some View {
+        if let attribution = viewModel.weatherAttribution {
+            HStack(spacing: Spacing.xs) {
+                AsyncImage(url: colorScheme == .dark ? attribution.markDarkURL : attribution.markLightURL) { image in
+                    image.resizable().scaledToFit()
+                } placeholder: {
+                    EmptyView()
+                }
+                .frame(height: weatherMarkHeight)
+                .accessibilityLabel(Text(verbatim: "Apple Weather"))
+                Link("Weather Data Sources", destination: attribution.legalPageURL)
+                    .font(.caption2)
+            }
         }
     }
 
@@ -469,7 +507,34 @@ struct SettingsView: View {
     private var monthShowsCompletedRemindersBinding: Binding<Bool> {
         Binding(
             get: { viewModel.settings.monthShowsCompletedReminders },
-            set: { newValue in Task { await viewModel.setMonthShowsCompletedReminders(newValue) } }
+            set: { newValue in
+                // 숨기기(끄기)가 Premium 기능 — 보이게 되돌리는 건 누구나.
+                guard isPremiumUser || newValue else {
+                    showPremiumGate(feature: "month_hide_completed")
+                    return
+                }
+                Task { await viewModel.setMonthShowsCompletedReminders(newValue) }
+            }
+        )
+    }
+
+    private var monthShowsWeatherBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.monthShowsWeather },
+            set: { newValue in
+                guard isPremiumUser || !newValue else {
+                    showPremiumGate(feature: "month_weather")
+                    return
+                }
+                Task { await viewModel.setMonthShowsWeather(newValue) }
+            }
+        )
+    }
+
+    private var locationDeniedAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.isLocationDeniedAlertPresented },
+            set: { viewModel.isLocationDeniedAlertPresented = $0 }
         )
     }
 

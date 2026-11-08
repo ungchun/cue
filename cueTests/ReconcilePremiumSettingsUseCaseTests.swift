@@ -224,4 +224,53 @@ struct ReconcilePremiumSettingsUseCaseTests {
         let saved = await repository.fetch()
         #expect(saved.demotedLiveAlwaysOn == true)
     }
+
+    // MARK: - 월 캘린더 옵션 (완료 할일 숨김·날씨)
+
+    /// 강등 시 월 캘린더 프리미엄 옵션을 기본으로 되돌리고 기록한다 —
+    /// 완료 할일은 다시 보이게(숨기기가 유료), 날씨는 끈다.
+    @Test func demotionResetsMonthOptionsAndRecords() async {
+        var settings = AppSettings.default
+        settings.monthShowsCompletedReminders = false
+        settings.monthShowsWeather = true
+        let (useCase, repository, _) = makeUseCase(settings: settings)
+
+        let changed = await useCase(isPremium: false)
+
+        #expect(changed == true)
+        let saved = await repository.fetch()
+        #expect(saved.monthShowsCompletedReminders == true)
+        #expect(saved.monthShowsWeather == false)
+        #expect(saved.demotedMonthHidesCompletedReminders == true)
+        #expect(saved.demotedMonthShowsWeather == true)
+    }
+
+    /// 기본값(완료 할일 보임·날씨 꺼짐)인 무료 사용자는 아무것도 저장하지 않는다.
+    @Test func nonPremiumWithDefaultMonthOptionsIsNoOp() async {
+        let (useCase, repository, _) = makeUseCase(settings: .default)
+
+        let changed = await useCase(isPremium: false)
+
+        #expect(changed == false)
+        let saved = await repository.fetch()
+        #expect(saved.demotedMonthHidesCompletedReminders == false)
+        #expect(saved.demotedMonthShowsWeather == false)
+    }
+
+    /// 재구독 시 접어둔 월 캘린더 옵션을 되돌리고 기록을 비운다.
+    @Test func premiumRestoresDemotedMonthOptions() async {
+        var settings = AppSettings.default
+        settings.demotedMonthHidesCompletedReminders = true
+        settings.demotedMonthShowsWeather = true
+        let (useCase, repository, _) = makeUseCase(settings: settings)
+
+        let changed = await useCase(isPremium: true)
+
+        #expect(changed == true)
+        let saved = await repository.fetch()
+        #expect(saved.monthShowsCompletedReminders == false)
+        #expect(saved.monthShowsWeather == true)
+        #expect(saved.demotedMonthHidesCompletedReminders == false)
+        #expect(saved.demotedMonthShowsWeather == false)
+    }
 }

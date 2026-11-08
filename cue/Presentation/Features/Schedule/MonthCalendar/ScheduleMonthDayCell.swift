@@ -5,12 +5,15 @@
 
 import SwiftUI
 
-/// 월 격자의 하루 칸 — 우상단 날짜 숫자 + 그날 항목 칩들. 표시 월 밖 칸(nil)은 비워 둔다.
+/// 월 격자의 하루 칸 — 좌상단 날씨 아이콘(예보가 있는 날) + 우상단 날짜 숫자 + 그날 항목 칩들.
+/// 표시 월 밖 칸(nil)은 비워 둔다.
 struct ScheduleMonthDayCell: View {
     let day: Int?
     /// 이 칸의 요일(1=일 … 7=토) — 날짜 숫자 색을 가른다.
     let weekday: Int
     let isToday: Bool
+    /// 그날 날씨 SF Symbol 이름 — nil이면 그리지 않는다.
+    let weatherSymbol: String?
     /// 이미 칸 안 순서(종일 → 시간 → 미완료 → 완료)로 정렬된 항목.
     let items: [WidgetCalendarItem]
     /// 칩 탭 — 상세 시트를 연다.
@@ -22,8 +25,13 @@ struct ScheduleMonthDayCell: View {
     var body: some View {
         if let day {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                dayNumber(day)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                HStack(spacing: Spacing.zero) {
+                    if let weatherSymbol {
+                        weatherIcon(weatherSymbol)
+                    }
+                    Spacer(minLength: Spacing.zero)
+                    dayNumber(day)
+                }
                 ForEach(items) { item in
                     ScheduleMonthItemChip(item: item) { onSelect(item) }
                 }
@@ -32,6 +40,16 @@ struct ScheduleMonthDayCell: View {
         } else {
             Color.clear
         }
+    }
+
+    /// 시스템 날씨 앱처럼 멀티컬러 채움 심볼 — 해는 노랑, 비는 파랑 등 색은 심볼이 정한다.
+    /// 날짜 숫자 줄 높이 안에 들어가게 caption 크기를 따른다. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
+    private func weatherIcon(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .symbolVariant(.fill)
+            .symbolRenderingMode(.multicolor)
+            .font(.caption)
+            .accessibilityHidden(true)
     }
 
     @ViewBuilder

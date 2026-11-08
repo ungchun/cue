@@ -69,6 +69,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// 일정 탭 월 캘린더에 완료한 할일을 보일지. 기본 `true`(필드가 없던 시절 동작).
     /// 인라인 기본값 — memberwise init에 기본 인자로 붙어 기존 생성 호출부가 그대로 컴파일된다.
     var monthShowsCompletedReminders: Bool = true
+    /// 일정 탭 월 캘린더 날짜 칸에 날씨 아이콘을 보일지(현재 위치 예보). 기본 `false` — 켤 때 위치 권한을 묻는다.
+    var monthShowsWeather: Bool = false
     /// 첫 실행 온보딩을 끝(완료 또는 스킵)까지 봤는지. `false`면 앱 시작 시 온보딩 표시.
     var hasCompletedOnboarding: Bool
     /// 온보딩을 **표시한 적** 있는지 — 도중(첫 큐 게시가 메모를 저장한 뒤) 앱이 종료돼도
@@ -85,6 +87,10 @@ struct AppSettings: Codable, Equatable, Sendable {
     var demotedMemoShowsCalendar: Bool = false
     var demotedScheduleShowsCalendar: Bool = false
     var demotedReminderShowsCalendar: Bool = false
+    /// 강등 정리가 다시 보이게 한 월 캘린더 완료 할일 — 원래 숨겨져 있었음의 기록.
+    var demotedMonthHidesCompletedReminders: Bool = false
+    /// 강등 정리가 끈 월 캘린더 날씨 — 원래 켜져 있었음의 기록.
+    var demotedMonthShowsWeather: Bool = false
     /// 강등 정리가 되돌린 메모 LA 커스텀 색 — 원래 값의 기록. nil이면 기록 없음.
     var demotedMemoColorHex: String?
     var demotedMemoTextColorHex: String?
@@ -169,6 +175,8 @@ extension AppSettings {
             ?? fallback.hiddenReminderListIDs
         monthShowsCompletedReminders = try container.decodeIfPresent(Bool.self, forKey: .monthShowsCompletedReminders)
             ?? fallback.monthShowsCompletedReminders
+        monthShowsWeather = try container.decodeIfPresent(Bool.self, forKey: .monthShowsWeather)
+            ?? fallback.monthShowsWeather
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)
             ?? fallback.hasCompletedOnboarding
         hasStartedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasStartedOnboarding)
@@ -181,6 +189,11 @@ extension AppSettings {
             ?? fallback.demotedScheduleShowsCalendar
         demotedReminderShowsCalendar = try container.decodeIfPresent(Bool.self, forKey: .demotedReminderShowsCalendar)
             ?? fallback.demotedReminderShowsCalendar
+        demotedMonthHidesCompletedReminders = try container.decodeIfPresent(
+            Bool.self, forKey: .demotedMonthHidesCompletedReminders
+        ) ?? fallback.demotedMonthHidesCompletedReminders
+        demotedMonthShowsWeather = try container.decodeIfPresent(Bool.self, forKey: .demotedMonthShowsWeather)
+            ?? fallback.demotedMonthShowsWeather
         demotedMemoColorHex = try container.decodeIfPresent(String.self, forKey: .demotedMemoColorHex)
         demotedMemoTextColorHex = try container.decodeIfPresent(String.self, forKey: .demotedMemoTextColorHex)
     }

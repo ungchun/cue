@@ -148,6 +148,17 @@ struct Dependencies: Sendable {
             saveMemo: SaveMemoUseCase(repository: memoRepository)
         )
     }()
+
+    // MARK: - 날씨
+
+    /// 월 캘린더 날씨 — 켤 때 위치 권한 요청, 칸 아이콘용 일별 예보, 설정의 출처 표기.
+    /// 기본값은 인메모리(예보 없음) — 실 배선은 `CompositionRoot`에서 같은 repo 인스턴스로.
+    var requestWeatherLocationAccess: RequestWeatherLocationAccessUseCase =
+        .init(repository: InMemoryWeatherRepository())
+    var fetchDailyWeather: FetchDailyWeatherUseCase =
+        .init(repository: InMemoryWeatherRepository())
+    var fetchWeatherAttribution: FetchWeatherAttributionUseCase =
+        .init(repository: InMemoryWeatherRepository())
 }
 
 extension EnvironmentValues {

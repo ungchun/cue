@@ -245,103 +245,103 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يستخدم Cue موقعك لإضافة موقعك الحالي إلى الحدث."
+            "value" : "يستخدم Cue موقعك لإضافة موقعك الحالي إلى الحدث وعرض الطقس في التقويم."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue verwendet deinen Standort, um deinen aktuellen Standort zu einem Ereignis hinzuzufügen."
+            "value" : "Cue verwendet deinen Standort, um deinen aktuellen Standort zu einem Ereignis hinzuzufügen und das Wetter im Kalender anzuzeigen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue uses your location to add your current location to an event."
+            "value" : "Cue uses your location to add your current location to an event and to show the weather in your calendar."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue usa tu ubicación para añadir tu ubicación actual a un evento."
+            "value" : "Cue usa tu ubicación para añadir tu ubicación actual a un evento y mostrar el tiempo en el calendario."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue utilise votre position pour ajouter votre position actuelle à un événement."
+            "value" : "Cue utilise votre position pour ajouter votre position actuelle à un événement et afficher la météo dans l'agenda."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue आपके वर्तमान स्थान को इवेंट में जोड़ने के लिए आपके स्थान का उपयोग करता है।"
+            "value" : "Cue आपके वर्तमान स्थान को इवेंट में जोड़ने और कैलेंडर में मौसम दिखाने के लिए आपके स्थान का उपयोग करता है।"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue menggunakan lokasi Anda untuk menambahkan lokasi saat ini ke acara."
+            "value" : "Cue menggunakan lokasi Anda untuk menambahkan lokasi saat ini ke acara dan menampilkan cuaca di kalender."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue usa la tua posizione per aggiungere la posizione attuale a un evento."
+            "value" : "Cue usa la tua posizione per aggiungere la posizione attuale a un evento e mostrare il meteo nel calendario."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cueは現在地をイベントに追加するために位置情報を使用します。"
+            "value" : "Cueは現在地をイベントに追加し、カレンダーに天気を表示するために位置情報を使用します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "현재 위치를 이벤트에 추가하기 위해 위치 정보를 사용합니다."
+            "value" : "현재 위치를 이벤트에 추가하고 캘린더에 날씨를 표시하기 위해 위치 정보를 사용합니다."
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue menggunakan lokasi anda untuk menambah lokasi semasa ke acara."
+            "value" : "Cue menggunakan lokasi anda untuk menambah lokasi semasa ke acara dan menunjukkan cuaca dalam kalendar."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Cue usa sua localização para adicionar a localização atual a um evento."
+            "value" : "O Cue usa sua localização para adicionar sua localização atual a um evento e mostrar o clima no calendário."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue использует вашу геопозицию, чтобы добавить текущее местоположение в событие."
+            "value" : "Cue использует вашу геопозицию, чтобы добавлять текущее местоположение к событию и показывать погоду в календаре."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue ใช้ตำแหน่งของคุณเพื่อเพิ่มตำแหน่งปัจจุบันลงในกิจกรรม"
+            "value" : "Cue ใช้ตำแหน่งของคุณเพื่อเพิ่มตำแหน่งปัจจุบันลงในกิจกรรมและแสดงสภาพอากาศในปฏิทิน"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue dùng vị trí của bạn để thêm vị trí hiện tại vào sự kiện."
+            "value" : "Cue dùng vị trí của bạn để thêm vị trí hiện tại vào sự kiện và hiện thời tiết trong lịch."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue 使用你的位置以将当前位置添加到日程。"
+            "value" : "Cue 使用你的位置将当前位置添加到日程，并在日历中显示天气。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cue 使用你的位置以將目前位置加入行程。"
+            "value" : "Cue 使用你的位置將目前位置加入行程，並在行事曆中顯示天氣。"
           }
         }
       }

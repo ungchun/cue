@@ -22,6 +22,8 @@ final class ScheduleMonthPageModel {
 
     /// 날짜 숫자 → 그 날 항목.
     private var itemsByDay: [Int: [WidgetCalendarItem]] = [:]
+    /// 날짜 숫자 → 그 날 날씨 SF Symbol 이름. 예보가 있는 날(오늘부터 약 10일)만.
+    private var weatherByDay: [Int: String] = [:]
 
     init(monthStart: Date, now: Date, calendar: Calendar = .current) {
         self.monthStart = monthStart
@@ -33,12 +35,18 @@ final class ScheduleMonthPageModel {
         itemsByDay[day] ?? []
     }
 
+    /// 그 날 날씨 아이콘 이름(예보가 없으면 nil).
+    func weatherSymbol(day: Int) -> String? {
+        weatherByDay[day]
+    }
+
     // MARK: - VM 전용 갱신
 
-    /// 항목을 채우고 적재 완료로 표시한다. 같은 내용이면 건드리지 않는다 — 캐시를 그린 뒤
+    /// 항목·날씨를 채우고 적재 완료로 표시한다. 같은 내용이면 건드리지 않는다 — 캐시를 그린 뒤
     /// 조회 결과가 같을 때 페이지가 한 번 더 그려지지 않게.
-    func apply(itemsByDay newItems: [Int: [WidgetCalendarItem]]) {
+    func apply(itemsByDay newItems: [Int: [WidgetCalendarItem]], weatherByDay newWeather: [Int: String] = [:]) {
         if itemsByDay != newItems { itemsByDay = newItems }
+        if weatherByDay != newWeather { weatherByDay = newWeather }
         if !isLoaded { isLoaded = true }
     }
 
@@ -46,6 +54,7 @@ final class ScheduleMonthPageModel {
     /// 다시 윈도우에 들어오면 VM이 같은 객체를 채운다.
     func reset() {
         if !itemsByDay.isEmpty { itemsByDay = [:] }
+        if !weatherByDay.isEmpty { weatherByDay = [:] }
         if isLoaded { isLoaded = false }
     }
 

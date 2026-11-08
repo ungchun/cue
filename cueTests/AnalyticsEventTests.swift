@@ -92,6 +92,7 @@ struct AnalyticsEventTests {
         #expect(AnalyticsEvent.tasksDefaultViewChanged(view: "today").name == "tasks_default_view_changed")
         #expect(AnalyticsEvent.focusEndSoundToggled(on: false).name == "focus_end_sound_toggled")
         #expect(AnalyticsEvent.monthCompletedTasksToggled(on: false).name == "month_completed_tasks_toggled")
+        #expect(AnalyticsEvent.monthWeatherToggled(on: true).name == "month_weather_toggled")
         #expect(AnalyticsEvent.calendarVisibilityToggled(kind: "calendar", on: true).name
                 == "calendar_visibility_toggled")
         #expect(AnalyticsEvent.calendarShowAllTapped(kind: "reminder_list").name == "calendar_show_all")
@@ -156,6 +157,7 @@ struct AnalyticsEventTests {
                 == ["view": "upcoming"])
         #expect(AnalyticsEvent.focusEndSoundToggled(on: true).parameters == ["on": "true"])
         #expect(AnalyticsEvent.monthCompletedTasksToggled(on: false).parameters == ["on": "false"])
+        #expect(AnalyticsEvent.monthWeatherToggled(on: true).parameters == ["on": "true"])
         #expect(AnalyticsEvent.calendarVisibilityToggled(kind: "calendar", on: false).parameters
                 == ["kind": "calendar", "on": "false"])
         #expect(AnalyticsEvent.calendarShowAllTapped(kind: "calendar").parameters

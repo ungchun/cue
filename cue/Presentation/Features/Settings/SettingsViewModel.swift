@@ -22,6 +22,8 @@ final class SettingsViewModel {
     private let refreshLiveActivityLayout: RefreshLiveActivityLayoutUseCase
     private let fetchReminderLists: FetchReminderListsUseCase
     private let fetchCalendars: FetchCalendarsUseCase
+    private let requestWeatherLocationAccess: RequestWeatherLocationAccessUseCase
+    private let fetchWeatherAttribution: FetchWeatherAttributionUseCase
     private let analytics: any AnalyticsService
 
     /// 현재 설정. View는 읽기만 하고, 변경은 아래 `set...` 메서드로.
@@ -39,6 +41,10 @@ final class SettingsViewModel {
     private(set) var reminderLists: [ReminderList] = []
     /// "볼 캘린더 선택" 체크리스트용 캘린더 목록 — 권한 없으면 빈 배열.
     private(set) var eventCalendars: [EventCalendar] = []
+    /// 날씨 출처 표기(마크·법적 고지 링크) — 못 받으면 nil(표기 행을 그리지 않는다).
+    private(set) var weatherAttribution: WeatherDataAttribution?
+    /// 날씨 표시를 켜려다 위치 권한이 거부됨 — 설정 앱으로 안내하는 알럿.
+    var isLocationDeniedAlertPresented = false
 
     init(dependencies: Dependencies) {
         self.fetchAppSettings = dependencies.fetchAppSettings
@@ -48,6 +54,8 @@ final class SettingsViewModel {
         self.refreshLiveActivityLayout = dependencies.refreshLiveActivityLayout
         self.fetchReminderLists = dependencies.fetchReminderLists
         self.fetchCalendars = dependencies.fetchCalendars
+        self.requestWeatherLocationAccess = dependencies.requestWeatherLocationAccess
+        self.fetchWeatherAttribution = dependencies.fetchWeatherAttribution
         self.analytics = dependencies.analytics
     }
 
@@ -60,6 +68,10 @@ final class SettingsViewModel {
         memoText = memo.text
         reminderLists = (try? await fetchReminderLists()) ?? []
         eventCalendars = (try? await fetchCalendars()) ?? []
+        // 출처 표기는 바뀌지 않으니 한 번만 받는다.
+        if weatherAttribution == nil {
+            weatherAttribution = try? await fetchWeatherAttribution()
+        }
     }
 
     // MARK: - 변경 (메모리 즉시 반영 + 영속 저장)
@@ -185,6 +197,16 @@ final class SettingsViewModel {
     func setMonthShowsCompletedReminders(_ value: Bool) async {
         analytics.log(.monthCompletedTasksToggled(on: value))
         await update { $0.monthShowsCompletedReminders = value }
+    }
+
+    /// 일정 탭 월 캘린더에 날씨를 보일지. 켤 때 위치 권한을 묻고, 거부되면 켜지 않고 알럿으로 안내한다.
+    func setMonthShowsWeather(_ value: Bool) async {
+        if value, !(await requestWeatherLocationAccess()) {
+            isLocationDeniedAlertPresented = true
+            return
+        }
+        analytics.log(.monthWeatherToggled(on: value))
+        await update { $0.monthShowsWeather = value }
     }
 
     /// 할일 탭에서 이 리스트를 보일지(true) 숨길지(false) 설정한다. 캘린더 숨김과 동일 방식.

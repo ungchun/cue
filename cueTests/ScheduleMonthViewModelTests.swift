@@ -48,7 +48,8 @@ struct ScheduleMonthViewModelTests {
         remindersRepository: InMemoryRemindersRepository? = nil,
         appSettings: AppSettings = .default,
         snapshotCache: RecordingSnapshotCache = RecordingSnapshotCache(),
-        clock: MutableClock? = nil
+        clock: MutableClock? = nil,
+        weather: InMemoryWeatherRepository = InMemoryWeatherRepository()
     ) -> (ScheduleMonthViewModel, RecordingEventsRepository, RecordingSnapshotCache) {
         let eventsRepository = RecordingEventsRepository(
             InMemoryEventsRepository(access: eventsAccess, events: events)
@@ -67,6 +68,7 @@ struct ScheduleMonthViewModelTests {
         dependencies.loadMonthEventsSnapshot = LoadMonthEventsSnapshotUseCase(repository: snapshotCache)
         dependencies.saveMonthEventsSnapshot = SaveMonthEventsSnapshotUseCase(repository: snapshotCache)
         dependencies.loadRemindersSnapshot = LoadRemindersSnapshotUseCase(repository: snapshotCache)
+        dependencies.fetchDailyWeather = FetchDailyWeatherUseCase(repository: weather)
         let fixedNow = now
         let nowProvider: () -> Date
         if let clock {
@@ -571,6 +573,86 @@ struct ScheduleMonthViewModelTests {
         await viewModel.onAppear()
 
         #expect(viewModel.page(for: 0).items(day: 20).map(\.title) == ["남은 일"])
+    }
+
+    // MARK: - 날씨
+
+    /// 오늘(15일)부터 이틀치 예보 — 16일은 다음 날.
+    private func twoDayForecast() -> [DailyWeather] {
+        [
+            DailyWeather(date: date(11, 15), symbolName: "cloud.rain"),
+            DailyWeather(date: date(11, 16), symbolName: "sun.max"),
+        ]
+    }
+
+    private func weatherSettings(on: Bool) -> AppSettings {
+        var settings = AppSettings.default
+        settings.monthShowsWeather = on
+        return settings
+    }
+
+    /// 설정이 켜져 있으면 예보가 있는 날 칸에 날씨 아이콘 이름이 붙고, 예보 없는 날은 nil.
+    @Test func weatherShownOnForecastDaysWhenSettingOn() async {
+        let weather = InMemoryWeatherRepository(forecast: twoDayForecast())
+        let (viewModel, _, _) = makeViewModel(appSettings: weatherSettings(on: true), weather: weather)
+        await viewModel.onAppear()
+        await viewModel.waitForWeather()
+
+        let page = viewModel.page(for: 0)
+        #expect(page.weatherSymbol(day: 15) == "cloud.rain")
+        #expect(page.weatherSymbol(day: 16) == "sun.max")
+        #expect(page.weatherSymbol(day: 17) == nil)
+        // 다른 달 페이지엔 이번 달 날씨가 새지 않는다.
+        #expect(viewModel.page(for: 1).weatherSymbol(day: 15) == nil)
+    }
+
+    /// 설정이 꺼져 있으면 예보를 조회하지도, 그리지도 않는다.
+    @Test func weatherNotFetchedWhenSettingOff() async {
+        let weather = InMemoryWeatherRepository(forecast: twoDayForecast())
+        let (viewModel, _, _) = makeViewModel(weather: weather)
+        await viewModel.onAppear()
+        await viewModel.waitForWeather()
+
+        #expect(await weather.forecastFetchCount == 0)
+        #expect(viewModel.page(for: 0).weatherSymbol(day: 15) == nil)
+    }
+
+    /// 조회가 실패하면 아이콘 없이 그린다 — 일정·할일 표시는 영향 없다.
+    @Test func weatherFailureLeavesDaysWithoutIcons() async {
+        let weather = InMemoryWeatherRepository(forecast: twoDayForecast(), fails: true)
+        let (viewModel, _, _) = makeViewModel(
+            events: [event(id: "e1", title: "회의", day: date(11, 15))],
+            appSettings: weatherSettings(on: true), weather: weather
+        )
+        await viewModel.onAppear()
+        await viewModel.waitForWeather()
+
+        let page = viewModel.page(for: 0)
+        #expect(page.weatherSymbol(day: 15) == nil)
+        #expect(page.items(day: 15).map(\.title) == ["회의"])
+    }
+
+    /// 켜져 있던 설정을 끄고 다시 나타나면(설정 탭 → 일정 탭) 아이콘이 사라진다.
+    @Test func weatherClearedWhenSettingTurnedOff() async {
+        let settings = InMemoryAppSettingsRepository(storage: weatherSettings(on: true))
+        let weather = InMemoryWeatherRepository(forecast: twoDayForecast())
+        var dependencies = Dependencies.preview
+        dependencies.currentEventsAccess = CurrentEventsAccessUseCase(repository: InMemoryEventsRepository())
+        dependencies.fetchEvents = FetchEventsUseCase(repository: InMemoryEventsRepository())
+        dependencies.fetchAppSettings = FetchAppSettingsUseCase(repository: settings)
+        dependencies.fetchDailyWeather = FetchDailyWeatherUseCase(repository: weather)
+        let fixedNow = now
+        let viewModel = ScheduleMonthViewModel(dependencies: dependencies, now: { fixedNow }, debounce: .zero)
+        await viewModel.onAppear()
+        await viewModel.waitForWeather()
+        #expect(viewModel.page(for: 0).weatherSymbol(day: 15) == "cloud.rain")
+
+        var off = await settings.fetch()
+        off.monthShowsWeather = false
+        await settings.save(off)
+        await viewModel.onAppear()
+
+        #expect(viewModel.page(for: 0).weatherSymbol(day: 15) == nil)
     }
 
     // MARK: - 외부 변경
