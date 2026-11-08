@@ -311,13 +311,13 @@ struct SettingsView: View {
         }
     }
 
-    /// WeatherKit 약관의 출처 표기 — " Weather · 데이터 출처" 한 줄 링크. 받지 못했으면 그리지 않는다.
-    /// 마크 이미지 대신 시스템이 주는 서비스 이름 텍스트를 써서 푸터의 다른 설명과 같은 글자·색으로 녹인다.
+    /// WeatherKit 약관의 출처 표기 — " Weather" 한 단어를 법적 고지 링크로. 받지 못했으면 그리지 않는다.
+    /// 상표 표기와 링크를 한 글자 덩어리에 겹쳐 가장 짧게 — 상표라 번역하지 않는다(verbatim).
     @ViewBuilder
     private var weatherAttributionFooter: some View {
         if let attribution = viewModel.weatherAttribution {
             Link(destination: attribution.legalPageURL) {
-                Text("\(attribution.serviceName) · Data Sources")
+                Text(verbatim: attribution.serviceName)
             }
             .font(.footnote)
             .foregroundStyle(.secondary)
