@@ -151,6 +151,26 @@ struct ScheduleReminderEditorTests {
         #expect(editor.editingReminder?.isCompleted == false)
     }
 
+    /// 월 칩을 다시 읽는 동안의 탭은 받는다 — 시트는 이미 저장소 값으로 다시 그려져 탭마다 원을
+    /// 뒤집는데, 여기서 무시하면 시트만 바뀌고 저장은 안 돼 둘이 어긋난다.
+    @Test func toggleCompletionAcceptsTapWhileMonthReloads() async throws {
+        let target = reminder(id: "r1")
+        let box = EditorBox()
+        let (editor, repository, _) = makeEditor(reminders: [target]) {
+            guard let editor = box.editor, !box.tappedDuringReload else { return }
+            box.tappedDuringReload = true
+            await editor.toggleCompletion(reminderID: "r1")
+        }
+        box.editor = editor
+        await editor.present(reminderID: "r1", lookup: target)
+
+        await editor.toggleCompletion(reminderID: "r1")
+
+        let stored = try await repository.fetchReminders()
+        #expect(stored.first?.isCompleted == false)
+        #expect(editor.editingReminder?.isCompleted == false)
+    }
+
     /// 저장소에 없는 할일(그새 외부에서 지워짐)을 완료하면 실패를 알리고 시트 값은 그대로 둔다.
     @Test func toggleFailureSetsErrorMessageAndKeepsState() async {
         let stale = reminder(id: "stale")
@@ -350,6 +370,13 @@ struct ScheduleReminderEditorTests {
 
         #expect(editor.defaultListID == nil)
     }
+}
+
+/// 다시 읽기 클로저에서 편집기를 다시 부르기 위한 상자 — 편집기는 클로저를 받은 뒤에 생긴다.
+@MainActor
+private final class EditorBox {
+    weak var editor: ScheduleReminderEditor?
+    var tappedDuringReload = false
 }
 
 /// 다시 읽기 요청 횟수 — 클로저가 값을 바꾸므로 참조 타입으로 둔다.

@@ -83,7 +83,6 @@ final class ScheduleReminderEditor {
     func toggleCompletion(reminderID: String) async {
         guard let current = editingReminder, current.id == reminderID,
               pendingCompletionIDs.insert(reminderID).inserted else { return }
-        defer { pendingCompletionIDs.remove(reminderID) }
         do {
             try await toggleReminderCompletion(current)
             if !current.isCompleted {
@@ -92,6 +91,7 @@ final class ScheduleReminderEditor {
                 analytics.log(.reminderUncompleted)
             }
         } catch {
+            pendingCompletionIDs.remove(reminderID)
             errorMessage = error.localizedDescription
             return
         }
@@ -105,6 +105,9 @@ final class ScheduleReminderEditor {
         } catch {
             replaceIfPresented(toggled)
         }
+        // 시트가 저장소 값으로 다시 그려졌으니 여기서 다음 탭을 받는다 — 월 칩 재조회까지 막으면
+        // 그 사이 탭은 시트 원만 뒤집고 저장은 무시돼 시트가 실제 완료 상태와 어긋난다.
+        pendingCompletionIDs.remove(reminderID)
         await afterWrite()
     }
 
