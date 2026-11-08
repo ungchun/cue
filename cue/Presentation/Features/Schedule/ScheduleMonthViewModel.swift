@@ -33,6 +33,9 @@ final class ScheduleMonthViewModel {
     private let saveMonthEventsSnapshot: SaveMonthEventsSnapshotUseCase
     private let loadRemindersSnapshot: LoadRemindersSnapshotUseCase
     private let fetchDailyWeather: FetchDailyWeatherUseCase
+    /// 음력 표시를 쓸 수 있는 지역(한국)인지 — 설정이 켜져 있어도 이게 false면 그리지 않는다.
+    private let isLunarDateAvailable: Bool
+    private let lunarDayLabeler = LunarDayLabeler()
     /// 현재 시각 공급자 — 앵커 달과 격자의 "오늘" 기준. 테스트에서 주입.
     private let now: () -> Date
     /// 오프셋 0의 달(1일 자정) — init에서 한 번 고정한다.
@@ -89,6 +92,11 @@ final class ScheduleMonthViewModel {
     @ObservationIgnored private var showsWeather = false
     /// 날(자정) → 날씨 SF Symbol 이름. 조회 실패면 이전 값을 그대로 둔다.
     @ObservationIgnored private var weatherSymbols: [Date: String] = [:]
+    /// 설정·지역 — 날짜 칸에 음력 표기를 그릴지.
+    @ObservationIgnored private var showsLunarDate = false
+    /// 달 시작일 → 그 달 음력 표기. 음력은 바뀌지 않으므로 스와이프로 되돌아온 달은 다시 계산하지 않는다.
+    /// 일정 캐시와 같이 윈도우 밖 달은 축출한다.
+    @ObservationIgnored private var lunarLabelsByMonth: [Date: [Int: String]] = [:]
     @ObservationIgnored private var reminderListColorHexes: [String: String] = [:]
     /// 권한·설정·할일 컨텍스트를 한 번이라도 읽었는지.
     @ObservationIgnored private var hasContext = false
@@ -128,6 +136,7 @@ final class ScheduleMonthViewModel {
         self.saveMonthEventsSnapshot = dependencies.saveMonthEventsSnapshot
         self.loadRemindersSnapshot = dependencies.loadRemindersSnapshot
         self.fetchDailyWeather = dependencies.fetchDailyWeather
+        self.isLunarDateAvailable = dependencies.isLunarDateAvailable
         self.now = now
         self.anchorMonthStart = Self.monthStart(containing: now())
         self.debounce = debounce
@@ -319,6 +328,7 @@ final class ScheduleMonthViewModel {
             pages[start] = nil
         }
         eventsByMonth = eventsByMonth.filter { window.contains($0.key) }
+        lunarLabelsByMonth = lunarLabelsByMonth.filter { window.contains($0.key) }
         fetchedMonths.formIntersection(window)
         weakPages = weakPages.filter { $0.value() != nil }
     }
@@ -348,6 +358,8 @@ final class ScheduleMonthViewModel {
         hiddenReminderListIDs = settings.hiddenReminderListIDs
         showsCompletedReminders = settings.monthShowsCompletedReminders
         showsWeather = settings.monthShowsWeather
+        showsLunarDate = settings.monthShowsLunarDate && isLunarDateAvailable
+        if !showsLunarDate { lunarLabelsByMonth.removeAll() }
         // 할일 권한은 묻지 않는다 — 없으면 일정만 보여 준다(월 화면이 프롬프트를 띄우면 맥락이 어긋난다).
         let remindersGranted = await currentRemindersAccess() == .granted
         if eventsAccess != previousAccess {
@@ -469,10 +481,22 @@ final class ScheduleMonthViewModel {
         for (date, symbol) in weatherSymbols where date >= start && date < end {
             weatherByDay[calendar.component(.day, from: date)] = symbol
         }
-        pageModel(for: start, retain: isInWindow(start)).apply(itemsByDay: byDay, weatherByDay: weatherByDay)
+        pageModel(for: start, retain: isInWindow(start)).apply(
+            itemsByDay: byDay,
+            weatherByDay: weatherByDay,
+            lunarByDay: showsLunarDate ? lunarLabels(monthStart: start, calendar: calendar) : [:]
+        )
     }
 
-    /// 적재된 페이지를 받아 둔 데이터로 다시 만든다 — 설정·할일·날씨만 바뀌었을 때.
+    /// 그 달 음력 표기 — 처음 한 번만 계산한다. 윈도우 밖 달은 담지 않는다(축출과 맞춤).
+    private func lunarLabels(monthStart start: Date, calendar: Calendar) -> [Int: String] {
+        if let cached = lunarLabelsByMonth[start] { return cached }
+        let labels = lunarDayLabeler.labels(monthStart: start, calendar: calendar)
+        if isInWindow(start) { lunarLabelsByMonth[start] = labels }
+        return labels
+    }
+
+    /// 적재된 페이지를 받아 둔 데이터로 다시 만든다 — 설정·할일·날씨·음력만 바뀌었을 때.
     private func rebuildLoadedPages() {
         for (start, page) in pages where page.isLoaded {
             rebuild(monthStart: start)

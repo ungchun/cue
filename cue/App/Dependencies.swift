@@ -159,6 +159,12 @@ struct Dependencies: Sendable {
         .init(repository: InMemoryWeatherRepository())
     var fetchWeatherAttribution: FetchWeatherAttributionUseCase =
         .init(repository: InMemoryWeatherRepository())
+
+    // MARK: - 음력
+
+    /// 월 캘린더 음력 표시를 노출할지 — 한국 지역에서만. 기본값은 `false`(테스트가 기기 지역에 흔들리지 않게).
+    /// 실 값은 `CompositionRoot`에서 현재 지역으로 정한다.
+    var isLunarDateAvailable = false
 }
 
 extension EnvironmentValues {

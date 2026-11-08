@@ -3,6 +3,7 @@
 //  cue / App
 //
 
+import Foundation
 import SwiftData
 
 /// 조립 루트(Composition Root) — 구체 구현을 생성해 의존성을 연결하는 **유일한** 장소.
@@ -109,7 +110,8 @@ struct CompositionRoot {
             ),
             requestWeatherLocationAccess: RequestWeatherLocationAccessUseCase(repository: weatherRepository),
             fetchDailyWeather: FetchDailyWeatherUseCase(repository: weatherRepository),
-            fetchWeatherAttribution: FetchWeatherAttributionUseCase(repository: weatherRepository)
+            fetchWeatherAttribution: FetchWeatherAttributionUseCase(repository: weatherRepository),
+            isLunarDateAvailable: Locale.current.region == .southKorea
         )
     }
 }

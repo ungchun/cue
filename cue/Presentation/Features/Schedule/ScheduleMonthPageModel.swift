@@ -24,6 +24,8 @@ final class ScheduleMonthPageModel {
     private var itemsByDay: [Int: [WidgetCalendarItem]] = [:]
     /// 날짜 숫자 → 그 날 날씨 SF Symbol 이름. 예보가 있는 날(오늘부터 약 10일)만.
     private var weatherByDay: [Int: String] = [:]
+    /// 날짜 숫자 → 음력 표기("10.14"). 음력 표시 설정이 켜져 있고 한국 지역일 때만 채워진다.
+    private var lunarByDay: [Int: String] = [:]
 
     init(monthStart: Date, now: Date, calendar: Calendar = .current) {
         self.monthStart = monthStart
@@ -40,13 +42,23 @@ final class ScheduleMonthPageModel {
         weatherByDay[day]
     }
 
+    /// 그 날 음력 표기(표시 안 하면 nil).
+    func lunarLabel(day: Int) -> String? {
+        lunarByDay[day]
+    }
+
     // MARK: - VM 전용 갱신
 
-    /// 항목·날씨를 채우고 적재 완료로 표시한다. 같은 내용이면 건드리지 않는다 — 캐시를 그린 뒤
+    /// 항목·날씨·음력을 채우고 적재 완료로 표시한다. 같은 내용이면 건드리지 않는다 — 캐시를 그린 뒤
     /// 조회 결과가 같을 때 페이지가 한 번 더 그려지지 않게.
-    func apply(itemsByDay newItems: [Int: [WidgetCalendarItem]], weatherByDay newWeather: [Int: String] = [:]) {
+    func apply(
+        itemsByDay newItems: [Int: [WidgetCalendarItem]],
+        weatherByDay newWeather: [Int: String] = [:],
+        lunarByDay newLunar: [Int: String] = [:]
+    ) {
         if itemsByDay != newItems { itemsByDay = newItems }
         if weatherByDay != newWeather { weatherByDay = newWeather }
+        if lunarByDay != newLunar { lunarByDay = newLunar }
         if !isLoaded { isLoaded = true }
     }
 
@@ -55,6 +67,7 @@ final class ScheduleMonthPageModel {
     func reset() {
         if !itemsByDay.isEmpty { itemsByDay = [:] }
         if !weatherByDay.isEmpty { weatherByDay = [:] }
+        if !lunarByDay.isEmpty { lunarByDay = [:] }
         if isLoaded { isLoaded = false }
     }
 

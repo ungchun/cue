@@ -49,7 +49,8 @@ struct ScheduleMonthViewModelTests {
         appSettings: AppSettings = .default,
         snapshotCache: RecordingSnapshotCache = RecordingSnapshotCache(),
         clock: MutableClock? = nil,
-        weather: InMemoryWeatherRepository = InMemoryWeatherRepository()
+        weather: InMemoryWeatherRepository = InMemoryWeatherRepository(),
+        isLunarDateAvailable: Bool = false
     ) -> (ScheduleMonthViewModel, RecordingEventsRepository, RecordingSnapshotCache) {
         let eventsRepository = RecordingEventsRepository(
             InMemoryEventsRepository(access: eventsAccess, events: events)
@@ -69,6 +70,7 @@ struct ScheduleMonthViewModelTests {
         dependencies.saveMonthEventsSnapshot = SaveMonthEventsSnapshotUseCase(repository: snapshotCache)
         dependencies.loadRemindersSnapshot = LoadRemindersSnapshotUseCase(repository: snapshotCache)
         dependencies.fetchDailyWeather = FetchDailyWeatherUseCase(repository: weather)
+        dependencies.isLunarDateAvailable = isLunarDateAvailable
         let fixedNow = now
         let nowProvider: () -> Date
         if let clock {
@@ -653,6 +655,62 @@ struct ScheduleMonthViewModelTests {
         await viewModel.onAppear()
 
         #expect(viewModel.page(for: 0).weatherSymbol(day: 15) == nil)
+    }
+
+    // MARK: - 음력
+
+    private func lunarSettings(on: Bool) -> AppSettings {
+        var settings = AppSettings.default
+        settings.monthShowsLunarDate = on
+        return settings
+    }
+
+    /// 설정이 켜져 있고 한국 지역이면 칸마다 그 날의 음력 표기가 붙는다(달마다 제 날짜로).
+    @Test func lunarShownWhenSettingOnAndAvailable() async {
+        let (viewModel, _, _) = makeViewModel(appSettings: lunarSettings(on: true), isLunarDateAvailable: true)
+        await viewModel.onAppear()
+
+        let page = viewModel.page(for: 0)
+        #expect(page.lunarLabel(day: 22) == "10.14")
+        #expect(page.lunarLabel(day: 9) == "10.1")
+        #expect(viewModel.page(for: 1).lunarLabel(day: 22) == "11.14")
+    }
+
+    /// 설정이 켜져 있어도 한국 지역이 아니면 그리지 않는다(설정 화면에서 토글이 숨겨진 뒤 남은 값).
+    @Test func lunarNotShownWhenUnavailableEvenIfSettingOn() async {
+        let (viewModel, _, _) = makeViewModel(appSettings: lunarSettings(on: true), isLunarDateAvailable: false)
+        await viewModel.onAppear()
+
+        #expect(viewModel.page(for: 0).lunarLabel(day: 22) == nil)
+    }
+
+    /// 한국 지역이어도 기본(설정 꺼짐)은 그리지 않는다.
+    @Test func lunarNotShownWhenSettingOff() async {
+        let (viewModel, _, _) = makeViewModel(isLunarDateAvailable: true)
+        await viewModel.onAppear()
+
+        #expect(viewModel.page(for: 0).lunarLabel(day: 22) == nil)
+    }
+
+    /// 켜져 있던 설정을 끄고 다시 나타나면(설정 탭 → 일정 탭) 음력 표기가 사라진다.
+    @Test func lunarClearedWhenSettingTurnedOff() async {
+        let settings = InMemoryAppSettingsRepository(storage: lunarSettings(on: true))
+        var dependencies = Dependencies.preview
+        dependencies.currentEventsAccess = CurrentEventsAccessUseCase(repository: InMemoryEventsRepository())
+        dependencies.fetchEvents = FetchEventsUseCase(repository: InMemoryEventsRepository())
+        dependencies.fetchAppSettings = FetchAppSettingsUseCase(repository: settings)
+        dependencies.isLunarDateAvailable = true
+        let fixedNow = now
+        let viewModel = ScheduleMonthViewModel(dependencies: dependencies, now: { fixedNow }, debounce: .zero)
+        await viewModel.onAppear()
+        #expect(viewModel.page(for: 0).lunarLabel(day: 22) == "10.14")
+
+        var off = await settings.fetch()
+        off.monthShowsLunarDate = false
+        await settings.save(off)
+        await viewModel.onAppear()
+
+        #expect(viewModel.page(for: 0).lunarLabel(day: 22) == nil)
     }
 
     // MARK: - 외부 변경

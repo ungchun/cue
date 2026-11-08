@@ -71,6 +71,8 @@ struct AppSettings: Codable, Equatable, Sendable {
     var monthShowsCompletedReminders: Bool = true
     /// 일정 탭 월 캘린더 날짜 칸에 날씨 아이콘을 보일지(현재 위치 예보). 기본 `false` — 켤 때 위치 권한을 묻는다.
     var monthShowsWeather: Bool = false
+    /// 일정 탭 월 캘린더 날짜 칸에 음력 날짜("10.14")를 보일지. 기본 `false`. 한국 지역에서만 노출·적용한다.
+    var monthShowsLunarDate: Bool = false
     /// 첫 실행 온보딩을 끝(완료 또는 스킵)까지 봤는지. `false`면 앱 시작 시 온보딩 표시.
     var hasCompletedOnboarding: Bool
     /// 온보딩을 **표시한 적** 있는지 — 도중(첫 큐 게시가 메모를 저장한 뒤) 앱이 종료돼도
@@ -177,6 +179,8 @@ extension AppSettings {
             ?? fallback.monthShowsCompletedReminders
         monthShowsWeather = try container.decodeIfPresent(Bool.self, forKey: .monthShowsWeather)
             ?? fallback.monthShowsWeather
+        monthShowsLunarDate = try container.decodeIfPresent(Bool.self, forKey: .monthShowsLunarDate)
+            ?? fallback.monthShowsLunarDate
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)
             ?? fallback.hasCompletedOnboarding
         hasStartedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasStartedOnboarding)

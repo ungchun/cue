@@ -56,6 +56,7 @@ struct AppSettingsRepositoryTests {
         #expect(settings.hiddenCalendarIDs.isEmpty)              // 숨긴 캘린더 기본 없음(전부 표시)
         #expect(settings.monthShowsCompletedReminders == true)   // 월 캘린더 완료 할일 기본 표시(기존 동작)
         #expect(settings.monthShowsWeather == false)             // 월 캘린더 날씨 기본 꺼짐(위치 권한 필요)
+        #expect(settings.monthShowsLunarDate == false)           // 월 캘린더 음력 기본 꺼짐
         #expect(settings.demotedMonthHidesCompletedReminders == false)
         #expect(settings.demotedMonthShowsWeather == false)
         #expect(settings.hasCompletedOnboarding == false)        // 온보딩 완주 기본 false(첫 실행 표시)

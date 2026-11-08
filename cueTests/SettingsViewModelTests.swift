@@ -15,7 +15,8 @@ struct SettingsViewModelTests {
     private func makeViewModel(
         repository: InMemoryAppSettingsRepository,
         analytics: SpyAnalyticsService? = nil,
-        weather: InMemoryWeatherRepository = InMemoryWeatherRepository()
+        weather: InMemoryWeatherRepository = InMemoryWeatherRepository(),
+        isLunarDateAvailable: Bool = false
     ) -> SettingsViewModel {
         var dependencies = Dependencies.preview
         dependencies.fetchAppSettings = FetchAppSettingsUseCase(repository: repository)
@@ -23,6 +24,7 @@ struct SettingsViewModelTests {
         dependencies.requestWeatherLocationAccess = RequestWeatherLocationAccessUseCase(repository: weather)
         dependencies.fetchWeatherAttribution = FetchWeatherAttributionUseCase(repository: weather)
         if let analytics { dependencies.analytics = analytics }
+        dependencies.isLunarDateAvailable = isLunarDateAvailable
         return SettingsViewModel(dependencies: dependencies)
     }
 
@@ -182,6 +184,30 @@ struct SettingsViewModelTests {
         #expect(await weather.accessRequestCount == 0)
         #expect(await repository.fetch().monthShowsWeather == false)
         #expect(viewModel.isLocationDeniedAlertPresented == false)
+    }
+
+    /// 음력 표시 토글 — 켜고 끄는 대로 저장·기록한다(권한 없음, 프리미엄 아님).
+    @Test func setMonthShowsLunarDatePersistsAndLogs() async {
+        let repository = InMemoryAppSettingsRepository()
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: repository, analytics: analytics, isLunarDateAvailable: true)
+        await viewModel.onAppear()
+
+        await viewModel.setMonthShowsLunarDate(true)
+        #expect(viewModel.settings.monthShowsLunarDate == true)
+        #expect(await repository.fetch().monthShowsLunarDate == true)
+
+        await viewModel.setMonthShowsLunarDate(false)
+        #expect(await repository.fetch().monthShowsLunarDate == false)
+        #expect(analytics.events == [.monthLunarDateToggled(on: true), .monthLunarDateToggled(on: false)])
+    }
+
+    /// 음력 토글 노출 여부는 주입된 지역 판정을 그대로 따른다.
+    @Test func lunarDateAvailabilityFollowsDependency() {
+        #expect(makeViewModel(repository: InMemoryAppSettingsRepository(), isLunarDateAvailable: true)
+            .isLunarDateAvailable == true)
+        #expect(makeViewModel(repository: InMemoryAppSettingsRepository())
+            .isLunarDateAvailable == false)
     }
 
     /// 진입 시 날씨 출처 표기를 받아 두고, 실패하면 nil로 둔다(표기 행을 그리지 않음).

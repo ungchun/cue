@@ -43,8 +43,7 @@ actor WeatherKitWeatherRepository: WeatherRepository {
     func attribution() async throws -> WeatherDataAttribution {
         let attribution = try await service.attribution
         return WeatherDataAttribution(
-            markLightURL: attribution.combinedMarkLightURL,
-            markDarkURL: attribution.combinedMarkDarkURL,
+            serviceName: attribution.serviceName,
             legalPageURL: attribution.legalPageURL
         )
     }

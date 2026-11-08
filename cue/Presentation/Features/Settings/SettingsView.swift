@@ -13,9 +13,7 @@ struct SettingsView: View {
     @Environment(\.premiumStore) private var premiumStore
     @Environment(\.dependencies) private var dependencies
     @Environment(\.openURL) private var openURL
-    @Environment(\.colorScheme) private var colorScheme
     /// 날씨 출처 마크 높이 — 옆 링크(caption2)와 같은 줄 높이를 따른다.
-    @ScaledMetric(relativeTo: .caption2) private var weatherMarkHeight: CGFloat = 12
 
     /// 유료(Premium) 전용 설정 게이트 — 실제 구매 엔타이틀먼트(`PremiumStore`)를 반응형으로 따른다.
     private var isPremiumUser: Bool { premiumStore.isPremium }
@@ -192,6 +190,11 @@ struct SettingsView: View {
                     Toggle("Show Weather in Calendar", isOn: monthShowsWeatherBinding)
                         .tint(.green)
                 }
+                // 음력은 한국 지역에서만 — 다른 지역엔 행 자체가 없다.
+                if viewModel.isLunarDateAvailable {
+                    Toggle("Show Lunar Dates in Calendar", isOn: monthShowsLunarDateBinding)
+                        .tint(.green)
+                }
                 premiumGated(feature: "show_calendar_schedule") {
                     Toggle("Show Calendar in Live", isOn: scheduleShowsCalendarBinding)
                         .tint(.green)
@@ -308,21 +311,16 @@ struct SettingsView: View {
         }
     }
 
-    /// WeatherKit 약관의 출처 표기 — Apple 날씨 마크 + 법적 고지 링크. 받지 못했으면 그리지 않는다.
+    /// WeatherKit 약관의 출처 표기 — " Weather · 데이터 출처" 한 줄 링크. 받지 못했으면 그리지 않는다.
+    /// 마크 이미지 대신 시스템이 주는 서비스 이름 텍스트를 써서 푸터의 다른 설명과 같은 글자·색으로 녹인다.
     @ViewBuilder
     private var weatherAttributionFooter: some View {
         if let attribution = viewModel.weatherAttribution {
-            HStack(spacing: Spacing.xs) {
-                AsyncImage(url: colorScheme == .dark ? attribution.markDarkURL : attribution.markLightURL) { image in
-                    image.resizable().scaledToFit()
-                } placeholder: {
-                    EmptyView()
-                }
-                .frame(height: weatherMarkHeight)
-                .accessibilityLabel(Text(verbatim: "Apple Weather"))
-                Link("Weather Data Sources", destination: attribution.legalPageURL)
-                    .font(.caption2)
+            Link(destination: attribution.legalPageURL) {
+                Text("\(attribution.serviceName) · Data Sources")
             }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
     }
 
@@ -528,6 +526,13 @@ struct SettingsView: View {
                 }
                 Task { await viewModel.setMonthShowsWeather(newValue) }
             }
+        )
+    }
+
+    private var monthShowsLunarDateBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.monthShowsLunarDate },
+            set: { newValue in Task { await viewModel.setMonthShowsLunarDate(newValue) } }
         )
     }
 

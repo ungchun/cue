@@ -179,6 +179,11 @@ struct PremiumPaywallView: View {
                 detail: "A monthly calendar beside your memos, schedule, and to-dos"
             )
             featureRow(
+                icon: "cloud.sun",
+                title: "Weather in Calendar",
+                detail: "See the forecast right on your monthly calendar"
+            )
+            featureRow(
                 icon: "square.grid.2x2",
                 title: "Home Screen Widgets",
                 // 위젯 종류를 나열하지 않는다 — 위젯이 늘 때마다 문구를 고치고

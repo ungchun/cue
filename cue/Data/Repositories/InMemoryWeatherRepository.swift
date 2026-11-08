@@ -34,7 +34,7 @@ actor InMemoryWeatherRepository: WeatherRepository {
     func attribution() async throws -> WeatherDataAttribution {
         if fails { throw URLError(.notConnectedToInternet) }
         let url = URL(string: "https://weatherkit.apple.com/legal-attribution.html")!
-        return WeatherDataAttribution(markLightURL: url, markDarkURL: url, legalPageURL: url)
+        return WeatherDataAttribution(serviceName: "\u{F8FF} Weather", legalPageURL: url)
     }
 
     /// 테스트 훅 — 예보를 바꾼다.

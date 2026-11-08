@@ -41,7 +41,9 @@ final class SettingsViewModel {
     private(set) var reminderLists: [ReminderList] = []
     /// "볼 캘린더 선택" 체크리스트용 캘린더 목록 — 권한 없으면 빈 배열.
     private(set) var eventCalendars: [EventCalendar] = []
-    /// 날씨 출처 표기(마크·법적 고지 링크) — 못 받으면 nil(표기 행을 그리지 않는다).
+    /// 월 캘린더 음력 표시 토글을 노출할지 — 한국 지역에서만.
+    let isLunarDateAvailable: Bool
+    /// 날씨 출처 표기(서비스 이름·법적 고지 링크) — 못 받으면 nil(표기 행을 그리지 않는다).
     private(set) var weatherAttribution: WeatherDataAttribution?
     /// 날씨 표시를 켜려다 위치 권한이 거부됨 — 설정 앱으로 안내하는 알럿.
     var isLocationDeniedAlertPresented = false
@@ -57,6 +59,7 @@ final class SettingsViewModel {
         self.requestWeatherLocationAccess = dependencies.requestWeatherLocationAccess
         self.fetchWeatherAttribution = dependencies.fetchWeatherAttribution
         self.analytics = dependencies.analytics
+        self.isLunarDateAvailable = dependencies.isLunarDateAvailable
     }
 
     /// 화면이 나타날 때 — 저장된 설정과 메모 색(배경·글자)을 불러온다.
@@ -207,6 +210,12 @@ final class SettingsViewModel {
         }
         analytics.log(.monthWeatherToggled(on: value))
         await update { $0.monthShowsWeather = value }
+    }
+
+    /// 일정 탭 월 캘린더 날짜 칸에 음력 날짜를 보일지. 날씨 아이콘이 있는 칸은 날씨가 우선이다.
+    func setMonthShowsLunarDate(_ value: Bool) async {
+        analytics.log(.monthLunarDateToggled(on: value))
+        await update { $0.monthShowsLunarDate = value }
     }
 
     /// 할일 탭에서 이 리스트를 보일지(true) 숨길지(false) 설정한다. 캘린더 숨김과 동일 방식.
