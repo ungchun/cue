@@ -91,7 +91,11 @@ struct SchedulePackerTests {
     /// 실측: 헤더 15.2 / 시간행 30.9 → 컬럼당 (헤더+2행) 83pt + 다음 날 첫 행 52.1 = 135.1 ≤ 136.
     /// 과거엔 caption2 스타일 메트릭(리딩 포함 15.1)을 크기비 스케일해 행당 ~4.3pt 과대 추정
     /// → 셋째 날이 통째로 버려졌다(레퍼런스 대비 휑한 카드).
-    @Test func fiveRowsAcrossThreeDaysAllFitLikeReference() {
+    /// 첫 열 여유가 ~4.3pt뿐이라 실측한 iOS 26 글꼴에서만 돌린다 — iOS 27.2 베타 실기기(한국어)에선
+    /// 4개만 들어갔다(2026-11). 언어 여유값은 아니라 글꼴 줄높이 차이로 추정 — 뷰도 같은 글꼴로
+    /// 커지니 결함은 아니다. 같은 글꼴인데 실패하면 메시지의 줄높이로 다시 본다.
+    @Test(.enabled(if: fontsMatchIOS26Calibration()))
+    func fiveRowsAcrossThreeDaysAllFitLikeReference() {
         let (left, right) = SchedulePacker.pack([
             day(id: "a", label: "오늘", count: 2),
             day(id: "b", label: "내일", count: 2),
@@ -99,7 +103,10 @@ struct SchedulePackerTests {
         ])
 
         let placed = (left + right).flatMap { $0.events.map(\.id) }
-        #expect(placed.count == 5)
+        #expect(
+            placed.count == 5,
+            "title=\(ScheduleMetrics.titleLine) time=\(ScheduleMetrics.timeLine) header=\(ScheduleMetrics.header)"
+        )
     }
 
     /// 추정 캘리브레이션 가드 — 시간 행 추정은 실측(30.9pt)을 과소하지 않되(잘림 위험)
@@ -159,4 +166,12 @@ struct SchedulePackerTests {
 
         #expect(single == left)
     }
+}
+
+/// 런타임 글꼴 줄높이가 iOS 26 실측(제목 14.917 · 시간 14.320 · 헤더 13.127)과 같은가.
+/// iOS 26.5·27.1 시뮬은 같다(2026-11 측정). 다르면 실측 기반 회귀 테스트가 의미를 잃는다.
+private func fontsMatchIOS26Calibration() -> Bool {
+    abs(ScheduleMetrics.titleLine - 14.917) < 0.01
+        && abs(ScheduleMetrics.timeLine - 14.320) < 0.01
+        && abs(ScheduleMetrics.header - 13.127) < 0.01
 }
