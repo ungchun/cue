@@ -58,6 +58,13 @@ actor EventKitEventsRepository: EventsRepository {
         store.calendars(for: .event).map(EventMapper.toCalendar)
     }
 
+    /// 일정 시트는 자기 `EKEventStore`로 쓴다. 이 store는 변경 알림을 받아야 그 쓰기를 반영하는데,
+    /// 할일 저장 직후의 일정 저장엔 알림이 빠져 수정 전 이벤트를 계속 돌려줬다(2026-11-08 QA R-07).
+    /// `reset()`으로 캐시를 비우면 다음 조회는 캘린더 DB에서 다시 읽는다.
+    func discardCache() {
+        store.reset()
+    }
+
     /// `EKEventStoreChanged`는 미리알림·캘린더 변경 모두에 발송되는 공통 노티 — events 측은
     /// 그 중 캘린더 변경에 대응한다. 구독자 측에서 stream을 종료해도 안에서 만든 Task가
     /// 자동 cancel되도록 `onTermination`에 연결.

@@ -83,6 +83,7 @@ struct ScheduleViewModelTests {
         // 프리페치의 프롬프트-없는 권한 조회도 같은 repo를 보게 배선 — 기본값(별도 인메모리)은
         // 항상 미결정이라 프리페치가 무조건 건너뛰게 된다.
         dependencies.currentEventsAccess = CurrentEventsAccessUseCase(repository: eventsRepository)
+        dependencies.discardEventsCache = DiscardEventsCacheUseCase(repository: eventsRepository)
         if let analytics { dependencies.analytics = analytics }
         return dependencies
     }
@@ -536,6 +537,49 @@ struct ScheduleViewModelTests {
         #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["edited"])
     }
 
+    /// 조회 쪽 캐시가 수정 전 일정을 붙들고 있어도 편집 시트 저장 뒤엔 새 제목을 읽는다
+    /// — 할일 저장 직후 수정은 알림이 빠져 재실행 전까지 옛 제목이 보였다(2026-11-08 QA R-07).
+    @Test func dismissEditSavedReadsPastStaleCache() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let original = event(id: "e", title: "Before", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60))
+        let base = InMemoryEventsRepository(access: .granted, events: [original])
+        let viewModel = ScheduleViewModel(
+            dependencies: makeDependencies(eventsRepository: CachingEventsRepository(base)), now: { today }
+        )
+        await viewModel.onAppear()
+        viewModel.presentEdit(original)
+
+        var edited = original
+        edited.title = "After"
+        await base.updateSilently(edited)
+        await viewModel.dismissEdit(outcome: .saved)
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.title) == ["After"])
+    }
+
+    /// 월 캘린더도 같은 저장소를 읽으니 캐시를 버린 뒤 다시 읽어 새 제목을 본다.
+    @Test func dismissEditSavedRefreshesMonthPastStaleCache() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let original = event(id: "e", title: "Before", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60))
+        let base = InMemoryEventsRepository(access: .granted, events: [original])
+        let viewModel = ScheduleViewModel(
+            dependencies: makeDependencies(eventsRepository: CachingEventsRepository(base)), now: { today }
+        )
+        let month = viewModel.monthCalendar
+        await month.onAppear()
+        await month.waitForWindowLoad()
+        let day = Calendar.current.component(.day, from: today)
+        #expect(month.page(for: 0).items(day: day).map(\.title) == ["Before"])
+
+        var edited = original
+        edited.title = "After"
+        await base.updateSilently(edited)
+        await viewModel.dismissEdit(outcome: .saved)
+        await month.waitForWindowLoad()
+
+        #expect(month.page(for: 0).items(day: day).map(\.title) == ["After"])
+    }
+
     /// 취소는 쓴 게 없으니 다시 읽지 않는다 — 저장소에 몰래 들어간 일정이 보이지 않아야 한다.
     @Test func dismissNewEventCanceledDoesNotReload() async {
         let today = Calendar.current.startOfDay(for: Date())
@@ -897,6 +941,26 @@ private actor GatedEventsRepository: EventsRepository {
     }
     func fetchCalendars() async throws -> [EventCalendar] { try await base.fetchCalendars() }
     nonisolated func changes() -> AsyncStream<Void> { base.changes() }
+    func discardCache() async { await base.discardCache() }
+}
+
+/// EventKit store의 조회 캐시를 흉내 내는 더블 — 첫 조회 결과를 붙들고 있다가
+/// `discardCache()` 뒤에만 base를 다시 읽는다. 변경 알림이 빠지면 캐시가 옛 값을 돌려주는 상황.
+private actor CachingEventsRepository: EventsRepository {
+    private let base: InMemoryEventsRepository
+    private var cached: [CalendarEvent]?
+
+    init(_ base: InMemoryEventsRepository) { self.base = base }
+
+    func requestAccess() async -> EventsAccess { await base.requestAccess() }
+    func currentAccess() async -> EventsAccess { await base.currentAccess() }
+    func fetchEvents(from: Date, to: Date) async throws -> [CalendarEvent] {
+        if cached == nil { cached = try await base.fetchEvents(from: .distantPast, to: .distantFuture) }
+        return (cached ?? []).filter { $0.startDate < to && $0.endDate > from }
+    }
+    func fetchCalendars() async throws -> [EventCalendar] { try await base.fetchCalendars() }
+    nonisolated func changes() -> AsyncStream<Void> { base.changes() }
+    func discardCache() async { cached = nil }
 }
 
 /// 일정 게시 횟수만 세는 서비스 더블 — 겹친 게시가 몇 번 서비스까지 닿는지 관측한다.

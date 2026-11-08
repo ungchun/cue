@@ -23,6 +23,7 @@ final class ScheduleViewModel {
     private let loadSnapshotUseCase: LoadEventsSnapshotUseCase
     private let saveSnapshotUseCase: SaveEventsSnapshotUseCase
     private let fetchEventsUseCase: FetchEventsUseCase
+    private let discardEventsCacheUseCase: DiscardEventsCacheUseCase
     private let observeChangesUseCase: ObserveEventsChangesUseCase
     private let startLiveActivityUseCase: StartScheduleLiveActivityUseCase
     private let endLiveActivityUseCase: EndScheduleLiveActivityUseCase
@@ -98,6 +99,7 @@ final class ScheduleViewModel {
         self.loadSnapshotUseCase = dependencies.loadEventsSnapshot
         self.saveSnapshotUseCase = dependencies.saveEventsSnapshot
         self.fetchEventsUseCase = dependencies.fetchEvents
+        self.discardEventsCacheUseCase = dependencies.discardEventsCache
         self.observeChangesUseCase = dependencies.observeEventsChanges
         self.startLiveActivityUseCase = dependencies.startScheduleLiveActivity
         self.endLiveActivityUseCase = dependencies.endScheduleLiveActivity
@@ -363,8 +365,11 @@ final class ScheduleViewModel {
     /// 시트가 EventKit에 직접 쓴 뒤 — 변경 알림에 기대지 않고 타임라인·월 캘린더를 다시 읽는다.
     /// 할일 저장 직후 일정을 저장하면 EventKit이 `EKEventStoreChanged`를 보내지 않아
     /// 새 일정이 화면에 안 나타났다(2026-11-08 QA N-07). 취소는 쓴 게 없어 건너뛴다.
+    /// 다시 읽기 전에 조회 캐시를 버린다 — 알림이 빠지면 조회 쪽이 수정 전 일정을 계속 돌려줘
+    /// 수정이 재실행 전까지 안 보였다(2026-11-08 QA R-07). 월 캘린더도 같은 저장소를 읽는다.
     private func reloadAfterOwnWrite(_ outcome: EventEditOutcome) async {
         guard outcome != .canceled else { return }
+        await discardEventsCacheUseCase()
         await handleExternalChange()
         await monthCalendar.reloadAfterOwnWrite()
     }

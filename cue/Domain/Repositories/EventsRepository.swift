@@ -23,6 +23,9 @@ protocol EventsRepository: Sendable {
     /// `fetchEvents`로 다시 가져온다. EventKit 구현은 `EKEventStoreChanged` 노티를 노출.
     /// 구독은 호출 측의 `Task`에 묶여 cancel 시 자동 종료된다.
     func changes() -> AsyncStream<Void>
+    /// 조회 쪽 캐시를 버려 다음 `fetchEvents`가 저장소의 최신값을 읽게 한다.
+    /// 앱이 다른 경로(일정 시트)로 쓴 뒤 변경 알림이 빠지면 캐시가 옛 값을 계속 돌려준다.
+    func discardCache() async
 }
 
 extension EventsRepository {

@@ -52,6 +52,9 @@ actor InMemoryEventsRepository: EventsRepository {
 
     nonisolated func changes() -> AsyncStream<Void> { changesStream }
 
+    /// 캐시가 없다 — 조회가 늘 현재 값을 돌려준다.
+    func discardCache() {}
+
     /// 테스트 헬퍼 — 변경 신호를 한 번 emit한다. 실 EventKit 구현은 NotificationCenter가
     /// 자동으로 emit하므로 외부에서 호출할 필요가 없다.
     func emitChange() {
@@ -62,5 +65,11 @@ actor InMemoryEventsRepository: EventsRepository {
     /// `EKEventStoreChanged`가 오지 않는 경우를 흉내 낸다.
     func insertSilently(_ event: CalendarEvent) {
         events.append(event)
+    }
+
+    /// 테스트 헬퍼 — 같은 id의 이벤트를 변경 신호 없이 바꾼다. 시트가 기존 일정을 수정한 경우.
+    func updateSilently(_ event: CalendarEvent) {
+        guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
+        events[index] = event
     }
 }

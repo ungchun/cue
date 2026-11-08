@@ -95,6 +95,7 @@ struct CompositionRoot {
             // 앱 시작 프리페치용 프롬프트-없는 권한 조회 + 첫 페인트 스냅샷 캐시.
             currentRemindersAccess: CurrentRemindersAccessUseCase(repository: remindersRepository),
             currentEventsAccess: CurrentEventsAccessUseCase(repository: eventsRepository),
+            discardEventsCache: DiscardEventsCacheUseCase(repository: eventsRepository),
             loadRemindersSnapshot: LoadRemindersSnapshotUseCase(repository: snapshotCacheRepository),
             saveRemindersSnapshot: SaveRemindersSnapshotUseCase(repository: snapshotCacheRepository),
             loadEventsSnapshot: LoadEventsSnapshotUseCase(repository: snapshotCacheRepository),

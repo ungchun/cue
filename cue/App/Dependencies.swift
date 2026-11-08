@@ -116,6 +116,10 @@ struct Dependencies: Sendable {
         .init(repository: InMemoryRemindersRepository(access: .notDetermined))
     var currentEventsAccess: CurrentEventsAccessUseCase =
         .init(repository: InMemoryEventsRepository(access: .notDetermined))
+    /// 일정 시트가 직접 쓴 뒤 다시 읽기 전에 조회 캐시를 버린다 — 실 배선은 `CompositionRoot`에서
+    /// `fetchEvents`와 같은 repo 인스턴스로(다른 인스턴스면 버려도 소용없다).
+    var discardEventsCache: DiscardEventsCacheUseCase =
+        .init(repository: InMemoryEventsRepository(access: .notDetermined))
 
     /// 마지막 fetch 결과 스냅샷 — 앱 재시작 시 스피너 없이 즉시 첫 페인트하기 위한 캐시.
     /// 기본값은 빈 인메모리(복원 nil = 기존 스피너 경로) — 실 배선은 `CompositionRoot`에서.

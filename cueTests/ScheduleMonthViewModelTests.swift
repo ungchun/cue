@@ -816,6 +816,7 @@ private actor RecordingEventsRepository: EventsRepository {
     }
     func fetchCalendars() async throws -> [EventCalendar] { try await base.fetchCalendars() }
     nonisolated func changes() -> AsyncStream<Void> { base.changes() }
+    func discardCache() async { await base.discardCache() }
     func insertSilently(_ event: CalendarEvent) async { await base.insertSilently(event) }
 }
 
