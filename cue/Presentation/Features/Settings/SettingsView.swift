@@ -312,12 +312,13 @@ struct SettingsView: View {
     }
 
     /// WeatherKit 약관의 출처 표기 — " Weather" 한 단어를 법적 고지 링크로. 받지 못했으면 그리지 않는다.
-    /// 상표 표기와 링크를 한 글자 덩어리에 겹쳐 가장 짧게 — 상표라 번역하지 않는다(verbatim).
+    /// 상표 표기와 링크를 한 글자 덩어리에 겹쳐 가장 짧게. `WeatherAttribution.serviceName`은 로케일을 따라
+    /// " 날씨"처럼 번역돼 오므로 쓰지 않고, 상표 원문을 영어 그대로 고정한다.
     @ViewBuilder
     private var weatherAttributionFooter: some View {
         if let attribution = viewModel.weatherAttribution {
             Link(destination: attribution.legalPageURL) {
-                Text(verbatim: attribution.serviceName)
+                Text(verbatim: "\u{F8FF} Weather")
             }
             .font(.footnote)
             .foregroundStyle(.secondary)
