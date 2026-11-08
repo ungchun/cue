@@ -61,7 +61,7 @@ struct SnapshotCacheRepositoryTests {
 
     /// 기본·읽기 전용 플래그 추가 전에 저장된 목록도 읽힌다 — 없으면 둘 다 false.
     @Test func reminderListDecodesLegacyJSONWithoutFlags() throws {
-        let json = #"{"id":"A","title":"회사","colorHex":"#FF9500"}"#
+        let json = ##"{"id":"A","title":"회사","colorHex":"#FF9500"}"##
 
         let list = try JSONDecoder().decode(ReminderList.self, from: Data(json.utf8))
 

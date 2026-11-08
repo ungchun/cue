@@ -94,7 +94,9 @@ struct SchedulePackerTests {
     /// 첫 열 여유가 ~4.3pt뿐이라 실측한 iOS 26 글꼴에서만 돌린다 — iOS 27.2 베타 실기기(한국어)에선
     /// 4개만 들어갔다(2026-11). 언어 여유값은 아니라 글꼴 줄높이 차이로 추정 — 뷰도 같은 글꼴로
     /// 커지니 결함은 아니다. 같은 글꼴인데 실패하면 메시지의 줄높이로 다시 본다.
-    @Test(.enabled(if: fontsMatchIOS26Calibration()))
+    /// 행 마진도 UI 언어를 따른다 — 톨 스크립트(th·hi·ar·vi) 마진 2.0이면 첫 열 여유를 넘겨
+    /// 4개만 들어가는 게 의도된 동작이라, 한글·라틴 마진(0.4)일 때만 돌린다.
+    @Test(.enabled(if: fontsMatchIOS26Calibration() && usesDefaultRowMargin()))
     func fiveRowsAcrossThreeDaysAllFitLikeReference() {
         let (left, right) = SchedulePacker.pack([
             day(id: "a", label: "오늘", count: 2),
@@ -105,7 +107,7 @@ struct SchedulePackerTests {
         let placed = (left + right).flatMap { $0.events.map(\.id) }
         #expect(
             placed.count == 5,
-            "title=\(ScheduleMetrics.titleLine) time=\(ScheduleMetrics.timeLine) header=\(ScheduleMetrics.header)"
+            "title=\(ScheduleMetrics.titleLine) time=\(ScheduleMetrics.timeLine) header=\(ScheduleMetrics.header) lang=\(currentLanguageCode ?? "nil")"
         )
     }
 
@@ -170,6 +172,12 @@ struct SchedulePackerTests {
 
 /// 런타임 글꼴 줄높이가 iOS 26 실측(제목 14.917 · 시간 14.320 · 헤더 13.127)과 같은가.
 /// iOS 26.5·27.1 시뮬은 같다(2026-11 측정). 다르면 실측 기반 회귀 테스트가 의미를 잃는다.
+private var currentLanguageCode: String? { Locale.current.language.languageCode?.identifier }
+
+private func usesDefaultRowMargin() -> Bool {
+    ScheduleMetrics.rowSafetyMargin(languageCode: currentLanguageCode) == 0.4
+}
+
 private func fontsMatchIOS26Calibration() -> Bool {
     abs(ScheduleMetrics.titleLine - 14.917) < 0.01
         && abs(ScheduleMetrics.timeLine - 14.320) < 0.01
