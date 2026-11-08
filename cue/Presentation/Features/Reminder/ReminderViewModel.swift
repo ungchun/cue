@@ -982,11 +982,6 @@ final class ReminderViewModel {
         analytics.log(.reminderShowCompletedToggled(on: showsCompleted))
     }
 
-    /// 좌상단 "미리 알림" 버튼 — 외부 앱 점프 직전에 뷰가 호출하는 로깅 훅.
-    func logRemindersAppOpened() {
-        analytics.log(.externalAppOpened(app: "reminders"))
-    }
-
     /// 접근 거부 화면의 "설정 열기" — 설정 앱 이동 직전에 뷰가 호출하는 로깅 훅.
     func logPermissionSettingsOpened() {
         analytics.log(.permissionSettingsOpened(kind: "reminder"))

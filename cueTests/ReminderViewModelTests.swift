@@ -1931,15 +1931,6 @@ struct ReminderViewModelTests {
         #expect(analytics.events == [.reminderScopeSelected(scope: "today")])
     }
 
-    /// 좌상단 "미리 알림" 버튼 — 외부 앱 열기 이벤트(뷰가 openURL 직전에 호출).
-    @Test func openingRemindersAppLogsExternalAppOpened() async {
-        let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])
-
-        viewModel.logRemindersAppOpened()
-
-        #expect(analytics.events == [.externalAppOpened(app: "reminders")])
-    }
-
     /// 접근 거부 화면의 "설정 열기" — 권한 설정 이동 이벤트.
     @Test func openingPermissionSettingsLogsReminderKind() async {
         let (viewModel, analytics) = await makeAnalyticsViewModel(lists: [listA])

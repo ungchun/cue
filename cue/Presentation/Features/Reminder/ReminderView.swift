@@ -71,9 +71,6 @@ struct ReminderView: View {
     // active한 섹션에만 진짜 입력 row를 mount하고 나머진 placeholder로 표시.
     @State private var activeNewRowListID: String?
 
-    // 좌상단 "미리 알림" 버튼 — Apple Reminders 앱 호출용 SwiftUI 환경 핸들.
-    @Environment(\.openURL) private var openURL
-
     var body: some View {
         content
             // 시스템 large title은 색을 selection별로 동적 변경할 수 없어 inline 모드로
@@ -82,9 +79,6 @@ struct ReminderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationTitle(showsInlineTitle ? currentTitle : "")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    openRemindersAppButton
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     optionsMenu
                 }
@@ -152,22 +146,6 @@ struct ReminderView: View {
             } message: {
                 Text("This list and all reminders in it will be deleted.")
             }
-    }
-
-    /// 좌측 상단 — Apple Reminders 앱으로 점프하는 텍스트 버튼.
-    /// `x-apple-reminderkit://` 스킴으로 시스템 미리 알림 앱을 연다. 시스템이 처리할 수
-    /// 없으면 SwiftUI `openURL`이 조용히 무시한다(별도 fallback 없음).
-    private var openRemindersAppButton: some View {
-        Button {
-            if let url = URL(string: "x-apple-reminderkit://") {
-                viewModel.logRemindersAppOpened()
-                openURL(url)
-            }
-        } label: {
-            Text("Reminders")
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
     }
 
     /// 새 입력 행·인라인 편집 어느 쪽이든 입력 포커스가 살아 있는지 — 완료(체크) 버튼 노출 조건.
