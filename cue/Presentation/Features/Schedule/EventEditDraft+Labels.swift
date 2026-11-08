@@ -3,23 +3,9 @@
 //  cue / Presentation
 //
 
-import EventKit
 import Foundation
 
 /// 드래프트 옵션의 표시 문구 — 편집 폼(메뉴)과 보기 화면이 같은 문구를 쓰도록 한 곳에 둔다.
-extension EventEditDraft {
-    /// "다음으로 표시" 값 문구. 지원 안 함은 빈 문자열(호출처가 행을 숨긴다).
-    static func label(for availability: EKEventAvailability) -> String {
-        switch availability {
-        case .busy: String(localized: "Busy")
-        case .free: String(localized: "Free")
-        case .tentative: String(localized: "Tentative")
-        case .unavailable: String(localized: "Unavailable")
-        default: ""
-        }
-    }
-}
-
 extension EventEditDraft.Recurrence {
     /// 반복 메뉴 문구. 사용자화·외부 규칙은 "사용자화"(요약은 CustomRule.summaryText).
     var label: String {
