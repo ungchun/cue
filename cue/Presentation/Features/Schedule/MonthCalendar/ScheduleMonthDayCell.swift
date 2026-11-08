@@ -22,7 +22,7 @@ struct ScheduleMonthDayCell: View {
     let onSelect: (WidgetCalendarItem) -> Void
 
     /// 오늘 밑줄 두께 — 날짜 숫자 글자 크기를 따라간다.
-    @ScaledMetric(relativeTo: .subheadline) private var todayUnderlineHeight: CGFloat = 2
+    @ScaledMetric(relativeTo: .footnote) private var todayUnderlineHeight: CGFloat = 2
     /// 라이트 모드 날씨 아이콘 테두리 두께(pt) — 아이콘과 함께 커진다.
     @ScaledMetric(relativeTo: .title3) private var weatherEdgeWidth: CGFloat = 0.8
     @Environment(\.colorScheme) private var colorScheme
@@ -55,7 +55,7 @@ struct ScheduleMonthDayCell: View {
     }
 
     /// 시스템 날씨 앱처럼 멀티컬러 채움 심볼 — 해는 노랑, 비는 파랑 등 색은 심볼이 정한다.
-    /// 날짜 숫자(subheadline)보다 크게(title3) — 칸 머리에서 날씨가 먼저 눈에 들어오게. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
+    /// 날짜 숫자(footnote)보다 크게(title3) — 칸 머리에서 날씨가 먼저 눈에 들어오게. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
     ///
     /// 멀티컬러 구름·달은 흰색으로 고정이라 라이트 배경에선 사라진다 — 라이트에서만 같은 모양을 상하좌우로
     /// 살짝 밀어 낸 그림자로 얇은 회색 테두리를 둘러 윤곽을 살린다(해·비 색은 그대로).
@@ -73,7 +73,7 @@ struct ScheduleMonthDayCell: View {
             .accessibilityHidden(true)
     }
 
-    /// 날짜 숫자(subheadline)보다 작고 흐리게(tertiary) — 곁들이는 정보라 날짜보다 먼저 눈에 띄지 않게.
+    /// 날짜 숫자(footnote)보다 작고 흐리게(tertiary) — 곁들이는 정보라 날짜보다 먼저 눈에 띄지 않게.
     /// 고정폭 숫자는 쓰지 않는다 — "1"이 넓어져 좁은 칸에서 날짜 숫자와 붙는다.
     /// 숫자를 그대로 찍는 표기라 문자열 카탈로그를 거치지 않는다(verbatim).
     private func lunarText(_ label: String) -> some View {
@@ -95,7 +95,7 @@ struct ScheduleMonthDayCell: View {
     private func dayNumber(_ day: Int) -> some View {
         // 숫자 포맷으로 — 문자열 카탈로그 키를 거치지 않고 로케일 숫자 표기를 따른다.
         Text(day, format: .number)
-            .font(.subheadline.weight(isToday ? .bold : .regular))
+            .font(.footnote.weight(isToday ? .bold : .regular))
             .monospacedDigit()
             .foregroundStyle(isToday ? Color.red : Self.dayColor(weekday))
             .padding(.bottom, todayUnderlineHeight)
