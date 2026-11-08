@@ -32,6 +32,8 @@ struct ReminderDetailSheet: View {
     /// 저장·완료 직후 부모가 새 값으로 다시 그려도 기준이 흔들리지 않게 상태로 둔다.
     @State private var reminder: Reminder?
     private let lists: [ReminderList]
+    /// 생성 경로의 기본 목록 — 목록이 늦게 적재되면 나중에 채워져 들어온다(그때 빈 선택을 메운다).
+    private let defaultListID: String?
     private let startsInViewMode: Bool
     private let onComplete: ((Draft) -> Void)?
     private let onSave: ((ReminderChanges) -> Void)?
@@ -74,6 +76,7 @@ struct ReminderDetailSheet: View {
         )
         _reminder = State(initialValue: nil)
         self.lists = lists
+        self.defaultListID = listID
         self.onSwitchKind = onSwitchKind
         self.startsInViewMode = false
         self.onComplete = onComplete
@@ -98,6 +101,7 @@ struct ReminderDetailSheet: View {
         let initial = ReminderEditDraft(reminder: reminder)
         _reminder = State(initialValue: reminder)
         self.lists = lists
+        self.defaultListID = nil
         self.startsInViewMode = startsInViewMode
         self.onComplete = nil
         self.onSave = onSave
@@ -129,6 +133,11 @@ struct ReminderDetailSheet: View {
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
+            // 기준값도 같이 채운다 — 사용자가 바꾼 게 아니니 닫을 때 폐기 확인이 뜨면 안 된다.
+            .onChange(of: defaultListID) { _, listID in
+                draft.adoptDefaultList(listID)
+                initialDraft.adoptDefaultList(listID)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     closeButton

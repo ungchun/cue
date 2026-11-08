@@ -96,6 +96,13 @@ struct ReminderEditDraft: Equatable {
 
     // MARK: - 편집
 
+    /// 아직 고른 목록이 없을 때만 기본 목록을 채운다 — + 시트는 권한·목록 적재 전에 열려 빈 값으로
+    /// 시작할 수 있다. 사용자가 이미 고른 목록은 덮지 않는다.
+    mutating func adoptDefaultList(_ listID: String?) {
+        guard self.listID.isEmpty, let listID else { return }
+        self.listID = listID
+    }
+
     /// 위치 선택 시트 결과 반영. 위치 알림은 좌표가 있어야 울리므로 좌표 없는 선택(이름만
     /// 입력)은 거절한다(false). 기존 반경은 장소를 바꿔도 유지한다.
     @discardableResult

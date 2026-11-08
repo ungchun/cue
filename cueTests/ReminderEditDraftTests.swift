@@ -240,6 +240,21 @@ struct ReminderEditDraftTests {
         #expect(withoutList.listID == "")
     }
 
+    /// + 시트가 목록 적재 전에 열려 빈 선택으로 시작했으면 나중에 온 기본 목록으로 메운다.
+    /// 이미 고른 목록은 덮지 않는다.
+    @Test func adoptDefaultListFillsOnlyEmptySelection() {
+        var empty = ReminderEditDraft(title: "", notes: "", dueDate: nil, includesTime: false, recurrence: nil)
+        var chosen = ReminderEditDraft(title: "", notes: "", dueDate: nil, includesTime: false, recurrence: nil, listID: "B")
+
+        empty.adoptDefaultList(nil)
+        #expect(empty.listID == "")
+        empty.adoptDefaultList("A")
+        chosen.adoptDefaultList("A")
+
+        #expect(empty.listID == "A")
+        #expect(chosen.listID == "B")
+    }
+
     /// 목록 선택지에서 읽기 전용 목록은 빠진다 — 고르면 저장이 실패한다. 지금 속한 목록은
     /// 읽기 전용이어도 남겨 피커 선택값이 비지 않게 한다.
     @Test func pickableListsHideReadOnlyExceptCurrent() {
