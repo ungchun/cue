@@ -14,6 +14,7 @@ import Observation
 @MainActor
 @Observable
 final class ScheduleReminderEditor {
+    private let requestRemindersAccess: RequestRemindersAccessUseCase
     private let fetchReminderLists: FetchReminderListsUseCase
     private let fetchReminders: FetchRemindersUseCase
     private let addReminder: AddReminderUseCase
@@ -28,8 +29,11 @@ final class ScheduleReminderEditor {
     private(set) var lists: [ReminderList] = []
     /// 저장·완료·삭제 실패 메시지 — View가 alert로 표시.
     var errorMessage: String?
+    /// 완료 저장·재조회 중인 할일 — 그새 다시 탭하면 옛 값으로 한 번 더 완료해 반복 회차를 건너뛴다.
+    private var pendingCompletionIDs: Set<String> = []
 
     init(dependencies: Dependencies) {
+        self.requestRemindersAccess = dependencies.requestRemindersAccess
         self.fetchReminderLists = dependencies.fetchReminderLists
         self.fetchReminders = dependencies.fetchReminders
         self.addReminder = dependencies.addReminder
@@ -71,7 +75,9 @@ final class ScheduleReminderEditor {
 
     /// 시트의 완료 토글 — 할일 탭과 같은 방향별 기록.
     func toggleCompletion(reminderID: String) async {
-        guard let current = editingReminder, current.id == reminderID else { return }
+        guard let current = editingReminder, current.id == reminderID,
+              pendingCompletionIDs.insert(reminderID).inserted else { return }
+        defer { pendingCompletionIDs.remove(reminderID) }
         do {
             try await toggleReminderCompletion(current)
             if !current.isCompleted {
@@ -112,6 +118,13 @@ final class ScheduleReminderEditor {
     /// 할일 쪽으로 바꿔 저장할 때 `create`가 알린다.
     func refreshLists() async {
         lists = (try? await fetchReminderLists()) ?? []
+    }
+
+    /// + 시트가 할일 쪽으로 바뀔 때 — 할일 탭을 한 번도 안 연 사용자는 권한이 미결정이라
+    /// 목록이 비고 저장이 조용히 실패한다. 여기서 묻고 목록을 다시 읽는다.
+    func prepareForCreate() async {
+        _ = await requestRemindersAccess()
+        await refreshLists()
     }
 
     /// 새 할일의 기본 목록 — 미리 알림의 기본 목록, 없으면 첫 목록.

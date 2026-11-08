@@ -47,7 +47,13 @@ struct NewItemSheet: View {
                 }
             }
         }
-        .task { await reminderEditor.refreshLists() }
+        .task(id: kind) {
+            if kind == .reminder {
+                await reminderEditor.prepareForCreate()
+            } else {
+                await reminderEditor.refreshLists()
+            }
+        }
     }
 
     private func switchKind(to newKind: NewItemKind, carrying title: String) {

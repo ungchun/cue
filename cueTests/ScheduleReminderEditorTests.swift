@@ -21,12 +21,14 @@ struct ScheduleReminderEditorTests {
 
     /// 편집기가 쓰는 할일 UseCase만 인메모리로 바꿔 끼운다 — 나머지는 프리뷰 묶음 그대로(쓰이지 않음).
     private func makeEditor(
+        access: RemindersAccess = .granted,
         lists: [ReminderList]? = nil,
         reminders: [Reminder] = []
     ) -> (ScheduleReminderEditor, InMemoryRemindersRepository, SpyAnalyticsService) {
-        let repository = InMemoryRemindersRepository(access: .granted, lists: lists ?? [listA, listB], reminders: reminders)
+        let repository = InMemoryRemindersRepository(access: access, lists: lists ?? [listA, listB], reminders: reminders)
         let analytics = SpyAnalyticsService()
         var dependencies = Dependencies.preview
+        dependencies.requestRemindersAccess = RequestRemindersAccessUseCase(repository: repository)
         dependencies.fetchReminderLists = FetchReminderListsUseCase(repository: repository)
         dependencies.fetchReminders = FetchRemindersUseCase(repository: repository)
         dependencies.addReminder = AddReminderUseCase(repository: repository)
@@ -129,6 +131,25 @@ struct ScheduleReminderEditorTests {
         #expect(analytics.events == [.reminderCompleted(source: "app"), .reminderUncompleted])
     }
 
+    /// 저장·재조회가 끝나기 전 다시 탭해도 한 번만 완료한다 — 옛 값으로 두 번 완료하면
+    /// 반복 할일이 두 회차 넘어간다.
+    @Test func toggleCompletionIgnoresTapWhileSaving() async throws {
+        let target = reminder(id: "r1")
+        let (editor, repository, analytics) = makeEditor(reminders: [target])
+        await editor.present(reminderID: "r1", lookup: target)
+
+        async let first: Void = editor.toggleCompletion(reminderID: "r1")
+        async let second: Void = editor.toggleCompletion(reminderID: "r1")
+        _ = await (first, second)
+
+        let stored = try await repository.fetchReminders()
+        #expect(stored.first?.isCompleted == true)
+        #expect(analytics.events == [.reminderCompleted(source: "app")])
+
+        await editor.toggleCompletion(reminderID: "r1")
+        #expect(editor.editingReminder?.isCompleted == false)
+    }
+
     /// 저장소에 없는 할일(그새 외부에서 지워짐)을 완료하면 실패를 알리고 시트 값은 그대로 둔다.
     @Test func toggleFailureSetsErrorMessageAndKeepsState() async {
         let stale = reminder(id: "stale")
@@ -179,6 +200,16 @@ struct ScheduleReminderEditorTests {
 
         #expect(editor.lists.map(\.id) == [listA.id, defaultList.id])
         #expect(editor.defaultListID == defaultList.id)
+    }
+
+    /// 할일 탭을 안 연 사용자도 + 시트의 할일 쪽에서 권한을 묻고 목록을 받는다.
+    @Test func prepareForCreateRequestsAccessThenLoadsLists() async {
+        let (editor, repository, _) = makeEditor(access: .notDetermined)
+
+        await editor.prepareForCreate()
+
+        #expect(await repository.currentAccess() == .granted)
+        #expect(editor.defaultListID == listA.id)
     }
 
     @Test func defaultListFallsBackToFirstListThenNil() async {
