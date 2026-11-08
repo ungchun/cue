@@ -66,6 +66,9 @@ struct AppSettings: Codable, Equatable, Sendable {
     /// 캘린더 숨김과 동일 동작 — 숨긴 리스트의 할일은 오늘·예정·전체 어디서도 안 보이고,
     /// 목록 칩에서도 빠진다. 오늘/예정/전체 시스템 필터는 항상 유지. `ReminderList.id` 값.
     var hiddenReminderListIDs: Set<String>
+    /// 일정 탭 월 캘린더에 완료한 할일을 보일지. 기본 `true`(필드가 없던 시절 동작).
+    /// 인라인 기본값 — memberwise init에 기본 인자로 붙어 기존 생성 호출부가 그대로 컴파일된다.
+    var monthShowsCompletedReminders: Bool = true
     /// 첫 실행 온보딩을 끝(완료 또는 스킵)까지 봤는지. `false`면 앱 시작 시 온보딩 표시.
     var hasCompletedOnboarding: Bool
     /// 온보딩을 **표시한 적** 있는지 — 도중(첫 큐 게시가 메모를 저장한 뒤) 앱이 종료돼도
@@ -164,6 +167,8 @@ extension AppSettings {
             ?? fallback.hiddenCalendarIDs
         hiddenReminderListIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenReminderListIDs)
             ?? fallback.hiddenReminderListIDs
+        monthShowsCompletedReminders = try container.decodeIfPresent(Bool.self, forKey: .monthShowsCompletedReminders)
+            ?? fallback.monthShowsCompletedReminders
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)
             ?? fallback.hasCompletedOnboarding
         hasStartedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasStartedOnboarding)

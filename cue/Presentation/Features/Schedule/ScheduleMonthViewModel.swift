@@ -82,6 +82,8 @@ final class ScheduleMonthViewModel {
     @ObservationIgnored private var eventsAccess: EventsAccess = .notDetermined
     @ObservationIgnored private var hiddenCalendarIDs: Set<String> = []
     @ObservationIgnored private var hiddenReminderListIDs: Set<String> = []
+    /// 설정 — 완료한 할일을 칸에 그릴지. 끄면 재구성 때 걸러 낸다(조회는 그대로).
+    @ObservationIgnored private var showsCompletedReminders = true
     @ObservationIgnored private var reminderListColorHexes: [String: String] = [:]
     /// 권한·설정·할일 컨텍스트를 한 번이라도 읽었는지.
     @ObservationIgnored private var hasContext = false
@@ -330,6 +332,7 @@ final class ScheduleMonthViewModel {
         let settings = await fetchAppSettings()
         hiddenCalendarIDs = settings.hiddenCalendarIDs
         hiddenReminderListIDs = settings.hiddenReminderListIDs
+        showsCompletedReminders = settings.monthShowsCompletedReminders
         // 할일 권한은 묻지 않는다 — 없으면 일정만 보여 준다(월 화면이 프롬프트를 띄우면 맥락이 어긋난다).
         let remindersGranted = await currentRemindersAccess() == .granted
         if eventsAccess != previousAccess {
@@ -406,7 +409,7 @@ final class ScheduleMonthViewModel {
         let calendar = Calendar.current
         let byDate = ScheduleMonthItemsBuilder.itemsByDay(
             events: eventsByMonth[start] ?? [],
-            reminders: remindersByMonth[start] ?? [],
+            reminders: visibleReminders(in: start),
             reminderListColorHexes: reminderListColorHexes,
             hiddenCalendarIDs: hiddenCalendarIDs,
             hiddenReminderListIDs: hiddenReminderListIDs,
@@ -419,6 +422,12 @@ final class ScheduleMonthViewModel {
             byDay[calendar.component(.day, from: date)] = items
         }
         pageModel(for: start, retain: isInWindow(start)).apply(itemsByDay: byDay)
+    }
+
+    /// 그 달 할일 — 완료 숨김 설정이면 완료한 것을 뺀다.
+    private func visibleReminders(in start: Date) -> [Reminder] {
+        let reminders = remindersByMonth[start] ?? []
+        return showsCompletedReminders ? reminders : reminders.filter { !$0.isCompleted }
     }
 
     private func pageModel(for start: Date, retain: Bool) -> ScheduleMonthPageModel {

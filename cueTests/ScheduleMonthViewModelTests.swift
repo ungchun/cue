@@ -542,6 +542,37 @@ struct ScheduleMonthViewModelTests {
         #expect(await eventsRepository.fetchedRanges.count == 3)
     }
 
+    // MARK: - 완료한 할일 표시 설정
+
+    private func completedAndOpenReminders() -> InMemoryRemindersRepository {
+        InMemoryRemindersRepository(access: .granted, lists: [listA], reminders: [
+            Reminder(id: "done", title: "끝낸 일", isCompleted: true, notes: nil,
+                     dueDate: date(11, 20, hour: 9), includesTime: true, listID: listA.id),
+            Reminder(id: "open", title: "남은 일", isCompleted: false, notes: nil,
+                     dueDate: date(11, 20, hour: 10), includesTime: true, listID: listA.id),
+        ])
+    }
+
+    /// 기본은 완료한 할일도 칸에 보인다(설정이 없던 시절 동작).
+    @Test func completedRemindersShownByDefault() async {
+        let (viewModel, _, _) = makeViewModel(remindersRepository: completedAndOpenReminders())
+        await viewModel.onAppear()
+
+        #expect(Set(viewModel.page(for: 0).items(day: 20).map(\.title)) == ["끝낸 일", "남은 일"])
+    }
+
+    /// 설정을 끄면 완료한 할일은 빠지고 남은 할일만 보인다.
+    @Test func completedRemindersHiddenWhenSettingOff() async {
+        var settings = AppSettings.default
+        settings.monthShowsCompletedReminders = false
+        let (viewModel, _, _) = makeViewModel(
+            remindersRepository: completedAndOpenReminders(), appSettings: settings
+        )
+        await viewModel.onAppear()
+
+        #expect(viewModel.page(for: 0).items(day: 20).map(\.title) == ["남은 일"])
+    }
+
     // MARK: - 외부 변경
 
     @Test func externalChangeReloadsRemindersAndWindowMonths() async throws {

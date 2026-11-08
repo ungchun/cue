@@ -118,6 +118,20 @@ struct SettingsViewModelTests {
         #expect(reloaded.settings.focusEndSound == true)
     }
 
+    /// 월 캘린더 완료 할일 표시 토글이 영속화된다.
+    @Test func setMonthShowsCompletedRemindersPersists() async {
+        let repository = InMemoryAppSettingsRepository()
+        let viewModel = makeViewModel(repository: repository)
+        await viewModel.onAppear()
+
+        await viewModel.setMonthShowsCompletedReminders(false)
+        #expect(viewModel.settings.monthShowsCompletedReminders == false)
+
+        let reloaded = makeViewModel(repository: repository)
+        await reloaded.onAppear()
+        #expect(reloaded.settings.monthShowsCompletedReminders == false)
+    }
+
     /// 라이브 표시 순서 변경이 영속화되고, 저장 전에 정제(집중 제외·빠진 종류 보충)를 거친다.
     @Test func setLiveAlwaysOnOrderPersistsResolved() async {
         let repository = InMemoryAppSettingsRepository()
@@ -397,6 +411,17 @@ struct SettingsViewModelTests {
         await viewModel.setStartTabID("focus")
 
         #expect(analytics.events == [.startTabChanged(tab: "focus")])
+    }
+
+    /// 월 캘린더 완료 할일 토글은 monthCompletedTasksToggled를 기록한다.
+    @Test func setMonthShowsCompletedRemindersLogsToggle() async {
+        let analytics = SpyAnalyticsService()
+        let viewModel = makeViewModel(repository: InMemoryAppSettingsRepository(), analytics: analytics)
+        await viewModel.onAppear()
+
+        await viewModel.setMonthShowsCompletedReminders(false)
+
+        #expect(analytics.events == [.monthCompletedTasksToggled(on: false)])
     }
 
     /// 집중 종료 소리 토글은 focusEndSoundToggled를 기록한다.

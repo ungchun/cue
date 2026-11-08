@@ -181,6 +181,12 @@ final class SettingsViewModel {
         await update { $0.hiddenCalendarIDs.removeAll() }
     }
 
+    /// 일정 탭 월 캘린더에 완료한 할일을 보일지. 월 캘린더는 다시 나타날 때 설정을 읽어 반영한다.
+    func setMonthShowsCompletedReminders(_ value: Bool) async {
+        analytics.log(.monthCompletedTasksToggled(on: value))
+        await update { $0.monthShowsCompletedReminders = value }
+    }
+
     /// 할일 탭에서 이 리스트를 보일지(true) 숨길지(false) 설정한다. 캘린더 숨김과 동일 방식.
     func setReminderListVisible(_ id: String, _ visible: Bool) async {
         analytics.log(.calendarVisibilityToggled(kind: "reminder_list", on: visible))

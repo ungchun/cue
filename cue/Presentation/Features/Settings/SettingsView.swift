@@ -181,6 +181,8 @@ struct SettingsView: View {
                         LabeledContent("Calendars", value: calendarsSummary)
                     }
                 }
+                Toggle("Show Completed Tasks in Calendar", isOn: monthShowsCompletedRemindersBinding)
+                    .tint(.green)
                 premiumGated(feature: "show_calendar_schedule") {
                     Toggle("Show Calendar", isOn: scheduleShowsCalendarBinding)
                         .tint(.green)
@@ -461,6 +463,13 @@ struct SettingsView: View {
         Binding(
             get: { viewModel.settings.tasksDefaultScopeID },
             set: { newValue in Task { await viewModel.setTasksDefaultScopeID(newValue) } }
+        )
+    }
+
+    private var monthShowsCompletedRemindersBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.settings.monthShowsCompletedReminders },
+            set: { newValue in Task { await viewModel.setMonthShowsCompletedReminders(newValue) } }
         )
     }
 
