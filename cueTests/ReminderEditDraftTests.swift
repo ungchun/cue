@@ -225,4 +225,18 @@ struct ReminderEditDraftTests {
         #expect(!draft.effectiveIncludesTime)
         #expect(draft.effectiveRecurrence == nil)
     }
+
+    /// 생성 드래프트의 목록 — 일정 탭 + 시트는 기본 목록을 넘기고, 할일 탭은 안 넘겨 빈 값.
+    @Test func newDraftKeepsGivenListOrStartsEmpty() {
+        let withList = ReminderEditDraft(
+            title: "", notes: "", dueDate: nil, includesTime: false, recurrence: nil,
+            listID: "list-b", now: now
+        )
+        let withoutList = ReminderEditDraft(
+            title: "", notes: "", dueDate: nil, includesTime: false, recurrence: nil, now: now
+        )
+
+        #expect(withList.listID == "list-b")
+        #expect(withoutList.listID == "")
+    }
 }

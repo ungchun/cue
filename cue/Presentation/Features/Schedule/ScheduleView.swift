@@ -54,9 +54,10 @@ struct ScheduleView: View {
                 warmUpEventStore()
             }
             .sheet(isPresented: $viewModel.showingNewEvent) {
-                EventDetailSheet(
+                NewItemSheet(
                     eventStore: eventStore,
-                    onCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
+                    reminderEditor: viewModel.reminderEditor,
+                    onEventCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
                 )
             }
             .sheet(item: $viewModel.editingEvent) { occurrence in

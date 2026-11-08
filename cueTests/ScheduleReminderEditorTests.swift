@@ -21,13 +21,15 @@ struct ScheduleReminderEditorTests {
 
     /// 편집기가 쓰는 할일 UseCase만 인메모리로 바꿔 끼운다 — 나머지는 프리뷰 묶음 그대로(쓰이지 않음).
     private func makeEditor(
+        lists: [ReminderList]? = nil,
         reminders: [Reminder] = []
     ) -> (ScheduleReminderEditor, InMemoryRemindersRepository, SpyAnalyticsService) {
-        let repository = InMemoryRemindersRepository(access: .granted, lists: [listA, listB], reminders: reminders)
+        let repository = InMemoryRemindersRepository(access: .granted, lists: lists ?? [listA, listB], reminders: reminders)
         let analytics = SpyAnalyticsService()
         var dependencies = Dependencies.preview
         dependencies.fetchReminderLists = FetchReminderListsUseCase(repository: repository)
         dependencies.fetchReminders = FetchRemindersUseCase(repository: repository)
+        dependencies.addReminder = AddReminderUseCase(repository: repository)
         dependencies.updateReminder = UpdateReminderUseCase(repository: repository)
         dependencies.toggleReminderCompletion = ToggleReminderCompletionUseCase(repository: repository)
         dependencies.deleteReminder = DeleteReminderUseCase(repository: repository)
@@ -164,6 +166,94 @@ struct ScheduleReminderEditorTests {
 
         #expect(editor.errorMessage == DomainError.notFound.localizedDescription)
         #expect(editor.editingReminder == stale)
+    }
+
+    // MARK: - 생성 (+ 시트)
+
+    /// 기본 목록은 isDefault 목록 — 이름·순서와 무관(로케일마다 이름이 다르다).
+    @Test func refreshListsLoadsListsAndPicksDefaultList() async {
+        let defaultList = ReminderList(id: "list-def", title: "Reminders", colorHex: nil, isDefault: true)
+        let (editor, _, _) = makeEditor(lists: [listA, defaultList])
+
+        await editor.refreshLists()
+
+        #expect(editor.lists.map(\.id) == [listA.id, defaultList.id])
+        #expect(editor.defaultListID == defaultList.id)
+    }
+
+    @Test func defaultListFallsBackToFirstListThenNil() async {
+        let (editor, _, _) = makeEditor()
+        #expect(editor.defaultListID == nil)
+
+        await editor.refreshLists()
+
+        #expect(editor.defaultListID == listA.id)
+    }
+
+    @Test func createStoresIntoChosenListAndLogs() async throws {
+        let (editor, repository, analytics) = makeEditor()
+        await editor.refreshLists()
+
+        await editor.create(
+            title: "우유 사기", notes: "2통",
+            dueDate: due, includesTime: false, recurrence: nil,
+            listID: listB.id
+        )
+
+        let stored = try await repository.fetchReminders()
+        #expect(stored.count == 1)
+        #expect(stored.first?.title == "우유 사기")
+        #expect(stored.first?.notes == "2통")
+        #expect(stored.first?.dueDate == due)
+        #expect(stored.first?.includesTime == false)
+        #expect(stored.first?.listID == listB.id)
+        #expect(analytics.events == [.reminderCreated])
+        #expect(editor.errorMessage == nil)
+    }
+
+    /// 목록을 안 골랐으면(nil) 기본 목록으로.
+    @Test func createWithoutListUsesDefaultList() async throws {
+        let (editor, repository, _) = makeEditor()
+        await editor.refreshLists()
+
+        await editor.create(
+            title: "우유 사기", notes: nil,
+            dueDate: nil, includesTime: false, recurrence: nil,
+            listID: nil
+        )
+
+        #expect(try await repository.fetchReminders().map(\.listID) == [listA.id])
+    }
+
+    /// 목록이 하나도 없으면 저장하지 않고 알린다.
+    @Test func createWithoutAnyListSetsErrorMessage() async throws {
+        let (editor, repository, analytics) = makeEditor(lists: [])
+        await editor.refreshLists()
+
+        await editor.create(
+            title: "우유 사기", notes: nil,
+            dueDate: nil, includesTime: false, recurrence: nil,
+            listID: nil
+        )
+
+        #expect(editor.errorMessage == String(localized: "Select a list first."))
+        #expect(try await repository.fetchReminders().isEmpty)
+        #expect(analytics.events.isEmpty)
+    }
+
+    @Test func createFailureSetsErrorMessage() async throws {
+        let (editor, repository, analytics) = makeEditor()
+        await editor.refreshLists()
+
+        await editor.create(
+            title: "  ", notes: nil,
+            dueDate: nil, includesTime: false, recurrence: nil,
+            listID: listA.id
+        )
+
+        #expect(editor.errorMessage == DomainError.validation(String(localized: "Please enter a title.")).localizedDescription)
+        #expect(try await repository.fetchReminders().isEmpty)
+        #expect(analytics.events.isEmpty)
     }
 }
 

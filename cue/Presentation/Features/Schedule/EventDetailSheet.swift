@@ -22,6 +22,8 @@ import SwiftUI
 struct EventDetailSheet: View {
     let eventStore: EKEventStore
     let onCompletion: (EventEditOutcome) -> Void
+    /// 신규 시트(NewItemSheet)에서만 — 상단 일정/할일 토글로 할일 쪽으로 넘어간다. 인자는 제목.
+    private let onSwitchKind: ((String) -> Void)?
 
     /// 대상 회차 — 열 때 한 번만 찾는다. 상태로 고정하는 이유: 저장·삭제 직후 부모가 다시
     /// 그려지며 init이 재실행돼도 (이미 지워진) 이벤트를 다시 찾다 신규 모드로 뒤집히지 않게.
@@ -39,13 +41,21 @@ struct EventDetailSheet: View {
     /// 쓰기 가능한 캘린더 목록 — 캘린더 선택 행.
     private let calendars: [EKCalendar]
 
-    /// `occurrence`가 nil이면 신규 모드(편집 모드로 시작).
-    init(eventStore: EKEventStore, occurrence: EventOccurrenceRef? = nil, onCompletion: @escaping (EventEditOutcome) -> Void) {
+    /// `occurrence`가 nil이면 신규 모드(편집 모드로 시작). `title`은 신규 모드의 초기 제목.
+    init(
+        eventStore: EKEventStore,
+        occurrence: EventOccurrenceRef? = nil,
+        title: String = "",
+        onSwitchKind: ((String) -> Void)? = nil,
+        onCompletion: @escaping (EventEditOutcome) -> Void
+    ) {
         self.eventStore = eventStore
         self.onCompletion = onCompletion
+        self.onSwitchKind = onSwitchKind
 
         let event = occurrence.flatMap { EventOccurrenceLocator.locate($0, in: eventStore) }
         var initial = event.map(EventEditDraft.init(event:)) ?? .newEvent(now: .now)
+        if event == nil { initial.title = title }
         if initial.calendarID == nil {
             initial.calendarID = eventStore.defaultCalendarForNewEvents?.calendarIdentifier
         }
@@ -73,6 +83,11 @@ struct EventDetailSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     closeButton
+                }
+                if let onSwitchKind {
+                    ToolbarItem(placement: .principal) {
+                        NewItemKindPicker(kind: .event) { _ in onSwitchKind(draft.title) }
+                    }
                 }
                 if isEditing {
                     ToolbarItem(placement: .confirmationAction) {

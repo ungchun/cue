@@ -6,7 +6,8 @@
 import Foundation
 import Observation
 
-/// 일정 탭(월 캘린더)에서 할일 칩을 탭해 여는 상세 시트의 상태 + 동작 — 완료 토글·수정·삭제.
+/// 일정 탭(월 캘린더)에서 할일 칩을 탭해 여는 상세 시트의 상태 + 동작 — 완료 토글·수정·삭제,
+/// 그리고 + 시트의 할일 쪽 생성.
 ///
 /// 할일 탭의 `ReminderViewModel`에 기대지 않는다 — 그쪽은 목록·선택·낙관적 반영까지 들고 있는
 /// 할일 탭 전용이다. 여기선 UseCase만 부르고, 월 칩 갱신은 월 VM의 EventKit 변경 구독이 맡는다.
@@ -15,6 +16,7 @@ import Observation
 final class ScheduleReminderEditor {
     private let fetchReminderLists: FetchReminderListsUseCase
     private let fetchReminders: FetchRemindersUseCase
+    private let addReminder: AddReminderUseCase
     private let updateReminder: UpdateReminderUseCase
     private let toggleReminderCompletion: ToggleReminderCompletionUseCase
     private let deleteReminder: DeleteReminderUseCase
@@ -30,6 +32,7 @@ final class ScheduleReminderEditor {
     init(dependencies: Dependencies) {
         self.fetchReminderLists = dependencies.fetchReminderLists
         self.fetchReminders = dependencies.fetchReminders
+        self.addReminder = dependencies.addReminder
         self.updateReminder = dependencies.updateReminder
         self.toggleReminderCompletion = dependencies.toggleReminderCompletion
         self.deleteReminder = dependencies.deleteReminder
@@ -98,6 +101,44 @@ final class ScheduleReminderEditor {
             try await deleteReminder(reminderID: reminderID)
             analytics.log(.reminderDeleted)
             if editingReminder?.id == reminderID { editingReminder = nil }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - 생성 (+ 시트)
+
+    /// + 시트를 열기 전에 목록 선택지를 새로 읽는다. 실패(권한 없음 등)는 알리지 않고 빈 목록 —
+    /// 할일 쪽으로 바꿔 저장할 때 `create`가 알린다.
+    func refreshLists() async {
+        lists = (try? await fetchReminderLists()) ?? []
+    }
+
+    /// 새 할일의 기본 목록 — 미리 알림의 기본 목록, 없으면 첫 목록.
+    var defaultListID: String? {
+        lists.first(where: \.isDefault)?.id ?? lists.first?.id
+    }
+
+    /// + 시트의 할일 저장. 목록을 안 골랐으면 기본 목록으로. 월 칩은 변경 구독이 갱신한다.
+    func create(
+        title: String,
+        notes: String?,
+        dueDate: Date?,
+        includesTime: Bool,
+        recurrence: RecurrenceRule?,
+        listID: String?
+    ) async {
+        guard let listID = listID ?? defaultListID else {
+            errorMessage = String(localized: "Select a list first.")
+            return
+        }
+        do {
+            try await addReminder(
+                title: title, notes: notes,
+                dueDate: dueDate, includesTime: includesTime, recurrence: recurrence,
+                listID: listID
+            )
+            analytics.log(.reminderCreated)
         } catch {
             errorMessage = error.localizedDescription
         }

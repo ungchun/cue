@@ -8,7 +8,8 @@ import SwiftUI
 /// 할일 세부사항 시트의 편집 모드 본문 — 컨테이너(ReminderDetailSheet)의 `Form` 안에 놓이는 섹션 묶음.
 ///
 /// 섹션 순서는 Apple 미리 알림 세부사항을 따른다: 제목·메모 / 날짜·시간 / 반복 / 위치 / 목록 / 우선순위.
-/// 위치·목록·우선순위는 기존 항목 수정에서만 보인다(`showsAttributes`) — 생성 경로가 받지 않는 값.
+/// 위치·우선순위는 기존 항목 수정에서만 보인다(`showsAttributes`) — 생성 경로가 받지 않는 값.
+/// 목록은 선택지(`lists`)가 있으면 보인다 — 일정 탭 + 시트의 생성은 목록을 고른다.
 ///
 /// 날짜·시간 인라인 피커는 **한 번에 하나만** 펼친다 (iOS 미리 알림과 동일).
 /// 토글이 켜진 행을 다시 탭하면 펼침/접힘이 바뀐다.
@@ -103,11 +104,13 @@ struct ReminderEditForm: View {
 
         if showsAttributes {
             locationSection
-            if !lists.isEmpty {
-                Section {
-                    listPicker
-                }
+        }
+        if !lists.isEmpty {
+            Section {
+                listPicker
             }
+        }
+        if showsAttributes {
             Section {
                 Picker("Priority", selection: $draft.priority) {
                     ForEach(ReminderPriority.allCases, id: \.self) { priority in

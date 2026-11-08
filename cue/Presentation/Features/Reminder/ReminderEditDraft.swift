@@ -43,13 +43,15 @@ struct ReminderEditDraft: Equatable {
         priority = reminder.priority
     }
 
-    /// 신규 생성 — 생성 경로(add)는 리스트·우선순위·위치를 받지 않아 폼도 그 행을 숨긴다.
+    /// 신규 생성 — 생성 경로(add)는 우선순위·위치를 받지 않아 폼도 그 행을 숨긴다.
+    /// 목록은 고를 수 있을 때(일정 탭 + 시트)만 `listID`로 받는다. 빈 문자열은 "호출자가 정함".
     init(
         title: String,
         notes: String,
         dueDate: Date?,
         includesTime: Bool,
         recurrence: RecurrenceRule?,
+        listID: String = "",
         now: Date = .now
     ) {
         self.title = title
@@ -62,7 +64,7 @@ struct ReminderEditDraft: Equatable {
         isLocationEnabled = false
         location = nil
         proximity = .arriving
-        listID = ""
+        self.listID = listID
         priority = ReminderPriority.none
     }
 

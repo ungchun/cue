@@ -24,6 +24,8 @@ struct ReminderDetailSheet: View {
         var includesTime: Bool
         /// 반복 규칙 — 날짜가 켜져 있고 반복을 골랐을 때만 non-nil.
         var recurrence: RecurrenceRule?
+        /// 고른 목록 — 목록 행이 없었으면(할일 탭) nil, 호출자가 정한다.
+        var listID: String?
     }
 
     /// 대상 항목(nil이면 생성) — 열 때 한 번 고정한다. 저장 값은 이 값 대비 바뀐 것만 쓰므로,
@@ -35,6 +37,8 @@ struct ReminderDetailSheet: View {
     private let onSave: ((ReminderChanges) -> Void)?
     private let onToggleCompletion: (() -> Void)?
     private let onDelete: (() -> Void)?
+    /// 일정 탭 + 시트(NewItemSheet)에서만 — 상단 일정/할일 토글로 일정 쪽으로 넘어간다. 인자는 제목.
+    private let onSwitchKind: ((String) -> Void)?
 
     /// 편집 X로 돌아갈 때의 복원값이자 생성 경로의 변경 감지 기준(기존 항목은 `reminder`
     /// 대비 저장 값으로 판정). 상태로 고정 — 부모가 다시 그려 init이 재실행돼도 그대로.
@@ -51,20 +55,26 @@ struct ReminderDetailSheet: View {
     private let deviceLocale = Locale.autoupdatingCurrent
 
     /// 생성 — 초기값(할일 탭 입력 행의 제목·메모 등)을 받아 편집 모드로 연다.
+    /// `lists`를 주면 목록 행이 보이고 `listID`가 처음 선택값이다.
     init(
         title: String = "",
         memo: String = "",
         dueDate: Date? = nil,
         includesTime: Bool = false,
         recurrence: RecurrenceRule? = nil,
+        lists: [ReminderList] = [],
+        listID: String? = nil,
+        onSwitchKind: ((String) -> Void)? = nil,
         onComplete: @escaping (Draft) -> Void
     ) {
         let initial = ReminderEditDraft(
             title: title, notes: memo,
-            dueDate: dueDate, includesTime: includesTime, recurrence: recurrence
+            dueDate: dueDate, includesTime: includesTime, recurrence: recurrence,
+            listID: listID ?? ""
         )
         _reminder = State(initialValue: nil)
-        self.lists = []
+        self.lists = lists
+        self.onSwitchKind = onSwitchKind
         self.startsInViewMode = false
         self.onComplete = onComplete
         self.onSave = nil
@@ -93,6 +103,7 @@ struct ReminderDetailSheet: View {
         self.onSave = onSave
         self.onToggleCompletion = onToggleCompletion
         self.onDelete = onDelete
+        self.onSwitchKind = nil
         _initialDraft = State(initialValue: initial)
         _draft = State(initialValue: initial)
         _isEditing = State(initialValue: !startsInViewMode)
@@ -121,6 +132,11 @@ struct ReminderDetailSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     closeButton
+                }
+                if let onSwitchKind {
+                    ToolbarItem(placement: .principal) {
+                        NewItemKindPicker(kind: .reminder) { _ in onSwitchKind(draft.title) }
+                    }
                 }
                 if isEditing {
                     ToolbarItem(placement: .confirmationAction) {
@@ -269,7 +285,8 @@ struct ReminderDetailSheet: View {
                 memo: draft.notes,
                 dueDate: draft.effectiveDueDate,
                 includesTime: draft.effectiveIncludesTime,
-                recurrence: draft.effectiveRecurrence
+                recurrence: draft.effectiveRecurrence,
+                listID: draft.listID.isEmpty ? nil : draft.listID
             ))
         }
         dismiss()
