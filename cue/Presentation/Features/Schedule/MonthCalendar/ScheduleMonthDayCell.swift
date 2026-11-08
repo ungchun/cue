@@ -24,7 +24,7 @@ struct ScheduleMonthDayCell: View {
     /// 오늘 밑줄 두께 — 날짜 숫자 글자 크기를 따라간다.
     @ScaledMetric(relativeTo: .footnote) private var todayUnderlineHeight: CGFloat = 2
     /// 라이트 모드 날씨 아이콘 테두리 두께(pt) — 아이콘과 함께 커진다.
-    @ScaledMetric(relativeTo: .title3) private var weatherEdgeWidth: CGFloat = 0.8
+    @ScaledMetric(relativeTo: .footnote) private var weatherEdgeWidth: CGFloat = 0.8
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -55,7 +55,7 @@ struct ScheduleMonthDayCell: View {
     }
 
     /// 시스템 날씨 앱처럼 멀티컬러 채움 심볼 — 해는 노랑, 비는 파랑 등 색은 심볼이 정한다.
-    /// 날짜 숫자(footnote)보다 크게(title3) — 칸 머리에서 날씨가 먼저 눈에 들어오게. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
+    /// 날짜 숫자와 같은 크기(footnote) — 칸 머리 한 줄의 높이를 맞춘다. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
     ///
     /// 멀티컬러 구름·달은 흰색으로 고정이라 라이트 배경에선 사라진다 — 라이트에서만 같은 모양을 상하좌우로
     /// 살짝 밀어 낸 그림자로 얇은 회색 테두리를 둘러 윤곽을 살린다(해·비 색은 그대로).
@@ -65,7 +65,7 @@ struct ScheduleMonthDayCell: View {
         return Image(systemName: symbol)
             .symbolVariant(.fill)
             .symbolRenderingMode(.multicolor)
-            .font(.title3)
+            .font(.footnote)
             .shadow(color: edge, radius: 0, x: width, y: 0)
             .shadow(color: edge, radius: 0, x: -width, y: 0)
             .shadow(color: edge, radius: 0, x: 0, y: width)
