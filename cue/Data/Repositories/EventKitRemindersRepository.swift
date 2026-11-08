@@ -13,14 +13,20 @@ import Foundation
 /// 않으므로 `@MainActor` 대신 `actor`가 맞다. EventKit·권한에 직접 붙는 I/O 경계 글루.
 actor EventKitRemindersRepository: RemindersRepository {
     private let store = EKEventStore()
+    /// 이번 실행에서 프롬프트로 허용받았는지. `authorizationStatus`는 허용 직후에도 같은 프로세스에선
+    /// `.notDetermined`를 계속 돌려줘(2026-11-09 QA 실측) 월 캘린더가 재실행 전까지 빈 채로 남았다.
+    /// 설정에서 권한을 끄면 iOS가 앱을 종료하므로 이 값이 낡을 일은 없다.
+    private var grantedThisLaunch = false
 
     func requestAccess() async -> RemindersAccess {
+        if grantedThisLaunch { return .granted }
         switch EKEventStore.authorizationStatus(for: .reminder) {
         case .fullAccess:
             return .granted
         case .notDetermined:
             do {
                 let granted = try await store.requestFullAccessToReminders()
+                grantedThisLaunch = granted
                 return granted ? .granted : .denied
             } catch {
                 return .denied
@@ -33,6 +39,7 @@ actor EventKitRemindersRepository: RemindersRepository {
 
     /// 상태-전용 조회 — 프롬프트를 절대 띄우지 않는다(앱 시작 프리페치 경로).
     func currentAccess() async -> RemindersAccess {
+        if grantedThisLaunch { return .granted }
         switch EKEventStore.authorizationStatus(for: .reminder) {
         case .fullAccess: return .granted
         case .notDetermined: return .notDetermined

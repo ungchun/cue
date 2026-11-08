@@ -15,8 +15,13 @@ import EventKit
 /// 이 repository는 권한 게이트만 책임진다.
 actor EventKitEventsRepository: EventsRepository {
     private let store = EKEventStore()
+    /// 이번 실행에서 프롬프트로 허용받았는지. `authorizationStatus`는 허용 직후에도 같은 프로세스에선
+    /// `.notDetermined`를 계속 돌려줘(2026-11-09 QA 실측) 월 캘린더가 재실행 전까지 빈 채로 남았다.
+    /// 설정에서 권한을 끄면 iOS가 앱을 종료하므로 이 값이 낡을 일은 없다.
+    private var grantedThisLaunch = false
 
     func requestAccess() async -> EventsAccess {
+        if grantedThisLaunch { return .granted }
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess, .writeOnly:
             // writeOnly도 새 이벤트 생성에는 충분하므로 granted로 본다.
@@ -24,6 +29,7 @@ actor EventKitEventsRepository: EventsRepository {
         case .notDetermined:
             do {
                 let granted = try await store.requestFullAccessToEvents()
+                grantedThisLaunch = granted
                 return granted ? .granted : .denied
             } catch {
                 return .denied
@@ -37,6 +43,7 @@ actor EventKitEventsRepository: EventsRepository {
     /// 상태-전용 조회 — 프롬프트를 절대 띄우지 않는다(앱 시작 프리페치 경로).
     /// `requestAccess`와 같은 매핑: writeOnly도 granted로 본다.
     func currentAccess() async -> EventsAccess {
+        if grantedThisLaunch { return .granted }
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess, .writeOnly: return .granted
         case .notDetermined: return .notDetermined
