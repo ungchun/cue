@@ -28,14 +28,18 @@ struct StartScheduleLiveActivityUseCase: Sendable {
     /// - Parameter showsCalendarOverride: 잠금화면 월간 캘린더 표시 강제(온보딩 목업용).
     ///   nil이면 서비스가 설정 미러로 결정한다. 결정값은 ContentState에 실려 게시된다.
     /// - Parameter isSample: 온보딩 예시 게시 마커 — `endSamples`가 이 마커로만 예시를 정리한다.
+    /// - Parameter onlyIfShowing: 일정 카드가 지금 떠 있을 때만 다시 게시한다(아니면 `false`).
+    ///   앱 쓰기 뒤 갱신용 — 사용자가 밀어 지운 카드를 저장 한 번에 되살리지 않게.
     @discardableResult
     func callAsFunction(
         events: [CalendarEvent],
         weekEvents: [CalendarEvent] = [],
         now: Date = .now,
         showsCalendarOverride: Bool? = nil,
-        isSample: Bool = false
+        isSample: Bool = false,
+        onlyIfShowing: Bool = false
     ) async throws -> Bool {
+        if onlyIfShowing, !(await service.isScheduleShowing) { return false }
         let days = Self.groupIntoDays(events, now: now)
         guard !days.isEmpty else { return false }   // 다가오는 일정 없으면 LA 안 띄움
         try await service.startSchedule(

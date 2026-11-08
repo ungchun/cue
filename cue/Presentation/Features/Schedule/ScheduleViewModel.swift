@@ -133,11 +133,17 @@ final class ScheduleViewModel {
             // 숨김 설정이 바뀌었으면 지금까지 본 범위를 다시 필터링해 반영한다.
             hiddenCalendarIDs = hidden
             await reloadFetchedRange()
-        } else if fetchedUntil < minimumFetchedUntil() {
-            // 앱을 켜 둔 채 날이 지나면 범위 끝이 오늘 쪽으로 다가온다. 캘린더 변경이 없으면 다시 읽을
-            // 계기가 없어, 그대로 라이브를 게시하면 실리는 날이 하루씩 줄었다 — 다시 나타날 때 넓힌다.
-            await reloadFetchedRange()
+        } else {
+            await widenRangeIfDayPassed()
         }
+    }
+
+    /// 앱을 켜 둔 채 날이 지나면 범위 끝이 오늘 쪽으로 다가온다. 캘린더 변경이 없으면 다시 읽을
+    /// 계기가 없어, 그대로 라이브를 게시하면 실리는 날이 하루씩 줄었다 — 다시 나타날 때·LIVE를
+    /// 누를 때 넓힌다(같은 탭에 머문 채 다음 날 돌아와 누르면 onAppear가 다시 안 돈다).
+    private func widenRangeIfDayPassed() async {
+        guard access == .granted, hasLoaded, fetchedUntil < minimumFetchedUntil() else { return }
+        await reloadFetchedRange()
     }
 
     /// 앱 시작 프리페치 — 탭 진입을 기다리지 않고 첫 페이지 적재를 미리 끝낸다.
@@ -260,6 +266,7 @@ final class ScheduleViewModel {
             analytics.log(.liveDenied(kind: "schedule"))
             return verdict
         }
+        await widenRangeIfDayPassed()
         // 떠 있으면 끄고 다시 켠다(새로고침) — 더는 단순 종료하지 않는다.
         if liveActivityActive {
             await endLiveActivityUseCase()
@@ -392,6 +399,7 @@ final class ScheduleViewModel {
     /// 다음 게시 전까지 잠금화면에 옛 내용으로 남는다. 외부 변경엔 하지 않는다: 일정 게시는
     /// 끝내고 새로 요청하는데, 백그라운드에서 요청이 막히면 카드가 사라진다. 시트 저장은 늘 앞쪽이다.
     /// 항상 표시 게시와 같은 체인에 줄 세운다 — 겹치면 카드가 여러 장 뜬다.
+    /// 카드가 실제로 떠 있을 때만 — 잠금화면에서 밀어 지운 카드는 되살리지 않고 꺼진 상태로 맞춘다.
     private func refreshLiveActivityAfterOwnWrite() async {
         let task = Task { [previous = alwaysOnChain] in
             await previous?.value
@@ -406,9 +414,10 @@ final class ScheduleViewModel {
         do {
             liveActivityActive = try await startLiveActivityUseCase(
                 events: eventsByDay.flatMap(\.events),
-                weekEvents: await fetchWeekEvents()
+                weekEvents: await fetchWeekEvents(),
+                onlyIfShowing: true
             )
-            // 다가오는 일정이 다 지워졌으면 게시를 건너뛴다 — 옛 카드가 남지 않게 끝낸다(토글과 같은 처리).
+            // 다가오는 일정이 다 지워졌거나 카드가 이미 내려갔으면 게시를 건너뛴다 — 옛 카드가 남지 않게 끝낸다.
             if !liveActivityActive { await endLiveActivityUseCase() }
         } catch {
             // 갱신 실패는 조용히 — 저장 자체는 성공했다.

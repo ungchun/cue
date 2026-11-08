@@ -606,6 +606,32 @@ struct ScheduleViewModelTests {
         #expect(viewModel.liveActivityActive)
     }
 
+    /// 잠금화면에서 밀어 지운 카드는 앱에서 저장해도 되살리지 않는다 — 앱은 지운 걸 모르고
+    /// 켜짐으로 들고 있어, 확인 없이 다시 게시하면 지운 카드가 새로 뜬다.
+    @Test func dismissEditSavedDoesNotReviveDismissedLiveActivity() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let original = event(id: "e", title: "Before", start: today, end: today.addingTimeInterval(24 * 60 * 60), isAllDay: true)
+        let repository = InMemoryEventsRepository(access: .granted, events: [original])
+        let service = CountingScheduleLiveActivityService()
+        var dependencies = makeDependencies(eventsRepository: repository)
+        dependencies.startScheduleLiveActivity = StartScheduleLiveActivityUseCase(service: service)
+        let viewModel = ScheduleViewModel(
+            dependencies: dependencies, premiumStore: PremiumStore(previewIsPremium: true), now: { today }
+        )
+        await viewModel.onAppear()
+        _ = await viewModel.toggleLiveActivity()
+        await service.dismissFromLockScreen()
+        viewModel.presentEdit(original)
+
+        var edited = original
+        edited.title = "After"
+        await repository.updateSilently(edited)
+        await viewModel.dismissEdit(outcome: .saved)
+
+        #expect(await service.startScheduleCount == 1)
+        #expect(!viewModel.liveActivityActive)
+    }
+
     /// 라이브가 꺼져 있으면 저장해도 새로 켜지 않는다.
     @Test func dismissEditSavedDoesNotStartInactiveLiveActivity() async {
         let today = Calendar.current.startOfDay(for: Date())
@@ -934,6 +960,29 @@ struct ScheduleViewModelTests {
         #expect(viewModel.fetchedUntil == Calendar.current.date(byAdding: .day, value: 32, to: today))
     }
 
+    /// 같은 탭에 머문 채 다음 날 돌아와 LIVE를 누르면(onAppear 없음) 넓힌 범위로 게시한다.
+    @Test func toggleLiveAfterDayChangeWidensRangeFirst() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let day = 24 * 60 * 60.0
+        let edge = event(id: "edge", title: "Edge",
+                         start: today.addingTimeInterval(31 * day + 10 * 60 * 60),
+                         end: today.addingTimeInterval(31 * day + 11 * 60 * 60))
+        let clock = DayClock(today)
+        let service = CountingScheduleLiveActivityService()
+        var dependencies = makeDependencies(events: [edge])
+        dependencies.startScheduleLiveActivity = StartScheduleLiveActivityUseCase(service: service)
+        let viewModel = ScheduleViewModel(
+            dependencies: dependencies, premiumStore: PremiumStore(previewIsPremium: true), now: { clock.now }
+        )
+        await viewModel.onAppear()
+
+        clock.now = today.addingTimeInterval(2 * day)
+        _ = await viewModel.toggleLiveActivity()
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["edge"])
+        #expect(await service.lastScheduleTitles == ["Edge"])
+    }
+
     /// 첫 페이지 적재가 성공하면 스냅샷을 저장한다 — 다음 실행의 첫 페인트 재료.
     @Test func loadInitialSavesSnapshot() async {
         let today = Calendar.current.startOfDay(for: Date())
@@ -1057,6 +1106,10 @@ private actor CountingScheduleLiveActivityService: LiveActivityService {
     private(set) var endScheduleCount = 0
     /// 마지막으로 게시한 일정 제목들 — 다시 게시가 새 내용을 실었는지 본다.
     private(set) var lastScheduleTitles: [String] = []
+    /// 일정 카드가 시스템에 살아 있는지 — 잠금화면에서 밀어 지운 상황은 false로 둔다.
+    private(set) var showing = true
+    var isScheduleShowing: Bool { showing }
+    func dismissFromLockScreen() { showing = false }
 
     func startReminder(
         listTitle: String,
@@ -1071,8 +1124,12 @@ private actor CountingScheduleLiveActivityService: LiveActivityService {
     func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
         startScheduleCount += 1
         lastScheduleTitles = days.flatMap(\.events).map(\.title)
+        showing = true
     }
-    func endSchedule() async { endScheduleCount += 1 }
+    func endSchedule() async {
+        endScheduleCount += 1
+        showing = false
+    }
     func endSamples() async {}
     func startMemo(text: String, colorHex: String, textColorHex: String) async throws {}
     func endMemo() async {}

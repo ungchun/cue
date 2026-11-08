@@ -73,6 +73,12 @@ actor ActivityKitLiveActivityService: LiveActivityService {
         }
     }
 
+    var isScheduleShowing: Bool {
+        get async {
+            Activity<ScheduleLiveActivityAttributes>.liveActivity != nil
+        }
+    }
+
     // 집중(Focus) LA는 AlarmKit으로 이관됨 — 여기선 Reminder/Schedule만 다룬다.
 
     // MARK: - Reminder

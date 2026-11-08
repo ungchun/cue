@@ -59,6 +59,10 @@ protocol LiveActivityService: Sendable {
     /// 일정 라이브 액티비티 즉시 종료.
     func endSchedule() async
 
+    /// 일정 카드가 지금 시스템에 살아 있는지 — 사용자가 잠금화면에서 밀어 지웠거나 시스템이
+    /// 끝냈으면(8h/12h 상한·요청 실패) false. 앱 쓰기 뒤 다시 게시할지 가르는 데 쓴다.
+    var isScheduleShowing: Bool { get async }
+
     // MARK: - 온보딩 예시 정리
 
     /// 온보딩 예시 일정·할일 LA만 골라 종료 — ContentState의 `isSample`이 켜진 활동이 예시다
@@ -96,4 +100,9 @@ protocol LiveActivityService: Sendable {
     /// 설정(App Group 미러, 예: 캘린더 함께 표시)이 바뀐 직후 즉시 반영되게 한다.
     /// 위젯은 App Group 변경을 스스로 감지하지 못하므로 재게시로 재렌더를 유도해야 한다.
     func refreshLayout() async
+}
+
+extension LiveActivityService {
+    /// 시스템 상태를 모르는 구현(테스트 더블 등)은 떠 있다고 본다 — 호출처의 활성 플래그를 따른다.
+    var isScheduleShowing: Bool { get async { true } }
 }
