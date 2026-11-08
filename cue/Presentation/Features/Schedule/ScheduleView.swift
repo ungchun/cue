@@ -57,14 +57,14 @@ struct ScheduleView: View {
                 NewItemSheet(
                     eventStore: eventStore,
                     reminderEditor: viewModel.reminderEditor,
-                    onEventCompletion: { outcome in viewModel.dismissNewEvent(outcome: outcome) }
+                    onEventCompletion: { outcome in Task { await viewModel.dismissNewEvent(outcome: outcome) } }
                 )
             }
             .sheet(item: $viewModel.editingEvent) { occurrence in
                 EventDetailSheet(
                     eventStore: eventStore,
                     occurrence: occurrence,
-                    onCompletion: { outcome in viewModel.dismissEdit(outcome: outcome) }
+                    onCompletion: { outcome in Task { await viewModel.dismissEdit(outcome: outcome) } }
                 )
             }
             .sheet(item: Bindable(viewModel.reminderEditor).editingReminder) { reminder in

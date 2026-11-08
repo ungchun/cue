@@ -118,11 +118,11 @@ struct ScheduleViewModelTests {
         #expect(viewModel.showingNewEvent == true)
     }
 
-    @Test func dismissNewEventClosesSheet() {
+    @Test func dismissNewEventClosesSheet() async {
         let viewModel = ScheduleViewModel(dependencies: makeDependencies())
         viewModel.presentNewEvent()
 
-        viewModel.dismissNewEvent()
+        await viewModel.dismissNewEvent()
 
         #expect(viewModel.showingNewEvent == false)
     }
@@ -430,13 +430,13 @@ struct ScheduleViewModelTests {
         #expect(viewModel.editingEvent == nil)
     }
 
-    @Test func dismissEditClearsEditingEvent() {
+    @Test func dismissEditClearsEditingEvent() async {
         let today = Calendar.current.startOfDay(for: Date())
         let target = event(id: "edit-me", start: today, end: today.addingTimeInterval(60 * 60))
         let viewModel = ScheduleViewModel(dependencies: makeDependencies())
         viewModel.presentEdit(target)
 
-        viewModel.dismissEdit()
+        await viewModel.dismissEdit()
 
         #expect(viewModel.editingEvent == nil)
     }
@@ -444,64 +444,110 @@ struct ScheduleViewModelTests {
     // MARK: - 분석 (event_created / event_updated / event_deleted / 외부 열기)
 
     /// 신규 시트 저장 → `.eventCreated` 1회 — 콜백 구조 변경(outcome) 후에도 기존 로깅 보존.
-    @Test func dismissNewEventSavedLogsEventCreated() {
+    @Test func dismissNewEventSavedLogsEventCreated() async {
         let analytics = SpyAnalyticsService()
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
         viewModel.presentNewEvent()
 
-        viewModel.dismissNewEvent(outcome: .saved)
+        await viewModel.dismissNewEvent(outcome: .saved)
 
         #expect(analytics.events == [.eventCreated])
         #expect(viewModel.showingNewEvent == false)
     }
 
     /// 신규 시트 취소 → 아무것도 로깅하지 않는다.
-    @Test func dismissNewEventCanceledLogsNothing() {
+    @Test func dismissNewEventCanceledLogsNothing() async {
         let analytics = SpyAnalyticsService()
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
         viewModel.presentNewEvent()
 
-        viewModel.dismissNewEvent()
+        await viewModel.dismissNewEvent()
 
         #expect(analytics.events.isEmpty)
     }
 
     /// 편집 시트 저장 → `.eventUpdated` 1회 + 시트 닫힘.
-    @Test func dismissEditSavedLogsEventUpdated() {
+    @Test func dismissEditSavedLogsEventUpdated() async {
         let today = Calendar.current.startOfDay(for: Date())
         let analytics = SpyAnalyticsService()
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
         viewModel.presentEdit(event(id: "e", start: today, end: today.addingTimeInterval(60 * 60)))
 
-        viewModel.dismissEdit(outcome: .saved)
+        await viewModel.dismissEdit(outcome: .saved)
 
         #expect(analytics.events == [.eventUpdated])
         #expect(viewModel.editingEvent == nil)
     }
 
     /// 편집 시트 안 삭제 버튼 → `.eventDeleted` 1회 — `.saved`가 아니라고 취소로 뭉개지지 않는다.
-    @Test func dismissEditDeletedLogsEventDeleted() {
+    @Test func dismissEditDeletedLogsEventDeleted() async {
         let today = Calendar.current.startOfDay(for: Date())
         let analytics = SpyAnalyticsService()
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
         viewModel.presentEdit(event(id: "e", start: today, end: today.addingTimeInterval(60 * 60)))
 
-        viewModel.dismissEdit(outcome: .deleted)
+        await viewModel.dismissEdit(outcome: .deleted)
 
         #expect(analytics.events == [.eventDeleted])
         #expect(viewModel.editingEvent == nil)
     }
 
     /// 편집 시트 취소 → 아무것도 로깅하지 않는다.
-    @Test func dismissEditCanceledLogsNothing() {
+    @Test func dismissEditCanceledLogsNothing() async {
         let today = Calendar.current.startOfDay(for: Date())
         let analytics = SpyAnalyticsService()
         let viewModel = ScheduleViewModel(dependencies: makeDependencies(analytics: analytics))
         viewModel.presentEdit(event(id: "e", start: today, end: today.addingTimeInterval(60 * 60)))
 
-        viewModel.dismissEdit()
+        await viewModel.dismissEdit()
 
         #expect(analytics.events.isEmpty)
+    }
+
+    // MARK: - 직접 쓴 뒤 다시 읽기 (변경 알림 없이)
+
+    /// 시트가 EventKit에 저장했는데 변경 알림이 안 와도 닫히면서 새 일정을 다시 읽는다
+    /// — 할일 저장 직후 일정 저장 시 EventKit이 알림을 빠뜨린다(2026-11-08 QA N-07).
+    @Test func dismissNewEventSavedReloadsWithoutChangeSignal() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let repository = InMemoryEventsRepository(access: .granted)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(eventsRepository: repository), now: { today })
+        await viewModel.onAppear()
+        viewModel.presentNewEvent()
+
+        await repository.insertSilently(event(id: "new", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60)))
+        await viewModel.dismissNewEvent(outcome: .saved)
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["new"])
+    }
+
+    /// 편집 시트 저장도 같은 경로 — 알림 없이 다시 읽는다.
+    @Test func dismissEditSavedReloadsWithoutChangeSignal() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let repository = InMemoryEventsRepository(access: .granted)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(eventsRepository: repository), now: { today })
+        await viewModel.onAppear()
+        let added = event(id: "edited", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60))
+        viewModel.presentEdit(added)
+
+        await repository.insertSilently(added)
+        await viewModel.dismissEdit(outcome: .saved)
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["edited"])
+    }
+
+    /// 취소는 쓴 게 없으니 다시 읽지 않는다 — 저장소에 몰래 들어간 일정이 보이지 않아야 한다.
+    @Test func dismissNewEventCanceledDoesNotReload() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let repository = InMemoryEventsRepository(access: .granted)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(eventsRepository: repository), now: { today })
+        await viewModel.onAppear()
+        viewModel.presentNewEvent()
+
+        await repository.insertSilently(event(id: "new", start: today.addingTimeInterval(60 * 60), end: today.addingTimeInterval(2 * 60 * 60)))
+        await viewModel.dismissNewEvent()
+
+        #expect(viewModel.eventsByDay.isEmpty)
     }
 
     // MARK: - 표시 방식 전환

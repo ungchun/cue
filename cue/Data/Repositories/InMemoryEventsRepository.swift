@@ -57,4 +57,10 @@ actor InMemoryEventsRepository: EventsRepository {
     func emitChange() {
         changesContinuation.yield(())
     }
+
+    /// 테스트 헬퍼 — 변경 신호 없이 이벤트를 넣는다. 시트가 EventKit에 직접 저장했는데
+    /// `EKEventStoreChanged`가 오지 않는 경우를 흉내 낸다.
+    func insertSilently(_ event: CalendarEvent) {
+        events.append(event)
+    }
 }

@@ -562,6 +562,28 @@ struct ScheduleMonthViewModelTests {
         #expect(await eventsRepository.fetchedRanges.count == 6)
     }
 
+    /// 앱이 직접 쓴 뒤엔 변경 알림 없이도 다시 읽는다 — EventKit이 알림을 빠뜨리는 경우(QA N-07).
+    @Test func reloadAfterOwnWriteShowsEventWithoutChangeSignal() async {
+        let (viewModel, eventsRepository, _) = makeViewModel()
+        await viewModel.onAppear()
+
+        await eventsRepository.insertSilently(event(id: "new", title: "새 일정", day: date(11, 20)))
+        await viewModel.reloadAfterOwnWrite()
+
+        #expect(viewModel.page(for: 0).items(day: 20).map(\.title) == ["새 일정"])
+        #expect(viewModel.externalReloadCount == 1)
+    }
+
+    /// 월 모드를 한 번도 안 열었으면 건너뛴다 — 처음 열 때 onAppear가 읽는다.
+    @Test func reloadAfterOwnWriteBeforeAppearDoesNothing() async {
+        let (viewModel, eventsRepository, _) = makeViewModel()
+
+        await viewModel.reloadAfterOwnWrite()
+
+        #expect(await eventsRepository.fetchedRanges.isEmpty)
+        #expect(viewModel.externalReloadCount == 0)
+    }
+
     @Test func externalChangeRefetchesOnlyWindowMonths() async throws {
         let reminders = InMemoryRemindersRepository(access: .granted, lists: [listA])
         let (viewModel, eventsRepository, _) = makeViewModel(remindersRepository: reminders)
@@ -623,6 +645,7 @@ private actor RecordingEventsRepository: EventsRepository {
     }
     func fetchCalendars() async throws -> [EventCalendar] { try await base.fetchCalendars() }
     nonisolated func changes() -> AsyncStream<Void> { base.changes() }
+    func insertSilently(_ event: CalendarEvent) async { await base.insertSilently(event) }
 }
 
 private struct RecordingFetchError: Error {}

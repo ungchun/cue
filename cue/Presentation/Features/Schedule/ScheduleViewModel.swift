@@ -309,14 +309,15 @@ final class ScheduleViewModel {
     }
 
     /// 시트의 저장·취소·삭제 콜백에서 호출 — 시트를 닫는다. 저장이면 event_created,
-    /// 삭제면 event_deleted 기록(취소는 무기록).
-    func dismissNewEvent(outcome: EventEditOutcome = .canceled) {
+    /// 삭제면 event_deleted 기록(취소는 무기록). 저장·삭제면 닫은 뒤 다시 읽는다.
+    func dismissNewEvent(outcome: EventEditOutcome = .canceled) async {
         switch outcome {
         case .saved: analytics.log(.eventCreated)
         case .deleted: analytics.log(.eventDeleted)
         case .canceled: break
         }
         showingNewEvent = false
+        await reloadAfterOwnWrite(outcome)
     }
 
     /// 이벤트 row 탭 — 상세 시트를 그 회차로 연다.
@@ -343,13 +344,23 @@ final class ScheduleViewModel {
 
     /// 편집 시트 콜백 — 시트를 닫는다. 저장이면 event_updated, 시트 안 삭제 버튼이면
     /// event_deleted 기록(취소는 무기록).
-    func dismissEdit(outcome: EventEditOutcome = .canceled) {
+    func dismissEdit(outcome: EventEditOutcome = .canceled) async {
         switch outcome {
         case .saved: analytics.log(.eventUpdated)
         case .deleted: analytics.log(.eventDeleted)
         case .canceled: break
         }
         editingEvent = nil
+        await reloadAfterOwnWrite(outcome)
+    }
+
+    /// 시트가 EventKit에 직접 쓴 뒤 — 변경 알림에 기대지 않고 타임라인·월 캘린더를 다시 읽는다.
+    /// 할일 저장 직후 일정을 저장하면 EventKit이 `EKEventStoreChanged`를 보내지 않아
+    /// 새 일정이 화면에 안 나타났다(2026-11-08 QA N-07). 취소는 쓴 게 없어 건너뛴다.
+    private func reloadAfterOwnWrite(_ outcome: EventEditOutcome) async {
+        guard outcome != .canceled else { return }
+        await handleExternalChange()
+        await monthCalendar.reloadAfterOwnWrite()
     }
 
     /// 좌상단 버튼 — 타임라인 ↔ 월 캘린더 전환. 바꾼 모드를 저장해 앱을 다시 열어도 유지한다.

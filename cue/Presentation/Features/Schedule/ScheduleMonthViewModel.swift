@@ -463,6 +463,12 @@ final class ScheduleMonthViewModel {
         }
     }
 
+    /// 앱이 직접 쓴 직후(일정 시트 저장·삭제) — 변경 알림을 기다리지 않고 다시 읽는다.
+    /// EventKit이 할일 저장 직후의 일정 저장에 `EKEventStoreChanged`를 빠뜨리는 경우가 있어서다.
+    func reloadAfterOwnWrite() async {
+        await handleExternalChange()
+    }
+
     /// 설정·할일을 다시 읽고 윈도우 달만 다시 조회한다.
     /// EventKit은 일정·할일 어느 쪽 변경이든 두 스트림을 함께 울리므로, 진행 중이면 한 번만 더 돌게 접는다.
     private func handleExternalChange() async {
