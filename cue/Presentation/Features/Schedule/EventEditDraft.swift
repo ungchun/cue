@@ -137,6 +137,8 @@ struct EventEditDraft: Equatable {
     /// 드래프트를 이벤트에 반영한다. 빈 문자열 필드는 nil로 정리(EventKit 관례).
     /// `.custom` 반복·알림은 기존 값을 그대로 둔다 — 보존 계약(위 타입 주석 참고).
     func apply(to event: EKEvent) {
+        // 알림 칸은 원래 시작 기준으로 정렬해 읽었다 — 시작을 옮기기 전 값으로 같은 순서를 다시 만든다.
+        let originalStart = event.startDate ?? start
         event.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         if let location {
             // 구조화 위치(제목\n주소 + 좌표)로 저장 — Apple 캘린더와 같은 표현.
@@ -169,14 +171,16 @@ struct EventEditDraft: Equatable {
             (event.recurrenceRules ?? []).forEach(event.removeRecurrenceRule)
             if let rule = recurrence.rule(endingOn: recurrenceEnd) { event.addRecurrenceRule(rule) }
         }
-        applyAlarms(to: event)
+        applyAlarms(to: event, originalStart: originalStart)
     }
 
     /// 알림 두 칸 반영. 두 칸 모두 `.custom`(3개 이상·위치 알림 등)이면 원본을 통째로 두고,
     /// 한 칸만 `.custom`이면 그 자리의 원본 알림을 복사해 남긴다 — 보존 계약.
-    private func applyAlarms(to event: EKEvent) {
+    /// 정렬은 읽을 때와 같은 원래 시작 기준이다. 새 시작으로 정렬하면 절대 일시 알림만 상대 위치가
+    /// 바뀌어 순서가 뒤집히고, `.custom` 칸이 엉뚱한 원본을 복사해 위치 알림 등이 사라진다.
+    private func applyAlarms(to event: EKEvent, originalStart: Date) {
         if firstAlarm == .custom, secondAlarm == .custom { return }
-        let original = Alarm.ordered(event.alarms ?? [], eventStart: event.startDate ?? start)
+        let original = Alarm.ordered(event.alarms ?? [], eventStart: originalStart)
         let slots = firstAlarm == .none ? [] : [firstAlarm, secondAlarm]
         let next = slots.enumerated().compactMap { index, slot -> EKAlarm? in
             guard slot == .custom else { return slot.makeEKAlarm() }

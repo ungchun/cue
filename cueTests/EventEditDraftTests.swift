@@ -321,6 +321,28 @@ struct EventEditDraftTests {
         #expect(Set(event.alarms?.map(\.relativeOffset) ?? []) == [-420, 0])
     }
 
+    /// 시작을 옮겨도 custom 칸은 읽을 때 그 자리의 원본을 지킨다. 새 시작 기준으로 다시 정렬하면
+    /// 절대 일시 알림만 상대 위치가 바뀌어 순서가 뒤집히고, -7분 알림 대신 절대 알림이 두 번 저장됐다.
+    @Test func customSlotSurvivesStartMoveWithAbsoluteAlarm() {
+        let fireDate = date(2026, 7, 25, 9, 30)
+        let store = EKEventStore()
+        let event = EKEvent(eventStore: store)
+        event.startDate = date(2026, 7, 25, 10, 0)
+        event.endDate = date(2026, 7, 25, 11, 0)
+        event.addAlarm(EKAlarm(relativeOffset: -420))
+        event.addAlarm(EKAlarm(absoluteDate: fireDate))
+        var draft = EventEditDraft(event: event)
+        #expect(draft.firstAlarm == .custom)
+        #expect(draft.secondAlarm == .absolute(fireDate))
+
+        draft.setStart(date(2026, 7, 25, 9, 0))
+        draft.apply(to: event)
+
+        let alarms = event.alarms ?? []
+        #expect(alarms.filter { $0.absoluteDate == nil }.map(\.relativeOffset) == [-420])
+        #expect(alarms.compactMap(\.absoluteDate) == [fireDate])
+    }
+
     /// 알림 3개 이상은 두 칸으로 못 그린다 — 두 칸 모두 custom, 저장 시 전부 보존.
     @Test func threeOrMoreAlarmsArePreserved() {
         let store = EKEventStore()
