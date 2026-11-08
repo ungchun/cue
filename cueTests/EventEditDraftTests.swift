@@ -405,6 +405,22 @@ struct EventEditDraftTests {
         #expect(draft == original)
     }
 
+    /// 두 칸이 같은 종일 프리셋으로 모이면 두 번째를 비운다 — 같은 시각 알림이 두 번 울리지 않게.
+    /// 되돌리면 둘 다 원래대로 돌아온다.
+    @Test func allDayToggleDropsSecondAlarmCollapsingIntoFirst() {
+        var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))
+        draft.firstAlarm = .atTime
+        draft.secondAlarm = .minutesBefore(15)
+
+        draft.isAllDay = true
+        #expect(draft.firstAlarm == .daysBeforeAt9AM(0))
+        #expect(draft.secondAlarm == EventEditDraft.Alarm.none)
+
+        draft.isAllDay = false
+        #expect(draft.firstAlarm == .atTime)
+        #expect(draft.secondAlarm == .minutesBefore(15))
+    }
+
     /// 종일 상태에서 알림을 직접 바꿨다면 되돌릴 때 그 선택을 옮긴다 — 옛 값으로 덮지 않는다.
     @Test func togglingAllDayBackKeepsAlarmPickedMeanwhile() {
         var draft = EventEditDraft.newEvent(now: date(2026, 7, 25, 14, 0))

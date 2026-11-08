@@ -28,7 +28,10 @@ struct EventEditDraft: Equatable {
                 alarmsBeforeAllDayToggle = nil
                 return
             }
-            let converted = (firstAlarm.converted(toAllDay: isAllDay), secondAlarm.converted(toAllDay: isAllDay))
+            var converted = (firstAlarm.converted(toAllDay: isAllDay), secondAlarm.converted(toAllDay: isAllDay))
+            // 두 칸이 같은 프리셋으로 모이면(이벤트 당시 + 15분 전 → 당일 9시 둘) 같은 시각 알림이
+            // 두 번 저장된다 — 두 번째를 비운다(되돌리면 위 복원이 살린다). custom은 원본 보존이라 손대지 않는다.
+            if converted.1 == converted.0, converted.1.relativeOffset != nil { converted.1 = .none }
             alarmsBeforeAllDayToggle = AlarmStash(
                 isAllDay: oldValue, first: firstAlarm, second: secondAlarm,
                 convertedFirst: converted.0, convertedSecond: converted.1
