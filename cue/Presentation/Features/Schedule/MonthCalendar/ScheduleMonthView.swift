@@ -101,7 +101,9 @@ struct ScheduleMonthView: View {
                     Color.clear.frame(width: 1 / displayScale, height: Spacing.zero)
                 }
                 Text(grid.weekdaySymbols.indices.contains(column) ? grid.weekdaySymbols[column] : "")
-                    .font(.caption)
+                    .font(.caption2)
+                    // 날짜 숫자보다 한참 작게 — caption2가 가장 작은 텍스트 스타일이라 시스템 보조 글자 배율로 한 단 더 줄인다.
+                    .textScale(.secondary)
                     .foregroundStyle(Self.weekdayColor(grid.weekdayIndex(column: column)))
                     .frame(maxWidth: .infinity)
             }

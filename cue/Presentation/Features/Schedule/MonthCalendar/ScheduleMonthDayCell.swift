@@ -98,12 +98,14 @@ struct ScheduleMonthDayCell: View {
             .font(.subheadline.weight(isToday ? .bold : .regular))
             .monospacedDigit()
             .foregroundStyle(isToday ? Color.red : Self.dayColor(weekday))
-            .padding(.bottom, todayUnderlineHeight + Spacing.xxs)
+            .padding(.bottom, todayUnderlineHeight)
             .overlay(alignment: .bottom) {
                 if isToday {
                     Capsule()
                         .fill(Color.red)
                         .frame(height: todayUnderlineHeight)
+                        // 숫자엔 내림획이 없어 글자 아래 여백이 그대로 틈으로 보인다 — 그만큼 끌어올려 숫자에 붙인다.
+                        .offset(y: -Spacing.xxs)
                 }
             }
     }
