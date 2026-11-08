@@ -8,8 +8,9 @@ import SwiftUI
 
 /// 이벤트 상세 시트의 편집 모드 본문 — 컨테이너(EventDetailSheet)의 `Form` 안에 놓이는 섹션 묶음.
 ///
-/// 섹션 구성은 Apple 캘린더 편집 시트 순서를 따른다: 제목·위치 / 종일·시작·종료·시간대 /
-/// 반복 / 캘린더 / 알림·두 번째 알림·다음으로 표시 / URL·메모.
+/// 섹션 구성은 Apple 캘린더 편집 시트 순서를 따른다: 제목·위치 / 종일·시작·종료 /
+/// 반복 / 캘린더 / 알림·두 번째 알림 / URL·메모.
+/// 시간대·다음으로 표시는 쓰는 사람이 드물어 뺐다 — 기존 값은 드래프트가 들고 있다가 그대로 저장한다.
 /// 이동 시간·초대받은 사람 편집은 EventKit이 서드파티에 열어 주지 않아 없다.
 struct EventEditForm: View {
     @Binding var draft: EventEditDraft
@@ -27,16 +28,9 @@ struct EventEditForm: View {
 
         Section {
             Toggle("All-day", isOn: $draft.isAllDay.animation())
-            Group {
-                DatePicker("Starts", selection: startBinding, displayedComponents: dateComponents)
-                // 종료는 시작 이전으로 못 내린다 — 드래프트 클램프와 피커 범위 이중 방어.
-                DatePicker("Ends", selection: endBinding, in: draft.start..., displayedComponents: dateComponents)
-            }
-            // 시간 지정 이벤트는 이벤트 시간대의 벽시계로 보여준다(Apple과 동일) — 시간대 행과 짝.
-            .environment(\.timeZone, draft.isAllDay ? .current : (draft.timeZone ?? .current))
-            if !draft.isAllDay {
-                timeZoneRow
-            }
+            DatePicker("Starts", selection: startBinding, displayedComponents: dateComponents)
+            // 종료는 시작 이전으로 못 내린다 — 드래프트 클램프와 피커 범위 이중 방어.
+            DatePicker("Ends", selection: endBinding, in: draft.start..., displayedComponents: dateComponents)
         }
 
         // 반복 — 할일 시트와 공용 행(메뉴 피커 + 사용자화 요약 + 반복 종료).
@@ -59,9 +53,6 @@ struct EventEditForm: View {
             // 두 번째 알림은 첫 알림이 있을 때만 — Apple과 동일.
             if draft.firstAlarm != .none {
                 alarmRows(selection: $draft.secondAlarm, title: "Second Alert")
-            }
-            if !availabilityOptions.isEmpty {
-                availabilityPicker
             }
         }
 
@@ -137,16 +128,6 @@ struct EventEditForm: View {
         Binding(get: { draft.end }, set: { draft.setEnd($0) })
     }
 
-    /// 시간대 — 검색 목록으로 푸시. 유동(nil) 이벤트는 기기 시간대로 표시한다.
-    private var timeZoneRow: some View {
-        let zone = draft.timeZone ?? .current
-        return NavigationLink {
-            TimeZonePickerScreen(selection: zone) { draft.setTimeZone($0) }
-        } label: {
-            LabeledContent("Time Zone", value: TimeZonePickerScreen.cityName(for: zone))
-        }
-    }
-
     // MARK: - 알림
 
     /// 알림 메뉴 + (사용자 지정일 때) 일시 피커.
@@ -175,7 +156,7 @@ struct EventEditForm: View {
         return presets + [current.isAbsolute ? current : .absolute(draft.start)]
     }
 
-    // MARK: - 캘린더 · 다음으로 표시
+    // MARK: - 캘린더
 
     private var calendarPicker: some View {
         Picker("Calendar", selection: $draft.calendarID) {
@@ -187,27 +168,6 @@ struct EventEditForm: View {
                     Text(calendar.title)
                 }
                 .tag(Optional(calendar.calendarIdentifier))
-            }
-        }
-    }
-
-    /// 선택한 캘린더가 지원하는 선택지 — 캘린더를 바꾸면 따라 바뀐다. 비면 행을 숨긴다.
-    private var availabilityOptions: [EKEventAvailability] {
-        guard let calendar = calendars.first(where: { $0.calendarIdentifier == draft.calendarID }) else { return [] }
-        return EventEditDraft.availabilityOptions(for: calendar.supportedEventAvailabilities)
-    }
-
-    /// 다음으로 표시 — 현재 값이 선택지에 없으면(신규·캘린더 변경) 첫 선택지(바쁨)로 보인다.
-    /// 저장 시 컨테이너가 선택지 밖 값을 걸러 EventKit 기본값을 유지한다.
-    private var availabilityPicker: some View {
-        let options = availabilityOptions
-        let binding = Binding<EKEventAvailability>(
-            get: { options.contains(draft.availability) ? draft.availability : options[0] },
-            set: { draft.availability = $0 }
-        )
-        return Picker("Show As", selection: binding) {
-            ForEach(options, id: \.self) { option in
-                Text(EventEditDraft.label(for: option)).tag(option)
             }
         }
     }
