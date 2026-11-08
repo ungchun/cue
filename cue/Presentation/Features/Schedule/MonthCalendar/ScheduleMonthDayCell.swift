@@ -21,16 +21,17 @@ struct ScheduleMonthDayCell: View {
     /// 칩 탭 — 상세 시트를 연다.
     let onSelect: (WidgetCalendarItem) -> Void
 
-    /// 오늘 원의 지름 — 두 자리 숫자가 원 안에 들어가도록 caption 글자 크기를 따라간다.
-    @ScaledMetric(relativeTo: .caption) private var todayDiameter: CGFloat = 20
+    /// 오늘 원의 지름 — 두 자리 숫자가 원 안에 들어가도록 날짜 숫자(callout) 글자 크기를 따라간다.
+    @ScaledMetric(relativeTo: .callout) private var todayDiameter: CGFloat = 26
     /// 라이트 모드 날씨 아이콘 테두리 두께(pt) — 아이콘과 함께 커진다.
-    @ScaledMetric(relativeTo: .caption) private var weatherEdgeWidth: CGFloat = 0.7
+    @ScaledMetric(relativeTo: .callout) private var weatherEdgeWidth: CGFloat = 0.7
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if let day {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                HStack(spacing: Spacing.zero) {
+                // 기준선 정렬 — 작은 음력 글씨가 날짜 숫자 가운데가 아니라 바닥선에 앉아 한 단 낮게 보인다.
+                HStack(alignment: .firstTextBaseline, spacing: Spacing.zero) {
                     // 좌상단은 한 칸만 — 좁은 칸에 둘 다 넣으면 날짜 숫자가 밀린다. 예보는 오늘 근처
                     // 열흘 남짓뿐이라 날씨를 앞세워도 나머지 날엔 음력이 보인다.
                     if let weatherSymbol {
@@ -52,7 +53,7 @@ struct ScheduleMonthDayCell: View {
     }
 
     /// 시스템 날씨 앱처럼 멀티컬러 채움 심볼 — 해는 노랑, 비는 파랑 등 색은 심볼이 정한다.
-    /// 날짜 숫자 줄 높이 안에 들어가게 caption 크기를 따른다. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
+    /// 날짜 숫자와 같은 callout 크기를 따른다. 상태 이름이 로케일화돼 있지 않아 VoiceOver에선 숨긴다.
     ///
     /// 멀티컬러 구름·달은 흰색으로 고정이라 라이트 배경에선 사라진다 — 라이트에서만 같은 모양을 상하좌우로
     /// 살짝 밀어 낸 그림자로 얇은 회색 테두리를 둘러 윤곽을 살린다(해·비 색은 그대로).
@@ -62,7 +63,7 @@ struct ScheduleMonthDayCell: View {
         return Image(systemName: symbol)
             .symbolVariant(.fill)
             .symbolRenderingMode(.multicolor)
-            .font(.caption)
+            .font(.callout)
             .shadow(color: edge, radius: 0, x: width, y: 0)
             .shadow(color: edge, radius: 0, x: -width, y: 0)
             .shadow(color: edge, radius: 0, x: 0, y: width)
@@ -70,7 +71,7 @@ struct ScheduleMonthDayCell: View {
             .accessibilityHidden(true)
     }
 
-    /// 날짜 숫자(caption)보다 한 단계 작고 흐리게 — 곁들이는 정보라 날짜를 가리지 않게.
+    /// 날짜 숫자(callout)보다 작고 흐리게 — 곁들이는 정보라 날짜를 가리지 않게.
     /// 숫자를 그대로 찍는 표기라 문자열 카탈로그를 거치지 않는다(verbatim).
     private func lunarText(_ label: String) -> some View {
         Text(verbatim: label)
@@ -89,7 +90,7 @@ struct ScheduleMonthDayCell: View {
     private func dayNumber(_ day: Int) -> some View {
         // 숫자 포맷으로 — 문자열 카탈로그 키를 거치지 않고 로케일 숫자 표기를 따른다.
         let text = Text(day, format: .number)
-            .font(.caption.weight(isToday ? .semibold : .regular))
+            .font(.callout.weight(isToday ? .semibold : .regular))
             .monospacedDigit()
         if isToday {
             // 앱 tint가 `.primary`(다크=흰색)라 흰 글씨를 얹으면 다크에서 숫자가 사라진다.

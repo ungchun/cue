@@ -24097,302 +24097,402 @@
         }
       }
     },
-    "Show Completed Tasks in Month View" : {
+    "Calendar View" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "إظهار المهام المكتملة في عرض الشهر"
+            "value" : "عرض التقويم"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erledigte Aufgaben in Monatsansicht anzeigen"
+            "value" : "Kalenderansicht"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar tareas completadas en vista mensual"
+            "value" : "Vista de calendario"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afficher les tâches terminées en vue mensuelle"
+            "value" : "Vue calendrier"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "मासिक दृश्य में पूर्ण टास्क दिखाएं"
+            "value" : "कैलेंडर दृश्य"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tampilkan Tugas Selesai di Tampilan Bulan"
+            "value" : "Tampilan Kalender"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra attività completate nella vista mensile"
+            "value" : "Vista calendario"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "月表示に完了済みのタスクを表示"
+            "value" : "カレンダー表示"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "캘린더에 완료된 할일 표시"
+            "value" : "캘린더 보기"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tunjuk Tugas Selesai dalam Paparan Bulan"
+            "value" : "Paparan Kalendar"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar tarefas concluídas na visão mensal"
+            "value" : "Visualização do calendário"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Показывать выполненные задачи в виде месяца"
+            "value" : "Вид календаря"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงงานที่เสร็จแล้วในมุมมองเดือน"
+            "value" : "มุมมองปฏิทิน"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiện việc đã xong trong lịch tháng"
+            "value" : "Chế độ xem lịch"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在月视图中显示已完成的任务"
+            "value" : "日历视图"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在月檢視中顯示已完成的任務"
+            "value" : "行事曆檢視"
           }
         }
       }
     },
-    "Show Weather in Calendar" : {
+    "Show Completed Tasks" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "إظهار الطقس في التقويم"
+            "value" : "إظهار المهام المكتملة"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wetter im Kalender anzeigen"
+            "value" : "Erledigte Aufgaben anzeigen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar el tiempo en el calendario"
+            "value" : "Mostrar tareas completadas"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afficher la météo dans l'agenda"
+            "value" : "Afficher les tâches terminées"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "कैलेंडर में मौसम दिखाएं"
+            "value" : "पूर्ण कार्य दिखाएं"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tampilkan Cuaca di Kalender"
+            "value" : "Tampilkan Tugas Selesai"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra meteo nel calendario"
+            "value" : "Mostra attività completate"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カレンダーに天気を表示"
+            "value" : "完了したタスクを表示"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "캘린더에 날씨 표시"
+            "value" : "완료된 할일 표시"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tunjuk Cuaca dalam Kalendar"
+            "value" : "Tunjuk Tugasan Selesai"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar clima no calendário"
+            "value" : "Mostrar tarefas concluídas"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Показывать погоду в календаре"
+            "value" : "Показывать выполненные задачи"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงสภาพอากาศในปฏิทิน"
+            "value" : "แสดงงานที่เสร็จแล้ว"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiện thời tiết trong lịch"
+            "value" : "Hiện việc đã hoàn thành"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在日历中显示天气"
+            "value" : "显示已完成的任务"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在行事曆中顯示天氣"
+            "value" : "顯示已完成的任務"
           }
         }
       }
     },
-    "Show Lunar Dates in Calendar" : {
+    "Show Weather" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "إظهار التواريخ القمرية في التقويم"
+            "value" : "إظهار الطقس"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mondkalenderdaten im Kalender anzeigen"
+            "value" : "Wetter anzeigen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar fechas lunares en el calendario"
+            "value" : "Mostrar el tiempo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Afficher les dates lunaires dans l'agenda"
+            "value" : "Afficher la météo"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "कैलेंडर में चंद्र तिथियां दिखाएं"
+            "value" : "मौसम दिखाएं"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tampilkan Tanggal Lunar di Kalender"
+            "value" : "Tampilkan Cuaca"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostra date lunari nel calendario"
+            "value" : "Mostra meteo"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カレンダーに旧暦を表示"
+            "value" : "天気を表示"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "캘린더에 음력 표시"
+            "value" : "날씨 표시"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tunjuk Tarikh Lunar dalam Kalendar"
+            "value" : "Tunjuk Cuaca"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mostrar datas lunares no calendário"
+            "value" : "Mostrar clima"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Показывать лунные даты в календаре"
+            "value" : "Показывать погоду"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "แสดงวันที่จันทรคติในปฏิทิน"
+            "value" : "แสดงสภาพอากาศ"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hiện ngày âm lịch trong lịch"
+            "value" : "Hiện thời tiết"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在日历中显示农历"
+            "value" : "显示天气"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在行事曆中顯示農曆"
+            "value" : "顯示天氣"
+          }
+        }
+      }
+    },
+    "Show Lunar Dates" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إظهار التواريخ القمرية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mondkalenderdaten anzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar fechas lunares"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher les dates lunaires"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चंद्र तिथियां दिखाएं"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilkan Tanggal Lunar"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostra date lunari"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旧暦を表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "음력 표시"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tunjuk Tarikh Lunar"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar datas lunares"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать лунные даты"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แสดงวันที่จันทรคติ"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiện ngày âm lịch"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示农历"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示農曆"
           }
         }
       }

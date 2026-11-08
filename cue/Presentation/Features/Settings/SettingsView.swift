@@ -182,28 +182,36 @@ struct SettingsView: View {
                         LabeledContent("Calendars", value: calendarsSummary)
                     }
                 }
-                premiumGated(feature: "month_hide_completed") {
-                    Toggle("Show Completed Tasks in Month View", isOn: monthShowsCompletedRemindersBinding)
-                        .tint(.green)
-                }
-                premiumGated(feature: "month_weather") {
-                    Toggle("Show Weather in Calendar", isOn: monthShowsWeatherBinding)
-                        .tint(.green)
-                }
-                // 음력은 한국 지역에서만 — 다른 지역엔 행 자체가 없다.
-                if viewModel.isLunarDateAvailable {
-                    Toggle("Show Lunar Dates in Calendar", isOn: monthShowsLunarDateBinding)
-                        .tint(.green)
-                }
                 premiumGated(feature: "show_calendar_schedule") {
                     Toggle("Show Calendar in Live", isOn: scheduleShowsCalendarBinding)
                         .tint(.green)
                 }
             } header: {
                 sectionHeader("Schedule")
+            }
+
+            // 일정 탭 월 캘린더에 무엇을 겹쳐 그릴지 — 헤더가 "캘린더"를 말해 주므로 행 문구는 대상만.
+            Section {
+                premiumGated(feature: "month_hide_completed") {
+                    Toggle("Show Completed Tasks", isOn: monthShowsCompletedRemindersBinding)
+                        .tint(.green)
+                }
+                premiumGated(feature: "month_weather") {
+                    Toggle("Show Weather", isOn: monthShowsWeatherBinding)
+                        .tint(.green)
+                }
+                // 음력은 한국 지역에서만 — 다른 지역엔 행 자체가 없다.
+                if viewModel.isLunarDateAvailable {
+                    Toggle("Show Lunar Dates", isOn: monthShowsLunarDateBinding)
+                        .tint(.green)
+                }
+            } header: {
+                sectionHeader("Calendar View")
             } footer: {
                 weatherAttributionFooter
             }
+            // 출처 한 줄 아래가 전역 간격(28)이면 휑하다 — 다음 섹션과 붙인다.
+            .listSectionSpacing(Spacing.sm)
 
             Section {
                 // 볼 목록 선택 — 전용 화면으로 push(체크리스트). 리스트가 없으면 행 자체를 숨긴다.
