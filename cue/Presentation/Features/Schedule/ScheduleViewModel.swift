@@ -129,6 +129,10 @@ final class ScheduleViewModel {
             // 숨김 설정이 바뀌었으면 지금까지 본 범위를 다시 필터링해 반영한다.
             hiddenCalendarIDs = hidden
             await reloadFetchedRange()
+        } else if fetchedUntil < minimumFetchedUntil() {
+            // 앱을 켜 둔 채 날이 지나면 범위 끝이 오늘 쪽으로 다가온다. 캘린더 변경이 없으면 다시 읽을
+            // 계기가 없어, 그대로 라이브를 게시하면 실리는 날이 하루씩 줄었다 — 다시 나타날 때 넓힌다.
+            await reloadFetchedRange()
         }
     }
 
@@ -198,8 +202,7 @@ final class ScheduleViewModel {
         // 스냅샷에서 복원한 범위 끝은 저장 당시의 "그날+30일"이라 날이 갈수록 오늘 쪽으로 다가온다.
         // 그대로 다시 저장하면 영영 안 늘어나, 타임라인을 안 내려 보는 월 모드에선 라이브에 오늘·내일만
         // 실렸다 — 첫 페이지 폭(오늘+initialDays) 아래로는 줄지 않게 넓힌다.
-        let minimumUntil = Calendar.current.date(byAdding: .day, value: Self.initialDays, to: today) ?? today
-        let until = max(fetchedUntil, minimumUntil)
+        let until = max(fetchedUntil, minimumFetchedUntil())
         do {
             let events = try await fetchEventsUseCase(from: today, to: until)
             eventsByDay = Self.groupByDay(visible(events), now: nowDate)
@@ -210,6 +213,12 @@ final class ScheduleViewModel {
         } catch {
             // 실패 시 기존 표시 유지 — 다음 신호에 재시도.
         }
+    }
+
+    /// 범위 끝의 하한 — 오늘+`initialDays`.
+    private func minimumFetchedUntil() -> Date {
+        let today = Calendar.current.startOfDay(for: now())
+        return Calendar.current.date(byAdding: .day, value: Self.initialDays, to: today) ?? today
     }
 
     /// 숨긴 캘린더의 이벤트를 걸러낸다. 숨김이 없으면 원본 그대로.

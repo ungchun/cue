@@ -848,6 +848,26 @@ struct ScheduleViewModelTests {
         #expect(await cache.eventsSnapshot?.fetchedUntil == expectedUntil)
     }
 
+    /// 앱을 켜 둔 채 날이 지나 다시 나타나면 범위를 오늘+30일로 넓혀 다시 읽는다 — 캘린더 변경이 없어도.
+    /// 그대로 두면 라이브 게시(onAppear 뒤 eventsByDay)에 실리는 날이 하루씩 줄었다.
+    @Test func reappearAfterDayChangeWidensRange() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let day = 24 * 60 * 60.0
+        let edge = event(id: "edge",
+                         start: today.addingTimeInterval(31 * day + 10 * 60 * 60),
+                         end: today.addingTimeInterval(31 * day + 11 * 60 * 60))
+        let clock = DayClock(today)
+        let viewModel = ScheduleViewModel(dependencies: makeDependencies(events: [edge]), now: { clock.now })
+        await viewModel.onAppear()
+        #expect(viewModel.eventsByDay.isEmpty)
+
+        clock.now = today.addingTimeInterval(2 * day)
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["edge"])
+        #expect(viewModel.fetchedUntil == Calendar.current.date(byAdding: .day, value: 32, to: today))
+    }
+
     /// 첫 페이지 적재가 성공하면 스냅샷을 저장한다 — 다음 실행의 첫 페인트 재료.
     @Test func loadInitialSavesSnapshot() async {
         let today = Calendar.current.startOfDay(for: Date())
@@ -988,4 +1008,10 @@ private actor CountingScheduleLiveActivityService: LiveActivityService {
     func endMemo() async {}
     func sync() async {}
     func refreshLayout() async {}
+}
+
+/// 바꿀 수 있는 현재 시각 — 앱을 켜 둔 채 날이 바뀌는 상황용. 테스트·VM 모두 메인 액터에서만 쓴다.
+private final class DayClock {
+    var now: Date
+    init(_ now: Date) { self.now = now }
 }
