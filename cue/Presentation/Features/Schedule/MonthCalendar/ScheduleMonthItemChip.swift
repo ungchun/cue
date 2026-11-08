@@ -26,6 +26,8 @@ struct ScheduleMonthItemChip: View {
     private static let softBackgroundOpacity: Double = 0.18
     /// 완료 할일 농도 — 색은 유지하고 살짝만 물러나게.
     private static let completedOpacity: Double = 0.5
+    /// 완료 할일 원 배율 — 채운 원은 테두리 원보다 커 보여 살짝 줄인다. 프레임은 그대로라 제목이 안 밀린다.
+    private static let completedIconScale: CGFloat = 0.8
 
     var body: some View {
         // plain — 기본 스타일의 tint·눌림 강조가 종류별 칩 모양을 바꾸지 않게.
@@ -69,6 +71,7 @@ struct ScheduleMonthItemChip: View {
                     .resizable()
                     .scaledToFit()
                     .fontWeight(.black)
+                    .scaleEffect(item.isCompleted ? Self.completedIconScale : 1)
                     .frame(width: reminderIconSize, height: reminderIconSize)
                     .foregroundStyle(reminderColor)
                 titleLine(centered: false)
