@@ -193,12 +193,18 @@ final class ScheduleViewModel {
     private func reloadFetchedRange() async {
         let nowDate = now()
         let today = Calendar.current.startOfDay(for: nowDate)
+        // 스냅샷에서 복원한 범위 끝은 저장 당시의 "그날+30일"이라 날이 갈수록 오늘 쪽으로 다가온다.
+        // 그대로 다시 저장하면 영영 안 늘어나, 타임라인을 안 내려 보는 월 모드에선 라이브에 오늘·내일만
+        // 실렸다 — 첫 페이지 폭(오늘+initialDays) 아래로는 줄지 않게 넓힌다.
+        let minimumUntil = Calendar.current.date(byAdding: .day, value: Self.initialDays, to: today) ?? today
+        let until = max(fetchedUntil, minimumUntil)
         do {
-            let events = try await fetchEventsUseCase(from: today, to: fetchedUntil)
+            let events = try await fetchEventsUseCase(from: today, to: until)
             eventsByDay = Self.groupByDay(visible(events), now: nowDate)
+            fetchedUntil = until
             // fetch 성공 결과를 스냅샷으로 저장 — 다음 실행의 첫 페인트 재료.
             // 필터 전 원본을 저장해 숨김 해제 시에도 캐시가 쓸모를 잃지 않는다.
-            await saveSnapshotUseCase(EventsSnapshot(events: events, fetchedUntil: fetchedUntil))
+            await saveSnapshotUseCase(EventsSnapshot(events: events, fetchedUntil: until))
         } catch {
             // 실패 시 기존 표시 유지 — 다음 신호에 재시도.
         }

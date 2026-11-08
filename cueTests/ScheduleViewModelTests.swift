@@ -777,6 +777,33 @@ struct ScheduleViewModelTests {
         #expect(viewModel.fetchedUntil == expectedUntil)
     }
 
+    /// 범위 끝이 코앞인(저장한 지 오래된) 캐시는 최신화 때 오늘+30일로 넓힌다 — 그대로 두면
+    /// 타임라인을 안 내려 보는 월 모드에서 라이브에 오늘·내일만 실린다(실기기 재현).
+    @Test func nearlyExpiredSnapshotRangeWidensToInitialDays() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let day = 24 * 60 * 60.0
+        let soon = event(id: "soon",
+                         start: today.addingTimeInterval(day + 10 * 60 * 60),
+                         end: today.addingTimeInterval(day + 11 * 60 * 60))
+        let later = event(id: "later",
+                          start: today.addingTimeInterval(5 * day + 10 * 60 * 60),
+                          end: today.addingTimeInterval(5 * day + 11 * 60 * 60))
+        let cache = InMemorySnapshotCacheRepository(
+            eventsSnapshot: EventsSnapshot(events: [soon], fetchedUntil: today.addingTimeInterval(2 * day))
+        )
+        var deps = makeDependencies(events: [soon, later])
+        deps.loadEventsSnapshot = LoadEventsSnapshotUseCase(repository: cache)
+        deps.saveEventsSnapshot = SaveEventsSnapshotUseCase(repository: cache)
+        let viewModel = ScheduleViewModel(dependencies: deps, now: { today })
+
+        await viewModel.onAppear()
+
+        #expect(viewModel.eventsByDay.flatMap(\.events).map(\.id) == ["soon", "later"])
+        let expectedUntil = Calendar.current.date(byAdding: .day, value: 30, to: today)
+        #expect(viewModel.fetchedUntil == expectedUntil)
+        #expect(await cache.eventsSnapshot?.fetchedUntil == expectedUntil)
+    }
+
     /// 첫 페이지 적재가 성공하면 스냅샷을 저장한다 — 다음 실행의 첫 페인트 재료.
     @Test func loadInitialSavesSnapshot() async {
         let today = Calendar.current.startOfDay(for: Date())
