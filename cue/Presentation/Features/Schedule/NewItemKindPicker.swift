@@ -19,6 +19,8 @@ struct NewItemKindPicker: View {
             EmptyView()
         }
         .pickerStyle(.segmented)
+        // 글자 폭만큼만 잡으면 칸이 좁아 누르기 답답하다 — 최소 폭을 주고, 긴 번역은 글자 폭대로 늘어난다.
+        .frame(minWidth: Spacing.xxl * 2.5)
         .fixedSize()
     }
 }
