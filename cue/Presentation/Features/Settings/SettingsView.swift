@@ -210,6 +210,9 @@ struct SettingsView: View {
             } footer: {
                 weatherAttributionFooter
             }
+            // 출처 한 줄 아래 여백(약 8pt)만큼 덜어, 출처 → 다음 머리글 간격을 푸터 없는 섹션의
+            // 카드 → 머리글 간격(전역 28)과 같게 맞춘다.
+            .listSectionSpacing(Spacing.md + Spacing.xs)
 
             Section {
                 // 볼 목록 선택 — 전용 화면으로 push(체크리스트). 리스트가 없으면 행 자체를 숨긴다.
