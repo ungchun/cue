@@ -139,6 +139,36 @@ actor EventKitRemindersRepository: RemindersRepository {
         try store.remove(reminder, commit: true)
     }
 
+    /// EventKit엔 할일 회차 삭제(EKSpan)가 없다. 미리 알림 앱의 "이 미리 알림만 삭제"는 같은 항목의
+    /// 마감만 다음 회차로 옮긴다 — 완료 사본도 삭제 기록도 남기지 않는다(2026-11-09 실측). 그대로 따라 한다.
+    /// 다음 회차가 없으면(반복 아님·마지막 회차) 항목을 지운다.
+    func deleteOccurrence(reminderID: String) async throws {
+        guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
+            throw DomainError.notFound
+        }
+        let current = ReminderMapper.toReminder(reminder)
+        guard let due = current.dueDate, let next = current.nextOccurrence(),
+              var components = reminder.dueDateComponents else {
+            try store.remove(reminder, commit: true)
+            return
+        }
+        // 날짜만 바꾼다 — 시·분·시간대는 그대로라 시각 지정 마감의 시각이 유지된다.
+        let day = Calendar.current.dateComponents([.year, .month, .day], from: next)
+        components.year = day.year
+        components.month = day.month
+        components.day = day.day
+        reminder.dueDateComponents = components
+        // 절대 시각 알람(cue가 다는 마감 알람 포함)은 같은 만큼 민다 — 안 밀면 지난 시각에 남아 울리지 않는다.
+        // 상대 오프셋 알람은 마감을 따라가고, 위치 알람은 시각이 없다.
+        let shift = next.timeIntervalSince(due)
+        for alarm in reminder.alarms ?? [] where alarm.structuredLocation == nil {
+            if let date = alarm.absoluteDate {
+                alarm.absoluteDate = date.addingTimeInterval(shift)
+            }
+        }
+        try store.save(reminder, commit: true)
+    }
+
     func moveReminder(reminderID: String, toListID listID: String) async throws {
         guard let reminder = store.calendarItem(withIdentifier: reminderID) as? EKReminder else {
             throw DomainError.notFound

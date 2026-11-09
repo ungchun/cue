@@ -42,8 +42,11 @@ protocol RemindersRepository: Sendable {
     /// 다른 알람)을, 해당 필드가 실제로 바뀌지 않았으면 보존해야 한다.
     @discardableResult
     func updateReminder(reminderID: String, changes: ReminderChanges) async throws -> Reminder
-    /// 항목을 삭제한다.
+    /// 항목을 삭제한다 — 반복 항목이면 이후 회차까지 전부.
     func deleteReminder(reminderID: String) async throws
+    /// 반복 항목의 이번 회차만 지운다 — 항목은 다음 회차 마감으로 넘어가고 완료 기록은 남기지 않는다.
+    /// 반복이 아니거나 마지막 회차라 넘어갈 회차가 없으면 항목을 지운다.
+    func deleteOccurrence(reminderID: String) async throws
     /// 항목을 다른 리스트로 옮긴다 (전체 탭 섹션 간 드래그). EventKit에선 calendar 교체.
     func moveReminder(reminderID: String, toListID listID: String) async throws
 

@@ -68,3 +68,76 @@ enum RecurrenceFrequency: String, Equatable, Sendable, Codable {
     case monthly
     case yearly
 }
+
+extension RecurrenceRule {
+    /// `due` 다음 회차 중 `due`와 `now`보다 모두 뒤인 첫 회차 — 미리 알림 앱의 "이 미리 알림만 삭제"가
+    /// 마감을 옮기는 곳(2026-11-09 실측: 11/6 매일 종일 → 11/7도 오늘도 아닌 11/10, 시각은 유지).
+    /// 반복 종료일은 저장된 시각과 무관하게 그날 하루를 포함한다. 회차가 없으면 nil(마지막 회차).
+    /// 간격은 `due`를 기준점으로 센다 — `due`가 곧 현재 회차라서.
+    func nextOccurrence(after due: Date, now: Date, calendar: Calendar = .current) -> Date? {
+        let dueDay = calendar.startOfDay(for: due)
+        let time = calendar.dateComponents([.hour, .minute, .second], from: due)
+        let endDay = endDate.map { calendar.startOfDay(for: $0) }
+        guard let dayAfterDue = calendar.date(byAdding: .day, value: 1, to: dueDay) else { return nil }
+        var day = max(dayAfterDue, calendar.startOfDay(for: now))
+        // ponytail: 하루씩 훑는다(최대 ~10년 × 간격, 2월 29일 매년도 덮음). 삭제 한 번에 한 번 도는 경로라 충분.
+        for _ in 0..<(3_700 * interval) {
+            if let endDay, day > endDay { return nil }
+            if matches(day, anchor: dueDay, calendar: calendar),
+               let occurrence = calendar.date(
+                   bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: time.second ?? 0, of: day
+               ),
+               occurrence > now {
+                return occurrence
+            }
+            guard let following = calendar.date(byAdding: .day, value: 1, to: day) else { return nil }
+            day = following
+        }
+        return nil
+    }
+
+    /// `day`가 `anchor`(현재 회차의 날)에서 시작한 이 규칙의 회차인가.
+    private func matches(_ day: Date, anchor: Date, calendar: Calendar) -> Bool {
+        let d = calendar.dateComponents([.year, .month, .day, .weekday], from: day)
+        let a = calendar.dateComponents([.year, .month, .day, .weekday], from: anchor)
+        guard let dYear = d.year, let dMonth = d.month, let dDay = d.day, let dWeekday = d.weekday,
+              let aYear = a.year, let aMonth = a.month, let aDay = a.day, let aWeekday = a.weekday
+        else { return false }
+
+        switch frequency {
+        case .daily:
+            let days = calendar.dateComponents([.day], from: anchor, to: day).day ?? 0
+            return days % interval == 0
+        case .weekly:
+            guard (weekdays.isEmpty ? [aWeekday] : weekdays).contains(dWeekday),
+                  let dayWeek = calendar.dateInterval(of: .weekOfYear, for: day)?.start,
+                  let anchorWeek = calendar.dateInterval(of: .weekOfYear, for: anchor)?.start
+            else { return false }
+            let weeks = calendar.dateComponents([.weekOfYear], from: anchorWeek, to: dayWeek).weekOfYear ?? 0
+            return weeks % interval == 0
+        case .monthly:
+            guard ((dYear - aYear) * 12 + dMonth - aMonth) % interval == 0 else { return false }
+            if let ordinal, let ordinalWeekday {
+                return isOrdinal(ordinal, weekday: ordinalWeekday, day: day, components: d, calendar: calendar)
+            }
+            return (monthDays.isEmpty ? [aDay] : monthDays).contains(dDay)
+        case .yearly:
+            guard (dYear - aYear) % interval == 0, (months.isEmpty ? [aMonth] : months).contains(dMonth)
+            else { return false }
+            if let ordinal, let ordinalWeekday {
+                return isOrdinal(ordinal, weekday: ordinalWeekday, day: day, components: d, calendar: calendar)
+            }
+            return dDay == aDay
+        }
+    }
+
+    /// `day`가 그 달의 `ordinal`째(-1 = 마지막) `weekday`인가.
+    private func isOrdinal(
+        _ ordinal: Int, weekday: Int, day: Date, components: DateComponents, calendar: Calendar
+    ) -> Bool {
+        guard components.weekday == weekday, let dayOfMonth = components.day else { return false }
+        if ordinal > 0 { return (dayOfMonth - 1) / 7 + 1 == ordinal }
+        let daysInMonth = calendar.range(of: .day, in: .month, for: day)?.count ?? 31
+        return (daysInMonth - dayOfMonth) / 7 + 1 == -ordinal
+    }
+}

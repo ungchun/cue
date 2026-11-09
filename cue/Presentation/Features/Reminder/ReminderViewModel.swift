@@ -925,10 +925,10 @@ final class ReminderViewModel {
         }
     }
 
-    /// 항목을 삭제한다.
-    func delete(_ reminder: Reminder) async {
+    /// 항목을 삭제한다. 반복 항목은 `span`으로 이번 회차만인지 이후 전부인지 고른다.
+    func delete(_ reminder: Reminder, span: ReminderDeleteSpan = .futureOccurrences) async {
         do {
-            try await deleteReminderUseCase(reminderID: reminder.id)
+            try await deleteReminderUseCase(reminderID: reminder.id, span: span)
             analytics.log(.reminderDeleted)
             // 쓰기 성공 — 삭제 전 상태를 든 낡은 재조회가 지운 행을 부활시키지 못하게.
             dataGeneration += 1

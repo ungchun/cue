@@ -1245,6 +1245,23 @@ struct ReminderViewModelTests {
         #expect(viewModel.visibleReminders.isEmpty)
     }
 
+    /// 반복 할일 "이 할일만 삭제" — 목록에서 사라지지 않고 다음 회차 마감으로 남는다.
+    @Test func deleteThisOccurrenceKeepsRecurringReminderWithNextDue() async {
+        let due = Calendar.current.startOfDay(for: Date().addingTimeInterval(3 * 86_400))
+        let target = reminder(
+            id: "1", dueDate: due, recurrence: RecurrenceRule(frequency: .daily), listID: "A"
+        )
+        let viewModel = ReminderViewModel(dependencies: makeDependencies(
+            lists: [listA], reminders: [target]
+        ))
+        await viewModel.onAppear()
+
+        await viewModel.delete(target, span: .thisOccurrence)
+
+        #expect(viewModel.visibleReminders.map(\.id) == ["1"])
+        #expect(viewModel.visibleReminders.first?.dueDate == Calendar.current.date(byAdding: .day, value: 1, to: due))
+    }
+
     // MARK: - List CRUD
 
     @Test func addListCreatesAndSelectsNewList() async {
@@ -2035,6 +2052,7 @@ private actor GatedRemindersRepository: RemindersRepository {
         return try await base.updateReminder(reminderID: reminderID, changes: changes)
     }
     func deleteReminder(reminderID: String) async throws { try await base.deleteReminder(reminderID: reminderID) }
+    func deleteOccurrence(reminderID: String) async throws { try await base.deleteOccurrence(reminderID: reminderID) }
     func moveReminder(reminderID: String, toListID listID: String) async throws {
         try await base.moveReminder(reminderID: reminderID, toListID: listID)
     }

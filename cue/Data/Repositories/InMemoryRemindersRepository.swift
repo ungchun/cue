@@ -128,6 +128,18 @@ actor InMemoryRemindersRepository: RemindersRepository {
         reminders.remove(at: index)
     }
 
+    /// EventKit 구현과 같은 의미론 — 다음 회차로 마감을 옮기고, 없으면 지운다.
+    func deleteOccurrence(reminderID: String) async throws {
+        guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
+            throw DomainError.notFound
+        }
+        guard let next = reminders[index].nextOccurrence() else {
+            reminders.remove(at: index)
+            return
+        }
+        reminders[index].dueDate = next
+    }
+
     func addList(title: String, colorHex: String?) async throws -> String {
         let id = UUID().uuidString
         lists.append(ReminderList(id: id, title: title, colorHex: colorHex))

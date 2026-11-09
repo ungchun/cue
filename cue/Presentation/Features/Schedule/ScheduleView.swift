@@ -96,8 +96,8 @@ struct ScheduleView: View {
             onToggleCompletion: {
                 Task { await editor.toggleCompletion(reminderID: reminder.id) }
             },
-            onDelete: {
-                Task { await editor.delete(reminderID: reminder.id) }
+            onDelete: { span in
+                Task { await editor.delete(reminderID: reminder.id, span: span) }
             }
         )
         // 시트는 연 순간의 할일을 상태로 고정한다 — 완료 후 editor가 저장소 값으로 갱신하면

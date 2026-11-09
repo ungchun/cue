@@ -38,7 +38,7 @@ struct ReminderDetailSheet: View {
     private let onComplete: ((Draft) -> Void)?
     private let onSave: ((ReminderChanges) -> Void)?
     private let onToggleCompletion: (() -> Void)?
-    private let onDelete: (() -> Void)?
+    private let onDelete: ((ReminderDeleteSpan) -> Void)?
     /// 일정 탭 + 시트(NewItemSheet)에서만 — 상단 일정/할일 토글로 일정 쪽으로 넘어간다. 인자는 제목.
     private let onSwitchKind: ((String) -> Void)?
 
@@ -96,7 +96,7 @@ struct ReminderDetailSheet: View {
         startsInViewMode: Bool,
         onSave: @escaping (ReminderChanges) -> Void,
         onToggleCompletion: (() -> Void)? = nil,   // nil → no completion toggle
-        onDelete: (() -> Void)? = nil              // nil → no delete button
+        onDelete: ((ReminderDeleteSpan) -> Void)? = nil   // nil → no delete button
     ) {
         let initial = ReminderEditDraft(reminder: reminder)
         _reminder = State(initialValue: reminder)
@@ -263,17 +263,35 @@ struct ReminderDetailSheet: View {
                     .frame(maxWidth: .infinity)
             }
             // 다이얼로그는 **여는 버튼에** 붙인다(EventDetailSheet와 같은 이유 — 앵커 위치).
-            // 할일엔 회차 범위(EKSpan)가 없어 반복 항목도 통째로 지운다 — 확인만 받는다.
-            .confirmationDialog("Delete Reminder", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
-                Button("Delete Reminder", role: .destructive) {
-                    onDelete?()
-                    dismiss()
+            // 다음 회차가 있으면 범위까지 묻는다 — 미리 알림 앱의 "이 미리 알림만 / 이후 모든 미리 알림 삭제".
+            // 문구는 제목 없이 메시지 하나(캘린더 상세의 삭제 창과 같은 모양).
+            .confirmationDialog("Delete Reminder", isPresented: $showingDeleteConfirmation, titleVisibility: .hidden) {
+                if hasNextOccurrence {
+                    Button("Delete This Reminder Only", role: .destructive) { delete(span: .thisOccurrence) }
+                    Button("Delete All Future Reminders", role: .destructive) { delete(span: .futureOccurrences) }
+                } else {
+                    Button("Delete Reminder", role: .destructive) { delete(span: .futureOccurrences) }
+                }
+            } message: {
+                if hasNextOccurrence {
+                    Text("Are you sure you want to delete this reminder? This is a repeating reminder.")
+                } else {
+                    Text("Are you sure you want to delete this reminder?")
                 }
             }
         }
     }
 
+    private var hasNextOccurrence: Bool {
+        reminder?.nextOccurrence() != nil
+    }
+
     // MARK: - 액션
+
+    private func delete(span: ReminderDeleteSpan) {
+        onDelete?(span)
+        dismiss()
+    }
 
     /// 편집 종료 — 보기 모드로 열린 기존 항목이면 편집분을 버리고 보기로, 아니면 시트를 닫는다.
     private func leaveEditing() {

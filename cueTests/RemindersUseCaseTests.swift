@@ -265,6 +265,60 @@ struct RemindersUseCaseTests {
         #expect(reminders.isEmpty)
     }
 
+    /// 반복 할일 "이 할일만 삭제" — 항목은 남고 다음 회차로 넘어간다(미리 알림 앱과 같은 의미).
+    @Test func deleteThisOccurrenceAdvancesRecurringReminderToNextDue() async throws {
+        // 마감이 미래여야 "지금 이후 첫 회차" 규칙과 무관하게 바로 다음 회차가 된다.
+        let due = Calendar.current.startOfDay(for: Date().addingTimeInterval(3 * 86_400))
+        var target = makeReminder(id: "R1")
+        target.dueDate = due
+        target.recurrence = RecurrenceRule(frequency: .daily, interval: 2)
+        let repository = makeRepository(reminders: [target])
+
+        try await DeleteReminderUseCase(repository: repository)(reminderID: "R1", span: .thisOccurrence)
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.map(\.id) == ["R1"])
+        #expect(reminders.first?.dueDate == Calendar.current.date(byAdding: .day, value: 2, to: due))
+        #expect(reminders.first?.isCompleted == false)
+    }
+
+    /// 마지막 회차(반복 종료일 = 마감일)의 "이 회차만"은 항목 삭제 — 미리 알림 앱 실측(2026-11-09).
+    @Test func deleteThisOccurrenceOfLastOccurrenceRemovesIt() async throws {
+        let due = Calendar.current.startOfDay(for: Date().addingTimeInterval(3 * 86_400))
+        var target = makeReminder(id: "R1")
+        target.dueDate = due
+        target.recurrence = RecurrenceRule(frequency: .daily, endDate: due)
+        let repository = makeRepository(reminders: [target])
+
+        try await DeleteReminderUseCase(repository: repository)(reminderID: "R1", span: .thisOccurrence)
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.isEmpty)
+    }
+
+    /// 반복이 아니면 "이 회차"가 곧 항목 전체 — 지운다.
+    @Test func deleteThisOccurrenceOfOneOffReminderRemovesIt() async throws {
+        let repository = makeRepository(reminders: [makeReminder(id: "R1")])
+
+        try await DeleteReminderUseCase(repository: repository)(reminderID: "R1", span: .thisOccurrence)
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.isEmpty)
+    }
+
+    /// 반복 할일 "이후 모든 할일 삭제" — 항목 자체를 지운다.
+    @Test func deleteFutureOccurrencesRemovesRecurringReminder() async throws {
+        var target = makeReminder(id: "R1")
+        target.dueDate = Date(timeIntervalSince1970: 1_700_000_000)
+        target.recurrence = RecurrenceRule(frequency: .weekly)
+        let repository = makeRepository(reminders: [target])
+
+        try await DeleteReminderUseCase(repository: repository)(reminderID: "R1", span: .futureOccurrences)
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.isEmpty)
+    }
+
     @Test func deleteReminderWithMissingIDThrows() async {
         let repository = makeRepository()
 

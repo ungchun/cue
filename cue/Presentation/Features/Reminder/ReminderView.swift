@@ -62,6 +62,8 @@ struct ReminderView: View {
     @State private var showingNewListSheet = false
     @State private var showingListInfoSheet = false
     @State private var showingDeleteListConfirmation = false
+    /// 스와이프로 지우려는 반복 할일 — 범위(이번 회차만/이후 전부)를 고르는 alert가 떠 있는 동안 non-nil.
+    @State private var recurringDeletion: Reminder?
 
     // 스크롤로 본문 large title이 가려졌는지 — 가려지면 navigation bar에 inline title 표시.
     @State private var showsInlineTitle = false
@@ -146,6 +148,44 @@ struct ReminderView: View {
             } message: {
                 Text("This list and all reminders in it will be deleted.")
             }
+            // 반복 할일 스와이프 삭제 — 미리 알림 앱처럼 이번 회차만인지 이후 전부인지 묻는다.
+            // 제목 없이 문장 하나(미리 알림 앱 원문) — 제목을 두면 굵은 줄이 하나 더 생긴다.
+            .alert(Text(verbatim: ""), isPresented: recurringDeletionBinding, presenting: recurringDeletion) { reminder in
+                Button("Delete This Reminder Only", role: .destructive) { performDelete(reminder, span: .thisOccurrence) }
+                Button("Delete All Future Reminders", role: .destructive) {
+                    performDelete(reminder, span: .futureOccurrences)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("Are you sure you want to delete this reminder? This is a repeating reminder.")
+            }
+    }
+
+    private var recurringDeletionBinding: Binding<Bool> {
+        Binding(
+            get: { recurringDeletion != nil },
+            set: { if !$0 { recurringDeletion = nil } }
+        )
+    }
+
+    /// 스와이프 삭제 — 넘어갈 다음 회차가 있을 때만 범위를 묻는다. 반복이 아니거나 마지막 회차·완료된
+    /// 항목은 바로 지운다(미리 알림 앱과 같다, 2026-11-09 실측).
+    private func requestDelete(_ reminder: Reminder) {
+        if reminder.nextOccurrence() != nil {
+            recurringDeletion = reminder
+        } else {
+            performDelete(reminder, span: .futureOccurrences)
+        }
+    }
+
+    /// 인라인 편집 중이면 편집분을 먼저 저장하고 지운다 — 두 재조회가 겹쳐 포커스가 지운 셀에 갇히지 않게
+    /// 잠깐 띄운다(`flushInlineEditAwaiting` 참고).
+    private func performDelete(_ reminder: Reminder, span: ReminderDeleteSpan) {
+        Task {
+            await flushInlineEditAwaiting()
+            try? await Task.sleep(for: .milliseconds(120))
+            await viewModel.delete(reminder, span: span)
+        }
     }
 
     /// 새 입력 행·인라인 편집 어느 쪽이든 입력 포커스가 살아 있는지 — 완료(체크) 버튼 노출 조건.
@@ -427,7 +467,7 @@ struct ReminderView: View {
                 .listRowInsets(rowInsets)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
-                        Task { await viewModel.delete(reminder) }
+                        requestDelete(reminder)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -525,11 +565,7 @@ struct ReminderView: View {
             .listRowInsets(rowInsets)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button(role: .destructive) {
-                    Task {
-                        await flushInlineEditAwaiting()
-                        try? await Task.sleep(for: .milliseconds(120))
-                        await viewModel.delete(reminder)
-                    }
+                    requestDelete(reminder)
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
@@ -656,7 +692,7 @@ struct ReminderView: View {
                 .listRowInsets(rowInsets)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
-                        Task { await viewModel.delete(reminder) }
+                        requestDelete(reminder)
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }

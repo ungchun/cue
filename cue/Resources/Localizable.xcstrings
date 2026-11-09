@@ -7483,13 +7483,13 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حذف جميع الأحداث المستقبلية"
+            "value" : "حذف كافة الأحداث المستقبلية"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alle zukünftigen Ereignisse löschen"
+            "value" : "Alle zukünftigen Ereignisse"
           }
         },
         "es" : {
@@ -7501,19 +7501,19 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer tous les événements à venir"
+            "value" : "Supprimer tous ceux à venir"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "भविष्य के सभी इवेंट हटाएँ"
+            "value" : "भविष्य के सभी इवेंट डिलीट करें"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hapus semua acara mendatang"
+            "value" : "Hapus Acara Mendatang"
           }
         },
         "it" : {
@@ -7525,7 +7525,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "これ以降のイベントをすべて削除"
+            "value" : "今後のすべての予定を削除"
           }
         },
         "ko" : {
@@ -7537,31 +7537,31 @@
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Padam semua acara akan datang"
+            "value" : "Padam Semua Peristiwa Masa Depan"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apagar todos os eventos futuros"
+            "value" : "Apagar Eventos Futuros"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Удалить все будущие события"
+            "value" : "Удалить все следующие"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ลบกิจกรรมในอนาคตทั้งหมด"
+            "value" : "ลบกิจกรรมทั้งหมดในอนาคต"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Xóa tất cả sự kiện sau"
+            "value" : "Xóa hết sự kiện sắp tới"
           }
         },
         "zh-Hans" : {
@@ -7573,7 +7573,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "刪除所有未來行程"
+            "value" : "刪除所有將來的行程"
           }
         }
       }
@@ -7601,19 +7601,19 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer l'événement"
+            "value" : "Supprimer l’évènement"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "इवेंट हटाएँ"
+            "value" : "इवेंट डिलीट करें"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hapus acara"
+            "value" : "Hapus Acara"
           }
         },
         "it" : {
@@ -7625,7 +7625,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "イベントを削除"
+            "value" : "予定を削除"
           }
         },
         "ko" : {
@@ -7637,13 +7637,13 @@
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Padam acara"
+            "value" : "Padam Peristiwa"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apagar evento"
+            "value" : "Apagar Evento"
           }
         },
         "ru" : {
@@ -7889,7 +7889,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur dieses Ereignis löschen"
+            "value" : "Nur dieses Ereignis"
           }
         },
         "es" : {
@@ -7901,19 +7901,19 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer cet événement uniquement"
+            "value" : "Supprimer celui-ci seulement"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "केवल यह इवेंट हटाएँ"
+            "value" : "केवल यह इवेंट डिलीट करें"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hapus acara ini saja"
+            "value" : "Hapus Acara ini Saja"
           }
         },
         "it" : {
@@ -7925,7 +7925,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このイベントのみ削除"
+            "value" : "この予定のみを削除"
           }
         },
         "ko" : {
@@ -7937,19 +7937,19 @@
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Padam acara ini sahaja"
+            "value" : "Padam Peristiwa Ini Sahaja"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apagar somente este evento"
+            "value" : "Apagar Somente Este"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Удалить только это событие"
+            "value" : "Удалить только это"
           }
         },
         "th" : {
@@ -7973,7 +7973,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "僅刪除此行程"
+            "value" : "只刪除此行程"
           }
         }
       }
@@ -21701,7 +21701,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Für zukünftige Ereignisse sichern"
+            "value" : "Alle zukünftigen Ereignisse sichern"
           }
         },
         "es" : {
@@ -21713,7 +21713,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enregistrer pour les événements à venir"
+            "value" : "Modifier tous ceux à venir"
           }
         },
         "hi" : {
@@ -21725,67 +21725,67 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Simpan untuk acara mendatang"
+            "value" : "Simpan untuk Acara Mendatang"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salva per gli eventi futuri"
+            "value" : "Salva per eventi futuri"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "これ以降のイベントに保存"
+            "value" : "今後の予定も保存"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이후 모든 이벤트에 저장"
+            "value" : "이후 이벤트에 대해 저장"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Simpan untuk acara akan datang"
+            "value" : "Simpan untuk Peristiwa Masa Depan"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salvar para eventos futuros"
+            "value" : "Salvar em Eventos Futuros"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Сохранить для будущих событий"
+            "value" : "Сохранить для следующих"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึกสำหรับกิจกรรมในอนาคต"
+            "value" : "บันทึกกิจกรรมในอนาคต"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lưu cho các sự kiện sau"
+            "value" : "Lưu cho sự kiện trong tương lai"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "存储到将来日程"
+            "value" : "针对将来日程保存"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "儲存至未來行程"
+            "value" : "儲存到將來行程"
           }
         }
       }
@@ -21801,7 +21801,7 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur für dieses Ereignis sichern"
+            "value" : "Nur dieses Ereignis sichern"
           }
         },
         "es" : {
@@ -21813,7 +21813,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enregistrer pour cet événement uniquement"
+            "value" : "Modifier celui-ci seulement"
           }
         },
         "hi" : {
@@ -21825,7 +21825,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Simpan untuk acara ini saja"
+            "value" : "Hanya Simpan untuk Acara Ini"
           }
         },
         "it" : {
@@ -21837,31 +21837,31 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このイベントのみ保存"
+            "value" : "この予定のみ保存"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 이벤트에만 저장"
+            "value" : "이 이벤트만 저장"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Simpan untuk acara ini sahaja"
+            "value" : "Simpan untuk Peristiwa Ini Sahaja"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salvar somente para este evento"
+            "value" : "Salvar Somente Neste Evento"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Сохранить только для этого события"
+            "value" : "Сохранить только для этого"
           }
         },
         "th" : {
@@ -21879,13 +21879,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅存储此日程"
+            "value" : "仅针对此日程保存"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "僅儲存此行程"
+            "value" : "只儲存到此行程"
           }
         }
       }
@@ -26301,106 +26301,6 @@
         }
       }
     },
-    "This is a repeating event." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "هذا حدث متكرر."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dies ist ein wiederkehrendes Ereignis."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este es un evento repetido."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cet événement est répétitif."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "यह दोहराया जाने वाला इवेंट है।"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ini adalah acara berulang."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questo è un evento che si ripete."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "これは繰り返しイベントです。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "반복되는 이벤트입니다."
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ini ialah acara berulang."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este é um evento repetido."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Это повторяющееся событие."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "นี่คือกิจกรรมที่เกิดซ้ำ"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đây là sự kiện lặp lại."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这是重复日程。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這是重複行程。"
-          }
-        }
-      }
-    },
     "This list and all reminders in it will be deleted." : {
       "localizations" : {
         "ar" : {
@@ -29706,6 +29606,706 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "刪除提醒事項"
+          }
+        }
+      }
+    },
+    "Delete This Reminder Only" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حذف هذا التذكير فقط"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur diese Erinnerung löschen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar solo este recordatorio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer ce rappel uniquement"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "केवल यह रिमाइंडर डिलीट करें"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya Hapus Pengingat Ini"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elimina solo questo promemoria"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリマインダーのみを削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 미리 알림만 삭제"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Padam Peringatan Ini Sahaja"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar Apenas Este Lembrete"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить только это напоминание"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบเตือนความจำนี้เท่านั้น"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ xóa lời nhắc này"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅删除此提醒事项"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只刪除此提醒事項"
+          }
+        }
+      }
+    },
+    "Delete All Future Reminders" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حذف كل التذكيرات المستقبلية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle zukünftigen Erinnerungen löschen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar todos los recordatorios futuros"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer tous les rappels futurs"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "भविष्य के सभी रिमाइंडर डिलीट करें"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus Semua Pengingat Mendatang"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elimina tutti i promemoria futuri"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今後のすべてのリマインダーを削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이후 모든 미리 알림 삭제"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Padam Semua Peringatan Masa Depan"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apagar Todos os Lembretes Futuros"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить все будущие напоминания"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบเตือนความจำในอนาคตทั้งหมด"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa tất cả lời nhắc trong tương lai"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除所有将来提醒事项"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刪除所有未來的提醒事項"
+          }
+        }
+      }
+    },
+    "Are you sure you want to delete this event?" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هل أنت متأكد من رغبتك في حذف هذا الحدث؟"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Möchtest du dieses Ereignis wirklich löschen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Seguro que quieres eliminar este evento?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voulez-vous vraiment supprimer cet évènement ?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्या आप वाक़ई यह इवेंट डिलीट करना ^[चाहते हैं](inflect: true)?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah Anda yakin ingin menghapus acara ini?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confermi di voler eliminare questo evento?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この予定を削除してもよろしいですか?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 이벤트를 삭제하겠습니까?"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adakah anda pasti mahu memadamkan peristiwa ini?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tem certeza de que deseja apagar este evento?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы действительно хотите удалить это событие?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณแน่ใจหรือไม่ว่าคุณต้องการลบกิจกรรมนี้"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn có chắc chắn muốn xóa sự kiện này không?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定要删除此日程吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確定要刪除此行程嗎？"
+          }
+        }
+      }
+    },
+    "Are you sure you want to delete this event? This is a repeating event." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هل ترغب بالتأكيد في حذف هذا الحدث؟ هذا حدث متكرر."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Möchtest du dieses Ereignis wirklich löschen? Dies ist ein sich wiederholendes Ereignis."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Seguro que quieres eliminar este evento? Es un evento recurrente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voulez-vous vraiment supprimer cet évènement récurrent ?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्या आप वाक़ई यह इवेंट डिलीट करना ^[चाहते हैं](inflect: true)? यह दोहराया जाने वाला इवेंट है।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah Anda yakin ingin menghapus acara ini? Ini adalah acara berulang."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confermi di voler eliminare questo evento?\nÈ un appuntamento ricorrente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この予定を削除してもよろしいですか? これは繰り返しの予定です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 이벤트를 삭제하겠습니까? 반복되는 이벤트입니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adakah anda pasti mahu memadamkan peristiwa ini? Ini ialah peristiwa berulang."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tem certeza de que deseja apagar este evento? Este é um evento recorrente."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы действительно хотите удалить это событие? Это повторяющееся событие."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณแน่ใจหรือไม่ว่าคุณต้องการลบกิจกรรมนี้ นี่เป็นกิจกรรมที่ทำประจำ"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn có chắc chắn muốn xóa sự kiện này không? Đây là sự kiện lặp lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定要删除此日程吗？此为重复日程。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確定要刪除此行程嗎？此為重複行程。"
+          }
+        }
+      }
+    },
+    "How should this change be applied?" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "كيف ينبغي تطبيق هذا التغيير؟"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie möchtest du diese Änderung anwenden?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Cómo se debe aplicar este cambio?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comment cette modification doit-elle être appliquée ?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस बदलाव को कैसे लागू करना है?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagaimana perubahan ini harus diterapkan?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Come vuoi applicare la modifica?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この変更の適用方法"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 변경 사항을 어떻게 적용할까요?"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagaimanakah perubahan ini akan digunakan?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Como esta alteração deve ser aplicada?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Каким образом применить это изменение?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ควรปรับใช้การเปลี่ยนแปลงนี้อย่างไร"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nên áp dụng thay đổi này như thế nào?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此更改应如何应用？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "應該如何套用此項更改？"
+          }
+        }
+      }
+    },
+    "Are you sure you want to delete this reminder? This is a repeating reminder." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هل ترغب بالتأكيد في حذف هذا التذكير؟ هذا تذكير متكرر."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Möchtest du diese Erinnerung wirklich löschen? Es handelt sich um eine wiederkehrende Erinnerung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Seguro que quieres eliminar este recordatorio? Se trata de un recordatorio recurrente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce rappel est récurrent, voulez-vous vraiment le supprimer ?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्या आप वाक़ई यह रिमाइंडर डिलीट करना ^[चाहते हैं](inflect: true)? यह दोहराया जाने वाला रिमाइंडर है।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah Anda yakin ingin menghapus pengingat ini? Ini adalah pengingat berulang."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confermi di voler eliminare il promemoria? Si tratta di un promemoria ricorrente."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリマインダーを削除してもよろしいですか? これは繰り返し実行するリマインダーです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 미리 알림을 삭제하겠습니까? 이 미리 알림은 반복되는 미리 알림입니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adakah anda pasti mahu memadamkan peringatan ini? Ini ialah peringatan berulang."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tem certeza de que deseja apagar este lembrete? Ele é recorrente."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы действительно хотите удалить выбранное напоминание? Это напоминание повторяется регулярно."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณแน่ใจหรือไม่ว่าคุณต้องการลบเตือนความจำนี้ ซึ่งเป็นกิจกรรมที่ทำประจำ"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn có chắc chắn muốn xóa lời nhắc này không? Đây là một lời nhắc lặp lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定要删除此提醒事项吗？这是重复提醒事项。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確定要刪除此提醒事項嗎？這是重複的提醒事項。"
+          }
+        }
+      }
+    },
+    "Are you sure you want to delete this reminder?" : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هل ترغب بالتأكيد في حذف هذا التذكير؟"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Möchtest du diese Erinnerung wirklich löschen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Seguro que quieres eliminar este recordatorio?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voulez-vous vraiment supprimer ce rappel ?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्या आप निश्चित हैं कि आप इस रिमाइंडर को डिलीट करना चाहते हैं?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah Anda yakin ingin menghapus pengingat ini?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confermi di voler eliminare il promemoria?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリマインダーを削除してもよろしいですか?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 미리 알림을 삭제하겠습니까?"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adakah anda pasti mahu memadamkan peringatan ini?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tem certeza de que deseja apagar este lembrete?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы действительно хотите удалить это напоминание?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คุณแน่ใจหรือไม่ว่าคุณต้องการลบเตือนความจำนี้"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn có chắc chắn muốn xóa lời nhắc này không?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你确定要删除此提醒事项吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確定要刪除此提醒事項嗎？"
           }
         }
       }

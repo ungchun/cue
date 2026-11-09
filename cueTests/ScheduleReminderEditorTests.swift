@@ -199,6 +199,24 @@ struct ScheduleReminderEditorTests {
         #expect(analytics.events == [.reminderDeleted])
     }
 
+    /// 반복 할일 시트의 "이 할일만 삭제" — 항목은 다음 회차로 남고 시트는 닫힌다.
+    @Test func deleteThisOccurrenceKeepsRecurringReminderAndClosesSheet() async throws {
+        let due = Calendar.current.startOfDay(for: Date().addingTimeInterval(3 * 86_400))
+        var target = reminder(id: "r1")
+        target.dueDate = due
+        target.recurrence = RecurrenceRule(frequency: .weekly)
+        let (editor, repository, analytics) = makeEditor(reminders: [target])
+        await editor.present(reminderID: "r1", lookup: target)
+
+        await editor.delete(reminderID: "r1", span: .thisOccurrence)
+
+        let remaining = try await repository.fetchReminders()
+        #expect(remaining.map(\.id) == ["r1"])
+        #expect(remaining.first?.dueDate == Calendar.current.date(byAdding: .weekOfYear, value: 1, to: due))
+        #expect(editor.editingReminder == nil)
+        #expect(analytics.events == [.reminderDeleted])
+    }
+
     @Test func deleteFailureSetsErrorMessageAndKeepsSheetOpen() async {
         let stale = reminder(id: "stale")
         let (editor, _, _) = makeEditor()

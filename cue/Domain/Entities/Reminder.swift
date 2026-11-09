@@ -52,3 +52,12 @@ extension Reminder {
         )
     }
 }
+
+extension Reminder {
+    /// "이 미리 알림만 삭제"로 넘어갈 다음 회차. nil이면 반복이 아니거나 이미 완료됐거나 마지막 회차 —
+    /// 미리 알림 앱처럼 선택 창 없이 바로 지운다(2026-11-09 실측).
+    func nextOccurrence(now: Date = Date(), calendar: Calendar = .current) -> Date? {
+        guard !isCompleted, let dueDate, let recurrence else { return nil }
+        return recurrence.nextOccurrence(after: dueDate, now: now, calendar: calendar)
+    }
+}

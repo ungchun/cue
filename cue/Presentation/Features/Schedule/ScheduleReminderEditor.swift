@@ -111,10 +111,10 @@ final class ScheduleReminderEditor {
         await afterWrite()
     }
 
-    /// 시트의 삭제 — 성공하면 시트를 닫는다.
-    func delete(reminderID: String) async {
+    /// 시트의 삭제 — 성공하면 시트를 닫는다. 반복 할일은 `span`으로 범위를 고른다.
+    func delete(reminderID: String, span: ReminderDeleteSpan = .futureOccurrences) async {
         do {
-            try await deleteReminder(reminderID: reminderID)
+            try await deleteReminder(reminderID: reminderID, span: span)
             analytics.log(.reminderDeleted)
             if editingReminder?.id == reminderID { editingReminder = nil }
         } catch {
