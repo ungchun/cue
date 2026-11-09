@@ -64,6 +64,8 @@ struct ReminderView: View {
     @State private var showingDeleteListConfirmation = false
     /// 스와이프로 지우려는 반복 할일 — 범위(이번 회차만/이후 전부)를 고르는 alert가 떠 있는 동안 non-nil.
     @State private var recurringDeletion: Reminder?
+    /// 범위 창에 "이 미리 알림만"을 낼지 — 요청 때 한 번 정한다(회차를 정확히 셀 수 있고 다음 회차가 있을 때).
+    @State private var canDeleteThisOccurrence = false
 
     // 스크롤로 본문 large title이 가려졌는지 — 가려지면 navigation bar에 inline title 표시.
     @State private var showsInlineTitle = false
@@ -151,7 +153,9 @@ struct ReminderView: View {
             // 반복 할일 스와이프 삭제 — 미리 알림 앱처럼 이번 회차만인지 이후 전부인지 묻는다.
             // 제목 없이 문장 하나(미리 알림 앱 원문) — 제목을 두면 굵은 줄이 하나 더 생긴다.
             .alert(Text(verbatim: ""), isPresented: recurringDeletionBinding, presenting: recurringDeletion) { reminder in
-                Button("Delete This Reminder Only", role: .destructive) { performDelete(reminder, span: .thisOccurrence) }
+                if canDeleteThisOccurrence {
+                    Button("Delete This Reminder Only", role: .destructive) { performDelete(reminder, span: .thisOccurrence) }
+                }
                 Button("Delete All Future Reminders", role: .destructive) {
                     performDelete(reminder, span: .futureOccurrences)
                 }
@@ -169,9 +173,12 @@ struct ReminderView: View {
     }
 
     /// 스와이프 삭제 — 넘어갈 다음 회차가 있을 때만 범위를 묻는다. 반복이 아니거나 마지막 회차·완료된
-    /// 항목은 바로 지운다(미리 알림 앱과 같다, 2026-11-09 실측).
+    /// 항목은 바로 지운다(미리 알림 앱과 같다, 2026-11-09 실측). 회차를 정확히 셀 수 없는 규칙은
+    /// 창은 띄우되 이후 전부 삭제만 낸다(엉뚱한 날로 옮기지 않게).
     private func requestDelete(_ reminder: Reminder) {
-        if reminder.nextOccurrence() != nil {
+        let canSkip = reminder.nextOccurrence() != nil
+        if canSkip || reminder.hasApproximateRecurrence {
+            canDeleteThisOccurrence = canSkip
             recurringDeletion = reminder
         } else {
             performDelete(reminder, span: .futureOccurrences)
@@ -564,7 +571,9 @@ struct ReminderView: View {
             .listRowSeparator(.hidden)
             .listRowInsets(rowInsets)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
+                // 반복이면 destructive 역할을 뺀다 — destructive는 누르자마자 행을 지우는 애니메이션을
+                // 돌려, 범위 창에서 취소·"이것만"을 골라 행이 남을 때 사라졌다 돌아오는 것처럼 보인다.
+                Button(role: reminder.recurrence == nil ? .destructive : nil) {
                     requestDelete(reminder)
                 } label: {
                     Label("Delete", systemImage: "trash")

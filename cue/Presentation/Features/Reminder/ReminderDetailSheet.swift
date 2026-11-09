@@ -51,6 +51,9 @@ struct ReminderDetailSheet: View {
     @State private var isCompleted: Bool
     @State private var showingDiscardConfirmation = false
     @State private var showingDeleteConfirmation = false
+    /// 삭제 창 모양 — 열 때 한 번 정한다(본문이 다시 그려질 때마다 회차를 세지 않게).
+    @State private var deleteOffersThisOccurrence = false
+    @State private var deleteIsRepeating = false
     @Environment(\.dismiss) private var dismiss
 
     /// DatePicker·서브타이틀의 오전/오후·요일을 기기 로케일로 일관되게 표시한다.
@@ -257,6 +260,9 @@ struct ReminderDetailSheet: View {
     private var deleteSection: some View {
         Section {
             Button(role: .destructive) {
+                let canSkip = reminder?.nextOccurrence() != nil
+                deleteOffersThisOccurrence = canSkip
+                deleteIsRepeating = canSkip || reminder?.hasApproximateRecurrence == true
                 showingDeleteConfirmation = true
             } label: {
                 Text("Delete Reminder")
@@ -264,26 +270,25 @@ struct ReminderDetailSheet: View {
             }
             // 다이얼로그는 **여는 버튼에** 붙인다(EventDetailSheet와 같은 이유 — 앵커 위치).
             // 다음 회차가 있으면 범위까지 묻는다 — 미리 알림 앱의 "이 미리 알림만 / 이후 모든 미리 알림 삭제".
+            // 회차를 정확히 셀 수 없는 규칙은 "이것만" 없이 이후 전부 삭제만(ReminderView와 같은 규칙).
             // 문구는 제목 없이 메시지 하나(캘린더 상세의 삭제 창과 같은 모양).
             .confirmationDialog("Delete Reminder", isPresented: $showingDeleteConfirmation, titleVisibility: .hidden) {
-                if hasNextOccurrence {
+                if deleteOffersThisOccurrence {
                     Button("Delete This Reminder Only", role: .destructive) { delete(span: .thisOccurrence) }
+                }
+                if deleteIsRepeating {
                     Button("Delete All Future Reminders", role: .destructive) { delete(span: .futureOccurrences) }
                 } else {
                     Button("Delete Reminder", role: .destructive) { delete(span: .futureOccurrences) }
                 }
             } message: {
-                if hasNextOccurrence {
+                if deleteIsRepeating {
                     Text("Are you sure you want to delete this reminder? This is a repeating reminder.")
                 } else {
                     Text("Are you sure you want to delete this reminder?")
                 }
             }
         }
-    }
-
-    private var hasNextOccurrence: Bool {
-        reminder?.nextOccurrence() != nil
     }
 
     // MARK: - 액션

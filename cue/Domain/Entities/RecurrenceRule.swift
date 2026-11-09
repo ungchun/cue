@@ -9,7 +9,7 @@ import Foundation
 ///
 /// 빈도·간격에 더해 Apple 미리 알림 "사용자화" 수준의 지정을 담는다:
 /// 매주 요일, 매월 일자 또는 서수 요일(N째 X요일), 매년 월, 반복 종료 날짜.
-/// 표현 못 하는 규칙(횟수 종료 등)은 Data 계층 매퍼가 빈도·간격만으로 단순화한다.
+/// 표현 못 하는 규칙(횟수 종료 등)은 Data 계층 매퍼가 빈도·간격만으로 단순화하고 `isApproximate`로 표시한다.
 struct RecurrenceRule: Equatable, Sendable, Codable {
     let frequency: RecurrenceFrequency
     /// 주기 간격 — `매일`이면 1, `2일마다`면 2. 음수·0은 1로 보정한다.
@@ -26,6 +26,9 @@ struct RecurrenceRule: Equatable, Sendable, Codable {
     var ordinalWeekday: Int?
     /// 반복 종료 날짜. nil이면 무기한.
     var endDate: Date?
+    /// 매퍼가 EventKit 규칙을 다 못 담아 빈도·간격으로 단순화했는지(마지막 평일·마지막 날·횟수 종료 등).
+    /// 이 값으로는 회차를 정확히 셀 수 없다 — "이 미리 알림만 삭제"가 엉뚱한 날로 옮기지 않게 표시한다.
+    var isApproximate = false
 
     init(
         frequency: RecurrenceFrequency,
@@ -35,7 +38,8 @@ struct RecurrenceRule: Equatable, Sendable, Codable {
         months: Set<Int> = [],
         ordinal: Int? = nil,
         ordinalWeekday: Int? = nil,
-        endDate: Date? = nil
+        endDate: Date? = nil,
+        isApproximate: Bool = false
     ) {
         self.frequency = frequency
         self.interval = max(1, interval)
@@ -45,6 +49,7 @@ struct RecurrenceRule: Equatable, Sendable, Codable {
         self.ordinal = ordinal
         self.ordinalWeekday = ordinalWeekday
         self.endDate = endDate
+        self.isApproximate = isApproximate
     }
 
     // 새 필드는 decodeIfPresent — 빈도·간격만 담긴 옛 스냅샷(JSON)도 그대로 읽힌다.
@@ -58,6 +63,7 @@ struct RecurrenceRule: Equatable, Sendable, Codable {
         ordinal = try container.decodeIfPresent(Int.self, forKey: .ordinal)
         ordinalWeekday = try container.decodeIfPresent(Int.self, forKey: .ordinalWeekday)
         endDate = try container.decodeIfPresent(Date.self, forKey: .endDate)
+        isApproximate = try container.decodeIfPresent(Bool.self, forKey: .isApproximate) ?? false
     }
 }
 
@@ -75,6 +81,7 @@ extension RecurrenceRule {
     /// 반복 종료일은 저장된 시각과 무관하게 그날 하루를 포함한다. 회차가 없으면 nil(마지막 회차).
     /// 간격은 `due`를 기준점으로 센다 — `due`가 곧 현재 회차라서.
     func nextOccurrence(after due: Date, now: Date, calendar: Calendar = .current) -> Date? {
+        guard !isApproximate else { return nil }   // 단순화된 규칙으로 날을 지어내지 않는다
         let dueDay = calendar.startOfDay(for: due)
         let time = calendar.dateComponents([.hour, .minute, .second], from: due)
         let endDay = endDate.map { calendar.startOfDay(for: $0) }

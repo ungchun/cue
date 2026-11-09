@@ -60,4 +60,10 @@ extension Reminder {
         guard !isCompleted, let dueDate, let recurrence else { return nil }
         return recurrence.nextOccurrence(after: dueDate, now: now, calendar: calendar)
     }
+
+    /// 회차를 정확히 셀 수 없는 반복(`RecurrenceRule.isApproximate`) — "이 미리 알림만"은 못 내고
+    /// 범위 창에서 이후 전부 삭제만 묻는다. 완료된 항목은 반복이어도 바로 지운다.
+    var hasApproximateRecurrence: Bool {
+        !isCompleted && recurrence?.isApproximate == true
+    }
 }

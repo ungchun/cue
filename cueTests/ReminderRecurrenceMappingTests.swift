@@ -60,12 +60,69 @@ struct ReminderRecurrenceMappingTests {
                 == RecurrenceRule(frequency: .monthly, ordinal: 2, ordinalWeekday: 3))
     }
 
-    /// 표현 못 하는 규칙(횟수 종료 등)은 빈도·간격만으로 단순화 — nil로 잃지 않는다.
+    /// 표현 못 하는 규칙(횟수 종료 등)은 빈도·간격만으로 단순화 — nil로 잃지 않는다. 단순화했다는 표시를 남긴다.
     @Test func unsupportedDetailsFallBackToFrequencyAndInterval() {
         let ek = EKRecurrenceRule(
             recurrenceWith: .weekly, interval: 3, end: EKRecurrenceEnd(occurrenceCount: 5)
         )
-        #expect(ReminderMapper.toRecurrence(ek) == RecurrenceRule(frequency: .weekly, interval: 3))
+        #expect(ReminderMapper.toRecurrence(ek) == RecurrenceRule(frequency: .weekly, interval: 3, isApproximate: true))
+    }
+
+    /// 미리 알림 앱의 "마지막 평일"(요일 여럿 + 위치) — 모양은 못 담아 단순화하되 종료일은 지키고,
+    /// 단순화 표시를 남겨 "이 미리 알림만 삭제"가 엉뚱한 날(다음 달 같은 일자)로 옮기지 않게 한다.
+    @Test func lastWeekdayRuleKeepsEndDateAndIsMarkedApproximate() {
+        let until = date(2026, 12, 31)
+        let weekdays: [EKWeekday] = [.monday, .tuesday, .wednesday, .thursday, .friday]
+        let ek = EKRecurrenceRule(
+            recurrenceWith: .monthly, interval: 1,
+            daysOfTheWeek: weekdays.map { EKRecurrenceDayOfWeek($0) },
+            daysOfTheMonth: nil, monthsOfTheYear: nil, weeksOfTheYear: nil,
+            daysOfTheYear: nil, setPositions: [-1], end: EKRecurrenceEnd(end: until)
+        )
+        #expect(ReminderMapper.toRecurrence(ek)
+                == RecurrenceRule(frequency: .monthly, endDate: until, isApproximate: true))
+    }
+
+    // MARK: - "이 미리 알림만 삭제" — EKReminder 마감 옮기기
+
+    /// 마감은 **자기 시간대**로 센다 — 기기 시간대와 달라도(예: 서울 기기에서 호놀룰루 마감 11/10 22:00)
+    /// 다음 날 같은 시각으로 간다. 기기 달력으로 세면 날짜가 하루 더 밀리거나 안 밀린다.
+    /// 알람도 새 마감과 같은 순간으로 따라가야 다음 편집에서 cue 마감 알람으로 인식된다.
+    @Test func movingDueCountsInItsOwnTimeZone() throws {
+        let honolulu = try #require(TimeZone(identifier: "Pacific/Honolulu"))
+        var local = Calendar(identifier: .gregorian)
+        local.timeZone = honolulu
+        let oldDue = try #require(local.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 22)))
+        let reminder = EKReminder(eventStore: EKEventStore())
+        reminder.dueDateComponents = DateComponents(
+            calendar: Calendar(identifier: .gregorian), timeZone: honolulu,
+            year: 2026, month: 11, day: 10, hour: 22, minute: 0
+        )
+        reminder.addAlarm(EKAlarm(absoluteDate: oldDue))
+
+        let moved = ReminderMapper.moveDueToNextOccurrence(
+            of: reminder, rule: RecurrenceRule(frequency: .daily), now: oldDue.addingTimeInterval(3600)
+        )
+
+        #expect(moved)
+        let components = try #require(reminder.dueDateComponents)
+        #expect([components.year, components.month, components.day, components.hour] == [2026, 11, 11, 22])
+        #expect(reminder.alarms?.first?.absoluteDate == oldDue.addingTimeInterval(86_400))
+    }
+
+    /// 종일 마감은 종일로 남는다(시각 필드가 생기지 않는다). 마지막 회차면 손대지 않고 false.
+    @Test func movingAllDayDueStaysAllDayAndStopsAtLastOccurrence() throws {
+        let reminder = EKReminder(eventStore: EKEventStore())
+        reminder.dueDateComponents = DateComponents(year: 2026, month: 11, day: 10)
+        let now = try #require(DateComponents(calendar: .current, year: 2026, month: 11, day: 10, hour: 12).date)
+
+        #expect(ReminderMapper.moveDueToNextOccurrence(of: reminder, rule: RecurrenceRule(frequency: .daily), now: now))
+        #expect(reminder.dueDateComponents?.day == 11)
+        #expect(reminder.dueDateComponents?.hour == nil)
+
+        let endsOn11th = RecurrenceRule(frequency: .daily, endDate: now.addingTimeInterval(86_400))
+        #expect(!ReminderMapper.moveDueToNextOccurrence(of: reminder, rule: endsOn11th, now: now))
+        #expect(reminder.dueDateComponents?.day == 11)
     }
 
     // MARK: - 도메인 ↔ 편집 UI 모델 브리지

@@ -133,6 +133,7 @@ actor InMemoryRemindersRepository: RemindersRepository {
         guard let index = reminders.firstIndex(where: { $0.id == reminderID }) else {
             throw DomainError.notFound
         }
+        guard !reminders[index].hasApproximateRecurrence else { throw DomainError.unknown }
         guard let next = reminders[index].nextOccurrence() else {
             reminders.remove(at: index)
             return

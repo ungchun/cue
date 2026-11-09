@@ -296,6 +296,24 @@ struct RemindersUseCaseTests {
         #expect(reminders.isEmpty)
     }
 
+    /// 회차를 정확히 셀 수 없는 규칙의 "이 회차만"은 아무것도 바꾸지 않고 실패 — 화면이 낡아 이 경로로
+    /// 와도 엉뚱한 날로 옮기거나 시리즈를 지우지 않는다(화면은 이 규칙에 "이것만"을 내지 않는다).
+    @Test func deleteThisOccurrenceOfApproximateRuleThrowsAndKeepsIt() async throws {
+        let due = Calendar.current.startOfDay(for: Date().addingTimeInterval(3 * 86_400))
+        var target = makeReminder(id: "R1")
+        target.dueDate = due
+        target.recurrence = RecurrenceRule(frequency: .monthly, isApproximate: true)
+        let repository = makeRepository(reminders: [target])
+
+        await #expect(throws: DomainError.self) {
+            try await DeleteReminderUseCase(repository: repository)(reminderID: "R1", span: .thisOccurrence)
+        }
+
+        let reminders = try await FetchRemindersUseCase(repository: repository)()
+        #expect(reminders.map(\.id) == ["R1"])
+        #expect(reminders.first?.dueDate == due)
+    }
+
     /// 반복이 아니면 "이 회차"가 곧 항목 전체 — 지운다.
     @Test func deleteThisOccurrenceOfOneOffReminderRemovesIt() async throws {
         let repository = makeRepository(reminders: [makeReminder(id: "R1")])

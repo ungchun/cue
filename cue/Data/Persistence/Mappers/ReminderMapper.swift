@@ -100,6 +100,33 @@ enum ReminderMapper {
         }
     }
 
+    // MARK: - 이 미리 알림만 삭제
+
+    /// "이 미리 알림만 삭제" — 같은 항목의 마감을 다음 회차 날로 옮기고 절대 시각 알람도 같은 만큼 민다
+    /// (완료 기록을 남기지 않는다, 미리 알림 앱과 같다). 다음 회차가 없으면(마지막 회차) 그대로 두고 false.
+    static func moveDueToNextOccurrence(of reminder: EKReminder, rule: RecurrenceRule, now: Date) -> Bool {
+        guard var components = reminder.dueDateComponents else { return false }
+        // 마감 자신의 달력·시간대로 센다 — 기기 시간대·달력과 달라도 날짜가 어긋나지 않게.
+        var calendar = components.calendar ?? .current
+        if let timeZone = components.timeZone { calendar.timeZone = timeZone }
+        guard let due = calendar.date(from: components),
+              let next = rule.nextOccurrence(after: due, now: now, calendar: calendar)
+        else { return false }
+        let day = calendar.dateComponents([.year, .month, .day], from: next)
+        components.year = day.year
+        components.month = day.month
+        components.day = day.day
+        reminder.dueDateComponents = components
+        // 상대 오프셋 알람은 마감을 따라가고, 위치 알람은 시각이 없다.
+        let shift = next.timeIntervalSince(due)
+        for alarm in reminder.alarms ?? [] where alarm.structuredLocation == nil {
+            if let date = alarm.absoluteDate {
+                alarm.absoluteDate = date.addingTimeInterval(shift)
+            }
+        }
+        return true
+    }
+
     // MARK: - 알람
 
     /// cue가 관리하는 마감 알람인지 — **이전 마감 시각과 같은 시각의 절대 알람(위치 없음)**만.
@@ -214,7 +241,11 @@ enum ReminderMapper {
         case .yearly: frequency = .yearly
         @unknown default: return nil
         }
-        let fallback = RecurrenceRule(frequency: frequency, interval: rule.interval)
+        // 단순화해도 종료일은 지키고, 단순화 표시를 남긴다(회차 계산 금지 — RecurrenceRule.isApproximate).
+        let fallback = RecurrenceRule(
+            frequency: frequency, interval: rule.interval,
+            endDate: rule.recurrenceEnd?.endDate, isApproximate: true
+        )
 
         // 횟수 종료는 도메인에 없다 — 단순화 폴백.
         if let end = rule.recurrenceEnd, end.endDate == nil { return fallback }

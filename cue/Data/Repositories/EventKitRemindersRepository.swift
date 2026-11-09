@@ -147,26 +147,14 @@ actor EventKitRemindersRepository: RemindersRepository {
             throw DomainError.notFound
         }
         let current = ReminderMapper.toReminder(reminder)
-        guard let due = current.dueDate, let next = current.nextOccurrence(),
-              var components = reminder.dueDateComponents else {
+        // 회차를 정확히 셀 수 없는 규칙엔 화면이 "이것만"을 안 낸다 — 낡은 화면에서 와도 시리즈를 지키고 실패.
+        guard !current.hasApproximateRecurrence else { throw DomainError.unknown }
+        if !current.isCompleted, let rule = current.recurrence,
+           ReminderMapper.moveDueToNextOccurrence(of: reminder, rule: rule, now: Date()) {
+            try store.save(reminder, commit: true)
+        } else {
             try store.remove(reminder, commit: true)
-            return
         }
-        // 날짜만 바꾼다 — 시·분·시간대는 그대로라 시각 지정 마감의 시각이 유지된다.
-        let day = Calendar.current.dateComponents([.year, .month, .day], from: next)
-        components.year = day.year
-        components.month = day.month
-        components.day = day.day
-        reminder.dueDateComponents = components
-        // 절대 시각 알람(cue가 다는 마감 알람 포함)은 같은 만큼 민다 — 안 밀면 지난 시각에 남아 울리지 않는다.
-        // 상대 오프셋 알람은 마감을 따라가고, 위치 알람은 시각이 없다.
-        let shift = next.timeIntervalSince(due)
-        for alarm in reminder.alarms ?? [] where alarm.structuredLocation == nil {
-            if let date = alarm.absoluteDate {
-                alarm.absoluteDate = date.addingTimeInterval(shift)
-            }
-        }
-        try store.save(reminder, commit: true)
     }
 
     func moveReminder(reminderID: String, toListID listID: String) async throws {

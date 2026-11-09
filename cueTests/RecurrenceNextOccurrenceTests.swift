@@ -127,4 +127,18 @@ struct RecurrenceNextOccurrenceTests {
         reminder.isCompleted = true
         #expect(reminder.nextOccurrence(now: date(2026, 11, 9), calendar: calendar) == nil)
     }
+
+    /// 매퍼가 단순화한 규칙(마지막 평일·마지막 날 등)은 회차를 지어내지 않는다 — 엉뚱한 날로 옮기느니
+    /// "이것만"을 안 낸다. 반복이긴 하니 범위 창은 띄우고(이후 전부 삭제만), 완료된 항목은 바로 지운다.
+    @Test func approximateRuleOffersNoThisOccurrenceOnly() {
+        let rule = RecurrenceRule(frequency: .monthly, isApproximate: true)
+        #expect(next(rule, due: date(2026, 11, 30), now: date(2026, 11, 9)) == nil)
+
+        var reminder = Reminder(id: "1", title: "t", isCompleted: false, notes: nil,
+                                dueDate: date(2026, 11, 30), listID: "A")
+        reminder.recurrence = rule
+        #expect(reminder.hasApproximateRecurrence)
+        reminder.isCompleted = true
+        #expect(!reminder.hasApproximateRecurrence)
+    }
 }
