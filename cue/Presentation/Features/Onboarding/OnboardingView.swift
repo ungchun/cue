@@ -30,6 +30,8 @@ struct OnboardingView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
 
             bottomButton
+                // 넓은 화면(Duo 펼침 등)에서 버튼이 화면 끝까지 늘어나지 않게 — 일반 iPhone 폭에선 그대로.
+                .frame(maxWidth: ContentWidth.readable)
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, Spacing.md)
         }
@@ -81,6 +83,8 @@ struct OnboardingView: View {
                 // 문구만 아래로 — offset은 레이아웃에 불참해 위 비주얼 위치가 전혀 안 변한다.
                 // 존 높이는 원래대로(150) 유지, 1·2장의 문구 시작 위치는 서로 같다.
                 .offset(y: Spacing.xxl + Spacing.lg)
+                // 넓은 화면에서 안내 문구가 한 줄로 길게 퍼지지 않게 — 일반 iPhone 폭에선 그대로.
+                .frame(maxWidth: ContentWidth.readable)
                 .padding(.horizontal, Spacing.xl)
                 .frame(height: 150, alignment: .top)
             Spacer(minLength: Spacing.zero)

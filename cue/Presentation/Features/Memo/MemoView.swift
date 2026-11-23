@@ -84,6 +84,9 @@ struct MemoView: View {
                 // 밑줄 아래 — 켜기(우). 입력 있을 때만 활성.
                 liveButtonRow
             }
+            // 넓은 화면(Duo 펼침 등)에서 입력줄·밑줄이 화면 끝까지 늘어나지 않게 — 일반
+            // iPhone 폭에선 상한에 닿지 않아 그대로다.
+            .frame(maxWidth: ContentWidth.readable)
             .padding(.horizontal, Spacing.lg)
             Spacer()
         }

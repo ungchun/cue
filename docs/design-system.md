@@ -8,7 +8,7 @@
 
 ```
 DesignSystem/
-├── Foundation/   간격 토큰 (색·폰트는 Apple 시스템 그대로 사용)
+├── Foundation/   간격·폭 토큰 (색·폰트는 Apple 시스템 그대로 사용)
 └── Components/   커스텀 컴포넌트 (필요할 때만 생성)
 ```
 
@@ -80,6 +80,16 @@ DesignSystem/
 4/8pt 그리드. `Spacing.xxs`(2) ~ `Spacing.xxl`(48).
 
 - 사용: `.padding(Spacing.md)`.
+
+## Foundation — 폭 (ContentWidth)
+
+`ContentWidth.readable`(480) — 가운데 정렬 콘텐츠(입력줄·주 버튼·안내 문구)의 폭 상한.
+
+- 사용: `.frame(maxWidth: ContentWidth.readable)`를 좌우 여백 `padding` **안쪽**에 건다.
+- 왜: iPhone Duo를 펼치면 가로 약 950pt라 폭을 다 쓰는 커스텀 레이아웃이 화면 끝까지
+  늘어난다. 일반 iPhone은 가장 넓은 기종도 이 값에 닿지 않아 화면이 그대로다.
+- 기기·방향을 묻지 않고 폭만으로 동작한다(`UIScreen`·`UIDevice` 분기 금지).
+  `List`·`Form`처럼 시스템이 여백을 정하는 화면에는 걸지 않는다.
 
 ## Components — 커스텀 컴포넌트
 
