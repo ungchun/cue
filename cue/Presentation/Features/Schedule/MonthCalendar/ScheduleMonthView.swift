@@ -113,14 +113,24 @@ struct ScheduleMonthView: View {
     /// 한 달 = 한 페이지. 선택을 VM의 `visibleOffset`에 묶어 제목이 따라 바뀐다.
     /// 페이지 TabView를 쓰는 이유 — LazyHStack 페이징은 첫 위치가 `scrollPosition` 초기값을
     /// 확실히 따르지 않아 엉뚱한 달에서 시작할 수 있다. TabView는 선택한 페이지에서 시작한다.
+    ///
+    /// 폭이 바뀌면 페이저를 새로 만든다(`.id(폭)`). 페이지 TabView는 폭이 연달아 바뀌면
+    /// 스크롤 위치를 잃고 첫 페이지(−120달)로 튄 뒤 그 값을 선택으로 써 버린다. iPhone Duo를
+    /// 빠르게 펴고 접으면 보던 달이 2016년으로 바뀌었다. 새로 만든 TabView는 위 이유대로
+    /// 선택한 페이지에서 시작하므로 보던 달이 유지된다. `GeometryReader`라 새 폭이 들어오는
+    /// 그 레이아웃에서 바로 교체돼, 옛 TabView가 새 폭으로 배치될 틈이 없다.
+    /// 세로 고정 iPhone은 폭이 바뀌지 않아 그대로다.
     private var pager: some View {
-        TabView(selection: Bindable(viewModel).visibleOffset) {
-            ForEach(viewModel.monthOffsets, id: \.self) { offset in
-                ScheduleMonthPage(viewModel: viewModel, offset: offset, onSelect: onSelectItem)
-                    .tag(offset)
+        GeometryReader { proxy in
+            TabView(selection: Bindable(viewModel).visibleOffset) {
+                ForEach(viewModel.monthOffsets, id: \.self) { offset in
+                    ScheduleMonthPage(viewModel: viewModel, offset: offset, onSelect: onSelectItem)
+                        .tag(offset)
+                }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .id(proxy.size.width)
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
     }
 
     /// 요일 헤더 색 — 일요일 빨강, 토요일 파랑, 평일은 날짜 숫자보다 한 단계 물러난 secondary.
