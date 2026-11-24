@@ -112,11 +112,13 @@ struct FocusSessionEditorSheet: View {
 
     // MARK: - 색상 섹션
 
-    /// 프리셋 색 팔레트 — adaptive grid로 폭에 맞춰 자동 줄바꿈.
+    /// 프리셋 색 팔레트 — 5열 고정, 2줄.
     /// 9개 프리셋 + 마지막 무지개 슬롯(커스텀 색상 진입점)으로 10칸 구성.
+    /// 열 수를 폭에 맡기면(adaptive) 넓은 시트(Duo 펼침 폼시트)에서 9열이 돼 무지개 칸
+    /// 하나만 둘째 줄에 남는다 — 10칸이 고르게 나뉘는 5열로 고정(목록 편집 6열과 같은 방식).
     private var paletteRow: some View {
         LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: Spacing.xxl), spacing: Spacing.md)],
+            columns: Array(repeating: GridItem(.flexible(), spacing: Spacing.md), count: 5),
             spacing: Spacing.md
         ) {
             ForEach(Self.palette, id: \.hex) { preset in

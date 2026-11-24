@@ -77,6 +77,8 @@ struct FocusView: View {
             .font(.system(size: 40, weight: .bold, design: .rounded))
             .foregroundStyle(Color.primary)
             .lineLimit(1)
+            // 긴 세션 이름이 넓은 화면(Duo 펼침)에서 한 줄로 끝없이 늘어나지 않게.
+            .frame(maxWidth: ContentWidth.readable)
             .frame(height: Spacing.xxl)
     }
 
