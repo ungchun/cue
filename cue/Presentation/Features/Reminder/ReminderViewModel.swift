@@ -89,6 +89,10 @@ final class ReminderViewModel {
     /// 사용자가 시스템 UI에서 종료한 경우 sync는 미흡(추후 service `isActive(_:)` query
     /// 추가 시 보강). 우선은 단순 로컬 토글.
     private(set) var liveActivityActive = false
+    /// 떠 있는 LA가 항상 표시로 게시된 것이면 그 설정 범위 id("today"·리스트 id 등), 사용자가
+    /// 직접 켰으면 nil. 데이터가 바뀌어 다시 게시할 때 항상 표시 카드는 이 범위를, 직접 켠 카드는
+    /// 할일 탭 선택을 따른다 — 탭에서 다른 목록을 보고 있어도 "오늘" 카드가 그 목록으로 바뀌지 않게.
+    private var alwaysOnScopeID: String?
 
     /// 사용자 리스트가 선택돼 있을 때만 그 ID. 시스템 필터 모드면 nil.
     /// 기존 호출처(옵션 메뉴, 시트, 삭제 confirmation 등)가 이 값으로 list 컨텍스트를 본다.
@@ -191,6 +195,8 @@ final class ReminderViewModel {
             await endLiveActivityUseCase()
             liveActivityActive = false
         }
+        // 직접 켠 카드 — 이후 갱신은 탭 선택을 따른다.
+        alwaysOnScopeID = nil
         do {
             try await startLiveActivityUseCase(
                 listTitle: listTitle,
@@ -230,23 +236,9 @@ final class ReminderViewModel {
         if let firstLoadTask { await firstLoadTask.value }
 
         let scopeID = await fetchAppSettings().liveAlwaysOnReminderScopeID
-        // 사용자 리스트 id가 삭제됐으면 전체로 폴백.
-        let scope = ReminderSelection.resolve(
-            scopeID: scopeID, lists: lists, fallback: .systemFilter(.all)
-        )
-        let title: String
-        switch scope {
-        case .list(let id): title = lists.first(where: { $0.id == id })?.title ?? SystemFilter.all.title
-        case .systemFilter(let filter): title = filter.title
-        }
-
         do {
-            try await startLiveActivityUseCase(
-                listTitle: title,
-                reminders: snapshot(for: scope),
-                listColors: listColorsByID,
-                weekEvents: await fetchWeekEvents()
-            )
+            try await publishLiveActivity(alwaysOnScopeID: scopeID)
+            alwaysOnScopeID = scopeID
             liveActivityActive = true
         } catch {
             // 자동 경로 — 조용히 무시.
@@ -306,13 +298,35 @@ final class ReminderViewModel {
         await saveSnapshotUseCase(RemindersSnapshot(lists: lists, reminders: allReminders))
     }
 
-    /// LA가 떠 있으면 현재 selection 스냅샷으로 다시 게시한다. 같은 리스트면 service가 부드럽게
-    /// `update`, 리스트가 바뀌었으면 재시작한다. 갱신 실패는 조용히 무시(화면 흐름 방해 금지).
+    /// LA가 떠 있으면 그 카드의 범위로 다시 게시한다 — 항상 표시 카드는 설정 범위, 직접 켠 카드는
+    /// 탭 선택. 갱신 실패는 조용히 무시(화면 흐름 방해 금지).
     private func refreshLiveActivityIfActive() async {
         guard liveActivityActive else { return }
-        try? await startLiveActivityUseCase(
-            listTitle: currentSelectionTitle,
-            reminders: visibleReminders,
+        try? await publishLiveActivity(alwaysOnScopeID: alwaysOnScopeID)
+    }
+
+    /// LA를 게시한다 — `alwaysOnScopeID`가 있으면 그 설정 범위, 없으면 할일 탭의 현재 선택 스냅샷.
+    /// 같은 제목이면 service가 부드럽게 `update`, 제목이 바뀌었으면 재시작한다.
+    private func publishLiveActivity(alwaysOnScopeID scopeID: String?) async throws {
+        let title: String
+        let reminders: [Reminder]
+        if let scopeID {
+            // 매 게시마다 지금 리스트로 다시 해석한다 — 사용자 리스트가 삭제됐으면 전체로 폴백.
+            let scope = ReminderSelection.resolve(
+                scopeID: scopeID, lists: lists, fallback: .systemFilter(.all)
+            )
+            switch scope {
+            case .list(let id): title = lists.first(where: { $0.id == id })?.title ?? SystemFilter.all.title
+            case .systemFilter(let filter): title = filter.title
+            }
+            reminders = snapshot(for: scope)
+        } else {
+            title = currentSelectionTitle
+            reminders = visibleReminders
+        }
+        try await startLiveActivityUseCase(
+            listTitle: title,
+            reminders: reminders,
             listColors: listColorsByID,
             weekEvents: await fetchWeekEvents()
         )

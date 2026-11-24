@@ -243,6 +243,37 @@ struct ReminderViewModelTests {
         #expect(call.items.map(\.id) == ["due-today"])
     }
 
+    /// 항상 표시로 띄운 카드는 데이터가 바뀌어 다시 게시할 때도 **설정의 범위**를 따른다 —
+    /// 할일 탭에서 보고 있는 목록(기본 "전체")으로 바뀌면 안 된다. 직접 켠 카드는 탭 선택을
+    /// 따른다(`completingReminderRefreshesActiveLiveActivity`).
+    @Test func alwaysOnCardKeepsConfiguredScopeWhenDataChanges() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(
+                lists: [listA],
+                reminders: [
+                    reminder(id: "due-today", dueDate: Date(), listID: "A"),
+                    reminder(id: "no-due", listID: "A"),
+                    reminder(id: "no-due-2", listID: "A"),
+                ],
+                liveActivityService: service,
+                appSettings: settings
+            ),
+            premiumStore: await premiumStore()
+        )
+        await viewModel.startAlwaysOnLiveActivity()
+        #expect(viewModel.selection == .systemFilter(.all))   // 할일 탭은 기본 "전체"를 보고 있다.
+
+        await viewModel.toggle(reminder(id: "no-due", listID: "A"))   // 데이터 변경 → 활성 LA 갱신
+
+        let calls = await service.startReminderCalls
+        #expect(calls.count >= 2)
+        #expect(calls.last?.listTitle == SystemFilter.today.title)
+        #expect(calls.last?.items.map(\.id) == ["due-today"])
+    }
+
     /// 권한이 거부돼 있으면 자동 게시하지 않는다.
     @Test func alwaysOnSkipsWhenAccessDenied() async {
         let service = RecordingReminderLiveActivity()
@@ -2112,10 +2143,10 @@ private actor GatedRemindersRepository: RemindersRepository {
 private actor RecordingReminderLiveActivity: LiveActivityService {
     func prepareRenewal(_ kind: LiveActivityKind) async {}
     var isEnabled: Bool { true }
-    private(set) var startReminderCalls: [(items: [LiveReminderItem], remaining: Int)] = []
+    private(set) var startReminderCalls: [(listTitle: String, items: [LiveReminderItem], remaining: Int)] = []
 
     func startReminder(listTitle: String, items: [LiveReminderItem], remaining: Int, todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {
-        startReminderCalls.append((items, remaining))
+        startReminderCalls.append((listTitle, items, remaining))
     }
     func endReminder() async {}
     func startSchedule(days: [LiveScheduleDay], todayCount: Int, weekEventDots: [LiveDayEventDots], showsCalendarOverride: Bool?, isSample: Bool) async throws {}
