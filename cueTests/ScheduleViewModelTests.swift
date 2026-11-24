@@ -431,6 +431,24 @@ struct ScheduleViewModelTests {
         #expect(viewModel.editingEvent == nil)
     }
 
+    /// 월 캘린더 할일 시트에서 쓰면 `afterReminderWrite`로 알린다 — RootView가 할일 탭 VM을
+    /// 다시 읽혀 떠 있는 할일 라이브에 반영하게(변경 알림이 빠져도).
+    @Test func reminderSheetWriteNotifiesAfterReminderWrite() async {
+        let list = ReminderList(id: "list", title: "개인", colorHex: nil)
+        let target = Reminder(id: "r1", title: "장보기", isCompleted: false, notes: nil,
+                              dueDate: Date(), includesTime: false, listID: list.id)
+        let counter = CallCounter()
+        let viewModel = ScheduleViewModel(
+            dependencies: makeDependencies(reminderLists: [list], reminders: [target]),
+            afterReminderWrite: { counter.count += 1 }
+        )
+        await viewModel.reminderEditor.present(reminderID: target.id, lookup: target)
+
+        await viewModel.reminderEditor.toggleCompletion(reminderID: target.id)
+
+        #expect(counter.count == 1)
+    }
+
     @Test func dismissEditClearsEditingEvent() async {
         let today = Calendar.current.startOfDay(for: Date())
         let target = event(id: "edit-me", start: today, end: today.addingTimeInterval(60 * 60))
@@ -1141,4 +1159,10 @@ private actor CountingScheduleLiveActivityService: LiveActivityService {
 private final class DayClock {
     var now: Date
     init(_ now: Date) { self.now = now }
+}
+
+/// 콜백 호출 횟수 기록 — 메인 액터 클로저에서 올린다.
+@MainActor
+private final class CallCounter {
+    var count = 0
 }

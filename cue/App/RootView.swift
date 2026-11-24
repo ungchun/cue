@@ -44,8 +44,13 @@ struct RootView: View {
 
     init(dependencies: Dependencies, premiumStore: PremiumStore) {
         self.premiumStore = premiumStore
-        _reminderViewModel = State(initialValue: ReminderViewModel(dependencies: dependencies, premiumStore: premiumStore))
-        _scheduleViewModel = State(initialValue: ScheduleViewModel(dependencies: dependencies, premiumStore: premiumStore))
+        let reminderViewModel = ReminderViewModel(dependencies: dependencies, premiumStore: premiumStore)
+        _reminderViewModel = State(initialValue: reminderViewModel)
+        // 일정 탭 할일 시트의 쓰기를 할일 탭(→ 떠 있는 할일 라이브)에 바로 알린다.
+        _scheduleViewModel = State(initialValue: ScheduleViewModel(
+            dependencies: dependencies, premiumStore: premiumStore,
+            afterReminderWrite: { await reminderViewModel.reloadAfterExternalWrite() }
+        ))
         _focusViewModel = State(initialValue: FocusViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _memoViewModel = State(initialValue: MemoViewModel(dependencies: dependencies, premiumStore: premiumStore))
         _settingsViewModel = State(initialValue: SettingsViewModel(dependencies: dependencies))

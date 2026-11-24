@@ -364,6 +364,28 @@ struct ReminderViewModelTests {
         #expect(viewModel.liveActivityActive)
     }
 
+    /// 일정 탭(월 캘린더 할일 시트)에서 할일을 쓰면 RootView가 이걸 불러 떠 있는 할일 라이브를
+    /// 갱신한다 — 변경 알림만 믿으면 빠질 때 일정 탭에서 완료한 할일이 카드에 남았다.
+    @Test func reloadAfterExternalWriteRefreshesActiveLiveActivity() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA], reminders: [
+            reminder(id: "a", dueDate: Date(), listID: "A"),
+            reminder(id: "b", dueDate: Date(), listID: "A"),
+        ])
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(remindersRepository: base, liveActivityService: service, appSettings: settings),
+            premiumStore: await premiumStore()
+        )
+        await viewModel.startAlwaysOnLiveActivity()
+
+        try await base.setCompleted(true, reminderID: "a")   // 일정 탭 시트의 쓰기 — 신호 없음
+        await viewModel.reloadAfterExternalWrite()
+
+        #expect(await service.startReminderCalls.last?.items.map(\.id) == ["b"])
+    }
+
     @Test func externalChangeReloadsRemindersAfterFirstLoad() async throws {
         // makeDependencies는 repo를 내부 생성 — 외부 변경 시뮬레이션을 위해 직접 조립.
         // 같은 repo 인스턴스가 ViewModel의 fetch와 변경 emit 양쪽에 쓰이도록.

@@ -160,6 +160,13 @@ final class ReminderViewModel {
         await reload(showsIndicator: false)
     }
 
+    /// 다른 화면(일정 탭 할일 시트)이 할일을 쓴 뒤 부른다 — 변경 알림을 기다리지 않고 다시 읽어
+    /// 목록과 떠 있는 라이브를 갱신한다. 자기 쓰기가 아니라 에코 억제 창은 보지 않는다.
+    func reloadAfterExternalWrite() async {
+        guard access == .granted, hasLoaded else { return }
+        await reload(showsIndicator: false)
+    }
+
     /// 자기 쓰기 에코 억제 창을 연다 — 이후 짧은 시간 동안 외부 변경 신호를 무시한다.
     /// EventKit이 쓰기 알림을 (동기 완료 뒤) 살짝 늦게 쏘므로 넉넉히 둔다.
     private static let selfWriteSuppressWindow: TimeInterval = 2

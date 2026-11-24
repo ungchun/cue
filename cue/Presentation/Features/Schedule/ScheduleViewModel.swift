@@ -92,7 +92,14 @@ final class ScheduleViewModel {
     /// 현재 시각 공급자 — "종료 지난 일정 숨김" 필터의 기준. 테스트에서 고정값 주입.
     private let now: () -> Date
 
-    init(dependencies: Dependencies, premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService()), now: @escaping () -> Date = { Date() }) {
+    /// - Parameter afterReminderWrite: 할일 시트가 쓴 뒤 부른다 — RootView가 할일 탭 VM을 다시 읽혀
+    ///   떠 있는 할일 라이브에 반영하게. 변경 알림만 믿으면 빠질 때 완료한 할일이 카드에 남았다.
+    init(
+        dependencies: Dependencies,
+        premiumStore: PremiumStore = PremiumStore(service: DisabledPurchaseService()),
+        now: @escaping () -> Date = { Date() },
+        afterReminderWrite: @escaping @MainActor () async -> Void = {}
+    ) {
         self.premiumStore = premiumStore
         self.requestAccessUseCase = dependencies.requestEventsAccess
         self.currentAccessUseCase = dependencies.currentEventsAccess
@@ -112,9 +119,10 @@ final class ScheduleViewModel {
         self.now = now
         let monthCalendar = ScheduleMonthViewModel(dependencies: dependencies, now: now)
         self.monthCalendar = monthCalendar
-        // 할일 시트가 쓴 뒤 월 칩을 직접 다시 읽는다 — 변경 알림이 빠져도 바로 보이게.
+        // 할일 시트가 쓴 뒤 월 칩과 할일 탭(→ 할일 라이브)을 직접 다시 읽는다 — 변경 알림이 빠져도 바로 보이게.
         self.reminderEditor = ScheduleReminderEditor(dependencies: dependencies) {
             await monthCalendar.reloadAfterOwnWrite()
+            await afterReminderWrite()
         }
         startObservingChanges()
     }
