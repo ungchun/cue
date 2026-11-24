@@ -1256,6 +1256,10 @@ struct ReminderView: View {
             if editTitleFocused || editMemoFocused {
                 editTitleFocused = false
                 editMemoFocused = false
+                // GrowingTextView는 become만 하고 resign은 안 한다(행은 항상 mount) — 여기서
+                // 명시로 내리지 않으면 UITextView가 first responder로 남아, 시트를 닫고 탭을
+                // 오갈 때 UIKit이 편집 상태 없는 키보드를 되살린다.
+                dismissKeyboard()
                 try? await Task.sleep(for: .milliseconds(80))
             }
             editingReminderID = nil
