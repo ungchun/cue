@@ -260,6 +260,49 @@ struct ReminderViewModelTests {
         #expect(await service.startReminderCalls.isEmpty)
     }
 
+    /// 콜드 런치 — 프리페치가 캐시를 칠하고 최신 fetch가 아직 비행 중이어도, 항상 표시는 캐시가
+    /// 아니라 **최신 fetch 결과**로 게시한다. 캐시엔 앱이 꺼진 사이(라이브 체크 버튼·미리 알림 앱)
+    /// 완료한 할일이 미완료로 남아 있어, 캐시로 게시하면 완료한 할일이 라이브에 되살아났다.
+    @Test func alwaysOnPublishesFreshFetchNotCachedSnapshot() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let cache = InMemorySnapshotCacheRepository(remindersSnapshot: RemindersSnapshot(
+            lists: [listA], reminders: [reminder(id: "done", dueDate: Date(), listID: "A")]
+        ))
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA], reminders: [
+            reminder(id: "done", isCompleted: true, dueDate: Date(), listID: "A"),
+            reminder(id: "fresh", dueDate: Date(), listID: "A"),
+        ])
+        let repo = GatedRemindersRepository(base)
+        await repo.closeGate()   // 프리페치의 최신화 fetch를 붙잡아 "캐시만 칠해진" 순간을 만든다.
+        let service = RecordingReminderLiveActivity()
+        var deps = makeDependencies(remindersRepository: repo, liveActivityService: service, appSettings: settings)
+        deps.loadRemindersSnapshot = LoadRemindersSnapshotUseCase(repository: cache)
+        deps.saveRemindersSnapshot = SaveRemindersSnapshotUseCase(repository: cache)
+        let viewModel = ReminderViewModel(dependencies: deps, premiumStore: await premiumStore())
+
+        let prefetchTask = Task { await viewModel.prefetch() }
+        var reloadInFlight = false
+        for _ in 0..<200 {
+            if await repo.isFetchWaiting { reloadInFlight = true; break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        #expect(reloadInFlight)
+        let startTask = Task { await viewModel.startAlwaysOnLiveActivity() }
+        // 캐시로 게시하는 버그라면 fetch를 풀기 전에 게시가 일어난다 (bounded — ~0.2s).
+        for _ in 0..<40 {
+            if !(await service.startReminderCalls).isEmpty { break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        await repo.releaseFetch()
+        await prefetchTask.value
+        await startTask.value
+
+        let calls = await service.startReminderCalls
+        #expect(calls.first?.items.map(\.id) == ["fresh"])
+        #expect(calls.allSatisfy { !$0.items.map(\.id).contains("done") })
+    }
+
     @Test func externalChangeReloadsRemindersAfterFirstLoad() async throws {
         // makeDependencies는 repo를 내부 생성 — 외부 변경 시뮬레이션을 위해 직접 조립.
         // 같은 repo 인스턴스가 ViewModel의 fetch와 변경 emit 양쪽에 쓰이도록.

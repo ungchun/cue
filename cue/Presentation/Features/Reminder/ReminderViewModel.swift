@@ -224,6 +224,10 @@ final class ReminderViewModel {
         }
         await onAppear()
         guard access == .granted else { return }
+        // 앱 시작 프리페치가 캐시만 칠하고 최신 fetch는 아직 비행 중일 수 있다 — `hasLoaded`는
+        // "칠했다"일 뿐 "최신이다"가 아니다. 캐시엔 앱이 꺼진 사이 완료한 할일이 미완료로 남아
+        // 있어, 그대로 게시하면 완료한 할일이 라이브에 되살아난다. 최신화가 끝나길 기다린다.
+        if let firstLoadTask { await firstLoadTask.value }
 
         let scopeID = await fetchAppSettings().liveAlwaysOnReminderScopeID
         // 사용자 리스트 id가 삭제됐으면 전체로 폴백.
