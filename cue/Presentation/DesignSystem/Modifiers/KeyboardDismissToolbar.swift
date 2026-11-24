@@ -17,14 +17,19 @@ extension View {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button {
-                    UIApplication.shared.sendAction(
-                        #selector(UIResponder.resignFirstResponder),
-                        to: nil, from: nil, for: nil
-                    )
+                    dismissKeyboard()
                 } label: {
                     Image(systemName: "keyboard.chevron.compact.down")
                 }
             }
         }
+    }
+
+    /// 편집 중인 필드의 키보드를 내린다 — 위 "완료" 버튼과 같은 브로드캐스트.
+    func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil, from: nil, for: nil
+        )
     }
 }

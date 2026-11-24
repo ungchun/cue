@@ -197,14 +197,19 @@ struct ReminderDetailSheet: View {
     private var closeButton: some View {
         Button {
             if isEditing, hasChanges {
+                // 키보드를 먼저 내린다 — 접는 기기 커버 화면처럼 세로가 짧으면 키보드 위 공간에
+                // popover가 눌려 제목이 잘리고, ✕도 툴바 넘침 메뉴로 숨어 버린다.
+                dismissKeyboard()
                 showingDiscardConfirmation = true
             } else {
                 leaveEditing()
             }
         } label: {
-            Image(systemName: "xmark")
+            // 아이콘만 그려도 제목을 가진 Label로 — 툴바가 넘침 메뉴로 접히면(접는 기기 커버
+            // 화면 + 키보드) 제목 없는 버튼은 메뉴에서 빠져 시트를 닫을 수 없다.
+            Label("Close", systemImage: "xmark")
+                .labelStyle(.iconOnly)
         }
-        .accessibilityLabel("Close")
         // X 버튼을 anchor 삼는 popover. iPhone(compact width)에선 기본이 sheet라
         // presentationCompactAdaptation(.popover)로 popover 강제.
         .popover(isPresented: $showingDiscardConfirmation) {

@@ -162,6 +162,9 @@ struct ListEditorSheet: View {
             // 변경이 있으면 폐기 confirm, 없으면 바로 dismiss — ReminderDetailSheet와 같은 패턴.
             Button {
                 if hasChanges {
+                    // 키보드를 먼저 내린다 — 접는 기기 커버 화면처럼 세로가 짧으면 키보드 위 공간에
+                    // popover가 눌려 제목이 잘리고, ✕도 툴바 넘침 메뉴로 숨어 버린다.
+                    dismissKeyboard()
                     showingDiscardConfirmation = true
                 } else {
                     dismiss()
