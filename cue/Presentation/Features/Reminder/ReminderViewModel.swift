@@ -29,6 +29,7 @@ final class ReminderViewModel {
     private let saveSortSettingsUseCase: SaveReminderSortSettingsUseCase
     private let startLiveActivityUseCase: StartReminderLiveActivityUseCase
     private let endLiveActivityUseCase: EndReminderLiveActivityUseCase
+    private let discardRemindersCacheUseCase: DiscardRemindersCacheUseCase
     private let consumeLiveActivation: ConsumeLiveActivationUseCase
     private let fetchAppSettings: FetchAppSettingsUseCase
     private let analytics: any AnalyticsService
@@ -129,6 +130,7 @@ final class ReminderViewModel {
         self.endLiveActivityUseCase = dependencies.endReminderLiveActivity
         self.consumeLiveActivation = dependencies.consumeLiveActivation
         self.fetchAppSettings = dependencies.fetchAppSettings
+        self.discardRemindersCacheUseCase = dependencies.discardRemindersCache
         self.fetchEventsUseCase = dependencies.fetchEvents
         self.analytics = dependencies.analytics
         startObservingChanges()
@@ -215,12 +217,20 @@ final class ReminderViewModel {
 
     /// 항상 표시 자동 게시 — 권한이 있으면 데이터를 적재하고 **설정의 할일 범위**
     /// (오늘/예정/전체/사용자 리스트) 스냅샷으로 LA 시작. 사용자의 현재 선택과는 무관하다.
-    /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 건너뛴다.
-    /// `force`면 이미 활성이어도 다시 게시한다 — 설정에서 범위를 바꾼 직후 반영용.
+    /// 사용자 탭이 아니므로 하루 쿼터를 소비하지 않는다. 이미 켜져 있으면 저장소 캐시를 버리고
+    /// 다시 읽어 재게시한다(포그라운드 복귀 경로 — 앱 밖에서 완료한 할일을 카드에서 걷어낸다).
+    /// `force`면 이미 활성이어도 끝내고 새로 게시한다 — 설정에서 범위를 바꾼 직후 반영용.
     func startAlwaysOnLiveActivity(force: Bool = false) async {
         // 항상 표시는 Premium 전용 — 게시 시점에 재확인(구독 만료·과거 저장값 잔존 방어).
         guard premiumStore.isPremium else { return }
-        guard force || !liveActivityActive else { return }
+        if !force, liveActivityActive {
+            // 앱이 꺼진 사이(라이브 체크 버튼·미리 알림 앱) 바뀐 값은 변경 알림이 빠지면 VM이
+            // 모른다. 캐시를 버리고 다시 읽으면 reload가 떠 있는 카드를 갱신한다 — 사용자가
+            // 잠금화면에서 카드를 지웠으면 service가 새로 띄운다.
+            await discardRemindersCacheUseCase()
+            await reload(showsIndicator: false)
+            return
+        }
         // force 재게시는 **끝내고 새로 시작**한다 — 잠금화면 정렬 근거인 relevanceScore를
         // 새 요청에 확실히 싣는, 실기기로 검증된 경로다(산 LA의 제자리 update만으로
         // 시스템이 재정렬해 주는지는 보증이 없다).

@@ -227,6 +227,13 @@ actor EventKitRemindersRepository: RemindersRepository {
         return sources.first { $0.sourceIdentifier == pickedID }
     }
 
+    /// 앱이 꺼져 있거나 백그라운드인 사이 다른 프로세스(라이브 체크 버튼 인텐트·미리 알림 앱)가
+    /// 쓴 값은 변경 알림이 빠지면 이 store 캐시에 반영되지 않는다. `reset()`으로 비우면
+    /// 다음 조회는 DB에서 다시 읽는다. 쓰기는 actor 안에서 동기로 끝나 중간에 끼지 않는다.
+    func discardCache() {
+        store.reset()
+    }
+
     /// `EKEventStoreChanged`는 미리알림·캘린더 변경 모두에 발송되는 공통 노티 — reminders
     /// 측은 그 중 미리알림 변경에 대응한다. 구독자 측에서 stream을 종료해도 안에서 만든
     /// Task가 자동 cancel되도록 `onTermination`에 연결.

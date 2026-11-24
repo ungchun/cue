@@ -96,6 +96,7 @@ struct CompositionRoot {
             currentRemindersAccess: CurrentRemindersAccessUseCase(repository: remindersRepository),
             currentEventsAccess: CurrentEventsAccessUseCase(repository: eventsRepository),
             discardEventsCache: DiscardEventsCacheUseCase(repository: eventsRepository),
+            discardRemindersCache: DiscardRemindersCacheUseCase(repository: remindersRepository),
             loadRemindersSnapshot: LoadRemindersSnapshotUseCase(repository: snapshotCacheRepository),
             saveRemindersSnapshot: SaveRemindersSnapshotUseCase(repository: snapshotCacheRepository),
             loadEventsSnapshot: LoadEventsSnapshotUseCase(repository: snapshotCacheRepository),

@@ -62,10 +62,17 @@ protocol RemindersRepository: Sendable {
     /// `fetchLists` / `fetchReminders`로 다시 가져온다. EventKit 구현은 `EKEventStoreChanged`
     /// 노티를 노출. 구독은 호출 측의 `Task`에 묶여 cancel 시 자동 종료된다.
     func changes() -> AsyncStream<Void>
+
+    /// 조회 캐시를 버린다 — 다음 fetch가 저장소의 최신 값을 읽게. 변경 알림(`changes`)이
+    /// 빠져도 앱 밖에서 바뀐 값(라이브 체크 버튼·미리 알림 앱)을 놓치지 않기 위함.
+    func discardCache() async
 }
 
 extension RemindersRepository {
     /// 기본 구현 — 프롬프트 없는 상태 조회가 없는 구현(테스트 더블 등)은 requestAccess로
     /// 폴백한다. 실 EventKit 구현은 반드시 상태-전용 조회로 오버라이드한다.
     func currentAccess() async -> RemindersAccess { await requestAccess() }
+
+    /// 기본 구현 — 캐시가 없는 구현(인메모리·테스트 더블)은 버릴 게 없다.
+    func discardCache() async {}
 }

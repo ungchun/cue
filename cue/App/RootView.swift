@@ -211,8 +211,8 @@ struct RootView: View {
                 }
             }
         }
-        // 포그라운드 복귀 — 시스템이 8시간 후 LA를 종료했을 수 있어 다시 게시한다
-        // (VM이 이 실행에서 켠 상태면 각자 건너뛴다 — 중복 게시 없음).
+        // 포그라운드 복귀 — 시스템이 8시간 후 LA를 종료했을 수 있어 다시 게시한다.
+        // 할일 VM은 이미 켠 상태면 다시 읽어 갱신만 한다(앱 밖 완료 반영), 나머지는 건너뛴다.
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task {

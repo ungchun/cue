@@ -105,6 +105,7 @@ struct ReminderViewModelTests {
         // 프리페치의 프롬프트-없는 권한 조회도 같은 repo를 보게 배선 — 기본값(별도 인메모리)은
         // 항상 미결정이라 프리페치가 무조건 건너뛰게 된다.
         dependencies.currentRemindersAccess = CurrentRemindersAccessUseCase(repository: remindersRepository)
+        dependencies.discardRemindersCache = DiscardRemindersCacheUseCase(repository: remindersRepository)
         dependencies.moveReminder = MoveReminderUseCase(repository: remindersRepository)
         if let analytics { dependencies.analytics = analytics }
         return dependencies
@@ -332,6 +333,35 @@ struct ReminderViewModelTests {
         let calls = await service.startReminderCalls
         #expect(calls.first?.items.map(\.id) == ["fresh"])
         #expect(calls.allSatisfy { !$0.items.map(\.id).contains("done") })
+    }
+
+    /// 포그라운드 복귀 — 항상 표시 카드가 이미 떠 있어도 저장소 캐시를 버리고 다시 읽어 재게시한다.
+    /// 앱이 꺼진 사이(라이브 체크 버튼·미리 알림 앱) 완료한 할일은 변경 신호가 빠지면 VM이
+    /// 모른 채 남는다 — 예전엔 "이미 활성"이라 그냥 건너뛰어 완료한 할일이 카드에 계속 보였다.
+    @Test func alwaysOnWhileActiveRefetchesAndRepublishes() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA], reminders: [
+            reminder(id: "a", dueDate: Date(), listID: "A"),
+            reminder(id: "b", dueDate: Date(), listID: "A"),
+        ])
+        let repo = GatedRemindersRepository(base)
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(remindersRepository: repo, liveActivityService: service, appSettings: settings),
+            premiumStore: await premiumStore()
+        )
+        await viewModel.startAlwaysOnLiveActivity()
+        let first = try #require(await service.startReminderCalls.last)
+        #expect(Set(first.items.map(\.id)) == ["a", "b"])
+
+        // 앱 밖에서 완료 — 변경 신호 없이 저장소만 바뀐다(InMemory setCompleted는 신호를 내지 않는다).
+        try await base.setCompleted(true, reminderID: "a")
+        await viewModel.startAlwaysOnLiveActivity()   // 포그라운드 복귀 경로(force 아님)
+
+        #expect(await repo.discardCount == 1)
+        #expect(await service.startReminderCalls.last?.items.map(\.id) == ["b"])
+        #expect(viewModel.liveActivityActive)
     }
 
     @Test func externalChangeReloadsRemindersAfterFirstLoad() async throws {
@@ -2059,6 +2089,7 @@ private actor GatedRemindersRepository: RemindersRepository {
     private var gateClosed = false
     private(set) var isFetchWaiting = false
     private(set) var fetchCount = 0
+    private(set) var discardCount = 0
     private var waiters: [CheckedContinuation<Void, Never>] = []
     // update 쓰기를 붙잡는 게이트 — "저장소 반환 전 선반영" 계약의 관측점.
     private var updateGateClosed = false
@@ -2091,6 +2122,7 @@ private actor GatedRemindersRepository: RemindersRepository {
 
     nonisolated func changes() -> AsyncStream<Void> { base.changes() }
     func requestAccess() async -> RemindersAccess { await base.requestAccess() }
+    func discardCache() async { discardCount += 1 }
     func fetchLists() async throws -> [ReminderList] { try await base.fetchLists() }
     func fetchReminders() async throws -> [Reminder] {
         fetchCount += 1
