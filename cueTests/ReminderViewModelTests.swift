@@ -275,6 +275,39 @@ struct ReminderViewModelTests {
         #expect(calls.last?.items.map(\.id) == ["due-today"])
     }
 
+    /// 항상 표시 "오늘" 카드는 저장된 **오늘 정렬**을 따른다 — 오늘 정렬 설정은 할일 탭이 오늘을
+    /// 볼 때만 적재돼, 탭이 "전체"면 기본 정렬(생성순)로 게시됐다.
+    @Test func alwaysOnTodayCardUsesSavedTodaySortWhileTabShowsAnotherScope() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let service = RecordingReminderLiveActivity()
+        let now = Date()
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(
+                lists: [listA],
+                reminders: [
+                    reminder(id: "z", title: "zeta", dueDate: now, creationDate: now.addingTimeInterval(-20), listID: "A"),
+                    reminder(id: "a", title: "alpha", dueDate: now, creationDate: now.addingTimeInterval(-10), listID: "A"),
+                ],
+                sortSettings: [
+                    ReminderViewModel.todayScopeKey: ReminderSortSettings(
+                        preference: .init(field: .title, direction: .ascending),
+                        manualOrder: []
+                    )
+                ],
+                liveActivityService: service,
+                appSettings: settings
+            ),
+            premiumStore: await premiumStore()
+        )
+
+        await viewModel.startAlwaysOnLiveActivity()
+        #expect(viewModel.selection == .systemFilter(.all))   // 할일 탭은 오늘이 아니다.
+
+        let call = try #require(await service.startReminderCalls.last)
+        #expect(call.items.map(\.id) == ["a", "z"])
+    }
+
     /// 권한이 거부돼 있으면 자동 게시하지 않는다.
     @Test func alwaysOnSkipsWhenAccessDenied() async {
         let service = RecordingReminderLiveActivity()

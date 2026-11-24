@@ -336,6 +336,8 @@ final class ReminderViewModel {
             case .list(let id): title = lists.first(where: { $0.id == id })?.title ?? SystemFilter.all.title
             case .systemFilter(let filter): title = filter.title
             }
+            // 범위의 정렬 설정은 할일 탭이 그 범위를 볼 때만 적재된다 — 게시 전에 채운다.
+            if let key = Self.sortScopeKey(for: scope) { await loadSortSettings(scope: key) }
             reminders = snapshot(for: scope)
         } else {
             title = currentSelectionTitle
@@ -412,10 +414,13 @@ final class ReminderViewModel {
 
     /// 현재 selection의 정렬 스코프 키 — 오늘·개별 리스트에서만 존재.
     /// 전체·예정·미선택은 nil(정렬 메뉴·드래그 비활성).
-    var currentSortScopeKey: String? {
+    var currentSortScopeKey: String? { Self.sortScopeKey(for: selection) }
+
+    /// selection의 정렬 스코프 키 — 오늘·개별 리스트에서만 존재.
+    static func sortScopeKey(for selection: ReminderSelection?) -> String? {
         switch selection {
-        case .systemFilter(.today): return Self.todayScopeKey
-        case .list(let id): return Self.listScopeKey(id)
+        case .systemFilter(.today): return todayScopeKey
+        case .list(let id): return listScopeKey(id)
         default: return nil
         }
     }
@@ -483,7 +488,13 @@ final class ReminderViewModel {
 
     /// 현재 스코프의 정렬 설정을 fetch해 캐시에 채운다(이미 있으면 건너뜀).
     private func loadSortSettingsForCurrentScope() async {
-        guard let key = currentSortScopeKey, sortSettingsByScope[key] == nil else { return }
+        guard let key = currentSortScopeKey else { return }
+        await loadSortSettings(scope: key)
+    }
+
+    /// 한 스코프의 정렬 설정을 fetch해 캐시에 채운다(이미 있으면 건너뜀).
+    private func loadSortSettings(scope key: String) async {
+        guard sortSettingsByScope[key] == nil else { return }
         sortSettingsByScope[key] = await fetchSortSettingsUseCase(scope: key)
     }
 
