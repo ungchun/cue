@@ -1,0 +1,7 @@
+# 빌드 산출물
+lib/
+lib-test/
+
+node_modules/
+*.local
+firebase-debug*.log
