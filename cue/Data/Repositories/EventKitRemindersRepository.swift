@@ -52,7 +52,16 @@ actor EventKitRemindersRepository: RemindersRepository {
         return store.calendars(for: .reminder).map { ReminderMapper.toList($0, defaultListID: defaultListID) }
     }
 
+    /// 조회와 캐시 비우기를 한 줄로 세운다 — 조회는 EventKit 완료 콜백을 기다리는 동안 actor가
+    /// 재진입되므로, 그 사이 `discardCache()`의 `reset()`이 끼면 EventKit이 결과 객체를 만드는
+    /// 도중 store가 비워진다(포그라운드 복귀 시 변경 알림 reload와 항상 표시 재조회가 겹칠 때).
+    private let fetchGate = SerialGate()
+
     func fetchReminders() async throws -> [Reminder] {
+        await fetchGate.run { await self.fetchRemindersFromStore() }
+    }
+
+    private func fetchRemindersFromStore() async -> [Reminder] {
         let predicate = store.predicateForReminders(in: nil)
         return await withCheckedContinuation { continuation in
             store.fetchReminders(matching: predicate) { ekReminders in
@@ -229,8 +238,13 @@ actor EventKitRemindersRepository: RemindersRepository {
 
     /// 앱이 꺼져 있거나 백그라운드인 사이 다른 프로세스(라이브 체크 버튼 인텐트·미리 알림 앱)가
     /// 쓴 값은 변경 알림이 빠지면 이 store 캐시에 반영되지 않는다. `reset()`으로 비우면
-    /// 다음 조회는 DB에서 다시 읽는다. 쓰기는 actor 안에서 동기로 끝나 중간에 끼지 않는다.
-    func discardCache() {
+    /// 다음 조회는 DB에서 다시 읽는다. 쓰기는 actor 안에서 동기로 끝나 중간에 끼지 않고,
+    /// 조회와는 `fetchGate`로 순서를 맞춘다.
+    func discardCache() async {
+        await fetchGate.run { await self.resetStore() }
+    }
+
+    private func resetStore() {
         store.reset()
     }
 
