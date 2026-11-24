@@ -390,9 +390,13 @@ struct ReminderViewModelTests {
 
         // 앱 밖에서 완료 — 변경 신호 없이 저장소만 바뀐다(InMemory setCompleted는 신호를 내지 않는다).
         try await base.setCompleted(true, reminderID: "a")
+        let fetchesBefore = await repo.fetchCount
         await viewModel.startAlwaysOnLiveActivity()   // 포그라운드 복귀 경로(force 아님)
 
         #expect(await repo.discardCount == 1)
+        // 캐시를 버린 **뒤에** 다시 읽어야 한다 — 순서가 뒤집히면 낡은 캐시를 다시 읽는다.
+        #expect(await repo.fetchCountsAtDiscard == [fetchesBefore])
+        #expect(await repo.fetchCount > fetchesBefore)
         #expect(await service.startReminderCalls.last?.items.map(\.id) == ["b"])
         #expect(viewModel.liveActivityActive)
     }
@@ -417,6 +421,61 @@ struct ReminderViewModelTests {
         await viewModel.reloadAfterExternalWrite()
 
         #expect(await service.startReminderCalls.last?.items.map(\.id) == ["b"])
+    }
+
+    /// 할일 탭에서 쓴 직후(자기 쓰기 에코 억제 창 안)에도 일정 탭의 쓰기는 반영한다 — 억제 창은
+    /// 자기 쓰기 에코만 거르는 장치라, 외부 쓰기 갱신까지 막으면 완료한 할일이 카드에 남는다.
+    @Test func reloadAfterExternalWriteIgnoresSelfWriteSuppressWindow() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let now = Date()
+        let base = InMemoryRemindersRepository(access: .granted, lists: [listA], reminders: [
+            reminder(id: "a", dueDate: now, listID: "A"),
+            reminder(id: "b", dueDate: now, listID: "A"),
+            reminder(id: "c", dueDate: now, listID: "A"),
+        ])
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(remindersRepository: base, liveActivityService: service, appSettings: settings),
+            premiumStore: await premiumStore()
+        )
+        await viewModel.startAlwaysOnLiveActivity()
+        await viewModel.toggle(reminder(id: "c", dueDate: now, listID: "A"))   // 자기 쓰기 — 억제 창이 열린다
+
+        try await base.setCompleted(true, reminderID: "a")   // 곧바로 일정 탭 시트의 쓰기
+        await viewModel.reloadAfterExternalWrite()
+
+        #expect(await service.startReminderCalls.last?.items.map(\.id) == ["b"])
+    }
+
+    /// 항상 표시 카드 위에서 라이브 버튼으로 직접 다시 켜면, 이후 갱신은 설정 범위가 아니라
+    /// 할일 탭의 선택을 따른다.
+    @Test func manualToggleOverAlwaysOnCardFollowsTabSelection() async throws {
+        var settings = AppSettings.default
+        settings.liveAlwaysOnReminderScopeID = "today"
+        let service = RecordingReminderLiveActivity()
+        let viewModel = ReminderViewModel(
+            dependencies: makeDependencies(
+                lists: [listA],
+                reminders: [
+                    reminder(id: "due-today", dueDate: Date(), listID: "A"),
+                    reminder(id: "no-due", listID: "A"),
+                    reminder(id: "no-due-2", listID: "A"),
+                ],
+                liveActivityService: service,
+                appSettings: settings
+            ),
+            premiumStore: await premiumStore()
+        )
+        await viewModel.startAlwaysOnLiveActivity()
+        viewModel.select(listA)
+        await viewModel.toggleLiveActivity(listTitle: listA.title)
+
+        await viewModel.toggle(reminder(id: "no-due", listID: "A"))   // 데이터 변경 → 활성 LA 갱신
+
+        let last = try #require(await service.startReminderCalls.last)
+        #expect(last.listTitle == listA.title)
+        #expect(Set(last.items.map(\.id)) == ["due-today", "no-due-2"])
     }
 
     @Test func externalChangeReloadsRemindersAfterFirstLoad() async throws {
@@ -2145,6 +2204,8 @@ private actor GatedRemindersRepository: RemindersRepository {
     private(set) var isFetchWaiting = false
     private(set) var fetchCount = 0
     private(set) var discardCount = 0
+    /// 캐시를 버린 순간의 `fetchCount` — "버린 뒤 다시 읽는다" 순서를 검증한다.
+    private(set) var fetchCountsAtDiscard: [Int] = []
     private var waiters: [CheckedContinuation<Void, Never>] = []
     // update 쓰기를 붙잡는 게이트 — "저장소 반환 전 선반영" 계약의 관측점.
     private var updateGateClosed = false
@@ -2177,7 +2238,10 @@ private actor GatedRemindersRepository: RemindersRepository {
 
     nonisolated func changes() -> AsyncStream<Void> { base.changes() }
     func requestAccess() async -> RemindersAccess { await base.requestAccess() }
-    func discardCache() async { discardCount += 1 }
+    func discardCache() async {
+        discardCount += 1
+        fetchCountsAtDiscard.append(fetchCount)
+    }
     func fetchLists() async throws -> [ReminderList] { try await base.fetchLists() }
     func fetchReminders() async throws -> [Reminder] {
         fetchCount += 1
